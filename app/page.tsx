@@ -58,6 +58,9 @@ export default function MCDMCalculator() {
   const [numAlternatives, setNumAlternatives] = useState(3)
   const [numCriteria, setNumCriteria] = useState(3)
 
+  const [isLoading, setIsLoading] = useState(false)
+  const [apiResults, setApiResults] = useState<any>(null)
+
   const generateTable = () => {
     const newAlts: Alternative[] = Array.from({ length: numAlternatives }, (_, i) => ({
       id: `alt-${i}`,
@@ -81,9 +84,26 @@ export default function MCDMCalculator() {
     setAlternatives(alternatives.map((alt) => (alt.id === id ? { ...alt, name } : alt)))
   }
 
-  const updateAlternativeScore = (altId: string, critId: string, score: number) => {
+  const updateAlternativeScore = (altId: string, critId: string, value: string) => {
+    if (value !== "") {
+      const numValue = Number.parseFloat(value)
+      if (isNaN(numValue) || numValue <= 0) {
+        return // Don't update if invalid
+      }
+    }
+
     setAlternatives(
-      alternatives.map((alt) => (alt.id === altId ? { ...alt, scores: { ...alt.scores, [critId]: score } } : alt)),
+      alternatives.map((alt) =>
+        alt.id === altId
+          ? {
+              ...alt,
+              scores: {
+                ...alt.scores,
+                [critId]: value === "" ? "" : Number.parseFloat(value),
+              },
+            }
+          : alt,
+      ),
     )
   }
 
@@ -92,6 +112,18 @@ export default function MCDMCalculator() {
   }
 
   const handleSaveTable = () => {
+    const allScoresFilled = alternatives.every((alt) =>
+      criteria.every((crit) => {
+        const score = alt.scores[crit.id]
+        return score !== undefined && score !== "" && Number(score) > 0
+      }),
+    )
+
+    if (!allScoresFilled) {
+      alert("Please fill in all score values with numbers greater than 0")
+      return
+    }
+
     setCurrentStep("matrix")
   }
 
@@ -324,6 +356,39 @@ export default function MCDMCalculator() {
     return {}
   }
 
+  const handleCalculate = async () => {
+    setIsLoading(true)
+    setApiResults(null)
+
+    try {
+      const payload = {
+        method,
+        alternatives,
+        criteria,
+      }
+
+      const response = await fetch("/api/calculate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to calculate")
+      }
+
+      const data = await response.json()
+      setApiResults(data)
+    } catch (error) {
+      console.error("Error:", error)
+      alert("Error calculating results")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const scores = calculateScores()
   const maxScore = Math.max(...Object.values(scores), 0)
   const bestAlternative = Object.entries(scores).find(([_, score]) => score === maxScore)?.[0]
@@ -548,11 +613,13 @@ export default function MCDMCalculator() {
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-black">Number of Alternatives</label>
                   <Input
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={numAlternatives}
-                    onChange={(e) => setNumAlternatives(Math.max(1, Number.parseInt(e.target.value) || 1))}
+                    type="text"
+                    inputMode="numeric"
+                    value={numAlternatives === 0 ? "" : numAlternatives}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setNumAlternatives(val === "" ? 0 : Number.parseInt(val) || 0)
+                    }}
                     className="text-sm h-10 border-gray-200 text-black shadow-none"
                   />
                 </div>
@@ -560,11 +627,13 @@ export default function MCDMCalculator() {
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-black">Number of Criteria</label>
                   <Input
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={numCriteria}
-                    onChange={(e) => setNumCriteria(Math.max(1, Number.parseInt(e.target.value) || 1))}
+                    type="text"
+                    inputMode="numeric"
+                    value={numCriteria === 0 ? "" : numCriteria}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setNumCriteria(val === "" ? 0 : Number.parseInt(val) || 0)
+                    }}
                     className="text-sm h-10 border-gray-200 text-black shadow-none"
                   />
                 </div>
@@ -730,13 +799,10 @@ export default function MCDMCalculator() {
                               <TableCell key={crit.id} className="text-center py-3 px-4">
                                 <Input
                                   type="number"
-                                  min="0"
-                                  step="0.01"
-                                  placeholder="0"
-                                  value={alt.scores[crit.id] || ""}
-                                  onChange={(e) =>
-                                    updateAlternativeScore(alt.id, crit.id, Number.parseFloat(e.target.value) || 0)
-                                  }
+                                  inputMode="decimal"
+                                  placeholder="Enter value"
+                                  value={alt.scores[crit.id] ?? ""}
+                                  onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
                                   className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
                                 />
                               </TableCell>
@@ -890,6 +956,193 @@ export default function MCDMCalculator() {
     )
   }
 
+  if (currentStep === "calculate") {
+    return (
+      <SidebarProvider>
+        <Sidebar className="border-r border-gray-200 bg-gray-50">
+          <SidebarHeader className="py-2">
+            <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarMenu>
+              {MCDM_METHODS.map((m) => (
+                <SidebarMenuItem key={m.value}>
+                  <SidebarMenuButton
+                    onClick={() => setMethod(m.value)}
+                    isActive={method === m.value}
+                    className={`text-xs ${method === m.value ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
+                  >
+                    <span>{m.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+        </Sidebar>
+
+        <main className="flex-1 min-h-screen bg-white p-2 md:p-3">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <SidebarTrigger className="md:hidden border-gray-200 text-black" />
+                <div>
+                  <h1 className="text-xl md:text-2xl font-bold text-black">Results</h1>
+                  <p className="text-xs text-gray-700">{methodInfo?.label} Analysis</p>
+                </div>
+              </div>
+              <Button
+                onClick={() => setCurrentStep("matrix")}
+                className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+              >
+                Back
+              </Button>
+            </div>
+
+            {isLoading ? (
+              <Card className="border-gray-200 bg-white shadow-none">
+                <CardContent className="pt-12 pb-12 flex flex-col items-center justify-center gap-4">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-black rounded-full animate-bounce" style={{ animationDelay: "0s" }} />
+                    <div className="w-2 h-2 bg-black rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+                    <div className="w-2 h-2 bg-black rounded-full animate-bounce" style={{ animationDelay: "0.4s" }} />
+                  </div>
+                  <p className="text-xs text-gray-700">Calculating {methodInfo?.label} results...</p>
+                </CardContent>
+              </Card>
+            ) : apiResults ? (
+              <>
+                <Card className="border-gray-200 bg-white mb-3 shadow-none">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs text-black">{methodInfo?.label} Dashboard</CardTitle>
+                    <CardDescription className="text-xs text-gray-700">{methodInfo?.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    {method === "swei" && (
+                      <div className="text-xs text-gray-700 space-y-1">
+                        <p>
+                          <span className="font-semibold text-black">Method:</span> Simple Weighted Evaluation Index
+                        </p>
+                        <p>
+                          <span className="font-semibold text-black">Formula:</span> Score = Σ(log₂(1/IDM)^Weight)
+                        </p>
+                        <p className="text-gray-600">
+                          Normalized values are converted to information terms using log₂(1/value), then raised to their
+                          weights and summed. Lower scores are better.
+                        </p>
+                      </div>
+                    )}
+
+                    {method === "ahp" && (
+                      <div className="text-xs text-gray-700 space-y-1">
+                        <p>
+                          <span className="font-semibold text-black">Method:</span> Analytic Hierarchy Process
+                        </p>
+                        <p>
+                          <span className="font-semibold text-black">Formula:</span> Score = Σ(Normalized Score^Weight)
+                        </p>
+                        <p className="text-gray-600">
+                          Uses pairwise comparisons and hierarchical decomposition for complex decision problems.
+                        </p>
+                      </div>
+                    )}
+
+                    {method === "topsis" && (
+                      <div className="space-y-2">
+                        <div className="text-xs text-gray-700 space-y-1">
+                          <p>
+                            <span className="font-semibold text-black">Method:</span> TOPSIS (Ideal Solution)
+                          </p>
+                          <p>
+                            <span className="font-semibold text-black">Formula:</span> Score = Distance to Negative
+                            Ideal / (Distance to Ideal + Distance to Negative Ideal)
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {method === "vikor" && (
+                      <div className="space-y-2">
+                        <div className="text-xs text-gray-700 space-y-1">
+                          <p>
+                            <span className="font-semibold text-black">Method:</span> VIKOR (Compromise Ranking)
+                          </p>
+                          <p>
+                            <span className="font-semibold text-black">Metrics:</span> S (group utility) and R
+                            (individual regret)
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {method === "electre" && (
+                      <div className="text-xs text-gray-700 space-y-1">
+                        <p>
+                          <span className="font-semibold text-black">Method:</span> ELECTRE (Outranking)
+                        </p>
+                        <p>
+                          <span className="font-semibold text-black">Analysis:</span> Concordance and Discordance
+                          indices
+                        </p>
+                        <p className="text-gray-600">
+                          Builds outranking relations between alternatives based on concordance and discordance
+                          analysis.
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-gray-200 bg-white shadow-none">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs text-black">Results</CardTitle>
+                    <CardDescription className="text-xs text-gray-700">
+                      Information scores and ranking (ascending order)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <div className="space-y-2">
+                      {apiResults.ranking
+                        .sort((a: any, b: any) => a.score - b.score)
+                        .map((item: any, index: number) => (
+                          <div
+                            key={item.alternativeId}
+                            className={`p-2 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border ${
+                              index === 0 ? "bg-white border-black" : "bg-white border-gray-200"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-bold text-black w-5 text-center">#{index + 1}</div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-black text-xs truncate">{item.alternativeName}</p>
+                                {index === 0 && <p className="text-xs text-black">🏆 Best Choice</p>}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-base font-bold text-black">{item.score.toFixed(4)}</div>
+                              <div className="text-xs text-gray-600">Information Score</div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <Card className="border-gray-200 bg-white shadow-none">
+                <CardContent className="pt-12 pb-12 flex flex-col items-center justify-center gap-4">
+                  <p className="text-xs text-gray-700">Click the button below to calculate results</p>
+                  <Button onClick={handleCalculate} className="bg-black text-white hover:bg-gray-800 text-xs h-8">
+                    Calculate Results
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </main>
+      </SidebarProvider>
+    )
+  }
+
   return (
     <SidebarProvider>
       <Sidebar className="border-r border-gray-200 bg-gray-50">
@@ -943,10 +1196,11 @@ export default function MCDMCalculator() {
                     <span className="font-semibold text-black">Method:</span> Simple Weighted Evaluation Index
                   </p>
                   <p>
-                    <span className="font-semibold text-black">Formula:</span> Score = Σ(Normalized Score × Weight)
+                    <span className="font-semibold text-black">Formula:</span> Score = Σ(log₂(1/IDM)^Weight)
                   </p>
                   <p className="text-gray-600">
-                    Scores are normalized to 0-1 range, then multiplied by their weights and summed.
+                    Normalized values are converted to information terms using log₂(1/value), then raised to their
+                    weights and summed. Lower scores are better.
                   </p>
                 </div>
               )}
