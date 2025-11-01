@@ -1,70 +1,102 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { calculateSWEI } from "./swei"
-import { calculateTOPSIS } from "./topsis"
-import type { CalculationRequest, CalculationResponse } from "./types"
+import { NextRequest, NextResponse } from "next/server";
+import type { CalculationRequest, CalculationResponse } from "./types";
+
+// Import all calculation functions
+import { calculateSWEI } from "./swei";
+import { calculateSWI } from "./swi";
+import { calculateTOPSIS } from "./topsis";
+import { calculateVIKOR } from "./vikor";
+import { calculateWASPAS } from "./waspas";
+import { calculateEDAS } from "./edas";
+import { calculateMOORA } from "./moora";
+import { calculateCOCOSO } from "./cocoso";
+
+// Helper: build ranking and response
+function buildResponse(
+  method: string,
+  results: Record<string, number>,
+  alternatives: { id: string; name: string }[]
+): CalculationResponse {
+  const ranking = alternatives
+    .map((alt) => ({
+      alternativeId: alt.id,
+      alternativeName: alt.name,
+      score: results[alt.id] || 0,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .map((item, index) => ({
+      rank: index + 1,
+      ...item,
+      percentage: (item.score * 100).toFixed(2),
+    }));
+
+  const best = ranking[0];
+  return {
+    method,
+    results,
+    ranking,
+    bestAlternative: {
+      id: best.alternativeId,
+      name: best.alternativeName,
+      score: best.score,
+    },
+  };
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body: CalculationRequest = await request.json()
+    const body: CalculationRequest = await request.json();
+    const { method, alternatives, criteria } = body;
 
-    // Validate required fields
-    if (!body.method || !body.alternatives || !body.criteria) {
+    if (!method || !alternatives || !criteria) {
       return NextResponse.json(
         { error: "Missing required fields: method, alternatives, criteria" },
         { status: 400 }
-      )
+      );
     }
 
-    let results: Record<string, number> = {}
+    let results: Record<string, number> = {};
 
-    // Determine which method to execute
-    switch (body.method.toLowerCase()) {
+    // Method routing
+    switch (method.toLowerCase()) {
       case "swei":
-        const sweiResult = calculateSWEI(body.alternatives, body.criteria)
-        results = sweiResult.scores
-        break
-
+        results = calculateSWEI(alternatives, criteria).scores;
+        break;
+      case "swi":
+        results = calculateSWI(alternatives, criteria);
+        break;
       case "topsis":
-        results = calculateTOPSIS(body.alternatives, body.criteria)
-        break
-
+        results = calculateTOPSIS(alternatives, criteria);
+        break;
+      case "vikor":
+        results = calculateVIKOR(alternatives, criteria);
+        break;
+      case "waspas":
+        results = calculateWASPAS(alternatives, criteria);
+        break;
+      case "edas":
+        results = calculateEDAS(alternatives, criteria);
+        break;
+      case "moora":
+        results = calculateMOORA(alternatives, criteria);
+        break;
+      case "cocoso":
+        results = calculateCOCOSO(alternatives, criteria);
+        break;
       default:
-        return NextResponse.json({ error: "Invalid method" }, { status: 400 })
+        return NextResponse.json(
+          { error: `Invalid method: ${method}` },
+          { status: 400 }
+        );
     }
 
-    // Generate ranking
-    const ranking = body.alternatives
-      .map((alt) => ({
-        alternativeId: alt.id,
-        alternativeName: alt.name,
-        score: results[alt.id] || 0,
-      }))
-      .sort((a, b) => b.score - a.score)
-      .map((item, index) => ({
-        rank: index + 1,
-        ...item,
-        percentage: (item.score * 100).toFixed(2),
-      }))
-
-    const bestAlternative = ranking[0]
-
-    const response: CalculationResponse = {
-      method: body.method,
-      results,
-      ranking,
-      bestAlternative: {
-        id: bestAlternative.alternativeId,
-        name: bestAlternative.alternativeName,
-        score: bestAlternative.score,
-      },
-    }
-
-    return NextResponse.json(response, { status: 200 })
-  } catch (error) {
-    console.error("Calculation error:", error)
+    const response = buildResponse(method, results, alternatives);
+    return NextResponse.json(response, { status: 200 });
+  } catch (err) {
+    console.error("Calculation error:", err);
     return NextResponse.json(
       { error: "Internal server error during calculation" },
       { status: 500 }
-    )
+    );
   }
 }
