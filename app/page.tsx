@@ -463,7 +463,16 @@ export default function MCDMCalculator() {
                     <div>
                       <p className="font-semibold text-black mb-1">How it works:</p>
                       <p className="text-gray-700">
-The lower information score is the first ranking.
+import SWEIFormula from "@/components/SWEIFormula";
+
+export default function SWEIPage() {
+  return (
+    <div className="p-6">
+      <SWEIFormula />
+    </div>
+  );
+}
+
                       </p>
                     </div>
                   </div>
