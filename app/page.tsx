@@ -1020,7 +1020,7 @@ export default function MCDMCalculator() {
                     {method === "swei" && (
                       <div className="text-xs text-gray-700 space-y-1">
                         <p>
-                          <span className="font-semibold text-black">Method:</span> Simple Weighted Evaluation Index
+                          <span className="font-semibold text-black">Method:</span> Sum Weighted Exponential Infoemation
                         </p>
                         <p>
                           <span className="font-semibold text-black">Formula:</span> Score = Σ(log₂(1/IDM)^Weight)
@@ -1193,7 +1193,7 @@ export default function MCDMCalculator() {
               {method === "swei" && (
                 <div className="text-xs text-gray-700 space-y-1">
                   <p>
-                    <span className="font-semibold text-black">Method:</span> Simple Weighted Evaluation Index
+                    <span className="font-semibold text-black">Method:</span> Sum Weighted Exponential Infoemation
                   </p>
                   <p>
                     <span className="font-semibold text-black">Formula:</span> Score = Σ(log₂(1/IDM)^Weight)
