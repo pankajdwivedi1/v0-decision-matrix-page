@@ -457,14 +457,20 @@ export default function MCDMCalculator() {
                     <div>
                       <p className="font-semibold text-black mb-1">Formulation:</p>
                       <p className="text-gray-700 bg-gray-50 p-2 rounded border border-gray-200">
-                        Score = Σ(Normalized Score × Weight)
+                        Score = Σ(log₂(1/IDM)^Weight)
                       </p>
                     </div>
                     <div>
                       <p className="font-semibold text-black mb-1">How it works:</p>
                       <p className="text-gray-700">
-                        Normalizes all scores to a 0-1 scale, then multiplies each by its criterion weight and sums the
-                        results. Simple and intuitive for straightforward decision problems.
+                        | Step                 | Math Formula                       | Code Equivalent              | Status |
+| -------------------- | ---------------------------------- | ---------------------------- | ------ |
+| Normalization (Max)  | ( x_{ij} / \sum_i x_{ij} )         | columnSum division           | ✅      |
+| Normalization (Min)  | ( (1/x_{ij}) / \sum_i (1/x_{ij}) ) | inverse normalization        | ✅      |
+| Information Term     | ( \log_2(1/IDM_{ij}) )             | `Math.log2(1 / (idm + eps))` | ✅      |
+| Weighted Exponential | ( (Info_{ij})^{w_j} )              | `Math.pow(info, weight)`     | ✅      |
+| SWEI Score           | ( \sum_j (Info_{ij})^{w_j} )       | sum loop                     | ✅      |
+. The lower information score is the first ranking
                       </p>
                     </div>
                   </div>
