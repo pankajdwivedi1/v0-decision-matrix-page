@@ -1038,7 +1038,7 @@ export default function MCDMCalculator() {
                           <span className="font-semibold text-black">Method:</span> Analytic Hierarchy Process
                         </p>
                         <p>
-                          <span className="font-semibold text-black">Formula:</span> Score = Σ(Normalized Score^Weight)
+                          <span className="font-semibold text-black">Formula:</span> Score = Σ(log₂(1/IDM)^Weight)
                         </p>
                         <p className="text-gray-600">
                           Uses pairwise comparisons and hierarchical decomposition for complex decision problems.
