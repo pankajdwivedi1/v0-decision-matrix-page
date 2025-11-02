@@ -1,0 +1,149 @@
+"use client";
+
+import React, { useEffect, useRef } from "react";
+
+type SWEIFormulaProps = {
+  compact?: boolean;
+};
+
+declare global {
+  // MathJax global (loaded from CDN)
+  interface Window {
+    MathJax?: any;
+  }
+}
+
+/**
+ * SWEIFormula
+ * - Loads MathJax (once)
+ * - Renders the step-by-step SWEI formulas as LaTeX
+ *
+ * Usage:
+ *   import SWEIFormula from "@/components/SWEIFormula";
+ *   <SWEIFormula />
+ */
+export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Load MathJax if not present
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const existing = document.querySelector('script[data-mathjax="loaded"]');
+    if (!existing) {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js";
+      script.async = true;
+      script.setAttribute("data-mathjax", "loaded");
+      document.head.appendChild(script);
+      script.onload = () => {
+        // typeset the initial content
+        setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
+      };
+    } else {
+      // typeset if already loaded
+      setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
+    }
+  }, []);
+
+  // Re-typeset after every render (safe; MathJax caches)
+  useEffect(() => {
+    setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
+  });
+
+  // LaTeX strings for each step
+  const latex = {
+    title: "\\textbf{SWEI (Sum\\textendash Weighted Exponential Information) — Stepwise}",
+    step1:
+      "\\textbf{1. Decision matrix:} \\quad X = [x_{ij}]_{m\\times n} = \\begin{bmatrix} x_{11} & x_{12} & \\dots & x_{1n} \\\\ x_{21} & x_{22} & \\dots & x_{2n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m1} & x_{m2} & \\dots & x_{mn} \\end{bmatrix}",
+    step2_intro:
+      "\\textbf{2. Normalization (Information Decision Matrix — IDM):}\\quad \\text{For each criterion } j, \\text{ compute } IDM_{ij}.",
+    step2_benefit:
+      "\\displaystyle IDM_{ij}^{(benefit)} = \\frac{a_{ij}}{\\sum_{i=1}^{m} a_{ij}} \\quad \\text{(use when criterion is desirable)}",
+    step2_cost:
+      "\\displaystyle IDM_{ij}^{(cost)} = \\frac{1/a_{ij}}{\\sum_{i=1}^{m} 1/a_{ij}} \\quad \\text{(use when criterion is undesirable)}",
+    step3_intro:
+      "\\textbf{3. Information per cell:} \\quad Info_{ij} = \\log_{2}\\left(\\dfrac{1}{IDM_{ij}}\\right)",
+    step3_exp:
+      "\\textbf{3b. Weighted exponential term (SWEI variant):} \\quad Term_{ij} = \\big( Info_{ij} \\big)^{w_j}",
+    step4:
+      "\\textbf{4. SWEI score for alternative } i:\\quad SWEI_i = \\sum_{j=1}^{n} Term_{ij} = \\sum_{j=1}^{n} w_j \\log_{2}^{w_j}\\left(\\dfrac{1}{IDM_{ij}}\\right)",
+    ranking:
+      "\\textbf{5. Ranking:} \\quad \\text{Alternatives are ordered by } SWEI_i. \\text{(}\\text{lower} \\; SWEI_i \\Rightarrow \\text{better rank in the original paper)}",
+    note:
+      "\\text{Note: many implementations interpret aggregation differently — confirm whether to use the weighted exponent }(Info)^{w_j}\\text{ or } w_j \\cdot Info_{ij}."
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className={`prose max-w-none bg-white border rounded-lg p-6 shadow-sm ${
+        compact ? "text-sm" : "text-base"
+      }`}
+    >
+      <div className="mb-4">
+        <div>
+          {/* Title */}
+          <div style={{ fontSize: compact ? 18 : 20, fontWeight: 700 }}>
+            <span
+              className="latex"
+              // math content in inline-block ensures MathJax finds it
+              dangerouslySetInnerHTML={{ __html: `\\(${latex.title}\\)` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <ol className="space-y-4 list-decimal pl-5">
+        <li>
+          <div className="mb-2 font-semibold">Decision matrix</div>
+          <div className="bg-gray-50 p-3 rounded">
+            <div className="latex" dangerouslySetInnerHTML={{ __html: `\\(${latex.step1}\\)` }} />
+          </div>
+        </li>
+
+        <li>
+          <div className="mb-2 font-semibold">Normalization (IDM)</div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="bg-gray-50 p-3 rounded">
+              <div className="text-sm italic mb-2">Benefit (desirable) criteria</div>
+              <div className="latex" dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_benefit}\\)` }} />
+            </div>
+            <div className="bg-gray-50 p-3 rounded">
+              <div className="text-sm italic mb-2">Cost (undesirable) criteria</div>
+              <div className="latex" dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_cost}\\)` }} />
+            </div>
+          </div>
+        </li>
+
+        <li>
+          <div className="mb-2 font-semibold">Information term</div>
+          <div className="bg-gray-50 p-3 rounded">
+            <div className="latex" dangerouslySetInnerHTML={{ __html: `\\(${latex.step3_intro}\\)` }} />
+            <div className="mt-2 latex" dangerouslySetInnerHTML={{ __html: `\\(${latex.step3_exp}\\)` }} />
+          </div>
+        </li>
+
+        <li>
+          <div className="mb-2 font-semibold">Aggregation → SWEI score</div>
+          <div className="bg-gray-50 p-3 rounded">
+            <div className="latex" dangerouslySetInnerHTML={{ __html: `\\(${latex.step4}\\)` }} />
+          </div>
+        </li>
+
+        <li>
+          <div className="mb-2 font-semibold">Ranking</div>
+          <div className="bg-gray-50 p-3 rounded">
+            <div className="latex" dangerouslySetInnerHTML={{ __html: `\\(${latex.ranking}\\)` }} />
+            <div className="mt-2 text-sm text-gray-600">{latex.note}</div>
+          </div>
+        </li>
+      </ol>
+
+      <div className="mt-4 text-xs text-gray-500">
+        Source: SWEI formulation (information-theoretic normalization & weighted aggregation). Use consistent
+        weights & check whether your implementation expects lower or higher final scores to be better.
+      </div>
+    </div>
+  );
+}
