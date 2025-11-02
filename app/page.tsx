@@ -41,7 +41,7 @@ type MCDMMethod = "swei" | "ahp" | "topsis" | "vikor" | "electre"
 type PageStep = "home" | "input" | "table" | "matrix" | "calculate"
 
 const MCDM_METHODS: { value: MCDMMethod; label: string; description: string }[] = [
-  { value: "swei", label: "SWEI", description: "Simple Weighted Evaluation Index" },
+  { value: "swei", label: "SWEI", description: "Sum Weighted Exponential Information" },
   { value: "ahp", label: "AHP", description: "Analytic Hierarchy Process" },
   { value: "topsis", label: "TOPSIS", description: "Technique for Order Preference by Similarity to Ideal Solution" },
   { value: "vikor", label: "VIKOR", description: "VlseKriterijumska Optimizacija I Kompromisno Resenje" },
