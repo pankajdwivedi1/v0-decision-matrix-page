@@ -463,14 +463,7 @@ export default function MCDMCalculator() {
                     <div>
                       <p className="font-semibold text-black mb-1">How it works:</p>
                       <p className="text-gray-700">
-                        | Step                 | Math Formula                       | Code Equivalent              | Status |
-| -------------------- | ---------------------------------- | ---------------------------- | ------ |
-| Normalization (Max)  | ( x_{ij} / \sum_i x_{ij} )         | columnSum division           | ✅      |
-| Normalization (Min)  | ( (1/x_{ij}) / \sum_i (1/x_{ij}) ) | inverse normalization        | ✅      |
-| Information Term     | ( \log_2(1/IDM_{ij}) )             | `Math.log2(1 / (idm + eps))` | ✅      |
-| Weighted Exponential | ( (Info_{ij})^{w_j} )              | `Math.pow(info, weight)`     | ✅      |
-| SWEI Score           | ( \sum_j (Info_{ij})^{w_j} )       | sum loop                     | ✅      |
-. The lower information score is the first ranking
+The lower information score is the first ranking.
                       </p>
                     </div>
                   </div>
