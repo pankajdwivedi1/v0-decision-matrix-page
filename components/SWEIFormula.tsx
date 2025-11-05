@@ -53,7 +53,7 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
 
   // LaTeX strings for each step
   const latex = {
-    title: "\\textbf{SWEI (Sum\\textendash Weighted Exponential Information) — Stepwise}",
+    title: "\\textbf{SWEI (Sum Weighted Exponential Information) — Steps}",
     step1:
       "\\textbf{1. Decision matrix:} \\quad X = [x_{ij}]_{m\\times n} = \\begin{bmatrix} x_{11} & x_{12} & \\dots & x_{1n} \\\\ x_{21} & x_{22} & \\dots & x_{2n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m1} & x_{m2} & \\dots & x_{mn} \\end{bmatrix}",
     step2_intro:
@@ -77,7 +77,7 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
   return (
     <div
       ref={containerRef}
-      className={`prose max-w-none bg-white border rounded-lg p-6 shadow-sm ${
+      className={`prose max-w-none bg-white border border-gray-200 rounded-lg p-6 ${
         compact ? "text-sm" : "text-base"
       }`}
     >
@@ -141,8 +141,7 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
       </ol>
 
       <div className="mt-4 text-xs text-gray-500">
-        Source: SWEI formulation (information-theoretic normalization & weighted aggregation). Use consistent
-        weights & check whether your implementation expects lower or higher final scores to be better.
+        Source: SWEI formulation (information-theoretic normalization & weighted aggregation). <a className="text-blue-500 underline font-bold" target="_blank" href="https://doi.org/10.1016/j.rser.2025.115791">source article</a>
       </div>
     </div>
   );

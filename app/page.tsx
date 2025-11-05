@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import * as XLSX from "xlsx"
 import { Upload } from "lucide-react"
+import SWEIFormula from "@/components/SWEIFormula"
 
 interface Criterion {
   id: string
@@ -346,6 +347,12 @@ export default function MCDMCalculator() {
               </CardContent>
             </Card>
           </div>
+
+          {method === "swei" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <SWEIFormula />
+            </div>
+          )}
         </main>
       </SidebarProvider>
     )
