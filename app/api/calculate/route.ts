@@ -17,13 +17,17 @@ function buildResponse(
   results: Record<string, number>,
   alternatives: { id: string; name: string }[]
 ): CalculationResponse {
+  // Methods where LOWER score is better
+  const ascendingMethods = ["swei", "swi", "vikor"];
+  const isAscending = ascendingMethods.includes(method.toLowerCase());
+
   const ranking = alternatives
     .map((alt) => ({
       alternativeId: alt.id,
       alternativeName: alt.name,
       score: results[alt.id] || 0,
     }))
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => isAscending ? a.score - b.score : b.score - a.score)
     .map((item, index) => ({
       rank: index + 1,
       ...item,
@@ -63,7 +67,7 @@ export async function POST(request: NextRequest) {
         results = calculateSWEI(alternatives, criteria).scores;
         break;
       case "swi":
-        results = calculateSWI(alternatives, criteria);
+        results = calculateSWI(alternatives, criteria).scores;
         break;
       case "topsis":
         results = calculateTOPSIS(alternatives, criteria);
@@ -78,7 +82,7 @@ export async function POST(request: NextRequest) {
         results = calculateEDAS(alternatives, criteria);
         break;
       case "moora":
-        results = calculateMOORA(alternatives, criteria);
+        results = calculateMOORA(alternatives, criteria).scores;
         break;
       case "cocoso":
         results = calculateCOCOSO(alternatives, criteria);
@@ -91,6 +95,13 @@ export async function POST(request: NextRequest) {
     }
 
     const response = buildResponse(method, results, alternatives);
+    
+    console.log("=== API Response ===");
+    console.log("Method:", method);
+    console.log("Results:", results);
+    console.log("Ranking:", JSON.stringify(response.ranking, null, 2));
+    console.log("===================");
+    
     return NextResponse.json(response, { status: 200 });
   } catch (err) {
     console.error("Calculation error:", err);
