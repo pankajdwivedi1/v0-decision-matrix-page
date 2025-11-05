@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,6 +23,9 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+import * as XLSX from "xlsx"
+import { Upload } from "lucide-react"
+import SWEIFormula from "@/components/SWEIFormula"
 
 interface Criterion {
   id: string
@@ -34,7 +37,7 @@ interface Criterion {
 interface Alternative {
   id: string
   name: string
-  scores: Record<string, number>
+  scores: Record<string, number | "">
 }
 
 type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "cocoso"
@@ -103,6 +106,72 @@ export default function MCDMCalculator() {
 
   const [isLoading, setIsLoading] = useState(false)
   const [apiResults, setApiResults] = useState<any>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const parseExcelData = (data: any[][]) => {
+    if (data.length < 4) {
+      alert("Excel file must have at least 4 rows (headers, max/min, weights, and data)")
+      return
+    }
+
+    const headers = data[0].slice(1).filter(h => h !== undefined && h !== null && h !== '')
+    const types = data[1].slice(1)
+    const weights = data[2].slice(1)
+    const dataRows = data.slice(3).filter(row => row[0])
+
+    if (headers.length === 0 || dataRows.length === 0) {
+      alert("Excel file doesn't contain valid data")
+      return
+    }
+
+    const newCriteria: Criterion[] = headers.map((header, idx) => ({
+      id: `crit-${idx}`,
+      name: header?.toString() || `Criteria-${idx + 1}`,
+      type: types[idx]?.toString().toLowerCase().includes("min") ? "non-beneficial" as const : "beneficial" as const,
+      weight: Number(weights[idx]) || (1 / headers.length),
+    }))
+
+    const newAlternatives: Alternative[] = dataRows.map((row, altIdx) => {
+      const scores: Record<string, number> = {}
+      newCriteria.forEach((crit, critIdx) => {
+        const value = row[critIdx + 1]
+        scores[crit.id] = Number(value) || 0
+      })
+      return {
+        id: `alt-${altIdx}`,
+        name: row[0]?.toString() || `Alt-${altIdx + 1}`,
+        scores,
+      }
+    })
+
+    setCriteria(newCriteria)
+    setAlternatives(newAlternatives)
+    setNumCriteria(newCriteria.length)
+    setNumAlternatives(newAlternatives.length)
+  }
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer)
+        const workbook = XLSX.read(data, { type: "array" })
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 })
+        parseExcelData(jsonData as any[][])
+      } catch (error) {
+        alert("Error reading Excel file. Please ensure it's a valid Excel file.")
+        console.error(error)
+      }
+    }
+    reader.readAsArrayBuffer(file)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
 
   const generateTable = () => {
     const newAlts: Alternative[] = Array.from({ length: numAlternatives }, (_, i) => ({
@@ -130,7 +199,7 @@ export default function MCDMCalculator() {
   const updateAlternativeScore = (altId: string, critId: string, value: string) => {
     if (value !== "") {
       const numValue = Number.parseFloat(value)
-      if (isNaN(numValue) || numValue <= 0) {
+      if (isNaN(numValue) || numValue < 0) {
         return
       }
     }
@@ -158,12 +227,12 @@ export default function MCDMCalculator() {
     const allScoresFilled = alternatives.every((alt) =>
       criteria.every((crit) => {
         const score = alt.scores[crit.id]
-        return score !== undefined && score !== "" && Number(score) > 0
+        return score !== undefined && score !== "" && Number(score) >= 0
       }),
     )
 
     if (!allScoresFilled) {
-      alert("Please fill in all score values with numbers greater than 0")
+      alert("Please fill in all score values with numbers greater than or equal to 0")
       return
     }
 
@@ -210,10 +279,10 @@ export default function MCDMCalculator() {
     return (
       <SidebarProvider>
         <Sidebar className="border-r border-gray-200 bg-gray-50">
-          <SidebarHeader className="py-2">
+          <SidebarHeader className="py-2 px-3">
             <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
           </SidebarHeader>
-          <SidebarContent>
+          <SidebarContent className="px-2">
             <SidebarMenu>
               {MCDM_METHODS.map((m) => (
                 <SidebarMenuItem key={m.value}>
@@ -278,6 +347,12 @@ export default function MCDMCalculator() {
               </CardContent>
             </Card>
           </div>
+
+          {method === "swei" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <SWEIFormula />
+            </div>
+          )}
         </main>
       </SidebarProvider>
     )
@@ -287,10 +362,10 @@ export default function MCDMCalculator() {
     return (
       <SidebarProvider>
         <Sidebar className="border-r border-gray-200 bg-gray-50">
-          <SidebarHeader className="py-2">
+          <SidebarHeader className="py-2 px-3">
             <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
           </SidebarHeader>
-          <SidebarContent>
+          <SidebarContent className="px-2">
             <SidebarMenu>
               {MCDM_METHODS.map((m) => (
                 <SidebarMenuItem key={m.value}>
@@ -393,10 +468,10 @@ export default function MCDMCalculator() {
     return (
       <SidebarProvider>
         <Sidebar className="border-r border-gray-200 bg-gray-50">
-          <SidebarHeader className="py-2">
+          <SidebarHeader className="py-2 px-3">
             <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
           </SidebarHeader>
-          <SidebarContent>
+          <SidebarContent className="px-2">
             <SidebarMenu>
               {MCDM_METHODS.map((m) => (
                 <SidebarMenuItem key={m.value}>
@@ -449,6 +524,32 @@ export default function MCDMCalculator() {
 
           <div className="flex-1 overflow-y-auto p-2 md:p-3">
             <div className="max-w-7xl mx-auto">
+              <Card className="border-gray-200 bg-white shadow-none mb-4">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-black">Import Data</CardTitle>
+                  <CardDescription className="text-xs text-gray-700">
+                    Upload Excel file to auto-fill the table. Format: Row 1: Alt, Criteria names | Row 2: Alt, max/min | Row 3: Alt, weights | Row 4+: Alternative names and values
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    variant="outline"
+                    className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
+                  >
+                    <Upload className="w-3 h-3 mr-1" />
+                    Upload Excel
+                  </Button>
+                </CardContent>
+              </Card>
+
               <Card className="border-gray-200 bg-white shadow-none">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm text-black">Decision Matrix</CardTitle>
@@ -571,10 +672,10 @@ export default function MCDMCalculator() {
     return (
       <SidebarProvider>
         <Sidebar className="border-r border-gray-200 bg-gray-50">
-          <SidebarHeader className="py-2">
+          <SidebarHeader className="py-2 px-3">
             <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
           </SidebarHeader>
-          <SidebarContent>
+          <SidebarContent className="px-2">
             <SidebarMenu>
               {MCDM_METHODS.map((m) => (
                 <SidebarMenuItem key={m.value}>
@@ -700,9 +801,31 @@ export default function MCDMCalculator() {
               {MCDM_METHODS.map((m) => (
                 <SidebarMenuItem key={m.value}>
                   <SidebarMenuButton
-                    onClick={() => {
-                      setMethod(m.value)
-                      setApiResults(null)
+                    onClick={async () => {
+                      if (m.value !== method) {
+                        setMethod(m.value)
+                        setApiResults(null)
+                        setIsLoading(true)
+                        try {
+                          const response = await fetch("/api/calculate", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              method: m.value,
+                              alternatives,
+                              criteria,
+                            }),
+                          })
+                          if (response.ok) {
+                            const data = await response.json()
+                            setApiResults(data)
+                          }
+                        } catch (error) {
+                          console.error("Recalculation error:", error)
+                        } finally {
+                          setIsLoading(false)
+                        }
+                      }
                     }}
                     isActive={method === m.value}
                     className={`text-xs ${method === m.value ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
@@ -711,3 +834,80 @@ export default function MCDMCalculator() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarContent>
+        </Sidebar>
+
+        <main className="flex-1 min-h-screen bg-white p-2 md:p-3">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center gap-3 mb-4">
+              <SidebarTrigger className="md:hidden border-gray-200 text-black" />
+              <div>
+                <h1 className="text-xl md:text-2xl font-bold text-black">Results</h1>
+                <p className="text-xs text-gray-700">Calculation Results</p>
+              </div>
+            </div>
+
+            {apiResults && (
+              <Card className="border-gray-200 bg-white shadow-none">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-black">{methodInfo?.label} Results</CardTitle>
+                  <CardDescription className="text-xs text-gray-700">
+                    Ranked alternatives based on {methodInfo?.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Rank</TableHead>
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-right">Score</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {apiResults.ranking?.map((item: any, index: number) => (
+                          <TableRow key={index} className="border-b border-gray-200 hover:bg-gray-50">
+                            <TableCell className="text-xs py-3 px-4 text-black font-medium">{item.rank}</TableCell>
+                            <TableCell className="text-xs py-3 px-4 text-black">{item.alternativeName}</TableCell>
+                            <TableCell className="text-xs py-3 px-4 text-black text-right">
+                              {typeof item.score === "number" ? item.score.toFixed(4) : item.score}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="flex gap-2 justify-end mt-4">
+              <Button
+                onClick={() => setCurrentStep("matrix")}
+                variant="outline"
+                className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
+              >
+                Back
+              </Button>
+              <Button
+                onClick={() => {
+                  setCurrentStep("home")
+                  setApiResults(null)
+                  setAlternatives([])
+                  setCriteria([])
+                }}
+                className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+              >
+                New Calculation
+              </Button>
+            </div>
+          </div>
+        </main>
+      </SidebarProvider>
+    )
+  }
+
+  return null
+}
