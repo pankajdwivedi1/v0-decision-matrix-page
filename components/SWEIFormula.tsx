@@ -70,8 +70,7 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
       "\\textbf{4. SWEI score for alternative } i:\\quad SWEI_i = \\sum_{j=1}^{n} Term_{i,j} = \\sum_{j=1}^{n}  \\left[ \\log_{2} \\left( \\dfrac{1}{IDM_{i,j}}\\right) \\right]^{w_j}",
     ranking:
       "\\textbf{5. Ranking:} \\quad \\text{Alternatives are ordered by } SWEI_i. \\text{(}\\text{lower} \\; SWEI_i \\Rightarrow \\text{better rank in the original paper)}",
-    note:
-      "\\text{Note: many implementations interpret aggregation differently — confirm whether to use the weighted exponent }(Info)^{w_j}\\text{ or } w_j \\cdot Info_{i,j}."
+    
   };
 
   return (
@@ -141,7 +140,7 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
       </ol>
 
       <div className="mt-4 text-xs text-gray-500">
-        Source: SWEI formulation (information-theoretic normalization & weighted aggregation). <a className="text-blue-500 underline font-bold" target="_blank" href="https://doi.org/10.1016/j.rser.2025.115791"> Article source</a>
+        Source: SWEI formulation (information-theoretic normalization & weighted aggregation). <a className="text-blue-500 underline font-bold" target="_blank" href="https://doi.org/10.1016/j.rser.2025.115791"> Article by Dr Pankaj Prasad Dwivedi et al.</a>
       </div>
     </div>
   );
