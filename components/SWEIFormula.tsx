@@ -67,7 +67,7 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
     step3_exp:
       "\\textbf{3b. Weighted exponential information (SWEI variant):} \\quad Term_{i,j} = \\big( Info_{i,j} \\big)^{w_j}",
     step4:
-      "\\textbf{4. SWEI score for alternative } i:\\quad SWEI_i = \\sum_{j=1}^{n} Term_{ij} = \\sum_{j=1}^{n} w_j \\log_{2}^{w_j}\\left(\\dfrac{1}{IDM_{ij}}\\right)",
+      "\\textbf{4. SWEI score for alternative } i:\\quad SWEI_i = \\sum_{j=1}^{n} Term_{i,j} = \\sum_{j=1}^{n}  \\log_{2}^{w_j}\\left(\\dfrac{1}{IDM_{ij}}\\right)",
     ranking:
       "\\textbf{5. Ranking:} \\quad \\text{Alternatives are ordered by } SWEI_i. \\text{(}\\text{lower} \\; SWEI_i \\Rightarrow \\text{better rank in the original paper)}",
     note:
