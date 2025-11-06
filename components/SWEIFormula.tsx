@@ -55,7 +55,7 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
   const latex = {
     title: "\\textbf{SWEI (Sum Weighted Exponential Information) — Steps}",
     step1:
-      "\\textbf{1. Decision matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix} Where i=1,2,3, \\dots m (alternative) and j=1,2,3, \\dots n (criteria)", 
+      "\\textbf{1. Decision matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, Where  i=1,2,3, \\dots m (alternative)  and  j=1,2,3, \\dots n (criteria)", 
     step2_intro:
       "\\textbf{2. Normalization (Information Decision Matrix — IDM):}\\quad \\text{For each criterion } j, \\text{ compute } IDM_{i,j}.",
     step2_benefit:
