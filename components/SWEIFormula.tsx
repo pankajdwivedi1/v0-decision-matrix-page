@@ -55,7 +55,7 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
   const latex = {
     title: "\\textbf{SWEI (Sum Weighted Exponential Information) — Steps}",
     step1:
-      "\\textbf{1. Decision matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m1} & x_{m2} & \\dots & x_{mn} \\end{bmatrix}",
+      "\\textbf{1. Decision matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}",
     step2_intro:
       "\\textbf{2. Normalization (Information Decision Matrix — IDM):}\\quad \\text{For each criterion } j, \\text{ compute } IDM_{i,j}.",
     step2_benefit:
@@ -65,9 +65,9 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
     step3_intro:
       "\\textbf{3a. Information per cell and attribute:} \\quad Info_{i,j} = \\log_{2}\\left(\\dfrac{1}{IDM_{i,j}}\\right)",
     step3_exp:
-      "\\textbf{3b. Weighted exponential term (SWEI variant):} \\quad Term_{i,j} = \\big( Info_{i,j} \\big)^{w_j}",
+      "\\textbf{3b. Weighted exponential information (SWEI variant):} \\quad Term_{i,j} = \\big( Info_{i,j} \\big)^{w_j}",
     step4:
-      "\\textbf{4. SWEI score for alternative } i:\\quad SWEI_i = \\sum_{j=1}^{n} Term_{ij} = \\sum_{j=1}^{n} w_j \\log_{2}^{w_j}\\left(\\dfrac{1}{IDM_{i,j}}\\right)",
+      "\\textbf{4. SWEI score for alternative } i:\\quad SWEI_i = \\sum_{j=1}^{n} Term_{i,j} = \\sum_{j=1}^{n} \\log_{2}\\left{\\left(\\dfrac{1}{IDM_{i,j}}\\right)\\right}^{w_j}",
     ranking:
       "\\textbf{5. Ranking:} \\quad \\text{Alternatives are ordered by } SWEI_i. \\text{(}\\text{lower} \\; SWEI_i \\Rightarrow \\text{better rank in the original paper)}",
     note:
