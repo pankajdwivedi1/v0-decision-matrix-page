@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import SWIFormula from "@/components/SWIFormula";
 
 /**
  * SWIFormula.tsx
