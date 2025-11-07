@@ -53,7 +53,7 @@ const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; for
   { 
     value: "swi", 
     label: "SWI", 
-    description: "Simple Weighted Index",
+    description: "Sum Weighted Information",
     formula: "Score = Σ(Normalized Score × Weight)"
   },
   { 
