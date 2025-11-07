@@ -95,7 +95,7 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
 
       <ol className="space-y-4 list-decimal pl-5">
         <li>
-          <div className="mb-2 font-semibold">Information Decision Matrix (IDM): </div>
+          <div className="mb-2 font-semibold">Information Decision Matrix(IDM) </div>
           <div className="bg-gray-50 p-3 rounded">
             <div className="latex" dangerouslySetInnerHTML={{ __html: `\\(${latex.step1}\\)` }} />
           </div>
