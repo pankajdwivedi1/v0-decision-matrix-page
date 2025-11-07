@@ -95,7 +95,7 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
 
       <ol className="space-y-4 list-decimal pl-5">
         <li>
-          <div className="mb-2 font-semibold">Information Decision Matrix (IDM): The decision-maker constructs the IDM in the first step, which is \\quad X = [x_{i,j}], where \\quad a_(i,j)>0 to solve the MADM problem</div>
+          <div className="mb-2 font-semibold">Information Decision Matrix (IDM): </div>
           <div className="bg-gray-50 p-3 rounded">
             <div className="latex" dangerouslySetInnerHTML={{ __html: `\\(${latex.step1}\\)` }} />
           </div>
