@@ -26,6 +26,7 @@ import {
 import * as XLSX from "xlsx"
 import { Upload } from "lucide-react"
 import SWEIFormula from "@/components/SWEIFormula"
+import SWIFormula from "@/components/SWIFormula"
 
 interface Criterion {
   id: string
@@ -44,51 +45,51 @@ type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moo
 type PageStep = "home" | "input" | "table" | "matrix" | "calculate"
 
 const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; formula: string }[] = [
-  { 
-    value: "swei", 
-    label: "SWEI", 
+  {
+    value: "swei",
+    label: "SWEI",
     description: "Sum Weighted Exponential Information",
     formula: "Score = Σ(log₂(1/IDM)^Weight)"
   },
-  { 
-    value: "swi", 
-    label: "SWI", 
+  {
+    value: "swi",
+    label: "SWI",
     description: "Sum Weighted Information",
     formula: "Score = Σ(Normalized Score × Weight)"
   },
-  { 
-    value: "topsis", 
-    label: "TOPSIS", 
+  {
+    value: "topsis",
+    label: "TOPSIS",
     description: "Technique for Order Preference by Similarity to Ideal Solution",
     formula: "Score = D⁻ / (D⁺ + D⁻)"
   },
-  { 
-    value: "vikor", 
-    label: "VIKOR", 
+  {
+    value: "vikor",
+    label: "VIKOR",
     description: "VlseKriterijumska Optimizacija I Kompromisno Resenje",
     formula: "Q = v(S-S*)/(S⁻-S*) + (1-v)(R-R*)/(R⁻-R*)"
   },
-  { 
-    value: "waspas", 
-    label: "WASPAS", 
+  {
+    value: "waspas",
+    label: "WASPAS",
     description: "Weighted Aggregated Sum Product Assessment",
     formula: "Q = λ × WSM + (1-λ) × WPM"
   },
-  { 
-    value: "edas", 
-    label: "EDAS", 
+  {
+    value: "edas",
+    label: "EDAS",
     description: "Evaluation based on Distance from Average Solution",
     formula: "AS = (PDA + NDA) / 2"
   },
-  { 
-    value: "moora", 
-    label: "MOORA", 
+  {
+    value: "moora",
+    label: "MOORA",
     description: "Multi-Objective Optimization by Ratio Analysis",
     formula: "y = Σ(beneficial) - Σ(non-beneficial)"
   },
-  { 
-    value: "cocoso", 
-    label: "COCOSO", 
+  {
+    value: "cocoso",
+    label: "COCOSO",
     description: "Combined Compromise Solution",
     formula: "Score = (kₐ × S + kb × P + kc × (S×P)/(S+P))"
   },
@@ -208,12 +209,12 @@ export default function MCDMCalculator() {
       alternatives.map((alt) =>
         alt.id === altId
           ? {
-              ...alt,
-              scores: {
-                ...alt.scores,
-                [critId]: value === "" ? "" : Number.parseFloat(value),
-              },
-            }
+            ...alt,
+            scores: {
+              ...alt.scores,
+              [critId]: value === "" ? "" : Number.parseFloat(value),
+            },
+          }
           : alt,
       ),
     )
@@ -353,6 +354,13 @@ export default function MCDMCalculator() {
               <SWEIFormula />
             </div>
           )}
+
+          {method === "swi" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <SWIFormula />
+            </div>
+          )}
+
         </main>
       </SidebarProvider>
     )
