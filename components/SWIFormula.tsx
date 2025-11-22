@@ -93,7 +93,7 @@ export default function SWIFormula() {
       </p>
 
       <p className="text-gray-700 mt-6 italic">
-        A smaller SWEI score indicates a better (more desirable) alternative.
+        A smaller SWI score indicates a better (more desirable) alternative.
       </p>
     </div>
   );

@@ -8,6 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Sidebar,
   SidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -24,7 +27,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import * as XLSX from "xlsx"
-import { Upload } from "lucide-react"
+import { Upload, ChevronDown, ChevronRight } from "lucide-react"
 import SWEIFormula from "@/components/SWEIFormula"
 import SWIFormula from "@/components/SWIFormula"
 
@@ -41,7 +44,7 @@ interface Alternative {
   scores: Record<string, number | "">
 }
 
-type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "cocoso"
+type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "cocoso" | "test" 
 type PageStep = "home" | "input" | "table" | "matrix" | "calculate"
 
 const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; formula: string }[] = [
@@ -88,9 +91,9 @@ const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; for
     formula: "y = Σ(beneficial) - Σ(non-beneficial)"
   },
   {
-    value: "cocoso",
-    label: "COCOSO",
-    description: "Combined Compromise Solution",
+    value: "test",
+    label: "test",
+    description: "test zoltion",
     formula: "Score = (kₐ × S + kb × P + kc × (S×P)/(S+P))"
   },
 ]
@@ -276,6 +279,95 @@ export default function MCDMCalculator() {
 
   const methodInfo = MCDM_METHODS.find((m) => m.value === method)
 
+  // Collapsible sidebar sections: Methods (functional) and Weights (dummy)
+  const SidebarSections = ({
+    onMethodClick,
+  }: {
+    onMethodClick?: (value: MCDMMethod) => void | Promise<void>
+  }) => {
+    const [methodsOpen, setMethodsOpen] = useState(true)
+    const [weightsOpen, setWeightsOpen] = useState(false)
+
+    const handleMethodClick = (value: MCDMMethod) => {
+      if (onMethodClick) {
+        // allow parent to handle async or special behavior
+        void onMethodClick(value)
+      } else {
+        setMethod(value)
+      }
+    }
+
+    return (
+      <SidebarMenu>
+        <SidebarGroup>
+          <div onClick={() => setMethodsOpen((v) => !v)} className="cursor-pointer">
+            <SidebarGroupLabel className="text-xs font-semibold">
+              <div className="flex items-center gap-2">
+                <span>Ranking Methods</span>
+               
+                {methodsOpen ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
+              </div>
+            </SidebarGroupLabel>
+          </div>
+
+          {methodsOpen && (
+            <SidebarGroupContent>
+              {MCDM_METHODS.map((m) => (
+                <SidebarMenuItem key={m.value}>
+                  <SidebarMenuButton
+                    onClick={() => handleMethodClick(m.value)}
+                    isActive={method === m.value}
+                    className={`text-xs ${method === m.value ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
+                  >
+                    <span>{m.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarGroupContent>
+          )}
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <div onClick={() => setWeightsOpen((v) => !v)} className="cursor-pointer">
+            <SidebarGroupLabel className="text-xs font-semibold">
+              <div className="flex items-center gap-2">
+                <span>Weight Methods</span>
+               
+                {weightsOpen ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
+              </div>
+            </SidebarGroupLabel>
+          </div>
+
+          {weightsOpen && (
+            <SidebarGroupContent>
+              {/* Dummy weight items for now */}
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => {}} className="text-xs">
+                    <span>Default Weights</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => {}} className="text-xs">
+                    <span>Equal Weights</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          )}
+        </SidebarGroup>
+      </SidebarMenu>
+    )
+  }
+
   if (currentStep === "home") {
     return (
       <SidebarProvider>
@@ -284,19 +376,7 @@ export default function MCDMCalculator() {
             <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
           </SidebarHeader>
           <SidebarContent className="px-2">
-            <SidebarMenu>
-              {MCDM_METHODS.map((m) => (
-                <SidebarMenuItem key={m.value}>
-                  <SidebarMenuButton
-                    onClick={() => setMethod(m.value)}
-                    isActive={method === m.value}
-                    className={`text-xs ${method === m.value ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
-                  >
-                    <span>{m.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+            <SidebarSections onMethodClick={(v) => setMethod(v)} />
           </SidebarContent>
         </Sidebar>
 
@@ -374,19 +454,7 @@ export default function MCDMCalculator() {
             <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
           </SidebarHeader>
           <SidebarContent className="px-2">
-            <SidebarMenu>
-              {MCDM_METHODS.map((m) => (
-                <SidebarMenuItem key={m.value}>
-                  <SidebarMenuButton
-                    onClick={() => setMethod(m.value)}
-                    isActive={method === m.value}
-                    className={`text-xs ${method === m.value ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
-                  >
-                    <span>{m.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+            <SidebarSections onMethodClick={(v) => setMethod(v)} />
           </SidebarContent>
         </Sidebar>
 
@@ -480,19 +548,7 @@ export default function MCDMCalculator() {
             <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
           </SidebarHeader>
           <SidebarContent className="px-2">
-            <SidebarMenu>
-              {MCDM_METHODS.map((m) => (
-                <SidebarMenuItem key={m.value}>
-                  <SidebarMenuButton
-                    onClick={() => setMethod(m.value)}
-                    isActive={method === m.value}
-                    className={`text-xs ${method === m.value ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
-                  >
-                    <span>{m.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+            <SidebarSections onMethodClick={(v) => setMethod(v)} />
           </SidebarContent>
         </Sidebar>
 
@@ -684,19 +740,7 @@ export default function MCDMCalculator() {
             <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
           </SidebarHeader>
           <SidebarContent className="px-2">
-            <SidebarMenu>
-              {MCDM_METHODS.map((m) => (
-                <SidebarMenuItem key={m.value}>
-                  <SidebarMenuButton
-                    onClick={() => setMethod(m.value)}
-                    isActive={method === m.value}
-                    className={`text-xs ${method === m.value ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
-                  >
-                    <span>{m.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+            <SidebarSections onMethodClick={(v) => setMethod(v)} />
           </SidebarContent>
         </Sidebar>
 
@@ -805,44 +849,34 @@ export default function MCDMCalculator() {
             <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
           </SidebarHeader>
           <SidebarContent>
-            <SidebarMenu>
-              {MCDM_METHODS.map((m) => (
-                <SidebarMenuItem key={m.value}>
-                  <SidebarMenuButton
-                    onClick={async () => {
-                      if (m.value !== method) {
-                        setMethod(m.value)
-                        setApiResults(null)
-                        setIsLoading(true)
-                        try {
-                          const response = await fetch("/api/calculate", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              method: m.value,
-                              alternatives,
-                              criteria,
-                            }),
-                          })
-                          if (response.ok) {
-                            const data = await response.json()
-                            setApiResults(data)
-                          }
-                        } catch (error) {
-                          console.error("Recalculation error:", error)
-                        } finally {
-                          setIsLoading(false)
-                        }
-                      }
-                    }}
-                    isActive={method === m.value}
-                    className={`text-xs ${method === m.value ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
-                  >
-                    <span>{m.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+            <SidebarSections
+              onMethodClick={async (value) => {
+                if (value !== method) {
+                  setMethod(value)
+                  setApiResults(null)
+                  setIsLoading(true)
+                  try {
+                    const response = await fetch("/api/calculate", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        method: value,
+                        alternatives,
+                        criteria,
+                      }),
+                    })
+                    if (response.ok) {
+                      const data = await response.json()
+                      setApiResults(data)
+                    }
+                  } catch (error) {
+                    console.error("Recalculation error:", error)
+                  } finally {
+                    setIsLoading(false)
+                  }
+                }
+              }}
+            />
           </SidebarContent>
         </Sidebar>
 

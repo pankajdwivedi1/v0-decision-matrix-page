@@ -86,6 +86,9 @@ export async function POST(request: NextRequest) {
         break;
       case "cocoso":
         results = calculateCOCOSO(alternatives, criteria);
+      case "test":
+        console.log("Test method invoked");
+        // results = calculateCOCOSO(alternatives, criteria);
         break;
       default:
         return NextResponse.json(
