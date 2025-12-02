@@ -10,6 +10,14 @@ import { calculateWASPAS } from "./waspas";
 import { calculateEDAS } from "./edas";
 import { calculateMOORA } from "./moora";
 import { calculateCOCOSO } from "./cocoso";
+import { calculateCOPRAS } from "./copras";
+import { calculatePROMETHEE } from "./promethee";
+import { calculatePROMETHEE1 } from "./promethee1";
+import { calculatePROMETHEE2 } from "./promethee2";
+import { calculateELECTRE } from "./electre";
+import { calculateELECTRE1 } from "./electre1";
+import { calculateELECTRE2 } from "./electre2";
+import { calculateELECTRE3 } from "./electre3";
 
 // Helper: build ranking and response
 function buildResponse(
@@ -86,6 +94,30 @@ export async function POST(request: NextRequest) {
         break;
       case "cocoso":
         results = calculateCOCOSO(alternatives, criteria);
+        break;
+      case "copras":
+        results = calculateCOPRAS(alternatives, criteria);
+        break;
+      case "promethee":
+        results = calculatePROMETHEE(alternatives, criteria);
+        break;
+      case "promethee1":
+        results = calculatePROMETHEE1(alternatives, criteria);
+        break;
+      case "promethee2":
+        results = calculatePROMETHEE2(alternatives, criteria);
+        break;
+      case "electre":
+        results = calculateELECTRE(alternatives, criteria);
+        break;
+      case "electre1":
+        results = calculateELECTRE1(alternatives, criteria);
+        break;
+      case "electre2":
+        results = calculateELECTRE2(alternatives, criteria);
+        break;
+      case "electre3":
+        results = calculateELECTRE3(alternatives, criteria);
         break;
       default:
         return NextResponse.json(

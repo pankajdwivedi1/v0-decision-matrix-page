@@ -12,7 +12,24 @@ export interface Alternative {
 }
 
 export interface CalculationRequest {
-  method: "swei" | "ahp" | "topsis" | "vikor" | "electre"
+  method:
+    | "swei"
+    | "swi"
+    | "topsis"
+    | "vikor"
+    | "waspas"
+    | "edas"
+    | "moora"
+    | "cocoso"
+    | "copras"
+    | "promethee"
+    | "promethee1"
+    | "promethee2"
+    | "ahp"
+    | "electre"
+    | "electre1"
+    | "electre2"
+    | "electre3"
   alternatives: Alternative[]
   criteria: Criterion[]
 }

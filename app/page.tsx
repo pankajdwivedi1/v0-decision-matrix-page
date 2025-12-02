@@ -41,7 +41,7 @@ interface Alternative {
   scores: Record<string, number | "">
 }
 
-type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "cocoso"
+type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2" | "electre3"
 type PageStep = "home" | "input" | "table" | "matrix" | "calculate"
 
 const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; formula: string }[] = [
@@ -92,6 +92,54 @@ const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; for
     label: "COCOSO",
     description: "Combined Compromise Solution",
     formula: "Score = (kₐ × S + kb × P + kc × (S×P)/(S+P))"
+  },
+  {
+    value: "copras",
+    label: "COPRAS",
+    description: "Complex Proportional Assessment",
+    formula: "Q = S⁺ + adjusted S⁻ term"
+  },
+  {
+    value: "promethee",
+    label: "PROMETHEE",
+    description: "Preference Ranking Organization Method for Enrichment Evaluations",
+    formula: "φ = φ⁺ - φ⁻"
+  },
+  {
+    value: "promethee1",
+    label: "PROMETHEE I",
+    description: "Preference Ranking Organization Method (Partial Preorder)",
+    formula: "Score = Outranked - OutrankedBy (based on φ⁺ and φ⁻)"
+  },
+  {
+    value: "promethee2",
+    label: "PROMETHEE II",
+    description: "Preference Ranking Organization Method (Complete Ranking)",
+    formula: "φ = φ⁺ - φ⁻"
+  },
+  {
+    value: "electre",
+    label: "ELECTRE",
+    description: "ÉLimination Et Choix Traduisant la REalité",
+    formula: "Score = Outranked - OutrankedBy"
+  },
+  {
+    value: "electre1",
+    label: "ELECTRE I",
+    description: "ÉLimination Et Choix Traduisant la REalité (Basic Outranking)",
+    formula: "Score = Outranked - OutrankedBy"
+  },
+  {
+    value: "electre2",
+    label: "ELECTRE II",
+    description: "ÉLimination Et Choix Traduisant la REalité (Complete Ranking)",
+    formula: "Score = Strong Outranked - Strong OutrankedBy"
+  },
+  {
+    value: "electre3",
+    label: "ELECTRE III",
+    description: "ÉLimination Et Choix Traduisant la REalité (Fuzzy Thresholds)",
+    formula: "σ = C × Π((1-d_j)/(1-C))"
   },
 ]
 
