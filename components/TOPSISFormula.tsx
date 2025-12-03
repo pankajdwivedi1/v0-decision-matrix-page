@@ -2,9 +2,9 @@
 
 import React, { useEffect, useRef } from "react";
 
-type TOPSISFormulaProps = {
+interface TOPSISFormulaProps {
   compact?: boolean;
-};
+}
 
 declare global {
   // MathJax global (loaded from CDN)
