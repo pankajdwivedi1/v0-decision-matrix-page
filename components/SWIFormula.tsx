@@ -11,11 +11,11 @@ declare global {
 
 export default function SWIFormula() {
   const latex = {
-    IDM: "IDM = [a_{ij}]_{m \\times n}",
-    normalizationBenefit: "IDM'_{ij} = \\frac{a_{ij}}{\\sum_{i=1}^{m} a_{ij}} \\tag{1a}",
-    normalizationCost: "IDM'_{ij} = \\frac{1 / a_{ij}}{\\sum_{i=1}^{m} (1 / a_{ij})} \\tag{1b}",
-    informationEntropy: "I_{ij} = \\log_{2} \\left( \\frac{1}{IDM'_{ij}} \\right) \\tag{2}",
-    weightedInformationSum: "SWI_i = \\sum_{j=1}^{n} w_j \\, I_{ij} \\tag{3}",
+    IDM: "IDM = [a_{i,j}]_{m \\times n}",
+    normalizationBenefit: "IDM'_{i,j} = \\frac{a_{i,j}}{\\sum_{i=1}^{m} a_{i,j}} \\tag{1a}",
+    normalizationCost: "IDM'_{i,j} = \\frac{1 / a_{i,j}}{\\sum_{i=1}^{m} (1 / a_{i,j})} \\tag{1b}",
+    informationEntropy: "I_{i,j} = \\log_{2} \\left( \\frac{1}{IDM'_{i,j}} \\right) \\tag{2}",
+    weightedInformationSum: "SWI_i = \\sum_{j=1}^{n} w_j \\, I_{i,j} \\tag{3}",
     ranking: "\\text{Rank}(A_i) \\uparrow \; \\text{as} \; SWI_i \\downarrow"
   };
 
@@ -63,7 +63,7 @@ export default function SWIFormula() {
       </ul>
 
       <p className="mb-4 text-center">
-        {`$$ \sum_{i=1}^{m} IDM'_{ij} = 1 $$`}
+        {`$$ \sum_{i=1}^{m} IDM'_{i,j} = 1 $$`}
       </p>
 
       <h2 className="text-xl font-semibold mt-6 mb-2">Step&nbsp;III. Information Measure</h2>
@@ -74,14 +74,15 @@ export default function SWIFormula() {
 
       <h2 className="text-xl font-semibold mt-6 mb-2">Step&nbsp;IV. Weighted Information Sum</h2>
       <p className="mb-4">
-        {`Assign a weight \\( w_{j} \\) to each criterion, where \\( \\sum_{j=1}^{n} w_{j} = 1 \\) \\text{ for } j = 1, 2, \\ldots, n. \\text{ Here, } n \\text{ is the total number of criteria.} \\text{ Where } i = 1, 2, \\ldots, m \\text{ is the number of alternatives and } j = 1, 2, \\ldots, n \\text{ is the number of criteria.} The Sum Weighted Information for each alternative \\( A_i \\) is:`}
+        {`Assign a weight \\( w_{j} \\) to each criterion, where \( i = 1, 2, \dots, m \) represents the alternatives and \( j = 1, 2, \dots, n \)
+        represents the criteria. The Sum Weighted Information for each alternative \\( A_i \\) is:`}
       </p>
 
       <p className="text-center mb-4">
         {`$$ ${latex.weightedInformationSum} $$`}</p>
 
       {/* <p className="text-center mb-4">
-        {`$$ SWI_i = \sum_{j=1}^{n} w_j \, \log_{2} \left( \frac{1}{IDM'_{ij}} \right) $$`}
+        {`$$ SWI_i = \sum_{j=1}^{n} w_j \, \log_{2} \left( \frac{1}{IDM'_{i,j}} \right) $$`}
       </p> */}
 
       <h2 className="text-xl font-semibold mt-6 mb-2">Step&nbsp;V. Ranking of Alternatives</h2>
