@@ -63,13 +63,13 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
     step2_cost:
       "\\displaystyle \\overline {IDM}_{i,j} = \\frac{1/a_{i,j}}{\\sum_{i=1}^{m} 1/a_{i,j}}, \\quad \\quad \\text{where} \\sum_{i=1}^{m} \\overline {IDM}_{i,j}=1",
     step3_intro:
-      "\\textbf{3a. Information per cell and attribute:} \\quad Info_{i,j} = \\log_{2}\\left(\\dfrac{1}{IDM_{i,j}}\\right)",
+      "\\textbf{3a. Information per cell and attribute:} \\quad Info_{i,j} = \\log_{2}\\left(\\dfrac{1}{\\overline {IDM}_{i,j}}\\right)",
     step3_exp:
       "\\textbf{3b. Weighted exponential information (SWEI score):} \\quad Score_{i,j} = \\big( Info_{i,j} \\big)^{w_j}, \\quad \\text{where} \\sum_{j=1}^{n} {w}_{j}=1",
     step4:
-      "\\textbf{4. SWEI score for alternative } i:\\quad SWEI_i = \\sum_{j=1}^{n} Score_{i,j} = \\sum_{j=1}^{n}  \\left[ \\log_{2} \\left( \\dfrac{1}{IDM_{i,j}}\\right) \\right]^{w_j}",
+      "\\textbf{4. SWEI score for alternative } i:\\quad SWEI''_i = \\sum_{j=1}^{n} Score_{i,j} = \\sum_{j=1}^{n}  \\left[ \\log_{2} \\left( \\dfrac{1}{\\overline {IDM}_{i,j}}\\right) \\right]^{w_j}",
     ranking:
-      "\\textbf{5. Ranking:} \\quad \\text{Alternatives are ordered by } SWEI_i. \\text{(}\\text{lower} \\; SWEI_i \\Rightarrow \\text{better rank in the original paper)}",
+      "\\textbf{5. Ranking:} \\quad \\text{Alternatives are ordered by } SWEI''_i. \\text{(}\\text{lower} \\; SWEI''_i \\Rightarrow \\text{better rank in the original paper)}",
     note: "Lower SWEI score indicates better alternative ranking",
   };
 
@@ -139,7 +139,7 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
       </ol>
 
       <div className="mt-4 text-xs text-gray-500">
-        Source: SWEI formulation (information-theoretic normalization & weighted aggregation). <a className="text-blue-500 underline font-bold" target="_blank" href="https://doi.org/10.1016/j.rser.2025.115791"> Article by Dr Pankaj Prasad Dwivedi et al.</a>
+        Source: SWEI formulation (information-theoretic normalization & exponential weighted aggregation). <a className="text-blue-500 underline font-bold" target="_blank" href="https://doi.org/10.1016/j.rser.2025.115791"> (Article by Dr Pankaj Prasad Dwivedi et al. 2025)</a>
       </div>
     </div>
   );

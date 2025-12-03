@@ -55,23 +55,23 @@ export default function WASPASFormula({ compact = false }: WASPASFormulaProps) {
   const latex = {
     title: "\\textbf{WASPAS (Weighted Aggregated Sum Product Assessment) — Steps}",
     step1:
-      "\\textbf{1. Decision Matrix:} \\quad X = [x_{ij}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\\\ \\text{where } i = 1,2,\\dots,m \\text{ (alternatives)},\\; j = 1,2,\\dots,n \\text{ (criteria)}",
+      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\\\ \\text{where } i = 1,2,\\dots,m \\text{ (alternatives)},\\; j = 1,2,\\dots,n \\text{ (criteria)}",
     step2_intro:
       "\\textbf{2. Normalization:} \\quad \\text{Normalize each criterion using linear normalization (benefit / cost).}",
     step2_benefit:
-      "\\displaystyle x_{ij}^* = \\frac{x_{ij}}{\\max_i x_{ij}}, \\quad \\text{for benefit (max) criteria}",
+      "\\displaystyle x_{i,j}^* = \\frac{x_{i,j}}{\\max_i x_{i,j}}, \\quad \\text{for benefit (max) criteria}",
     step2_cost:
-      "\\displaystyle x_{ij}^* = \\frac{\\min_i x_{ij}}{x_{ij}}, \\quad \\text{for cost (min) criteria}",
+      "\\displaystyle x_{i,j}^* = \\frac{\\min_i x_{i,j}}{x_{i,j}}, \\quad \\text{for cost (min) criteria}",
     step3_intro:
       "\\textbf{3. Criteria Weights:} \\quad w_j \\ge 0, \\; \\sum_{j=1}^{n} w_j = 1.",
     step4_wsm_intro:
       "\\textbf{4. Weighted Sum Model (WSM) Score:} \\quad \\text{Compute the additive (sum) score for each alternative.}",
     step4_wsm_formula:
-      "\\displaystyle Q_i^{(1)} = \\sum_{j=1}^{n} w_j \\, x_{ij}^*, \\quad i = 1,2,\\dots,m",
+      "\\displaystyle Q_i^{(1)} = \\sum_{j=1}^{n} w_j \\, x_{i,j}^*, \\quad i = 1,2,\\dots,m",
     step5_wpm_intro:
       "\\textbf{5. Weighted Product Model (WPM) Score:} \\quad \\text{Compute the multiplicative (product) score for each alternative.}",
     step5_wpm_formula:
-      "\\displaystyle Q_i^{(2)} = \\prod_{j=1}^{n} (x_{ij}^*)^{w_j}, \\quad i = 1,2,\\dots,m",
+      "\\displaystyle Q_i^{(2)} = \\prod_{j=1}^{n} (x_{i,j}^*)^{w_j}, \\quad i = 1,2,\\dots,m",
     step6_intro:
       "\\textbf{6. WASPAS Aggregated Score:} \\quad \\text{Combine WSM and WPM scores with parameter } \\lambda \\in [0,1].",
     step6_formula:

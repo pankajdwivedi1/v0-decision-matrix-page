@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 
-type VIKORFormulaProps = {
+type EDASFormulaProps = {
   compact?: boolean;
 };
 
@@ -14,15 +14,15 @@ declare global {
 }
 
 /**
- * VIKORFormula
+ * EDASFormula
  * - Loads MathJax (once)
- * - Renders the step-by-step VIKOR formulas as LaTeX
+ * - Renders the step-by-step EDAS formulas as LaTeX
  *
  * Usage:
- *   import VIKORFormula from "@/components/VIKORFormula";
- *   <VIKORFormula />
+ *   import EDASFormula from "@/components/EDASFormula";
+ *   <EDASFormula />
  */
-export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
+export default function EDASFormula({ compact = false }: EDASFormulaProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Load MathJax if not present
@@ -65,35 +65,43 @@ export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
 
   // LaTeX strings for each step
   const latex = {
-    title: "\\textbf{VIKOR (VlseKriterijumska Optimizacija I Kompromisno Resenje) — Steps}",
+    title: "\\textbf{EDAS (Evaluation based on Distance from Average Solution) — Steps}",
     step1:
       "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)}",
     step2_intro:
-      "\\textbf{2. Normalization:} \\quad \\text{For each criterion } j, \\text{ normalize the decision matrix using linear normalization.}",
-    step2_benefit:
-      "f_{i,j} = \\frac{x_{i,j}}{\\max_i x_{i,j}}, \\quad \\text{for benefit (max) criteria}",
-    step2_cost:
-      "f_{i,j} = \\frac{\\min_i x_{i,j}}{x_{i,j}}, \\quad \\text{for cost (min) criteria}",
+      "\\textbf{2. Average Solution (AV):} \\quad \\text{Calculate the average solution for each criterion.}",
+    step2_formula:
+      "AV_j = \\frac{1}{m} \\sum_{i=1}^{m} x_{i,j}, \\quad j = 1, 2, \\ldots, n",
     step3_intro:
-      "\\textbf{3. Best and Worst Values:} \\quad \\text{Determine the best } f_j^* \\text{ and worst } f_j^- \\text{ values for each criterion.}",
-    step3_best:
-      "f_j^* = \\begin{cases} \\max_i f_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\min_i f_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
-    step3_worst:
-      "f_j^- = \\begin{cases} \\min_i f_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\max_i f_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
+      "\\textbf{3. Positive Distance from Average (PDA):} \\quad \\text{Calculate the positive distance from average for beneficial and non-beneficial criteria.}",
+    step3_benefit:
+      "PDA_{i,j} = \\frac{\\max(0, x_{i,j} - AV_j)}{AV_j}, \\quad \\text{for benefit (max) criteria}",
+    step3_cost:
+      "PDA_{i,j} = \\frac{\\max(0, AV_j - x_{i,j})}{AV_j}, \\quad \\text{for cost (min) criteria}",
     step4_intro:
-      "\\textbf{4. Utility Measure (S_i):} \\quad \\text{Calculate the weighted sum of normalized distances for each alternative.}",
-    step4_formula:
-      "S_i = \\sum_{j=1}^{n} w_j \\frac{f_j^* - f_{i,j}}{f_j^* - f_j^-}, \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1",
+      "\\textbf{4. Negative Distance from Average (NDA):} \\quad \\text{Calculate the negative distance from average for beneficial and non-beneficial criteria.}",
+    step4_benefit:
+      "NDA_{i,j} = \\frac{\\max(0, AV_j - x_{i,j})}{AV_j}, \\quad \\text{for benefit (max) criteria}",
+    step4_cost:
+      "NDA_{i,j} = \\frac{\\max(0, x_{i,j} - AV_j)}{AV_j}, \\quad \\text{for cost (min) criteria}",
     step5_intro:
-      "\\textbf{5. Regret Measure (R_i):} \\quad \\text{Calculate the maximum weighted normalized distance for each alternative.}",
-    step5_formula:
-      "R_i = \\max_j \\left[ w_j \\frac{f_j^* - f_{i,j}}{f_j^* - f_j^-} \\right]",
+      "\\textbf{5. Weighted Sum of PDA and NDA:} \\quad \\text{Calculate the weighted sum of positive and negative distances.}",
+    step5_pda:
+      "SP_i = \\sum_{j=1}^{n} w_j \\, PDA_{i,j}, \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1",
+    step5_nda:
+      "SN_i = \\sum_{j=1}^{n} w_j \\, NDA_{i,j}",
     step6_intro:
-      "\\textbf{6. VIKOR Index (Q_i):} \\quad \\text{Calculate the compromise solution index using parameter } v \\in [0,1].",
-    step6_formula:
-      "Q_i = v \\frac{S_i - S^*}{S^- - S^*} + (1-v) \\frac{R_i - R^*}{R^- - R^*} \\\\ \\text{where } S^* = \\min_i S_i, \\; S^- = \\max_i S_i, \\; R^* = \\min_i R_i, \\; R^- = \\max_i R_i",
+      "\\textbf{6. Normalized Values:} \\quad \\text{Normalize SP and SN values.}",
+    step6_sp:
+      "NSP_i = \\frac{SP_i}{\\max_i SP_i}",
+    step6_sn:
+      "NSN_i = 1 - \\frac{SN_i}{\\max_i SN_i}",
+    step7_intro:
+      "\\textbf{7. Appraisal Score (AS):} \\quad \\text{Calculate the final appraisal score for each alternative.}",
+    step7_formula:
+      "AS_i = \\frac{1}{2} (NSP_i + NSN_i), \\quad i = 1, 2, \\ldots, m",
     ranking:
-      "\\textbf{7. Ranking:} \\quad \\text{Alternatives are ranked in ascending order of } Q_i. \\text{ (Lower } Q_i \\Rightarrow \\text{better alternative)}",
+      "\\textbf{8. Ranking:} \\quad \\text{Alternatives are ranked in descending order of } AS_i. \\text{ (Higher } AS_i \\Rightarrow \\text{better alternative)}",
   };
 
   return (
@@ -154,16 +162,26 @@ export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
 
         <li>
           <div className="mb-2 font-semibold">
-            Normalization: Normalize the decision matrix using linear normalization to make criteria
-            comparable.
+            Average Solution: Calculate the average solution for each criterion based on all alternatives.
           </div>
+          <div className="bg-gray-50 p-3 rounded">
+            <div
+              className="latex text-sm"
+              style={{ fontSize: "0.875rem" }}
+              dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_formula}\\)` }}
+            />
+          </div>
+        </li>
+
+        <li>
+          <div className="mb-2 font-semibold">Positive Distance from Average (PDA): Calculate how much each alternative exceeds the average solution.</div>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="bg-gray-50 p-3 rounded">
               <div className="text-xs italic mb-2">Benefit (Max) Criteria</div>
               <div
                 className="latex text-sm"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_benefit}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step3_benefit}\\)` }}
               />
             </div>
             <div className="bg-gray-50 p-3 rounded">
@@ -171,29 +189,29 @@ export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
               <div
                 className="latex text-sm"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_cost}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step3_cost}\\)` }}
               />
             </div>
           </div>
         </li>
 
         <li>
-          <div className="mb-2 font-semibold">Best and Worst Values: Determine the best and worst values for each criterion.</div>
+          <div className="mb-2 font-semibold">Negative Distance from Average (NDA): Calculate how much each alternative falls below the average solution.</div>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="bg-gray-50 p-3 rounded">
-              <div className="text-xs italic mb-2">Best Value (f_j*)</div>
+              <div className="text-xs italic mb-2">Benefit (Max) Criteria</div>
               <div
                 className="latex text-sm"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_best}\\]` }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step4_benefit}\\)` }}
               />
             </div>
             <div className="bg-gray-50 p-3 rounded">
-              <div className="text-xs italic mb-2">Worst Value (f_j⁻)</div>
+              <div className="text-xs italic mb-2">Cost (Min) Criteria</div>
               <div
                 className="latex text-sm"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_worst}\\]` }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step4_cost}\\)` }}
               />
             </div>
           </div>
@@ -201,46 +219,68 @@ export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
 
         <li>
           <div className="mb-2 font-semibold">
-            Utility Measure (S_i): Calculate the weighted sum of normalized distances for each alternative.
+            Weighted Sum: Calculate the weighted sum of positive and negative distances from average.
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="bg-gray-50 p-3 rounded">
+              <div className="text-xs italic mb-2">Weighted Sum of PDA (SP_i)</div>
+              <div
+                className="latex text-sm"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step5_pda}\\)` }}
+              />
+            </div>
+            <div className="bg-gray-50 p-3 rounded">
+              <div className="text-xs italic mb-2">Weighted Sum of NDA (SN_i)</div>
+              <div
+                className="latex text-sm"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step5_nda}\\)` }}
+              />
+            </div>
+          </div>
+        </li>
+
+        <li>
+          <div className="mb-2 font-semibold">
+            Normalization: Normalize the weighted sums to make them comparable.
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="bg-gray-50 p-3 rounded">
+              <div className="text-xs italic mb-2">Normalized SP (NSP_i)</div>
+              <div
+                className="latex text-sm"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step6_sp}\\)` }}
+              />
+            </div>
+            <div className="bg-gray-50 p-3 rounded">
+              <div className="text-xs italic mb-2">Normalized SN (NSN_i)</div>
+              <div
+                className="latex text-sm"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step6_sn}\\)` }}
+              />
+            </div>
+          </div>
+        </li>
+
+        <li>
+          <div className="mb-2 font-semibold">
+            Appraisal Score: Calculate the final appraisal score as the average of normalized positive and negative distances.
           </div>
           <div className="bg-gray-50 p-3 rounded">
             <div
               className="latex text-sm"
               style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step4_formula}\\)` }}
+              dangerouslySetInnerHTML={{ __html: `\\(${latex.step7_formula}\\)` }}
             />
           </div>
         </li>
 
         <li>
           <div className="mb-2 font-semibold">
-            Regret Measure (R_i): Calculate the maximum weighted normalized distance for each alternative.
-          </div>
-          <div className="bg-gray-50 p-3 rounded">
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step5_formula}\\)` }}
-            />
-          </div>
-        </li>
-
-        <li>
-          <div className="mb-2 font-semibold">
-            VIKOR Index (Q_i): Calculate the compromise solution index using parameter v (typically v = 0.5).
-          </div>
-          <div className="bg-gray-50 p-3 rounded">
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_formula}\\]` }}
-            />
-          </div>
-        </li>
-
-        <li>
-          <div className="mb-2 font-semibold">
-            Ranking: Rank alternatives based on their VIKOR index values.
+            Ranking: Rank alternatives based on their appraisal scores.
           </div>
           <div className="bg-gray-50 p-3 rounded">
             <div
@@ -253,9 +293,9 @@ export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
       </ol>
 
       <div className="mt-4 text-xs text-gray-500">
-        Source: VIKOR method formulation (Opricovic, 1998). The method finds a compromise solution
-        that is closest to the ideal solution, considering both group utility (majority rule) and
-        individual regret (opponent).
+        Source: EDAS method formulation (Keshavarz Ghorabaee et al., 2015). The method evaluates
+        alternatives based on their distance from the average solution, considering both positive
+        and negative deviations.
       </div>
       </div>
     </>

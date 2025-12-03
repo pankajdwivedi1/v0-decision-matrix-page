@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 
-type VIKORFormulaProps = {
+type COPRASFormulaProps = {
   compact?: boolean;
 };
 
@@ -14,15 +14,15 @@ declare global {
 }
 
 /**
- * VIKORFormula
+ * COPRASFormula
  * - Loads MathJax (once)
- * - Renders the step-by-step VIKOR formulas as LaTeX
+ * - Renders the step-by-step COPRAS formulas as LaTeX
  *
  * Usage:
- *   import VIKORFormula from "@/components/VIKORFormula";
- *   <VIKORFormula />
+ *   import COPRASFormula from "@/components/COPRASFormula";
+ *   <COPRASFormula />
  */
-export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
+export default function COPRASFormula({ compact = false }: COPRASFormulaProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Load MathJax if not present
@@ -65,35 +65,33 @@ export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
 
   // LaTeX strings for each step
   const latex = {
-    title: "\\textbf{VIKOR (VlseKriterijumska Optimizacija I Kompromisno Resenje) — Steps}",
+    title: "\\textbf{COPRAS (Complex Proportional Assessment) — Steps}",
     step1:
       "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)}",
     step2_intro:
       "\\textbf{2. Normalization:} \\quad \\text{For each criterion } j, \\text{ normalize the decision matrix using linear normalization.}",
-    step2_benefit:
-      "f_{i,j} = \\frac{x_{i,j}}{\\max_i x_{i,j}}, \\quad \\text{for benefit (max) criteria}",
-    step2_cost:
-      "f_{i,j} = \\frac{\\min_i x_{i,j}}{x_{i,j}}, \\quad \\text{for cost (min) criteria}",
+    step2_formula:
+      "\\bar{x}_{i,j} = \\frac{x_{i,j}}{\\sum_{i=1}^{m} x_{i,j}}, \\quad i = 1, 2, \\ldots, m, \\quad j = 1, 2, \\ldots, n",
     step3_intro:
-      "\\textbf{3. Best and Worst Values:} \\quad \\text{Determine the best } f_j^* \\text{ and worst } f_j^- \\text{ values for each criterion.}",
-    step3_best:
-      "f_j^* = \\begin{cases} \\max_i f_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\min_i f_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
-    step3_worst:
-      "f_j^- = \\begin{cases} \\min_i f_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\max_i f_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
+      "\\textbf{3. Weighted Normalized Matrix:} \\quad \\text{Multiply each normalized value by its corresponding criterion weight.}",
+    step3_formula:
+      "d_{i,j} = w_j \\times \\bar{x}_{i,j}, \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1",
     step4_intro:
-      "\\textbf{4. Utility Measure (S_i):} \\quad \\text{Calculate the weighted sum of normalized distances for each alternative.}",
+      "\\textbf{4. Sums for Beneficial Criteria:} \\quad \\text{Calculate the sum of weighted normalized values for beneficial (maximizing) criteria.}",
     step4_formula:
-      "S_i = \\sum_{j=1}^{n} w_j \\frac{f_j^* - f_{i,j}}{f_j^* - f_j^-}, \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1",
+      "S_i^+ = \\sum_{j=1}^{k} d_{i,j}, \\quad \\text{where } k \\text{ is the number of beneficial criteria}",
     step5_intro:
-      "\\textbf{5. Regret Measure (R_i):} \\quad \\text{Calculate the maximum weighted normalized distance for each alternative.}",
+      "\\textbf{5. Sums for Non-Beneficial Criteria:} \\quad \\text{Calculate the sum of weighted normalized values for non-beneficial (minimizing) criteria.}",
     step5_formula:
-      "R_i = \\max_j \\left[ w_j \\frac{f_j^* - f_{i,j}}{f_j^* - f_j^-} \\right]",
+      "S_i^- = \\sum_{j=k+1}^{n} d_{i,j}, \\quad \\text{where } n-k \\text{ is the number of non-beneficial criteria}",
     step6_intro:
-      "\\textbf{6. VIKOR Index (Q_i):} \\quad \\text{Calculate the compromise solution index using parameter } v \\in [0,1].",
+      "\\textbf{6. Relative Significance (Priority):} \\quad \\text{Calculate the relative significance/priority for each alternative.}",
     step6_formula:
-      "Q_i = v \\frac{S_i - S^*}{S^- - S^*} + (1-v) \\frac{R_i - R^*}{R^- - R^*} \\\\ \\text{where } S^* = \\min_i S_i, \\; S^- = \\max_i S_i, \\; R^* = \\min_i R_i, \\; R^- = \\max_i R_i",
+      "Q_i = S_i^+ + \\frac{S_{\\min}^- \\sum_{i=1}^{m} S_i^-}{S_i^- \\sum_{i=1}^{m} \\frac{S_{\\min}^-}{S_i^-}}, \\quad \\text{where } S_{\\min}^- = \\min_i S_i^-",
+    step6_simplified:
+      "Q_i = S_i^+ + \\frac{\\sum_{i=1}^{m} S_i^-}{S_i^- \\sum_{i=1}^{m} \\frac{1}{S_i^-}}",
     ranking:
-      "\\textbf{7. Ranking:} \\quad \\text{Alternatives are ranked in ascending order of } Q_i. \\text{ (Lower } Q_i \\Rightarrow \\text{better alternative)}",
+      "\\textbf{7. Ranking:} \\quad \\text{Alternatives are ranked in descending order of } Q_i. \\text{ (Higher } Q_i \\Rightarrow \\text{better alternative)}",
   };
 
   return (
@@ -157,51 +155,31 @@ export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
             Normalization: Normalize the decision matrix using linear normalization to make criteria
             comparable.
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="bg-gray-50 p-3 rounded">
-              <div className="text-xs italic mb-2">Benefit (Max) Criteria</div>
-              <div
-                className="latex text-sm"
-                style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_benefit}\\)` }}
-              />
-            </div>
-            <div className="bg-gray-50 p-3 rounded">
-              <div className="text-xs italic mb-2">Cost (Min) Criteria</div>
-              <div
-                className="latex text-sm"
-                style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_cost}\\)` }}
-              />
-            </div>
-          </div>
-        </li>
-
-        <li>
-          <div className="mb-2 font-semibold">Best and Worst Values: Determine the best and worst values for each criterion.</div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="bg-gray-50 p-3 rounded">
-              <div className="text-xs italic mb-2">Best Value (f_j*)</div>
-              <div
-                className="latex text-sm"
-                style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_best}\\]` }}
-              />
-            </div>
-            <div className="bg-gray-50 p-3 rounded">
-              <div className="text-xs italic mb-2">Worst Value (f_j⁻)</div>
-              <div
-                className="latex text-sm"
-                style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_worst}\\]` }}
-              />
-            </div>
+          <div className="bg-gray-50 p-3 rounded">
+            <div
+              className="latex text-sm"
+              style={{ fontSize: "0.875rem" }}
+              dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_formula}\\)` }}
+            />
           </div>
         </li>
 
         <li>
           <div className="mb-2 font-semibold">
-            Utility Measure (S_i): Calculate the weighted sum of normalized distances for each alternative.
+            Weighted Normalized Matrix: Apply criterion weights to the normalized matrix.
+          </div>
+          <div className="bg-gray-50 p-3 rounded">
+            <div
+              className="latex text-sm"
+              style={{ fontSize: "0.875rem" }}
+              dangerouslySetInnerHTML={{ __html: `\\(${latex.step3_formula}\\)` }}
+            />
+          </div>
+        </li>
+
+        <li>
+          <div className="mb-2 font-semibold">
+            Sums for Beneficial Criteria: Calculate the sum of weighted normalized values for beneficial (maximizing) criteria.
           </div>
           <div className="bg-gray-50 p-3 rounded">
             <div
@@ -214,7 +192,7 @@ export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
 
         <li>
           <div className="mb-2 font-semibold">
-            Regret Measure (R_i): Calculate the maximum weighted normalized distance for each alternative.
+            Sums for Non-Beneficial Criteria: Calculate the sum of weighted normalized values for non-beneficial (minimizing) criteria.
           </div>
           <div className="bg-gray-50 p-3 rounded">
             <div
@@ -227,20 +205,23 @@ export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
 
         <li>
           <div className="mb-2 font-semibold">
-            VIKOR Index (Q_i): Calculate the compromise solution index using parameter v (typically v = 0.5).
+            Relative Significance (Priority): Calculate the relative significance/priority for each alternative, considering both beneficial and non-beneficial criteria.
           </div>
-          <div className="bg-gray-50 p-3 rounded">
+          <div className="bg-gray-50 p-3 rounded space-y-2">
             <div
               className="latex text-sm"
               style={{ fontSize: "0.875rem" }}
               dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_formula}\\]` }}
             />
+            <div className="text-xs text-gray-600 italic mt-2">
+              Note: The formula adjusts for non-beneficial criteria by incorporating the minimum sum of non-beneficial criteria.
+            </div>
           </div>
         </li>
 
         <li>
           <div className="mb-2 font-semibold">
-            Ranking: Rank alternatives based on their VIKOR index values.
+            Ranking: Rank alternatives based on their relative significance values.
           </div>
           <div className="bg-gray-50 p-3 rounded">
             <div
@@ -253,9 +234,9 @@ export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
       </ol>
 
       <div className="mt-4 text-xs text-gray-500">
-        Source: VIKOR method formulation (Opricovic, 1998). The method finds a compromise solution
-        that is closest to the ideal solution, considering both group utility (majority rule) and
-        individual regret (opponent).
+        Source: COPRAS method formulation (Zavadskas & Kaklauskas, 1996). The method evaluates
+        alternatives by considering both beneficial and non-beneficial criteria, providing a
+        complex proportional assessment of alternatives.
       </div>
       </div>
     </>

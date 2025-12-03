@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 
-type VIKORFormulaProps = {
+type COCOSOFormulaProps = {
   compact?: boolean;
 };
 
@@ -14,15 +14,15 @@ declare global {
 }
 
 /**
- * VIKORFormula
+ * COCOSOFormula
  * - Loads MathJax (once)
- * - Renders the step-by-step VIKOR formulas as LaTeX
+ * - Renders the step-by-step COCOSO formulas as LaTeX
  *
  * Usage:
- *   import VIKORFormula from "@/components/VIKORFormula";
- *   <VIKORFormula />
+ *   import COCOSOFormula from "@/components/COCOSOFormula";
+ *   <COCOSOFormula />
  */
-export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
+export default function COCOSOFormula({ compact = false }: COCOSOFormulaProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Load MathJax if not present
@@ -65,35 +65,41 @@ export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
 
   // LaTeX strings for each step
   const latex = {
-    title: "\\textbf{VIKOR (VlseKriterijumska Optimizacija I Kompromisno Resenje) — Steps}",
+    title: "\\textbf{COCOSO (Combined Compromise Solution) — Steps}",
     step1:
       "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)}",
     step2_intro:
       "\\textbf{2. Normalization:} \\quad \\text{For each criterion } j, \\text{ normalize the decision matrix using linear normalization.}",
     step2_benefit:
-      "f_{i,j} = \\frac{x_{i,j}}{\\max_i x_{i,j}}, \\quad \\text{for benefit (max) criteria}",
+      "r_{i,j} = \\frac{x_{i,j}}{\\max_i x_{i,j}}, \\quad \\text{for benefit (max) criteria}",
     step2_cost:
-      "f_{i,j} = \\frac{\\min_i x_{i,j}}{x_{i,j}}, \\quad \\text{for cost (min) criteria}",
+      "r_{i,j} = \\frac{\\min_i x_{i,j}}{x_{i,j}}, \\quad \\text{for cost (min) criteria}",
     step3_intro:
-      "\\textbf{3. Best and Worst Values:} \\quad \\text{Determine the best } f_j^* \\text{ and worst } f_j^- \\text{ values for each criterion.}",
-    step3_best:
-      "f_j^* = \\begin{cases} \\max_i f_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\min_i f_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
-    step3_worst:
-      "f_j^- = \\begin{cases} \\min_i f_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\max_i f_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
+      "\\textbf{3. Weighted Normalized Matrix:} \\quad \\text{Multiply each normalized value by its corresponding criterion weight.}",
+    step3_formula:
+      "v_{i,j} = w_j \\times r_{i,j}, \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1",
     step4_intro:
-      "\\textbf{4. Utility Measure (S_i):} \\quad \\text{Calculate the weighted sum of normalized distances for each alternative.}",
+      "\\textbf{4. Weighted Sum (WSM):} \\quad \\text{Calculate the weighted sum model score for each alternative.}",
     step4_formula:
-      "S_i = \\sum_{j=1}^{n} w_j \\frac{f_j^* - f_{i,j}}{f_j^* - f_j^-}, \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1",
+      "S_i = \\sum_{j=1}^{n} v_{i,j}, \\quad i = 1, 2, \\ldots, m",
     step5_intro:
-      "\\textbf{5. Regret Measure (R_i):} \\quad \\text{Calculate the maximum weighted normalized distance for each alternative.}",
+      "\\textbf{5. Weighted Product (WPM):} \\quad \\text{Calculate the weighted product model score for each alternative.}",
     step5_formula:
-      "R_i = \\max_j \\left[ w_j \\frac{f_j^* - f_{i,j}}{f_j^* - f_j^-} \\right]",
+      "P_i = \\prod_{j=1}^{n} (v_{i,j})^{w_j}, \\quad i = 1, 2, \\ldots, m",
     step6_intro:
-      "\\textbf{6. VIKOR Index (Q_i):} \\quad \\text{Calculate the compromise solution index using parameter } v \\in [0,1].",
-    step6_formula:
-      "Q_i = v \\frac{S_i - S^*}{S^- - S^*} + (1-v) \\frac{R_i - R^*}{R^- - R^*} \\\\ \\text{where } S^* = \\min_i S_i, \\; S^- = \\max_i S_i, \\; R^* = \\min_i R_i, \\; R^- = \\max_i R_i",
+      "\\textbf{6. Three Compromise Scores:} \\quad \\text{Calculate three different compromise scores using arithmetic, geometric, and harmonic means.}",
+    step6_arithmetic:
+      "k_{ia} = \\frac{S_i + P_i}{\\sum_{i=1}^{m} (S_i + P_i)}",
+    step6_geometric:
+      "k_{ib} = \\frac{S_i}{\\min_i S_i} + \\frac{P_i}{\\min_i P_i}",
+    step6_harmonic:
+      "k_{ic} = \\frac{\\lambda S_i + (1-\\lambda) P_i}{(\\lambda \\max_i S_i + (1-\\lambda) \\max_i P_i)}, \\quad \\lambda = 0.5",
+    step7_intro:
+      "\\textbf{7. Final COCOSO Score:} \\quad \\text{Calculate the final score as a combination of the three compromise scores.}",
+    step7_formula:
+      "k_i = \\frac{k_{ia} + k_{ib} + k_{ic}}{3} + (k_{ia} \\times k_{ib} \\times k_{ic})^{1/3}",
     ranking:
-      "\\textbf{7. Ranking:} \\quad \\text{Alternatives are ranked in ascending order of } Q_i. \\text{ (Lower } Q_i \\Rightarrow \\text{better alternative)}",
+      "\\textbf{8. Ranking:} \\quad \\text{Alternatives are ranked in descending order of } k_i. \\text{ (Higher } k_i \\Rightarrow \\text{better alternative)}",
   };
 
   return (
@@ -178,30 +184,21 @@ export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
         </li>
 
         <li>
-          <div className="mb-2 font-semibold">Best and Worst Values: Determine the best and worst values for each criterion.</div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="bg-gray-50 p-3 rounded">
-              <div className="text-xs italic mb-2">Best Value (f_j*)</div>
-              <div
-                className="latex text-sm"
-                style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_best}\\]` }}
-              />
-            </div>
-            <div className="bg-gray-50 p-3 rounded">
-              <div className="text-xs italic mb-2">Worst Value (f_j⁻)</div>
-              <div
-                className="latex text-sm"
-                style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_worst}\\]` }}
-              />
-            </div>
+          <div className="mb-2 font-semibold">
+            Weighted Normalized Matrix: Apply criterion weights to the normalized matrix.
+          </div>
+          <div className="bg-gray-50 p-3 rounded">
+            <div
+              className="latex text-sm"
+              style={{ fontSize: "0.875rem" }}
+              dangerouslySetInnerHTML={{ __html: `\\(${latex.step3_formula}\\)` }}
+            />
           </div>
         </li>
 
         <li>
           <div className="mb-2 font-semibold">
-            Utility Measure (S_i): Calculate the weighted sum of normalized distances for each alternative.
+            Weighted Sum (WSM): Calculate the weighted sum model score for each alternative.
           </div>
           <div className="bg-gray-50 p-3 rounded">
             <div
@@ -214,7 +211,7 @@ export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
 
         <li>
           <div className="mb-2 font-semibold">
-            Regret Measure (R_i): Calculate the maximum weighted normalized distance for each alternative.
+            Weighted Product (WPM): Calculate the weighted product model score for each alternative.
           </div>
           <div className="bg-gray-50 p-3 rounded">
             <div
@@ -226,21 +223,51 @@ export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
         </li>
 
         <li>
+          <div className="mb-2 font-semibold">Three Compromise Scores: Calculate three different compromise scores using arithmetic, geometric, and harmonic approaches.</div>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="bg-gray-50 p-3 rounded">
+              <div className="text-xs italic mb-2">Arithmetic Mean (k<sub>ia</sub>)</div>
+              <div
+                className="latex text-sm"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_arithmetic}\\]` }}
+              />
+            </div>
+            <div className="bg-gray-50 p-3 rounded">
+              <div className="text-xs italic mb-2">Geometric Mean (k<sub>ib</sub>)</div>
+              <div
+                className="latex text-sm"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_geometric}\\]` }}
+              />
+            </div>
+            <div className="bg-gray-50 p-3 rounded">
+              <div className="text-xs italic mb-2">Harmonic Mean (k<sub>ic</sub>)</div>
+              <div
+                className="latex text-sm"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_harmonic}\\]` }}
+              />
+            </div>
+          </div>
+        </li>
+
+        <li>
           <div className="mb-2 font-semibold">
-            VIKOR Index (Q_i): Calculate the compromise solution index using parameter v (typically v = 0.5).
+            Final COCOSO Score: Calculate the final score as a combination of the three compromise scores.
           </div>
           <div className="bg-gray-50 p-3 rounded">
             <div
               className="latex text-sm"
               style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_formula}\\]` }}
+              dangerouslySetInnerHTML={{ __html: `\\[${latex.step7_formula}\\]` }}
             />
           </div>
         </li>
 
         <li>
           <div className="mb-2 font-semibold">
-            Ranking: Rank alternatives based on their VIKOR index values.
+            Ranking: Rank alternatives based on their COCOSO scores.
           </div>
           <div className="bg-gray-50 p-3 rounded">
             <div
@@ -253,9 +280,9 @@ export default function VIKORFormula({ compact = false }: VIKORFormulaProps) {
       </ol>
 
       <div className="mt-4 text-xs text-gray-500">
-        Source: VIKOR method formulation (Opricovic, 1998). The method finds a compromise solution
-        that is closest to the ideal solution, considering both group utility (majority rule) and
-        individual regret (opponent).
+        Source: COCOSO method formulation (Yazdani et al., 2019). The method combines three
+        compromise solutions (arithmetic, geometric, and harmonic) to provide a robust ranking
+        of alternatives based on weighted sum and weighted product models.
       </div>
       </div>
     </>

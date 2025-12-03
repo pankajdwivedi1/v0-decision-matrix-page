@@ -67,27 +67,27 @@ export default function TOPSISFormula({ compact = false }: TOPSISFormulaProps) {
   const latex = {
     title: "\\textbf{TOPSIS (Technique for Order Preference by Similarity to Ideal Solution) — Steps}",
     step1:
-      "\\textbf{1. Decision Matrix:} \\quad X = [x_{ij}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{Where} \\quad i=1,2,3, \\dots m \\text{(alternatives)}, \\quad j=1,2,3, \\dots n \\text {(criteria)}",
+      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{Where} \\quad i=1,2,3, \\dots m \\text{(alternatives)}, \\quad j=1,2,3, \\dots n \\text {(criteria)}",
     step2_intro:
       "\\textbf{2. Normalization:} \\quad \\text{For each criterion } j, \\text{ normalize the decision matrix using vector normalization.}",
     step2_formula:
-      "\\displaystyle r_{ij} = \\frac{x_{ij}}{\\sqrt{\\sum_{i=1}^{m} x_{ij}^2}}, \\quad \\quad \\text{where } i = 1, 2, \\ldots, m \\text{ and } j = 1, 2, \\ldots, n",
+      "\\displaystyle r_{i,j} = \\frac{x_{i,j}}{\\sqrt{\\sum_{i=1}^{m} x_{i,j}^2}}, \\quad \\quad \\text{where } i = 1, 2, \\ldots, m \\text{ and } j = 1, 2, \\ldots, n",
     step3_intro:
       "\\textbf{3. Weighted Normalized Matrix:} \\quad \\text{Multiply each normalized value by its corresponding criterion weight.}",
     step3_formula:
-      "\\displaystyle v_{ij} = w_j \\times r_{ij}, \\quad \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1",
+      "\\displaystyle v_{i,j} = w_j \\times r_{i,j}, \\quad \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1",
     step4_intro:
       "\\textbf{4. Ideal and Negative-Ideal Solutions:} \\quad \\text{Determine the positive ideal solution } A^+ \\text{ and negative ideal solution } A^-.",
     step4_ideal:
-      "A^+ = \\{v_1^+, v_2^+, \\ldots, v_n^+\\} \\\\ \\text{where } v_j^+ = \\begin{cases} \\max_i v_{ij} & \\text{if } j \\in \\text{beneficial} \\\\ \\min_i v_{ij} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
+      "A^+ = \\{v_1^+, v_2^+, \\ldots, v_n^+\\} \\\\ \\text{where } v_j^+ = \\begin{cases} \\max_i v_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\min_i v_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
     step4_nadir:
-      "A^- = \\{v_1^-, v_2^-, \\ldots, v_n^-\\} \\\\ \\text{where } v_j^- = \\begin{cases} \\min_i v_{ij} & \\text{if } j \\in \\text{beneficial} \\\\ \\max_i v_{ij} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
+      "A^- = \\{v_1^-, v_2^-, \\ldots, v_n^-\\} \\\\ \\text{where } v_j^- = \\begin{cases} \\min_i v_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\max_i v_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
     step5_intro:
       "\\textbf{5. Separation Measures:} \\quad \\text{Calculate the Euclidean distance from each alternative to the ideal and negative-ideal solutions.}",
     step5_plus:
-      "d_i^+ = \\sqrt{\\sum_{j=1}^{n} (v_{ij} - v_j^+)^2} \\\\ \\text{where } i = 1, 2, \\ldots, m",
+      "d_i^+ = \\sqrt{\\sum_{j=1}^{n} (v_{i,j} - v_j^+)^2} \\\\ \\text{where } i = 1, 2, \\ldots, m",
     step5_minus:
-      "d_i^- = \\sqrt{\\sum_{j=1}^{n} (v_{ij} - v_j^-)^2} \\\\ \\text{where } i = 1, 2, \\ldots, m",
+      "d_i^- = \\sqrt{\\sum_{j=1}^{n} (v_{i,j} - v_j^-)^2} \\\\ \\text{where } i = 1, 2, \\ldots, m",
     step6_intro:
       "\\textbf{6. Closeness Coefficient:} \\quad \\text{Calculate the relative closeness to the ideal solution.}",
     step6_formula:
@@ -98,9 +98,9 @@ export default function TOPSISFormula({ compact = false }: TOPSISFormulaProps) {
     swei_intro:
       "\\textbf{Connection to SWEI / SWI (Simple Weighted Evaluation / Index):} \\\\ \\text{In classical SWEI / SWI, a single score for each alternative } A_i \\text{ is computed as a weighted sum of (normalized) criterion values.}",
     swei_formula:
-      "\\displaystyle S_i = \\sum_{j=1}^{n} w_j \\, r_{ij}, \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1, \\; 0 \\leq r_{ij} \\leq 1",
+      "\\displaystyle S_i = \\sum_{j=1}^{n} w_j \\, r_{i,j}, \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1, \\; 0 \\leq r_{i,j} \\leq 1",
     swei_comment:
-      "\\text{Here } S_i \\text{ is the overall SWEI / SWI score of alternative } A_i. \\text{ Higher } S_i \\Rightarrow \\text{ better alternative (similar to a weighted average).} \\\\ \\text{TOPSIS uses the same weighted normalized matrix } [v_{ij}] \\text{, but ranks alternatives by their distance to } A^+ \\text{ and } A^- \\text{ instead of a simple sum.}",
+      "\\text{Here } S_i \\text{ is the overall SWEI / SWI score of alternative } A_i. \\text{ Higher } S_i \\Rightarrow \\text{ better alternative (similar to a weighted average).} \\\\ \\text{TOPSIS uses the same weighted normalized matrix } [v_{i,j}] \\text{, but ranks alternatives by their distance to } A^+ \\text{ and } A^- \\text{ instead of a simple sum.}",
   };
 
   return (

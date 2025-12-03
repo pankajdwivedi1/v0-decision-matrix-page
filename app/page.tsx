@@ -30,6 +30,10 @@ import SWIFormula from "@/components/SWIFormula"
 import TOPSISFormula from "@/components/TOPSISFormula"
 import WASPASFormula from "@/components/WASPASFormula"
 import VIKORFormula from "@/components/VIKORFormula"
+import EDASFormula from "@/components/EDASFormula"
+import COPRASFormula from "@/components/COPRASFormula"
+import MOORAFormula from "@/components/MOORAFormula"
+import COCOSOFormula from "@/components/COCOSOFormula"
 
 interface Criterion {
   id: string
@@ -500,6 +504,30 @@ export default function MCDMCalculator() {
           {method === "vikor" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <VIKORFormula />
+            </div>
+          )}
+
+          {method === "edas" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <EDASFormula />
+            </div>
+          )}
+
+          {method === "copras" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <COPRASFormula />
+            </div>
+          )}
+
+          {method === "moora" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <MOORAFormula />
+            </div>
+          )}
+
+          {method === "cocoso" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <COCOSOFormula />
             </div>
           )}
 
