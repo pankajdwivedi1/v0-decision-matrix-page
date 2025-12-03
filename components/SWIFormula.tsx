@@ -11,7 +11,7 @@ declare global {
 
 export default function SWIFormula() {
   const latex = {
-    IDM: "IDM = [a_{i,j}]_{m \\times n}",
+    IDM: "\\quad A = [a_{i,j}]_{m\\times n} = \\begin{bmatrix} a_{1,1} & a_{1,2} & \\dots & a_{1,n} \\\\ a_{2,1} & a_{2,2} & \\dots & a_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ a_{m,1} & a_{m,2} & \\dots & a_{m,n} \\end{bmatrix}, \\quad \\quad a_{m,n}>0",
     normalizationBenefit: "\\overline {IDM}_{i,j} = \\frac{a_{i,j}}{\\sum_{i=1}^{m} a_{i,j}} \\tag{1a}",
     normalizationCost: "\\overline {IDM}_{i,j} = \\frac{1 / a_{i,j}}{\\sum_{i=1}^{m} (1 / a_{i,j})} \\tag{1b}",
     informationEntropy: "I_{i,j} = \\log_{2} \\left( \\frac{1}{\\overline {IDM}_{i,j}} \\right) \\tag{2}",

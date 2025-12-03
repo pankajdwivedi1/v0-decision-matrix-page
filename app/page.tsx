@@ -34,6 +34,7 @@ import EDASFormula from "@/components/EDASFormula"
 import COPRASFormula from "@/components/COPRASFormula"
 import MOORAFormula from "@/components/MOORAFormula"
 import COCOSOFormula from "@/components/COCOSOFormula"
+import EntropyFormula from "@/components/EntropyFormula"
 
 interface Criterion {
   id: string
@@ -154,13 +155,13 @@ const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; for
 const WEIGHT_METHODS: { value: WeightMethod; label: string; description: string }[] = [
   {
     value: "equal",
-    label: "Equal Weights (Dummy)",
-    description: "Assigns equal weights to all criteria (placeholder weight method).",
+    label: "Equal Weights",
+    description: "Assigns equal weights to all criteria.",
   },
   {
     value: "entropy",
-    label: "Entropy Weights (Dummy)",
-    description: "Entropy-based weighting (placeholder; not yet used in calculations).",
+    label: "Entropy Weight",
+    description: "Entropy-based objective weighting method that calculates weights based on information content in the decision matrix.",
   },
 ]
 
@@ -296,7 +297,7 @@ export default function MCDMCalculator() {
     setCriteria(criteria.map((crit) => (crit.id === id ? { ...crit, ...updates } : crit)))
   }
 
-  const handleSaveTable = () => {
+  const handleSaveTable = async () => {
     const allScoresFilled = alternatives.every((alt) =>
       criteria.every((crit) => {
         const score = alt.scores[crit.id]
@@ -307,6 +308,42 @@ export default function MCDMCalculator() {
     if (!allScoresFilled) {
       alert("Please fill in all score values with numbers greater than or equal to 0")
       return
+    }
+
+    // Calculate entropy weights if entropy method is selected
+    if (weightMethod === "entropy") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/calculate/entropy-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            alternatives,
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate entropy weights")
+        }
+
+        const data = await response.json()
+        
+        // Update criteria with calculated entropy weights
+        setCriteria(
+          criteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          })),
+        )
+      } catch (error) {
+        console.error("Error calculating entropy weights:", error)
+        alert("Error calculating entropy weights. Using equal weights instead.")
+      } finally {
+        setIsLoading(false)
+      }
     }
 
     setCurrentStep("matrix")
@@ -397,7 +434,7 @@ export default function MCDMCalculator() {
                   onClick={() => setWeightOpen((prev) => !prev)}
                   className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
                 >
-                  <span>Weight Methods (Dummy)</span>
+                  <span>Weight Methods</span>
                   {weightOpen ? (
                     <ChevronDown className="w-3 h-3" />
                   ) : (
@@ -457,27 +494,41 @@ export default function MCDMCalculator() {
 
             <Card className="border-gray-200 bg-white shadow-none w-full">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm text-black">{methodInfo?.label} Method</CardTitle>
-                <CardDescription className="text-xs text-gray-700">{methodInfo?.description}</CardDescription>
+                <CardTitle className="text-sm text-black">
+                  {weightMethod === "entropy" 
+                    ? "Entropy Weight Method" 
+                    : `${methodInfo?.label} Method`}
+                </CardTitle>
+                <CardDescription className="text-xs text-gray-700">
+                  {weightMethod === "entropy"
+                    ? "Entropy-based objective weighting method that calculates weights based on information content in the decision matrix."
+                    : methodInfo?.description}
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-2 text-xs">
                   <div>
                     <p className="font-semibold text-black mb-1">Formula:</p>
                     <p className="text-gray-700 bg-gray-50 p-2 rounded border border-gray-200">
-                      {methodInfo?.formula}
+                      {weightMethod === "entropy"
+                        ? "w_j = d_j / Σd_j, where d_j = 1 - E_j and E_j = -k Σ(p_ij × ln(p_ij))"
+                        : methodInfo?.formula}
                     </p>
                   </div>
                   <div>
                     <p className="font-semibold text-black mb-1">Description:</p>
-                    <p className="text-gray-700">{methodInfo?.description}</p>
+                    <p className="text-gray-700">
+                      {weightMethod === "entropy"
+                        ? "Entropy-based objective weighting method that calculates weights based on information content in the decision matrix. Higher entropy means more uncertainty (less information), resulting in lower weight. Lower entropy means more information content, resulting in higher weight."
+                        : methodInfo?.description}
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {method === "swei" && (
+          {method === "swei" && weightMethod !== "entropy" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <SWEIFormula />
             </div>
@@ -528,6 +579,12 @@ export default function MCDMCalculator() {
           {method === "cocoso" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <COCOSOFormula />
+            </div>
+          )}
+
+          {weightMethod === "entropy" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <EntropyFormula />
             </div>
           )}
 
@@ -585,7 +642,7 @@ export default function MCDMCalculator() {
                   onClick={() => setWeightOpen((prev) => !prev)}
                   className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
                 >
-                  <span>Weight Methods (Dummy)</span>
+                  <span>Weight Methods</span>
                   {weightOpen ? (
                     <ChevronDown className="w-3 h-3" />
                   ) : (
@@ -747,7 +804,7 @@ export default function MCDMCalculator() {
                   onClick={() => setWeightOpen((prev) => !prev)}
                   className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
                 >
-                  <span>Weight Methods (Dummy)</span>
+                  <span>Weight Methods</span>
                   {weightOpen ? (
                     <ChevronDown className="w-3 h-3" />
                   ) : (
@@ -887,24 +944,26 @@ export default function MCDMCalculator() {
                             </TableHead>
                           ))}
                         </TableRow>
-                        <TableRow className="bg-white border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Weight</TableHead>
-                          {criteria.map((crit) => (
-                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
-                              <Input
-                                type="number"
-                                min="0"
-                                max="1"
-                                step="0.1"
-                                value={crit.weight}
-                                onChange={(e) =>
-                                  updateCriterion(crit.id, { weight: Number.parseFloat(e.target.value) })
-                                }
-                                className="text-center text-xs h-8 border-gray-200 text-black shadow-none"
-                              />
-                            </TableHead>
-                          ))}
-                        </TableRow>
+                        {weightMethod !== "entropy" && (
+                          <TableRow className="bg-white border-b border-gray-200">
+                            <TableHead className="text-xs font-semibold text-black py-3 px-4">Weight</TableHead>
+                            {criteria.map((crit) => (
+                              <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max="1"
+                                  step="0.1"
+                                  value={crit.weight}
+                                  onChange={(e) =>
+                                    updateCriterion(crit.id, { weight: Number.parseFloat(e.target.value) })
+                                  }
+                                  className="text-center text-xs h-8 border-gray-200 text-black shadow-none"
+                                />
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        )}
                       </TableHeader>
                       <TableBody>
                         {alternatives.map((alt) => (
@@ -1007,7 +1066,7 @@ export default function MCDMCalculator() {
                   onClick={() => setWeightOpen((prev) => !prev)}
                   className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
                 >
-                  <span>Weight Methods (Dummy)</span>
+                  <span>Weight Methods</span>
                   {weightOpen ? (
                     <ChevronDown className="w-3 h-3" />
                   ) : (

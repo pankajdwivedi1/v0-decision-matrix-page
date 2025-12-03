@@ -30,6 +30,7 @@ export interface CalculationRequest {
     | "electre1"
     | "electre2"
     | "electre3"
+    | "entropy"
   alternatives: Alternative[]
   criteria: Criterion[]
 }

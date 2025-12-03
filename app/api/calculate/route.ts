@@ -18,6 +18,7 @@ import { calculateELECTRE } from "./electre";
 import { calculateELECTRE1 } from "./electre1";
 import { calculateELECTRE2 } from "./electre2";
 import { calculateELECTRE3 } from "./electre3";
+import { calculateEntropy } from "./entropy";
 
 // Helper: build ranking and response
 function buildResponse(
