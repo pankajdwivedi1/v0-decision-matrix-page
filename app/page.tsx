@@ -24,9 +24,12 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import * as XLSX from "xlsx"
-import { Upload } from "lucide-react"
+import { Upload, ChevronDown, ChevronRight } from "lucide-react"
 import SWEIFormula from "@/components/SWEIFormula"
 import SWIFormula from "@/components/SWIFormula"
+import TOPSISFormula from "@/components/TOPSISFormula"
+import WASPASFormula from "@/components/WASPASFormula"
+import VIKORFormula from "@/components/VIKORFormula"
 
 interface Criterion {
   id: string
@@ -42,6 +45,7 @@ interface Alternative {
 }
 
 type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2" | "electre3"
+type WeightMethod = "equal" | "entropy"
 type PageStep = "home" | "input" | "table" | "matrix" | "calculate"
 
 const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; formula: string }[] = [
@@ -143,9 +147,25 @@ const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; for
   },
 ]
 
+const WEIGHT_METHODS: { value: WeightMethod; label: string; description: string }[] = [
+  {
+    value: "equal",
+    label: "Equal Weights (Dummy)",
+    description: "Assigns equal weights to all criteria (placeholder weight method).",
+  },
+  {
+    value: "entropy",
+    label: "Entropy Weights (Dummy)",
+    description: "Entropy-based weighting (placeholder; not yet used in calculations).",
+  },
+]
+
 export default function MCDMCalculator() {
   const [method, setMethod] = useState<MCDMMethod>("swei")
+  const [weightMethod, setWeightMethod] = useState<WeightMethod>("equal")
   const [currentStep, setCurrentStep] = useState<PageStep>("home")
+  const [rankingOpen, setRankingOpen] = useState(true)
+  const [weightOpen, setWeightOpen] = useState(false)
 
   const [alternatives, setAlternatives] = useState<Alternative[]>([])
   const [criteria, setCriteria] = useState<Criterion[]>([])
@@ -332,19 +352,75 @@ export default function MCDMCalculator() {
             <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
           </SidebarHeader>
           <SidebarContent className="px-2">
-            <SidebarMenu>
-              {MCDM_METHODS.map((m) => (
-                <SidebarMenuItem key={m.value}>
-                  <SidebarMenuButton
-                    onClick={() => setMethod(m.value)}
-                    isActive={method === m.value}
-                    className={`text-xs ${method === m.value ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
-                  >
-                    <span>{m.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+            <div className="space-y-3">
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setRankingOpen((prev) => !prev)}
+                  className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
+                >
+                  <span>Ranking Methods</span>
+                  {rankingOpen ? (
+                    <ChevronDown className="w-3 h-3" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3" />
+                  )}
+                </button>
+                {rankingOpen && (
+                  <SidebarMenu>
+                    {MCDM_METHODS.map((m) => (
+                      <SidebarMenuItem key={m.value}>
+                        <SidebarMenuButton
+                          onClick={() => setMethod(m.value)}
+                          isActive={method === m.value}
+                          className={`text-xs ${
+                            method === m.value
+                              ? "bg-black text-white"
+                              : "text-black hover:bg-gray-100"
+                          }`}
+                        >
+                          <span>{m.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                )}
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setWeightOpen((prev) => !prev)}
+                  className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
+                >
+                  <span>Weight Methods (Dummy)</span>
+                  {weightOpen ? (
+                    <ChevronDown className="w-3 h-3" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3" />
+                  )}
+                </button>
+                {weightOpen && (
+                  <SidebarMenu>
+                    {WEIGHT_METHODS.map((w) => (
+                      <SidebarMenuItem key={w.value}>
+                        <SidebarMenuButton
+                          onClick={() => setWeightMethod(w.value)}
+                          isActive={weightMethod === w.value}
+                          className={`text-xs ${
+                            weightMethod === w.value
+                              ? "bg-gray-900 text-white"
+                              : "text-black hover:bg-gray-100"
+                          }`}
+                        >
+                          <span>{w.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                )}
+              </div>
+            </div>
           </SidebarContent>
         </Sidebar>
 
@@ -409,6 +485,24 @@ export default function MCDMCalculator() {
             </div>
           )}
 
+          {method === "topsis" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <TOPSISFormula />
+            </div>
+          )}
+
+          {method === "waspas" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <WASPASFormula />
+            </div>
+          )}
+
+          {method === "vikor" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <VIKORFormula />
+            </div>
+          )}
+
         </main>
       </SidebarProvider>
     )
@@ -422,19 +516,75 @@ export default function MCDMCalculator() {
             <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
           </SidebarHeader>
           <SidebarContent className="px-2">
-            <SidebarMenu>
-              {MCDM_METHODS.map((m) => (
-                <SidebarMenuItem key={m.value}>
-                  <SidebarMenuButton
-                    onClick={() => setMethod(m.value)}
-                    isActive={method === m.value}
-                    className={`text-xs ${method === m.value ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
-                  >
-                    <span>{m.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+            <div className="space-y-3">
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setRankingOpen((prev) => !prev)}
+                  className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
+                >
+                  <span>Ranking Methods</span>
+                  {rankingOpen ? (
+                    <ChevronDown className="w-3 h-3" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3" />
+                  )}
+                </button>
+                {rankingOpen && (
+                  <SidebarMenu>
+                    {MCDM_METHODS.map((m) => (
+                      <SidebarMenuItem key={m.value}>
+                        <SidebarMenuButton
+                          onClick={() => setMethod(m.value)}
+                          isActive={method === m.value}
+                          className={`text-xs ${
+                            method === m.value
+                              ? "bg-black text-white"
+                              : "text-black hover:bg-gray-100"
+                          }`}
+                        >
+                          <span>{m.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                )}
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setWeightOpen((prev) => !prev)}
+                  className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
+                >
+                  <span>Weight Methods (Dummy)</span>
+                  {weightOpen ? (
+                    <ChevronDown className="w-3 h-3" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3" />
+                  )}
+                </button>
+                {weightOpen && (
+                  <SidebarMenu>
+                    {WEIGHT_METHODS.map((w) => (
+                      <SidebarMenuItem key={w.value}>
+                        <SidebarMenuButton
+                          onClick={() => setWeightMethod(w.value)}
+                          isActive={weightMethod === w.value}
+                          className={`text-xs ${
+                            weightMethod === w.value
+                              ? "bg-gray-900 text-white"
+                              : "text-black hover:bg-gray-100"
+                          }`}
+                        >
+                          <span>{w.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                )}
+              </div>
+            </div>
           </SidebarContent>
         </Sidebar>
 
@@ -528,19 +678,75 @@ export default function MCDMCalculator() {
             <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
           </SidebarHeader>
           <SidebarContent className="px-2">
-            <SidebarMenu>
-              {MCDM_METHODS.map((m) => (
-                <SidebarMenuItem key={m.value}>
-                  <SidebarMenuButton
-                    onClick={() => setMethod(m.value)}
-                    isActive={method === m.value}
-                    className={`text-xs ${method === m.value ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
-                  >
-                    <span>{m.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+            <div className="space-y-3">
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setRankingOpen((prev) => !prev)}
+                  className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
+                >
+                  <span>Ranking Methods</span>
+                  {rankingOpen ? (
+                    <ChevronDown className="w-3 h-3" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3" />
+                  )}
+                </button>
+                {rankingOpen && (
+                  <SidebarMenu>
+                    {MCDM_METHODS.map((m) => (
+                      <SidebarMenuItem key={m.value}>
+                        <SidebarMenuButton
+                          onClick={() => setMethod(m.value)}
+                          isActive={method === m.value}
+                          className={`text-xs ${
+                            method === m.value
+                              ? "bg-black text-white"
+                              : "text-black hover:bg-gray-100"
+                          }`}
+                        >
+                          <span>{m.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                )}
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setWeightOpen((prev) => !prev)}
+                  className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
+                >
+                  <span>Weight Methods (Dummy)</span>
+                  {weightOpen ? (
+                    <ChevronDown className="w-3 h-3" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3" />
+                  )}
+                </button>
+                {weightOpen && (
+                  <SidebarMenu>
+                    {WEIGHT_METHODS.map((w) => (
+                      <SidebarMenuItem key={w.value}>
+                        <SidebarMenuButton
+                          onClick={() => setWeightMethod(w.value)}
+                          isActive={weightMethod === w.value}
+                          className={`text-xs ${
+                            weightMethod === w.value
+                              ? "bg-gray-900 text-white"
+                              : "text-black hover:bg-gray-100"
+                          }`}
+                        >
+                          <span>{w.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                )}
+              </div>
+            </div>
           </SidebarContent>
         </Sidebar>
 
@@ -732,19 +938,75 @@ export default function MCDMCalculator() {
             <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
           </SidebarHeader>
           <SidebarContent className="px-2">
-            <SidebarMenu>
-              {MCDM_METHODS.map((m) => (
-                <SidebarMenuItem key={m.value}>
-                  <SidebarMenuButton
-                    onClick={() => setMethod(m.value)}
-                    isActive={method === m.value}
-                    className={`text-xs ${method === m.value ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
-                  >
-                    <span>{m.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+            <div className="space-y-3">
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setRankingOpen((prev) => !prev)}
+                  className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
+                >
+                  <span>Ranking Methods</span>
+                  {rankingOpen ? (
+                    <ChevronDown className="w-3 h-3" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3" />
+                  )}
+                </button>
+                {rankingOpen && (
+                  <SidebarMenu>
+                    {MCDM_METHODS.map((m) => (
+                      <SidebarMenuItem key={m.value}>
+                        <SidebarMenuButton
+                          onClick={() => setMethod(m.value)}
+                          isActive={method === m.value}
+                          className={`text-xs ${
+                            method === m.value
+                              ? "bg-black text-white"
+                              : "text-black hover:bg-gray-100"
+                          }`}
+                        >
+                          <span>{m.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                )}
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setWeightOpen((prev) => !prev)}
+                  className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
+                >
+                  <span>Weight Methods (Dummy)</span>
+                  {weightOpen ? (
+                    <ChevronDown className="w-3 h-3" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3" />
+                  )}
+                </button>
+                {weightOpen && (
+                  <SidebarMenu>
+                    {WEIGHT_METHODS.map((w) => (
+                      <SidebarMenuItem key={w.value}>
+                        <SidebarMenuButton
+                          onClick={() => setWeightMethod(w.value)}
+                          isActive={weightMethod === w.value}
+                          className={`text-xs ${
+                            weightMethod === w.value
+                              ? "bg-gray-900 text-white"
+                              : "text-black hover:bg-gray-100"
+                          }`}
+                        >
+                          <span>{w.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                )}
+              </div>
+            </div>
           </SidebarContent>
         </Sidebar>
 
