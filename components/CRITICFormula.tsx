@@ -93,7 +93,7 @@ export default function CRITICFormula({ compact = false }: CriticFormulaProps) {
     step6_formula:
       "w_j = \\frac{C_j}{\\sum_{j=1}^{n} C_j}, \\quad j = 1, 2, \\ldots, n, \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1",
     interpretation:
-      "\\textbf{Interpretation:} \\quad \\text{Higher } C_j \\text{ means more information content (higher contrast and lower correlation with other criteria), resulting in higher weight } w_j. \\text{ Lower } C_j \\text{ means less information, resulting in lower weight.}",
+      "\\textbf{Interpretation:} \\quad \\text{Higher } C_j \\text{ means more information content, resulting in higher weight } w_j. \\text{ Lower } C_j \\text{ means less information, resulting in lower weight.}",
   };
 
   return (
