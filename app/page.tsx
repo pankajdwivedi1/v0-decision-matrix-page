@@ -35,6 +35,7 @@ import COPRASFormula from "@/components/COPRASFormula"
 import MOORAFormula from "@/components/MOORAFormula"
 import COCOSOFormula from "@/components/COCOSOFormula"
 import EntropyFormula from "@/components/EntropyFormula"
+import CRITICFormula from "@/components/CRITICFormula"
 
 interface Criterion {
   id: string
@@ -50,8 +51,23 @@ interface Alternative {
 }
 
 type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2" | "electre3"
-type WeightMethod = "equal" | "entropy"
+type WeightMethod = "equal" | "entropy" | "critic"
 type PageStep = "home" | "input" | "table" | "matrix" | "calculate"
+
+interface EntropyResult {
+  weights: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  entropyValues: Record<string, number>
+  diversityValues: Record<string, number>
+}
+
+interface CriticResult {
+  weights: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  standardDeviations: Record<string, number>
+  correlationMatrix: Record<string, Record<string, number>>
+  informationAmounts: Record<string, number>
+}
 
 const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; formula: string }[] = [
   {
@@ -163,6 +179,11 @@ const WEIGHT_METHODS: { value: WeightMethod; label: string; description: string 
     label: "Entropy Weight",
     description: "Entropy-based objective weighting method that calculates weights based on information content in the decision matrix.",
   },
+  {
+    value: "critic",
+    label: "CRITIC Method",
+    description: "CRITIC (Criteria Importance Through Intercriteria Correlation) method that determines weights based on contrast intensity and conflict between criteria.",
+  },
 ]
 
 export default function MCDMCalculator() {
@@ -180,6 +201,8 @@ export default function MCDMCalculator() {
 
   const [isLoading, setIsLoading] = useState(false)
   const [apiResults, setApiResults] = useState<any>(null)
+  const [entropyResult, setEntropyResult] = useState<EntropyResult | null>(null)
+  const [criticResult, setCriticResult] = useState<CriticResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const parseExcelData = (data: any[][]) => {
@@ -310,6 +333,10 @@ export default function MCDMCalculator() {
       return
     }
 
+    // Reset previous weight calculation results
+    setEntropyResult(null)
+    setCriticResult(null)
+
     // Calculate entropy weights if entropy method is selected
     if (weightMethod === "entropy") {
       setIsLoading(true)
@@ -329,8 +356,11 @@ export default function MCDMCalculator() {
           throw new Error("Failed to calculate entropy weights")
         }
 
-        const data = await response.json()
-        
+        const data: EntropyResult = await response.json()
+
+        // Save full entropy result for display (normalisation, entropy, diversity, weights)
+        setEntropyResult(data)
+
         // Update criteria with calculated entropy weights
         setCriteria(
           criteria.map((crit) => ({
@@ -341,6 +371,45 @@ export default function MCDMCalculator() {
       } catch (error) {
         console.error("Error calculating entropy weights:", error)
         alert("Error calculating entropy weights. Using equal weights instead.")
+          } finally {
+        setIsLoading(false)
+      }
+    }
+
+    // Calculate CRITIC weights if CRITIC method is selected
+    if (weightMethod === "critic") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/calculate/critic-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            alternatives,
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate CRITIC weights")
+        }
+
+        const data: CriticResult = await response.json()
+
+        // Save full CRITIC result for display
+        setCriticResult(data)
+
+        // Update criteria with calculated CRITIC weights
+        setCriteria(
+          criteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          })),
+        )
+      } catch (error) {
+        console.error("Error calculating CRITIC weights:", error)
+        alert("Error calculating CRITIC weights. Using equal weights instead.")
       } finally {
         setIsLoading(false)
       }
@@ -496,12 +565,16 @@ export default function MCDMCalculator() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm text-black">
                   {weightMethod === "entropy" 
-                    ? "Entropy Weight Method" 
+                    ? "Entropy Weight Method"
+                    : weightMethod === "critic"
+                    ? "CRITIC Method"
                     : `${methodInfo?.label} Method`}
                 </CardTitle>
                 <CardDescription className="text-xs text-gray-700">
                   {weightMethod === "entropy"
                     ? "Entropy-based objective weighting method that calculates weights based on information content in the decision matrix."
+                    : weightMethod === "critic"
+                    ? "CRITIC (Criteria Importance Through Intercriteria Correlation) method that determines weights based on contrast intensity and conflict between criteria."
                     : methodInfo?.description}
                 </CardDescription>
               </CardHeader>
@@ -512,6 +585,8 @@ export default function MCDMCalculator() {
                     <p className="text-gray-700 bg-gray-50 p-2 rounded border border-gray-200">
                       {weightMethod === "entropy"
                         ? "w_j = d_j / Σd_j, where d_j = 1 - E_j and E_j = -k Σ(p_ij × ln(p_ij))"
+                        : weightMethod === "critic"
+                        ? "w_j = C_j / ΣC_j, where C_j = σ_j × Σ(1 - r_jk)"
                         : methodInfo?.formula}
                     </p>
                   </div>
@@ -520,6 +595,8 @@ export default function MCDMCalculator() {
                     <p className="text-gray-700">
                       {weightMethod === "entropy"
                         ? "Entropy-based objective weighting method that calculates weights based on information content in the decision matrix. Higher entropy means more uncertainty (less information), resulting in lower weight. Lower entropy means more information content, resulting in higher weight."
+                        : weightMethod === "critic"
+                        ? "CRITIC method determines weights based on both contrast intensity (standard deviation) and conflict (correlation) between criteria. Higher information content (higher contrast and lower correlation) results in higher weights."
                         : methodInfo?.description}
                     </p>
                   </div>
@@ -528,7 +605,7 @@ export default function MCDMCalculator() {
             </Card>
           </div>
 
-          {method === "swei" && weightMethod !== "entropy" && (
+          {method === "swei" && weightMethod !== "entropy" && weightMethod !== "critic" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <SWEIFormula />
             </div>
@@ -585,6 +662,12 @@ export default function MCDMCalculator() {
           {weightMethod === "entropy" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <EntropyFormula />
+            </div>
+          )}
+
+          {weightMethod === "critic" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <CRITICFormula />
             </div>
           )}
 
@@ -944,7 +1027,7 @@ export default function MCDMCalculator() {
                             </TableHead>
                           ))}
                         </TableRow>
-                        {weightMethod !== "entropy" && (
+                        {weightMethod !== "entropy" && weightMethod !== "critic" && (
                           <TableRow className="bg-white border-b border-gray-200">
                             <TableHead className="text-xs font-semibold text-black py-3 px-4">Weight</TableHead>
                             {criteria.map((crit) => (
@@ -1008,7 +1091,7 @@ export default function MCDMCalculator() {
                 Back
               </Button>
               <Button onClick={handleSaveTable} className="bg-black text-white hover:bg-gray-800 text-xs h-8">
-                Next
+                {weightMethod === "entropy" ? "Calculate Entropy Weights" : weightMethod === "critic" ? "Calculate CRITIC Weights" : "Next"}
               </Button>
             </div>
           </div>
@@ -1150,9 +1233,14 @@ export default function MCDMCalculator() {
               </BreadcrumbList>
             </Breadcrumb>
 
-            <Card className="border-gray-200 bg-white shadow-none">
+            {/* Evaluation Matrix (Normalized) - First Table */}
+            <Card className="border-gray-200 bg-white shadow-none mb-6">
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs text-black">Evaluation Matrix</CardTitle>
+                <CardTitle className="text-xs text-black">
+                  {(weightMethod === "entropy" && entropyResult) || (weightMethod === "critic" && criticResult) 
+                    ? "Evaluation Matrix (Normalized)" 
+                    : "Evaluation Matrix"}
+                </CardTitle>
               </CardHeader>
               <CardContent className="pt-2 pb-2">
                 <div className="overflow-x-auto border border-gray-200 rounded-lg">
@@ -1166,7 +1254,7 @@ export default function MCDMCalculator() {
                           <TableHead key={crit.id} className="text-center py-2 px-3 font-semibold text-black text-xs">
                             <div className="text-xs whitespace-nowrap">{crit.name}</div>
                             <div className="text-xs text-gray-700">
-                              {crit.type === "beneficial" ? "↑" : "↓"} ({crit.weight})
+                              {crit.type === "beneficial" ? "↑" : "↓"} ({crit.weight.toFixed(3)})
                             </div>
                           </TableHead>
                         ))}
@@ -1178,7 +1266,11 @@ export default function MCDMCalculator() {
                           <TableCell className="py-2 px-3 font-medium text-black text-xs">{alt.name}</TableCell>
                           {criteria.map((crit) => (
                             <TableCell key={crit.id} className="text-center py-2 px-3 text-black text-xs">
-                              {alt.scores[crit.id] || "-"}
+                              {weightMethod === "entropy" && entropyResult
+                                ? entropyResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) ?? "-"
+                                : weightMethod === "critic" && criticResult
+                                ? criticResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) ?? "-"
+                                : alt.scores[crit.id] || "-"}
                             </TableCell>
                           ))}
                         </TableRow>
@@ -1188,6 +1280,202 @@ export default function MCDMCalculator() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Entropy Weight Calculation Results - Second Table */}
+            {weightMethod === "entropy" && entropyResult && (
+              <Card className="border-gray-200 bg-white shadow-none mb-6">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs text-black">Entropy Weight Calculation Results</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-2 pb-2">
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-left py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
+                            Alternative
+                          </TableHead>
+                          {criteria.map((crit) => (
+                            <TableHead
+                              key={crit.id}
+                              className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap"
+                            >
+                              {crit.name}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {/* Individual entropy contributions (pᵢⱼ × log₂(pᵢⱼ)) for each alternative */}
+                        {alternatives.map((alt) => (
+                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <TableCell className="py-2 px-3 font-medium text-black text-xs whitespace-nowrap">
+                              {alt.name}
+                            </TableCell>
+                            {criteria.map((crit) => {
+                              const p_ij = entropyResult.normalizedMatrix[alt.id]?.[crit.id]
+                              const epsilon = 1e-12
+                              // Calculate pᵢⱼ × log₂(pᵢⱼ)
+                              const entropyContribution =
+                                p_ij && p_ij > epsilon ? p_ij * Math.log2(p_ij) : 0
+                              return (
+                                <TableCell
+                                  key={crit.id}
+                                  className="text-center py-2 px-3 text-black text-xs whitespace-nowrap"
+                                >
+                                  {entropyContribution.toFixed(4)}
+                                </TableCell>
+                              )
+                            })}
+                          </TableRow>
+                        ))}
+                        
+                        {/* Entropy (Ej) row - highlighted */}
+                        <TableRow className="bg-yellow-50 border-b-2 border-yellow-300">
+                          <TableCell className="py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
+                            Eⱼ
+                          </TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell
+                              key={crit.id}
+                              className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap"
+                            >
+                              {entropyResult.entropyValues[crit.id]?.toFixed(3) ?? "-"}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+
+                        {/* Diversity Degree (dj=1-Ej) row - highlighted */}
+                        <TableRow className="bg-yellow-50 border-b-2 border-yellow-300">
+                          <TableCell className="py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
+                            dⱼ = 1 - Eⱼ
+                          </TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell
+                              key={crit.id}
+                              className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap"
+                            >
+                              {entropyResult.diversityValues[crit.id]?.toFixed(3) ?? "-"}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+
+                        {/* Weight Calculation (Wj) row - highlighted */}
+                        <TableRow className="bg-yellow-50 border-b-2 border-yellow-300">
+                          <TableCell className="py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
+                            Wⱼ
+                          </TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell
+                              key={crit.id}
+                              className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap"
+                            >
+                              {entropyResult.weights[crit.id]?.toFixed(3) ?? "-"}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* CRITIC Weight Calculation Results - Second Table */}
+            {weightMethod === "critic" && criticResult && (
+              <Card className="border-gray-200 bg-white shadow-none mb-6">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs text-black">CRITIC Weight Calculation Results</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-2 pb-2">
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-left py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
+                            Criteria
+                          </TableHead>
+                          <TableHead className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
+                            Standard Deviation (σⱼ)
+                          </TableHead>
+                          <TableHead className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
+                            Information Amount (Cⱼ)
+                          </TableHead>
+                          <TableHead className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
+                            Weight (Wⱼ)
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {criteria.map((crit) => (
+                          <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <TableCell className="py-2 px-3 font-medium text-black text-xs whitespace-nowrap">
+                              {crit.name}
+                            </TableCell>
+                            <TableCell className="text-center py-2 px-3 text-black text-xs whitespace-nowrap">
+                              {criticResult.standardDeviations[crit.id]?.toFixed(4) ?? "-"}
+                            </TableCell>
+                            <TableCell className="text-center py-2 px-3 text-black text-xs whitespace-nowrap">
+                              {criticResult.informationAmounts[crit.id]?.toFixed(4) ?? "-"}
+                            </TableCell>
+                            <TableCell className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
+                              {criticResult.weights[crit.id]?.toFixed(4) ?? "-"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* CRITIC Correlation Matrix - Third Table */}
+            {weightMethod === "critic" && criticResult && (
+              <Card className="border-gray-200 bg-white shadow-none mb-6">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs text-black">Correlation Matrix</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-2 pb-2">
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-left py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
+                            Criteria
+                          </TableHead>
+                          {criteria.map((crit) => (
+                            <TableHead
+                              key={crit.id}
+                              className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap"
+                            >
+                              {crit.name}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {criteria.map((crit) => (
+                          <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <TableCell className="py-2 px-3 font-medium text-black text-xs whitespace-nowrap">
+                              {crit.name}
+                            </TableCell>
+                            {criteria.map((crit2) => (
+                              <TableCell
+                                key={crit2.id}
+                                className="text-center py-2 px-3 text-black text-xs whitespace-nowrap"
+                              >
+                                {criticResult.correlationMatrix[crit.id]?.[crit2.id]?.toFixed(4) ?? "-"}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </main>
       </SidebarProvider>
