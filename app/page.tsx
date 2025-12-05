@@ -33,6 +33,18 @@ import VIKORFormula from "@/components/VIKORFormula"
 import EDASFormula from "@/components/EDASFormula"
 import COPRASFormula from "@/components/COPRASFormula"
 import MOORAFormula from "@/components/MOORAFormula"
+import MULTIMOORAFormula from "@/components/MULTIMOORAFormula"
+import TODIMFormula from "@/components/TODIMFormula"
+import CODASFormula from "@/components/CODASFormula"
+import MOOSRAFormula from "@/components/MOOSRAFormula"
+import MAIRCAFormula from "@/components/MAIRCAFormula"
+import MARCOSFormula from "@/components/MARCOSFormula"
+import PROMETHEEFormula from "@/components/PROMETHEEFormula"
+import PROMETHEE1Formula from "@/components/PROMETHEE1Formula"
+import PROMETHEE2Formula from "@/components/PROMETHEE2Formula"
+import ELECTREFormula from "@/components/ELECTREFormula"
+import ELECTRE1Formula from "@/components/ELECTRE1Formula"
+import ELECTRE2Formula from "@/components/ELECTRE2Formula"
 import COCOSOFormula from "@/components/COCOSOFormula"
 import EntropyFormula from "@/components/EntropyFormula"
 import CRITICFormula from "@/components/CRITICFormula"
@@ -50,7 +62,7 @@ interface Alternative {
   scores: Record<string, number | "">
 }
 
-type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2" | "electre3"
+type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "multimoora" | "todim" | "codas" | "moosra" | "mairca" | "marcos" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2"
 type WeightMethod = "equal" | "entropy" | "critic"
 type PageStep = "home" | "input" | "table" | "matrix" | "calculate"
 
@@ -113,6 +125,42 @@ const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; for
     formula: "y = Σ(beneficial) - Σ(non-beneficial)"
   },
   {
+    value: "multimoora",
+    label: "MULTIMOORA",
+    description: "Multi-Objective Optimization by Ratio Analysis plus Full Multiplicative Form",
+    formula: "Score = (Rank_RS + Rank_RP + Rank_FMF) / 3"
+  },
+  {
+    value: "todim",
+    label: "TODIM",
+    description: "Tomada de Decisão Interativa e Multicritério (Interactive and Multicriteria Decision Making)",
+    formula: "ξ_i^norm = (ξ_i - ξ_min) / (ξ_max - ξ_min)"
+  },
+  {
+    value: "codas",
+    label: "CODAS",
+    description: "Combinative Distance-based Assessment",
+    formula: "RA_i = d_i^E + τ × d_i^T"
+  },
+  {
+    value: "moosra",
+    label: "MOOSRA",
+    description: "Multi-Objective Optimization on the basis of Simple Ratio Analysis",
+    formula: "v_i = S_i^+ / S_i^-"
+  },
+  {
+    value: "mairca",
+    label: "MAIRCA",
+    description: "Multi-Attributive Ideal-Real Comparative Analysis",
+    formula: "G_p = Σ(T_pj - R_pj)"
+  },
+  {
+    value: "marcos",
+    label: "MARCOS",
+    description: "Measurement of Alternatives and Ranking according to Compromise Solution",
+    formula: "f(K_i) = K_i^+ / (K_i^+ + K_i^-)"
+  },
+  {
     value: "cocoso",
     label: "COCOSO",
     description: "Combined Compromise Solution",
@@ -159,12 +207,6 @@ const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; for
     label: "ELECTRE II",
     description: "ÉLimination Et Choix Traduisant la REalité (Complete Ranking)",
     formula: "Score = Strong Outranked - Strong OutrankedBy"
-  },
-  {
-    value: "electre3",
-    label: "ELECTRE III",
-    description: "ÉLimination Et Choix Traduisant la REalité (Fuzzy Thresholds)",
-    formula: "σ = C × Π((1-d_j)/(1-C))"
   },
 ]
 
@@ -653,9 +695,81 @@ export default function MCDMCalculator() {
             </div>
           )}
 
+          {method === "multimoora" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <MULTIMOORAFormula />
+            </div>
+          )}
+
+          {method === "todim" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <TODIMFormula />
+            </div>
+          )}
+
+          {method === "codas" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <CODASFormula />
+            </div>
+          )}
+
+          {method === "moosra" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <MOOSRAFormula />
+            </div>
+          )}
+
+          {method === "mairca" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <MAIRCAFormula />
+            </div>
+          )}
+
+          {method === "marcos" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <MARCOSFormula />
+            </div>
+          )}
+
           {method === "cocoso" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <COCOSOFormula />
+            </div>
+          )}
+
+          {method === "promethee" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <PROMETHEEFormula />
+            </div>
+          )}
+
+          {method === "promethee1" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <PROMETHEE1Formula />
+            </div>
+          )}
+
+          {method === "promethee2" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <PROMETHEE2Formula />
+            </div>
+          )}
+
+          {method === "electre" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <ELECTREFormula />
+            </div>
+          )}
+
+          {method === "electre1" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <ELECTRE1Formula />
+            </div>
+          )}
+
+          {method === "electre2" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <ELECTRE2Formula />
             </div>
           )}
 

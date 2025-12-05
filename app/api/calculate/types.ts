@@ -20,6 +20,12 @@ export interface CalculationRequest {
     | "waspas"
     | "edas"
     | "moora"
+    | "multimoora"
+    | "todim"
+    | "codas"
+    | "moosra"
+    | "mairca"
+    | "marcos"
     | "cocoso"
     | "copras"
     | "promethee"
@@ -29,7 +35,6 @@ export interface CalculationRequest {
     | "electre"
     | "electre1"
     | "electre2"
-    | "electre3"
     | "entropy"
   alternatives: Alternative[]
   criteria: Criterion[]
