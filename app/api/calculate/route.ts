@@ -9,7 +9,21 @@ import { calculateVIKOR } from "./vikor";
 import { calculateWASPAS } from "./waspas";
 import { calculateEDAS } from "./edas";
 import { calculateMOORA } from "./moora";
+import { calculateMULTIMOORA } from "./multimoora";
+import { calculateTODIM } from "./todim";
+import { calculateCODAS } from "./codas";
+import { calculateMOOSRA } from "./moosra";
+import { calculateMAIRCA } from "./mairca";
+import { calculateMARCOS } from "./marcos";
 import { calculateCOCOSO } from "./cocoso";
+import { calculateCOPRAS } from "./copras";
+import { calculatePROMETHEE } from "./promethee";
+import { calculatePROMETHEE1 } from "./promethee1";
+import { calculatePROMETHEE2 } from "./promethee2";
+import { calculateELECTRE } from "./electre";
+import { calculateELECTRE1 } from "./electre1";
+import { calculateELECTRE2 } from "./electre2";
+import { calculateEntropy } from "./entropy";
 
 // Helper: build ranking and response
 function buildResponse(
@@ -18,7 +32,7 @@ function buildResponse(
   alternatives: { id: string; name: string }[]
 ): CalculationResponse {
   // Methods where LOWER score is better
-  const ascendingMethods = ["swei", "swi", "vikor"];
+  const ascendingMethods = ["swei", "swi", "vikor", "multimoora", "mairca"];
   const isAscending = ascendingMethods.includes(method.toLowerCase());
 
   const ranking = alternatives
@@ -84,11 +98,50 @@ export async function POST(request: NextRequest) {
       case "moora":
         results = calculateMOORA(alternatives, criteria).scores;
         break;
+      case "multimoora":
+        results = calculateMULTIMOORA(alternatives, criteria).scores;
+        break;
+      case "todim":
+        results = calculateTODIM(alternatives, criteria).scores;
+        break;
+      case "codas":
+        results = calculateCODAS(alternatives, criteria).scores;
+        break;
+      case "moosra":
+        results = calculateMOOSRA(alternatives, criteria).scores;
+        break;
+      case "mairca":
+        results = calculateMAIRCA(alternatives, criteria).scores;
+        break;
+      case "marcos":
+        results = calculateMARCOS(alternatives, criteria).scores;
+        break;
       case "cocoso":
         results = calculateCOCOSO(alternatives, criteria);
       case "test":
         console.log("Test method invoked");
         // results = calculateCOCOSO(alternatives, criteria);
+        break;
+      case "copras":
+        results = calculateCOPRAS(alternatives, criteria);
+        break;
+      case "promethee":
+        results = calculatePROMETHEE(alternatives, criteria);
+        break;
+      case "promethee1":
+        results = calculatePROMETHEE1(alternatives, criteria);
+        break;
+      case "promethee2":
+        results = calculatePROMETHEE2(alternatives, criteria);
+        break;
+      case "electre":
+        results = calculateELECTRE(alternatives, criteria);
+        break;
+      case "electre1":
+        results = calculateELECTRE1(alternatives, criteria);
+        break;
+      case "electre2":
+        results = calculateELECTRE2(alternatives, criteria);
         break;
       default:
         return NextResponse.json(
