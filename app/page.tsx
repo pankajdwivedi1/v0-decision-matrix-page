@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import * as XLSX from "xlsx"
 import { Upload, ChevronDown, ChevronRight } from "lucide-react"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import SWEIFormula from "@/components/SWEIFormula"
 import SWIFormula from "@/components/SWIFormula"
 import TOPSISFormula from "@/components/TOPSISFormula"
@@ -39,6 +40,7 @@ import CODASFormula from "@/components/CODASFormula"
 import MOOSRAFormula from "@/components/MOOSRAFormula"
 import MAIRCAFormula from "@/components/MAIRCAFormula"
 import MARCOSFormula from "@/components/MARCOSFormula"
+import AHPFormula from "@/components/AHPFormula"
 import PROMETHEEFormula from "@/components/PROMETHEEFormula"
 import PROMETHEE1Formula from "@/components/PROMETHEE1Formula"
 import PROMETHEE2Formula from "@/components/PROMETHEE2Formula"
@@ -63,8 +65,13 @@ interface Alternative {
 }
 
 type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "multimoora" | "todim" | "codas" | "moosra" | "mairca" | "marcos" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2"
-type WeightMethod = "equal" | "entropy" | "critic"
+type WeightMethod = "equal" | "entropy" | "critic" | "ahp"
 type PageStep = "home" | "input" | "table" | "matrix" | "calculate"
+type ComparisonResult = {
+  method: MCDMMethod
+  label: string
+  ranking: { alternativeName: string; rank: number; score: number | string }[]
+}
 
 interface EntropyResult {
   weights: Record<string, number>
@@ -79,6 +86,15 @@ interface CriticResult {
   standardDeviations: Record<string, number>
   correlationMatrix: Record<string, Record<string, number>>
   informationAmounts: Record<string, number>
+}
+
+interface AHPResult {
+  weights: Record<string, number>
+  pairwiseMatrix: number[][]
+  normalizedMatrix: number[][]
+  lambdaMax: number
+  consistencyIndex: number
+  consistencyRatio: number
 }
 
 const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; formula: string }[] = [
@@ -226,11 +242,40 @@ const WEIGHT_METHODS: { value: WeightMethod; label: string; description: string 
     label: "CRITIC Method",
     description: "CRITIC (Criteria Importance Through Intercriteria Correlation) method that determines weights based on contrast intensity and conflict between criteria.",
   },
+  {
+    value: "ahp",
+    label: "AHP",
+    description: "Analytic Hierarchy Process (AHP) derives weights from a pairwise comparison matrix; here derived from provided priority scores.",
+  },
+]
+
+const CHART_COLORS = [
+  "#2563eb",
+  "#db2777",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#0ea5e9",
+  "#6366f1",
+  "#14b8a6",
+  "#f97316",
 ]
 
 export default function MCDMCalculator() {
   const [method, setMethod] = useState<MCDMMethod>("swei")
   const [weightMethod, setWeightMethod] = useState<WeightMethod>("equal")
+  const [activeFormulaType, setActiveFormulaType] = useState<"method" | "weight">("method")
+  const [homeTab, setHomeTab] = useState<"calculator" | "rankingComparison">("calculator")
+  const [comparisonAlternatives, setComparisonAlternatives] = useState<Alternative[]>([])
+  const [comparisonCriteria, setComparisonCriteria] = useState<Criterion[]>([])
+  const [selectedRankingMethods, setSelectedRankingMethods] = useState<MCDMMethod[]>(["topsis", "swei"])
+  const [comparisonWeightMethod, setComparisonWeightMethod] = useState<WeightMethod>("equal")
+  const [comparisonResults, setComparisonResults] = useState<ComparisonResult[]>([])
+  const [comparisonLoading, setComparisonLoading] = useState(false)
+  const [comparisonError, setComparisonError] = useState<string | null>(null)
+  const [comparisonFileName, setComparisonFileName] = useState<string>("")
+  const comparisonFileInputRef = useRef<HTMLInputElement>(null)
   const [currentStep, setCurrentStep] = useState<PageStep>("home")
   const [rankingOpen, setRankingOpen] = useState(true)
   const [weightOpen, setWeightOpen] = useState(false)
@@ -245,6 +290,7 @@ export default function MCDMCalculator() {
   const [apiResults, setApiResults] = useState<any>(null)
   const [entropyResult, setEntropyResult] = useState<EntropyResult | null>(null)
   const [criticResult, setCriticResult] = useState<CriticResult | null>(null)
+  const [ahpResult, setAhpResult] = useState<AHPResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const parseExcelData = (data: any[][]) => {
@@ -288,6 +334,208 @@ export default function MCDMCalculator() {
     setNumCriteria(newCriteria.length)
     setNumAlternatives(newAlternatives.length)
   }
+
+  const parseComparisonExcelData = (data: any[][]) => {
+    if (data.length < 4) {
+      setComparisonError("Excel file must have at least 4 rows (headers, max/min, weights, data)")
+      return
+    }
+
+    const headers = data[0].slice(1).filter(h => h !== undefined && h !== null && h !== "")
+    const types = data[1].slice(1)
+    const weights = data[2].slice(1)
+    const dataRows = data.slice(3).filter(row => row[0])
+
+    if (headers.length === 0 || dataRows.length === 0) {
+      setComparisonError("Excel file doesn't contain valid data")
+      return
+    }
+
+    const newCriteria: Criterion[] = headers.map((header, idx) => ({
+      id: `crit-${idx}`,
+      name: header?.toString() || `Criteria-${idx + 1}`,
+      type: types[idx]?.toString().toLowerCase().includes("min") ? "non-beneficial" : "beneficial",
+      weight: Number(weights[idx]) || 1 / headers.length,
+    }))
+
+    const newAlternatives: Alternative[] = dataRows.map((row, altIdx) => {
+      const scores: Record<string, number> = {}
+      newCriteria.forEach((crit, critIdx) => {
+        const value = row[critIdx + 1]
+        scores[crit.id] = Number(value) || 0
+      })
+      return {
+        id: `alt-${altIdx}`,
+        name: row[0]?.toString() || `Alt-${altIdx + 1}`,
+        scores,
+      }
+    })
+
+    setComparisonCriteria(newCriteria)
+    setComparisonAlternatives(newAlternatives)
+    setComparisonError(null)
+  }
+
+  const handleComparisonFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer)
+        const workbook = XLSX.read(data, { type: "array" })
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 })
+        parseComparisonExcelData(jsonData as any[][])
+        setComparisonFileName(file.name)
+      } catch (error) {
+        console.error(error)
+        setComparisonError("Error reading Excel file. Please ensure it's a valid Excel file.")
+      }
+    }
+    reader.readAsArrayBuffer(file)
+    if (comparisonFileInputRef.current) {
+      comparisonFileInputRef.current.value = ""
+    }
+  }
+
+  const toggleRankingMethodSelection = (value: MCDMMethod) => {
+    setSelectedRankingMethods((prev) =>
+      prev.includes(value) ? prev.filter((m) => m !== value) : [...prev, value],
+    )
+  }
+
+  const applyWeightMethodForComparison = async (
+    weight: WeightMethod,
+    alts: Alternative[],
+    crits: Criterion[],
+  ): Promise<{ criteria: Criterion[]; entropyResult?: EntropyResult; criticResult?: CriticResult }> => {
+    if (weight === "equal") {
+      const equalCriteria = crits.map((crit) => ({ ...crit, weight: 1 / crits.length }))
+      return { criteria: equalCriteria }
+    }
+
+    if (weight === "entropy") {
+      const response = await fetch("/api/calculate/entropy-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alternatives: alts, criteria: crits }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate entropy weights")
+      const data: EntropyResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated, entropyResult: data }
+    }
+
+    if (weight === "critic") {
+      const response = await fetch("/api/calculate/critic-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alternatives: alts, criteria: crits }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate CRITIC weights")
+      const data: CriticResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated, criticResult: data }
+    }
+
+    // AHP
+    const response = await fetch("/api/calculate/ahp-weights", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ criteria: crits }),
+    })
+    if (!response.ok) throw new Error("Failed to calculate AHP weights")
+    const data: AHPResult = await response.json()
+    const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+    return { criteria: updated }
+  }
+
+  const handleComparisonCalculate = async () => {
+    if (comparisonAlternatives.length === 0 || comparisonCriteria.length === 0) {
+      setComparisonError("Please upload a valid Excel file first.")
+      return
+    }
+    if (selectedRankingMethods.length === 0) {
+      setComparisonError("Select at least one ranking method.")
+      return
+    }
+
+    setComparisonLoading(true)
+    setComparisonError(null)
+    setComparisonResults([])
+
+    try {
+      const { criteria: weightedCriteria } = await applyWeightMethodForComparison(
+        comparisonWeightMethod,
+        comparisonAlternatives,
+        comparisonCriteria,
+      )
+
+      const payloadAlternatives = comparisonAlternatives
+
+      const results = await Promise.all(
+        selectedRankingMethods.map(async (m) => {
+          const response = await fetch("/api/calculate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              method: m,
+              alternatives: payloadAlternatives,
+              criteria: weightedCriteria,
+            }),
+          })
+          if (!response.ok) throw new Error(`Failed to calculate ${m} ranking`)
+          const data = await response.json()
+          const info = MCDM_METHODS.find((item) => item.value === m)
+          return {
+            method: m,
+            label: info?.label || m,
+            ranking: data.ranking || [],
+          } as ComparisonResult
+        }),
+      )
+
+      setComparisonResults(results)
+    } catch (error: any) {
+      console.error(error)
+      setComparisonError(error?.message || "Error while calculating comparison.")
+    } finally {
+      setComparisonLoading(false)
+    }
+  }
+
+  const comparisonChartData = useMemo(() => {
+    if (comparisonResults.length === 0) return []
+    const methodOrder = comparisonResults.map((r) => r.label)
+    const alternativesSet = new Set<string>()
+    comparisonResults.forEach((r) => {
+      r.ranking?.forEach((item) => alternativesSet.add(item.alternativeName))
+    })
+    const alternativesList = Array.from(alternativesSet)
+
+    return methodOrder.map((label, idx) => {
+      const entry: Record<string, any> = { method: label }
+      const ranking = comparisonResults[idx]?.ranking || []
+      ranking.forEach((item) => {
+        entry[item.alternativeName] = item.rank
+      })
+      // Ensure all alternatives exist to avoid undefined in chart
+      alternativesList.forEach((alt) => {
+        if (entry[alt] === undefined) entry[alt] = null
+      })
+      return entry
+    })
+  }, [comparisonResults])
+
+  const comparisonChartAlternatives = useMemo(() => {
+    const alternativesSet = new Set<string>()
+    comparisonResults.forEach((r) => {
+      r.ranking?.forEach((item) => alternativesSet.add(item.alternativeName))
+    })
+    return Array.from(alternativesSet)
+  }, [comparisonResults])
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -378,6 +626,7 @@ export default function MCDMCalculator() {
     // Reset previous weight calculation results
     setEntropyResult(null)
     setCriticResult(null)
+    setAhpResult(null)
 
     // Calculate entropy weights if entropy method is selected
     if (weightMethod === "entropy") {
@@ -457,6 +706,41 @@ export default function MCDMCalculator() {
       }
     }
 
+    // Calculate AHP weights if AHP method is selected
+    if (weightMethod === "ahp") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/calculate/ahp-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate AHP weights")
+        }
+
+        const data: AHPResult = await response.json()
+
+        setAhpResult(data)
+        setCriteria(
+          criteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          })),
+        )
+      } catch (error) {
+        console.error("Error calculating AHP weights:", error)
+        alert("Error calculating AHP weights. Using equal weights instead.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
     setCurrentStep("matrix")
   }
 
@@ -495,6 +779,36 @@ export default function MCDMCalculator() {
   }
 
   const methodInfo = MCDM_METHODS.find((m) => m.value === method)
+  const weightMethodInfo = WEIGHT_METHODS.find((w) => w.value === weightMethod)
+  const showingWeightFormula = activeFormulaType === "weight"
+
+  const cardTitle = showingWeightFormula
+    ? `${weightMethodInfo?.label} Method`
+    : `${methodInfo?.label} Method`
+
+  const cardDescription = showingWeightFormula
+    ? weightMethodInfo?.description
+    : methodInfo?.description
+
+  const cardFormula = showingWeightFormula
+    ? weightMethod === "entropy"
+      ? "w_j = d_j / Σd_j, where d_j = 1 - E_j and E_j = -k Σ(p_ij × ln(p_ij))"
+      : weightMethod === "critic"
+      ? "w_j = C_j / ΣC_j, where C_j = σ_j × Σ(1 - r_jk)"
+      : weightMethod === "ahp"
+      ? "w = eigenvector of pairwise matrix a_ij = w_i / w_j; check CR = CI / RI"
+      : weightMethodInfo?.label
+    : methodInfo?.formula
+
+  const cardLongDescription = showingWeightFormula
+    ? weightMethod === "entropy"
+      ? "Entropy-based objective weighting method that calculates weights based on information content in the decision matrix. Higher entropy means more uncertainty (less information), resulting in lower weight. Lower entropy means more information content, resulting in higher weight."
+      : weightMethod === "critic"
+      ? "CRITIC method determines weights based on both contrast intensity (standard deviation) and conflict (correlation) between criteria. Higher information content (higher contrast and lower correlation) results in higher weights."
+      : weightMethod === "ahp"
+      ? "AHP derives weights from pairwise comparisons (here built from provided priority scores). It computes the eigenvector of the pairwise matrix and checks consistency (CI/CR)."
+      : weightMethodInfo?.description
+    : methodInfo?.description
 
   if (currentStep === "home") {
     return (
@@ -523,7 +837,10 @@ export default function MCDMCalculator() {
                     {MCDM_METHODS.map((m) => (
                       <SidebarMenuItem key={m.value}>
                         <SidebarMenuButton
-                          onClick={() => setMethod(m.value)}
+                          onClick={() => {
+                            setActiveFormulaType("method")
+                            setMethod(m.value)
+                          }}
                           isActive={method === m.value}
                           className={`text-xs ${
                             method === m.value
@@ -557,7 +874,10 @@ export default function MCDMCalculator() {
                     {WEIGHT_METHODS.map((w) => (
                       <SidebarMenuItem key={w.value}>
                         <SidebarMenuButton
-                          onClick={() => setWeightMethod(w.value)}
+                          onClick={() => {
+                            setActiveFormulaType("weight")
+                            setWeightMethod(w.value)
+                          }}
                           isActive={weightMethod === w.value}
                           className={`text-xs ${
                             weightMethod === w.value
@@ -586,200 +906,367 @@ export default function MCDMCalculator() {
               </div>
             </div>
 
-            <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm text-black">Get Started</CardTitle>
-                <CardDescription className="text-xs text-gray-700">
-                  Create a decision matrix by adding alternatives and criteria
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button
-                  onClick={() => setCurrentStep("input")}
-                  className="w-full bg-black text-white hover:bg-gray-800 text-xs h-8"
-                >
-                  + Add Alternative & Criteria
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="flex gap-2 mb-4">
+              <Button
+                variant={homeTab === "calculator" ? "default" : "outline"}
+                className="text-xs h-8"
+                onClick={() => setHomeTab("calculator")}
+              >
+                Calculator
+              </Button>
+              <Button
+                variant={homeTab === "rankingComparison" ? "default" : "outline"}
+                className="text-xs h-8"
+                onClick={() => setHomeTab("rankingComparison")}
+              >
+                Ranking comparison
+              </Button>
+            </div>
 
-            <Card className="border-gray-200 bg-white shadow-none w-full">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm text-black">
-                  {weightMethod === "entropy" 
-                    ? "Entropy Weight Method"
-                    : weightMethod === "critic"
-                    ? "CRITIC Method"
-                    : `${methodInfo?.label} Method`}
-                </CardTitle>
-                <CardDescription className="text-xs text-gray-700">
-                  {weightMethod === "entropy"
-                    ? "Entropy-based objective weighting method that calculates weights based on information content in the decision matrix."
-                    : weightMethod === "critic"
-                    ? "CRITIC (Criteria Importance Through Intercriteria Correlation) method that determines weights based on contrast intensity and conflict between criteria."
-                    : methodInfo?.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-2 text-xs">
-                  <div>
-                    <p className="font-semibold text-black mb-1">Formula:</p>
-                    <p className="text-gray-700 bg-gray-50 p-2 rounded border border-gray-200">
-                      {weightMethod === "entropy"
-                        ? "w_j = d_j / Σd_j, where d_j = 1 - E_j and E_j = -k Σ(p_ij × ln(p_ij))"
-                        : weightMethod === "critic"
-                        ? "w_j = C_j / ΣC_j, where C_j = σ_j × Σ(1 - r_jk)"
-                        : methodInfo?.formula}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-black mb-1">Description:</p>
-                    <p className="text-gray-700">
-                      {weightMethod === "entropy"
-                        ? "Entropy-based objective weighting method that calculates weights based on information content in the decision matrix. Higher entropy means more uncertainty (less information), resulting in lower weight. Lower entropy means more information content, resulting in higher weight."
-                        : weightMethod === "critic"
-                        ? "CRITIC method determines weights based on both contrast intensity (standard deviation) and conflict (correlation) between criteria. Higher information content (higher contrast and lower correlation) results in higher weights."
-                        : methodInfo?.description}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {homeTab === "calculator" && (
+              <>
+                <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm text-black">Get Started</CardTitle>
+                    <CardDescription className="text-xs text-gray-700">
+                      Create a decision matrix by adding alternatives and criteria
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <Button
+                      onClick={() => setCurrentStep("input")}
+                      className="w-full bg-black text-white hover:bg-gray-800 text-xs h-8"
+                    >
+                      + Add Alternative & Criteria
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-gray-200 bg-white shadow-none w-full">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm text-black">{cardTitle}</CardTitle>
+                    <CardDescription className="text-xs text-gray-700">
+                      {cardDescription}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2 text-xs">
+                      <div>
+                        <p className="font-semibold text-black mb-1">Formula:</p>
+                        <p className="text-gray-700 bg-gray-50 p-2 rounded border border-gray-200">
+                          {cardFormula}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-black mb-1">Description:</p>
+                        <p className="text-gray-700">
+                          {cardLongDescription}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
+            {homeTab === "rankingComparison" && (
+              <>
+                <Card className="border-gray-200 bg-white shadow-none w-full mb-4">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm text-black">Ranking comparison</CardTitle>
+                    <CardDescription className="text-xs text-gray-700">
+                      Upload a decision matrix, choose one weight method, pick ranking methods to compare, then view rankings and chart.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-black">Upload Excel</p>
+                      <input
+                        ref={comparisonFileInputRef}
+                        type="file"
+                        accept=".xlsx,.xls"
+                        onChange={handleComparisonFileUpload}
+                        className="text-xs"
+                      />
+                      {comparisonFileName && (
+                        <p className="text-[11px] text-gray-600">Loaded: {comparisonFileName}</p>
+                      )}
+                      <p className="text-[11px] text-gray-600">
+                        Format: Row 1 headers; Row 2 max/min; Row 3 weights; Row 4+ alternative values.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="border border-gray-200 rounded-lg p-3">
+                        <p className="text-xs font-semibold text-black mb-2">Weight method (choose one)</p>
+                        <div className="space-y-2">
+                          {WEIGHT_METHODS.map((w) => (
+                            <label key={w.value} className="flex items-start gap-2 text-xs text-black">
+                              <input
+                                type="checkbox"
+                                checked={comparisonWeightMethod === w.value}
+                                onChange={() => setComparisonWeightMethod(w.value)}
+                                disabled={comparisonLoading}
+                              />
+                              <span>
+                                <span className="font-semibold">{w.label}</span>{" "}
+                                <span className="text-gray-700">{w.description}</span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="border border-gray-200 rounded-lg p-3">
+                        <p className="text-xs font-semibold text-black mb-2">Ranking methods (choose one or more)</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {MCDM_METHODS.map((m) => (
+                            <label key={m.value} className="flex items-start gap-2 text-[11px] text-black">
+                              <input
+                                type="checkbox"
+                                checked={selectedRankingMethods.includes(m.value)}
+                                onChange={() => toggleRankingMethodSelection(m.value)}
+                                disabled={comparisonLoading}
+                              />
+                              <span>
+                                <span className="font-semibold">{m.label}</span>{" "}
+                                <span className="text-gray-700">{m.description}</span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {comparisonError && (
+                      <div className="text-xs text-red-600 border border-red-200 bg-red-50 p-2 rounded">
+                        {comparisonError}
+                      </div>
+                    )}
+
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={handleComparisonCalculate}
+                        className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                        disabled={comparisonLoading}
+                      >
+                        {comparisonLoading ? "Calculating..." : "Calculate comparison"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {comparisonResults.length > 0 && (
+                  <Card className="border-gray-200 bg-white shadow-none w-full mb-4">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Ranking table</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Rankings by method (lower rank is better).
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="overflow-x-auto">
+                      <table className="min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="text-left px-3 py-2 border-b border-gray-200 text-black">Method</th>
+                            {comparisonResults[0]?.ranking?.map((item) => (
+                              <th key={item.alternativeName} className="px-3 py-2 text-left border-b border-gray-200 text-black">
+                                {item.alternativeName}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {comparisonResults.map((result) => (
+                            <tr key={result.method} className="border-b border-gray-200">
+                              <td className="px-3 py-2 font-semibold text-black whitespace-nowrap">{result.label}</td>
+                              {result.ranking?.map((item) => (
+                                <td key={item.alternativeName} className="px-3 py-2 text-black">
+                                  {item.rank}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {comparisonResults.length > 0 && comparisonChartData.length > 0 && (
+                  <Card className="border-gray-200 bg-white shadow-none w-full">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Ranking variation</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Line chart comparing alternative ranks across selected methods.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent style={{ height: 360 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={comparisonChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                          <YAxis reversed allowDecimals={false} tick={{ fontSize: 10 }} />
+                          <Tooltip />
+                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                          {comparisonChartAlternatives.map((alt, idx) => (
+                            <Line
+                              key={alt}
+                              type="monotone"
+                              dataKey={alt}
+                              stroke={CHART_COLORS[idx % CHART_COLORS.length]}
+                              activeDot={{ r: 4 }}
+                              strokeWidth={2}
+                            />
+                          ))}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
           </div>
 
-          {method === "swei" && weightMethod !== "entropy" && weightMethod !== "critic" && (
+          {!showingWeightFormula && homeTab === "calculator" && method === "swei" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <SWEIFormula />
             </div>
           )}
 
-          {method === "swi" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "swi" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <SWIFormula />
             </div>
           )}
 
-          {method === "topsis" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "topsis" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <TOPSISFormula />
             </div>
           )}
 
-          {method === "waspas" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "waspas" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <WASPASFormula />
             </div>
           )}
 
-          {method === "vikor" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "vikor" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <VIKORFormula />
             </div>
           )}
 
-          {method === "edas" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "edas" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <EDASFormula />
             </div>
           )}
 
-          {method === "copras" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "copras" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <COPRASFormula />
             </div>
           )}
 
-          {method === "moora" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "moora" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <MOORAFormula />
             </div>
           )}
 
-          {method === "multimoora" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "multimoora" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <MULTIMOORAFormula />
             </div>
           )}
 
-          {method === "todim" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "todim" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <TODIMFormula />
             </div>
           )}
 
-          {method === "codas" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "codas" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <CODASFormula />
             </div>
           )}
 
-          {method === "moosra" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "moosra" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <MOOSRAFormula />
             </div>
           )}
 
-          {method === "mairca" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "mairca" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <MAIRCAFormula />
             </div>
           )}
 
-          {method === "marcos" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "marcos" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <MARCOSFormula />
             </div>
           )}
 
-          {method === "cocoso" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "cocoso" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <COCOSOFormula />
             </div>
           )}
 
-          {method === "promethee" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "promethee" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <PROMETHEEFormula />
             </div>
           )}
 
-          {method === "promethee1" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "promethee1" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <PROMETHEE1Formula />
             </div>
           )}
 
-          {method === "promethee2" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "promethee2" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <PROMETHEE2Formula />
             </div>
           )}
 
-          {method === "electre" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "electre" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <ELECTREFormula />
             </div>
           )}
 
-          {method === "electre1" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "electre1" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <ELECTRE1Formula />
             </div>
           )}
 
-          {method === "electre2" && (
+          {homeTab === "calculator" && !showingWeightFormula && method === "electre2" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <ELECTRE2Formula />
             </div>
           )}
 
-          {weightMethod === "entropy" && (
+          {homeTab === "calculator" && showingWeightFormula && weightMethod === "entropy" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <EntropyFormula />
             </div>
           )}
 
-          {weightMethod === "critic" && (
+          {homeTab === "calculator" && showingWeightFormula && weightMethod === "ahp" && (
+            <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
+              <AHPFormula />
+            </div>
+          )}
+
+          {homeTab === "calculator" && showingWeightFormula && weightMethod === "critic" && (
             <div className="max-w-7xl mx-auto px-2 md:px-3 pb-6">
               <CRITICFormula />
             </div>
@@ -817,7 +1304,10 @@ export default function MCDMCalculator() {
                     {MCDM_METHODS.map((m) => (
                       <SidebarMenuItem key={m.value}>
                         <SidebarMenuButton
-                          onClick={() => setMethod(m.value)}
+                          onClick={() => {
+                            setActiveFormulaType("method")
+                            setMethod(m.value)
+                          }}
                           isActive={method === m.value}
                           className={`text-xs ${
                             method === m.value
@@ -851,7 +1341,10 @@ export default function MCDMCalculator() {
                     {WEIGHT_METHODS.map((w) => (
                       <SidebarMenuItem key={w.value}>
                         <SidebarMenuButton
-                          onClick={() => setWeightMethod(w.value)}
+                          onClick={() => {
+                            setActiveFormulaType("weight")
+                            setWeightMethod(w.value)
+                          }}
                           isActive={weightMethod === w.value}
                           className={`text-xs ${
                             weightMethod === w.value
@@ -979,7 +1472,10 @@ export default function MCDMCalculator() {
                     {MCDM_METHODS.map((m) => (
                       <SidebarMenuItem key={m.value}>
                         <SidebarMenuButton
-                          onClick={() => setMethod(m.value)}
+                          onClick={() => {
+                            setActiveFormulaType("method")
+                            setMethod(m.value)
+                          }}
                           isActive={method === m.value}
                           className={`text-xs ${
                             method === m.value
@@ -1013,7 +1509,10 @@ export default function MCDMCalculator() {
                     {WEIGHT_METHODS.map((w) => (
                       <SidebarMenuItem key={w.value}>
                         <SidebarMenuButton
-                          onClick={() => setWeightMethod(w.value)}
+                          onClick={() => {
+                            setActiveFormulaType("weight")
+                            setWeightMethod(w.value)
+                          }}
                           isActive={weightMethod === w.value}
                           className={`text-xs ${
                             weightMethod === w.value
@@ -1141,7 +1640,7 @@ export default function MCDMCalculator() {
                             </TableHead>
                           ))}
                         </TableRow>
-                        {weightMethod !== "entropy" && weightMethod !== "critic" && (
+                        {weightMethod !== "entropy" && weightMethod !== "critic" && weightMethod !== "ahp" && (
                           <TableRow className="bg-white border-b border-gray-200">
                             <TableHead className="text-xs font-semibold text-black py-3 px-4">Weight</TableHead>
                             {criteria.map((crit) => (
@@ -1205,7 +1704,13 @@ export default function MCDMCalculator() {
                 Back
               </Button>
               <Button onClick={handleSaveTable} className="bg-black text-white hover:bg-gray-800 text-xs h-8">
-                {weightMethod === "entropy" ? "Calculate Entropy Weights" : weightMethod === "critic" ? "Calculate CRITIC Weights" : "Next"}
+                {weightMethod === "entropy"
+                  ? "Calculate Entropy Weights"
+                  : weightMethod === "critic"
+                  ? "Calculate CRITIC Weights"
+                  : weightMethod === "ahp"
+                  ? "Calculate AHP Weights"
+                  : "Next"}
               </Button>
             </div>
           </div>
@@ -1241,7 +1746,10 @@ export default function MCDMCalculator() {
                     {MCDM_METHODS.map((m) => (
                       <SidebarMenuItem key={m.value}>
                         <SidebarMenuButton
-                          onClick={() => setMethod(m.value)}
+                          onClick={() => {
+                            setActiveFormulaType("method")
+                            setMethod(m.value)
+                          }}
                           isActive={method === m.value}
                           className={`text-xs ${
                             method === m.value
@@ -1275,7 +1783,10 @@ export default function MCDMCalculator() {
                     {WEIGHT_METHODS.map((w) => (
                       <SidebarMenuItem key={w.value}>
                         <SidebarMenuButton
-                          onClick={() => setWeightMethod(w.value)}
+                          onClick={() => {
+                            setActiveFormulaType("weight")
+                            setWeightMethod(w.value)
+                          }}
                           isActive={weightMethod === w.value}
                           className={`text-xs ${
                             weightMethod === w.value
@@ -1590,6 +2101,146 @@ export default function MCDMCalculator() {
                 </CardContent>
               </Card>
             )}
+
+            {weightMethod === "ahp" && ahpResult && (
+              <>
+                <Card className="border-gray-200 bg-white shadow-none mb-6">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs text-black">AHP Pairwise Comparison Matrix</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-2 pb-2">
+                    <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50 border-b border-gray-200">
+                            <TableHead className="text-left py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
+                              Criteria
+                            </TableHead>
+                            {criteria.map((crit) => (
+                              <TableHead
+                                key={crit.id}
+                                className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap"
+                              >
+                                {crit.name}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {criteria.map((crit, rowIdx) => (
+                            <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableCell className="py-2 px-3 font-medium text-black text-xs whitespace-nowrap">
+                                {crit.name}
+                              </TableCell>
+                              {criteria.map((_, colIdx) => (
+                                <TableCell
+                                  key={`${crit.id}-${colIdx}`}
+                                  className="text-center py-2 px-3 text-black text-xs whitespace-nowrap"
+                                >
+                                  {ahpResult.pairwiseMatrix[rowIdx]?.[colIdx]?.toFixed(4) ?? "-"}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-gray-200 bg-white shadow-none mb-6">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs text-black">AHP Normalized Matrix</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-2 pb-2">
+                    <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50 border-b border-gray-200">
+                            <TableHead className="text-left py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
+                              Criteria
+                            </TableHead>
+                            {criteria.map((crit) => (
+                              <TableHead
+                                key={crit.id}
+                                className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap"
+                              >
+                                {crit.name}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {criteria.map((crit, rowIdx) => (
+                            <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableCell className="py-2 px-3 font-medium text-black text-xs whitespace-nowrap">
+                                {crit.name}
+                              </TableCell>
+                              {criteria.map((_, colIdx) => (
+                                <TableCell
+                                  key={`${crit.id}-norm-${colIdx}`}
+                                  className="text-center py-2 px-3 text-black text-xs whitespace-nowrap"
+                                >
+                                  {ahpResult.normalizedMatrix[rowIdx]?.[colIdx]?.toFixed(4) ?? "-"}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-gray-200 bg-white shadow-none mb-6">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs text-black">AHP Weights & Consistency</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-2 pb-3 space-y-3">
+                    <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50 border-b border-gray-200">
+                            <TableHead className="text-left py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
+                              Criteria
+                            </TableHead>
+                            <TableHead className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
+                              Weight (Wⱼ)
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {criteria.map((crit) => (
+                            <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableCell className="py-2 px-3 font-medium text-black text-xs whitespace-nowrap">
+                                {crit.name}
+                              </TableCell>
+                              <TableCell className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
+                                {ahpResult.weights[crit.id]?.toFixed(4) ?? "-"}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-black">
+                      <div className="border border-gray-200 rounded-lg p-2 bg-gray-50">
+                        <div className="font-semibold">λ_max</div>
+                        <div>{ahpResult.lambdaMax.toFixed(4)}</div>
+                      </div>
+                      <div className="border border-gray-200 rounded-lg p-2 bg-gray-50">
+                        <div className="font-semibold">Consistency Index (CI)</div>
+                        <div>{ahpResult.consistencyIndex.toFixed(4)}</div>
+                      </div>
+                      <div className="border border-gray-200 rounded-lg p-2 bg-gray-50">
+                        <div className="font-semibold">Consistency Ratio (CR)</div>
+                        <div>{ahpResult.consistencyRatio.toFixed(4)}</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </div>
         </main>
       </SidebarProvider>
@@ -1610,6 +2261,7 @@ export default function MCDMCalculator() {
                   <SidebarMenuButton
                     onClick={async () => {
                       if (m.value !== method) {
+                        setActiveFormulaType("method")
                         setMethod(m.value)
                         setApiResults(null)
                         setIsLoading(true)
@@ -1704,6 +2356,9 @@ export default function MCDMCalculator() {
                   setApiResults(null)
                   setAlternatives([])
                   setCriteria([])
+                  setEntropyResult(null)
+                  setCriticResult(null)
+                  setAhpResult(null)
                 }}
                 className="bg-black text-white hover:bg-gray-800 text-xs h-8"
               >
