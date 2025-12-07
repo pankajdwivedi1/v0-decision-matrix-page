@@ -56,13 +56,13 @@ export function calculateMARCOS(
   for (let j = 0; j < n; j++) {
     const crit = criteria[j]
     const colVals = matrix.map((row) => row[j]).filter(val => val > 0)
-    
+
     if (colVals.length === 0) {
       idealSolution[crit.id] = 0
       antiIdealSolution[crit.id] = 0
       continue
     }
-    
+
     if (crit.type === "beneficial") {
       idealSolution[crit.id] = Math.max(...colVals)
       antiIdealSolution[crit.id] = Math.min(...colVals)
@@ -83,7 +83,7 @@ export function calculateMARCOS(
     const crit = criteria[j]
     const colVals = matrix.map((row) => row[j])
     const extendedVals = [...colVals, idealSolution[crit.id], antiIdealSolution[crit.id]].filter(v => v > 0)
-    
+
     if (extendedVals.length === 0) {
       maxValues[j] = 1
       minValues[j] = 1
@@ -106,7 +106,7 @@ export function calculateMARCOS(
     for (let j = 0; j < n; j++) {
       const crit = criteria[j]
       const x_ij = matrix[i][j]
-      
+
       let normalizedValue: number
       if (crit.type === "beneficial") {
         normalizedValue = maxValues[j] > epsilon ? x_ij / maxValues[j] : 0
@@ -127,7 +127,7 @@ export function calculateMARCOS(
     const crit = criteria[j]
     const x_ideal = idealSolution[crit.id]
     const x_antiIdeal = antiIdealSolution[crit.id]
-    
+
     if (crit.type === "beneficial") {
       normalizedIdeal[j] = maxValues[j] > epsilon ? x_ideal / maxValues[j] : 1
       normalizedAntiIdeal[j] = maxValues[j] > epsilon ? x_antiIdeal / maxValues[j] : 0
@@ -188,14 +188,31 @@ export function calculateMARCOS(
     const s_i = sValues[i]
 
     // Calculate utility degrees
+    // K_i^- = S_i / S_ideal (closeness to ideal - higher is better)
+    // K_i^+ = S_i / S_antiIdeal (distance from anti-ideal - higher is better)
     const k_i_minus = sIdeal > epsilon ? s_i / sIdeal : 0
     const k_i_plus = sAntiIdeal > epsilon ? s_i / sAntiIdeal : 0
 
-    // Final utility function using standard MARCOS formula
-    // f(K_i) = K_i^+ / (K_i^+ + K_i^-)
-    // This gives values between 0 and 1, where higher is better
-    const denominator = k_i_plus + k_i_minus
-    const utility = denominator > epsilon ? k_i_plus / denominator : 0
+    // Correct MARCOS utility function formula (Stević et al., 2020):
+    // f(K_i^-) = K_i^+ / (K_i^+ + K_i^-)
+    // f(K_i^+) = K_i^- / (K_i^+ + K_i^-)
+    // f(K_i) = (K_i^+ + K_i^-) / (1 + (1-f(K_i^+))/f(K_i^+) + (1-f(K_i^-))/f(K_i^-))
+    //
+    // This simplifies to:
+    // f(K_i) = (K_i^+ + K_i^-) / (1 + (K_i^+ + K_i^- - K_i^-)/K_i^- + (K_i^+ + K_i^- - K_i^+)/K_i^+)
+    // f(K_i) = (K_i^+ + K_i^-) / (1 + K_i^+/K_i^- + K_i^-/K_i^+)
+
+    let utility: number
+    if (k_i_minus > epsilon && k_i_plus > epsilon) {
+      const denominator = 1 + (k_i_plus / k_i_minus) + (k_i_minus / k_i_plus)
+      utility = (k_i_plus + k_i_minus) / denominator
+    } else if (k_i_plus > epsilon) {
+      utility = k_i_plus
+    } else if (k_i_minus > epsilon) {
+      utility = k_i_minus
+    } else {
+      utility = 0
+    }
 
     utilityDegrees[altId] = utility
     scores[altId] = utility

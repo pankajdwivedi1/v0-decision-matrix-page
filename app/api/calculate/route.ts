@@ -75,14 +75,52 @@ export async function POST(request: NextRequest) {
 
     let results: Record<string, number> = {};
 
+    // Helper function to check if all values in the decision matrix are greater than zero
+    const checkPositiveValues = (alternatives: any[], criteria: any[]): { isValid: boolean; invalidCells: string[] } => {
+      const invalidCells: string[] = [];
+      alternatives.forEach((alt) => {
+        criteria.forEach((crit) => {
+          const value = alt.scores[crit.id];
+          if (value === undefined || value === "" || Number(value) <= 0) {
+            invalidCells.push(`${alt.name} - ${crit.name}`);
+          }
+        });
+      });
+      return { isValid: invalidCells.length === 0, invalidCells };
+    };
+
     // Method routing
     switch (method.toLowerCase()) {
-      case "swei":
+      case "swei": {
+        // SWEI requires all values to be greater than zero (uses log function)
+        const validation = checkPositiveValues(alternatives, criteria);
+        if (!validation.isValid) {
+          return NextResponse.json(
+            {
+              error: "SWEI method requires all values to be greater than zero. Please check your decision matrix.",
+              invalidCells: validation.invalidCells
+            },
+            { status: 400 }
+          );
+        }
         results = calculateSWEI(alternatives, criteria).scores;
         break;
-      case "swi":
+      }
+      case "swi": {
+        // SWI requires all values to be greater than zero (uses log function)
+        const validation = checkPositiveValues(alternatives, criteria);
+        if (!validation.isValid) {
+          return NextResponse.json(
+            {
+              error: "SWI method requires all values to be greater than zero. Please check your decision matrix.",
+              invalidCells: validation.invalidCells
+            },
+            { status: 400 }
+          );
+        }
         results = calculateSWI(alternatives, criteria).scores;
         break;
+      }
       case "topsis":
         results = calculateTOPSIS(alternatives, criteria);
         break;
@@ -118,6 +156,7 @@ export async function POST(request: NextRequest) {
         break;
       case "cocoso":
         results = calculateCOCOSO(alternatives, criteria);
+        break;
       case "test":
         console.log("Test method invoked");
         // results = calculateCOCOSO(alternatives, criteria);
@@ -151,13 +190,13 @@ export async function POST(request: NextRequest) {
     }
 
     const response = buildResponse(method, results, alternatives);
-    
+
     console.log("=== API Response ===");
     console.log("Method:", method);
     console.log("Results:", results);
     console.log("Ranking:", JSON.stringify(response.ranking, null, 2));
     console.log("===================");
-    
+
     return NextResponse.json(response, { status: 200 });
   } catch (err) {
     console.error("Calculation error:", err);

@@ -1,94 +1,26 @@
-"use client";
-
-import React, { useEffect, useRef } from "react";
-
-type EntropyFormulaProps = {
-  compact?: boolean;
-};
+"use client"
+import { useEffect } from "react"
 
 declare global {
-  // MathJax global (loaded from CDN)
   interface Window {
     MathJax?: any;
   }
 }
 
-/**
- * EntropyFormula
- * - Loads MathJax (once)
- * - Renders the step-by-step Entropy method formulas as LaTeX
- *
- * Usage:
- *   import EntropyFormula from "@/components/EntropyFormula";
- *   <EntropyFormula />
- */
-export default function EntropyFormula({ compact = false }: EntropyFormulaProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  // Load MathJax if not present
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const existing = document.querySelector('script[data-mathjax="loaded"]');
-    if (!existing) {
-      const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js";
-      script.async = true;
-      script.setAttribute("data-mathjax", "loaded");
-      document.head.appendChild(script);
-      script.onload = () => {
-        // Configure MathJax for smaller fonts and wrapping
-        if (window.MathJax) {
-          window.MathJax.options = {
-            ...window.MathJax.options,
-            menuOptions: {
-              ...window.MathJax.options?.menuOptions,
-            },
-          };
-          window.MathJax.startup = {
-            ...window.MathJax.startup,
-            typeset: false,
-          };
-        }
-        setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
-      };
-    } else {
-      // typeset if already loaded
-      setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
-    }
-  }, []);
-
-  // Re-typeset after every render (safe; MathJax caches)
-  useEffect(() => {
-    setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
-  });
-
-  // LaTeX strings for each step
+export default function EntropyFormula() {
   const latex = {
-    title: "\\textbf{Entropy Method for Weight Calculation — Steps}",
-    step1:
-      "\\textbf{1. Decision Matrix:} \\quad X = [x_{ij}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)}",
-    step2_intro:
-      "\\textbf{2. Normalization:} \\quad \\text{For each criterion } j, \\text{ normalize the decision matrix to obtain probability values.}",
-    step2_formula:
-      "p_{ij} = \\frac{x_{ij}}{\\sum_{i=1}^{m} x_{ij}}, \\quad \\text{for all criteria (both beneficial and non-beneficial)}",
-    step3_intro:
-      "\\textbf{3. Entropy Calculation:} \\quad \\text{Calculate the entropy value for each criterion to measure the information content.}",
-    step3_formula:
-      "E_j = -k \\sum_{i=1}^{m} p_{i,j} \\log_2 p_{i,j}, \\quad \\text{where } k = \\frac{1}{\\log_2 m} \\text{ and } j = 1, 2, \\ldots, n",
-    step3_explanation:
-      "\\text{where } k = \\frac{1}{\\log_2 m} \\text{ is a constant ensuring that } E_j \\text{ lies in the range } [0,1]",
-    step4_intro:
-      "\\textbf{4. Diversity Degree:} \\quad \\text{Calculate the diversity degree for each criterion, which represents the amount of information.}",
-    step4_formula:
-      "d_j = 1 - E_j, \\quad j = 1, 2, \\ldots, n",
-    step5_intro:
-      "\\textbf{5. Weight Calculation:} \\quad \\text{Calculate the objective weights for each criterion based on the diversity degree.}",
-    step5_formula:
-      "w_j = \\frac{d_j}{\\sum_{j=1}^{n} d_j}, \\quad j = 1, 2, \\ldots, n, \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1",
-    interpretation:
-      "\\textbf{Interpretation:} \\quad \\text{Higher entropy } E_j \\text{ means more uncertainty (less information), resulting in lower weight } w_j. \\text{ Lower entropy means more information content, resulting in higher weight.}",
-  };
+    step1: "X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad i=1,\\dots,m, \\quad j=1,\\dots,n",
+    step2_formula: "p_{i,j} = \\frac{x_{i,j}}{\\sum_{i=1}^{m} x_{i,j}}",
+    step3_formula: "E_j = -k \\sum_{i=1}^{m} p_{i,j} \\log_2 p_{i,j}, \\quad k = \\frac{1}{\\log_2 m}",
+    step4_formula: "d_j = 1 - E_j",
+    step5_formula: "w_j = \\frac{d_j}{\\sum_{j=1}^{n} d_j}, \\quad \\sum_{j=1}^{n} w_j = 1"
+  }
+
+  useEffect(() => {
+    if (window.MathJax) {
+      window.MathJax.typesetPromise?.()
+    }
+  })
 
   return (
     <>
@@ -96,131 +28,114 @@ export default function EntropyFormula({ compact = false }: EntropyFormulaProps)
         __html: `
           .latex {
             font-size: 0.875rem !important;
-            line-height: 1.5;
+            line-height: 2 !important; 
+            margin: 1rem 0;
+            display: block;
           }
           .latex mjx-container {
             font-size: 0.875rem !important;
             max-width: 100% !important;
-            overflow-x: visible !important;
-            display: inline-block !important;
+            overflow-x: auto !important;
+            overflow-y: visible !important;
+            display: block !important;
+            margin: 0.75rem 0 !important;
+            padding: 0.5rem 0 !important;
+            text-align: center !important; 
           }
           .latex mjx-math {
             font-size: 0.875rem !important;
+            outline: none !important;
+          }
+          /* Fix list item spacing */
+          ol li {
+            margin-bottom: 2rem !important;
+            line-height: 1.8 !important;
+          }
+          /* Add more space to gray boxes */
+          .bg-gray-50 {
+            padding: 1.5rem !important;
+            margin: 1rem 0 !important;
+            display: block !important;
+            width: 100% !important;
+            overflow-x: auto;
+          }
+
+          /* Mobile adjustments */
+          @media (max-width: 640px) {
+            .bg-gray-50 {
+              padding: 0.75rem !important;
+              margin: 0.75rem 0 !important;
+            }
+            .latex {
+              font-size: 0.75rem !important;
+            }
+            .latex mjx-container {
+              margin: 0.5rem 0 !important;
+              padding: 0.25rem 0 !important;
+            }
+            h1 {
+              font-size: 1.25rem !important;
+              margin-bottom: 1rem !important;
+            }
+            h2 {
+              font-size: 1rem !important;
+              margin-top: 1rem !important;
+            }
+            p, li {
+              font-size: 0.875rem !important;
+            }
           }
         `
       }} />
-      <div
-        ref={containerRef}
-        className={`prose max-w-none bg-white border border-gray-200 rounded-lg p-6 ${
-          compact ? "text-sm" : "text-base"
-        }`}
-        style={{
-          overflowWrap: "break-word",
-          wordBreak: "break-word",
-        }}
-      >
-      <div className="mb-4">
-        <div>
-          {/* Title */}
-          <div style={{ fontSize: compact ? 18 : 20, fontWeight: 700 }}>
-            <span
-              className="latex"
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.title}\\)` }}
-            />
-          </div>
+      <div style={{ overflowWrap: "break-word", wordBreak: "break-word" }} className="prose max-w-none bg-white border border-gray-200 rounded-lg p-3 md:p-6 text-justify font-['Times_New_Roman',_Times,_serif] leading-relaxed">
+        <h1 className="text-2xl font-bold text-center mb-6">
+          Entropy Weight Method
+        </h1>
+
+        <p className="mb-4">
+          The Entropy method determines weights objectively based on the information content of each criterion. Higher entropy implies less information and lower weight.
+        </p>
+
+        <h2 className="text-xl font-semibold mt-6 mb-2">Step 1. Decision Matrix</h2>
+        <p className="mb-2">Construct the decision matrix:</p>
+        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+          <p className="text-center">{`$$ ${latex.step1} $$`}</p>
+        </div>
+
+        <h2 className="text-xl font-semibold mt-6 mb-2">Step 2. Normalization</h2>
+        <p className="mb-2">Calculate the probability of each alternative per criterion:</p>
+        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+          <p className="text-center">{`$$ ${latex.step2_formula} $$`}</p>
+        </div>
+
+        <h2 className="text-xl font-semibold mt-6 mb-2">Step 3. Entropy (E)</h2>
+        <p className="mb-2">Calculate the entropy value (measure of uncertainty) for each criterion:</p>
+        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+          <p className="text-center">{`$$ ${latex.step3_formula} $$`}</p>
+        </div>
+        <p className="text-sm text-gray-600 text-center mb-4">Note: If pij = 0, assume pij * log(pij) = 0.</p>
+
+        <h2 className="text-xl font-semibold mt-6 mb-2">Step 4. Diversity Degree (d)</h2>
+        <p className="mb-2">Calculate the degree of divergence (information content):</p>
+        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+          <p className="text-center">{`$$ ${latex.step4_formula} $$`}</p>
+        </div>
+
+        <h2 className="text-xl font-semibold mt-6 mb-2">Step 5. Weights (w)</h2>
+        <p className="mb-2">Normalize the diversity degree to get the final weights:</p>
+        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+          <p className="text-center">{`$$ ${latex.step5_formula} $$`}</p>
+        </div>
+
+        <div className="mt-6 text-xs text-gray-500">
+          Source: Shannon, C. E. (1948). A Mathematical Theory of Communication.
         </div>
       </div>
 
-      <ol className="space-y-4 list-decimal pl-5">
-        <li>
-          <div className="mb-2 font-semibold">
-            Decision Matrix Construction: Construct the decision matrix with alternatives as rows and
-            criteria as columns.
-          </div>
-          <div className="bg-gray-50 p-3 rounded">
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step1}\\)` }}
-            />
-          </div>
-        </li>
-
-        <li>
-          <div className="mb-2 font-semibold">
-            Normalization: Normalize the decision matrix to obtain probability values for each criterion.
-          </div>
-          <div className="bg-gray-50 p-3 rounded">
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_formula}\\)` }}
-            />
-          </div>
-        </li>
-
-        <li>
-          <div className="mb-2 font-semibold">
-            Entropy Calculation: Calculate the entropy value for each criterion to measure the information content.
-          </div>
-          <div className="bg-gray-50 p-3 rounded space-y-2">
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step3_formula}\\)` }}
-            />
-            <div
-              className="latex text-xs text-gray-600"
-              style={{ fontSize: "0.75rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step3_explanation}\\)` }}
-            />
-          </div>
-        </li>
-
-        <li>
-          <div className="mb-2 font-semibold">
-            Diversity Degree: Calculate the diversity degree for each criterion, which represents the amount of information.
-          </div>
-          <div className="bg-gray-50 p-3 rounded">
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step4_formula}\\)` }}
-            />
-          </div>
-        </li>
-
-        <li>
-          <div className="mb-2 font-semibold">
-            Weight Calculation: Calculate the objective weights for each criterion based on the diversity degree.
-          </div>
-          <div className="bg-gray-50 p-3 rounded">
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step5_formula}\\)` }}
-            />
-          </div>
-        </li>
-      </ol>
-
-      <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="text-sm font-semibold text-blue-900 mb-2">Interpretation</div>
-        <div
-          className="latex text-sm"
-          style={{ fontSize: "0.875rem" }}
-          dangerouslySetInnerHTML={{ __html: `\\(${latex.interpretation}\\)` }}
-        />
-      </div>
-
-      <div className="mt-4 text-xs text-gray-500">
-        Source: Entropy method for objective weight determination in multi-criteria decision making.
-        The method uses information theory to determine weights based on the amount of information
-        contained in each criterion. Higher entropy indicates more uncertainty and less information,
-        resulting in lower weights.
-      </div>
-      </div>
     </>
-  );
+  )
 }
+
+
+
 

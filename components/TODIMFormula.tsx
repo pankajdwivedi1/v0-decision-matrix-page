@@ -109,183 +109,230 @@ export default function TODIMFormula({ compact = false }: TODIMFormulaProps) {
         __html: `
           .latex {
             font-size: 0.875rem !important;
-            line-height: 1.5;
+            line-height: 2 !important; 
+            margin: 1rem 0;
+            display: block;
           }
           .latex mjx-container {
             font-size: 0.875rem !important;
             max-width: 100% !important;
-            overflow-x: visible !important;
-            display: inline-block !important;
+            overflow-x: auto !important;
+            overflow-y: visible !important;
+            display: block !important;
+            margin: 0.75rem 0 !important;
+            padding: 0.5rem 0 !important;
+            text-align: center !important; 
           }
           .latex mjx-math {
             font-size: 0.875rem !important;
+            outline: none !important;
+          }
+          /* Fix list item spacing */
+          ol li {
+            margin-bottom: 2rem !important;
+            line-height: 1.8 !important;
+          }
+          /* Add more space to gray boxes */
+          .bg-gray-50 {
+            padding: 1.5rem !important;
+            margin: 1rem 0 !important;
+            display: block !important;
+            width: 100% !important;
+            overflow-x: auto;
+          }
+
+          /* Mobile adjustments */
+          @media (max-width: 640px) {
+            .bg-gray-50 {
+              padding: 0.75rem !important;
+              margin: 0.75rem 0 !important;
+            }
+            .latex {
+              font-size: 0.75rem !important;
+            }
+            .latex mjx-container {
+              margin: 0.5rem 0 !important;
+              padding: 0.25rem 0 !important;
+            }
+            h1 {
+              font-size: 1.25rem !important;
+              margin-bottom: 1rem !important;
+            }
+            h2 {
+              font-size: 1rem !important;
+              margin-top: 1rem !important;
+            }
+            p, li {
+              font-size: 0.875rem !important;
+            }
           }
         `
       }} />
       <div
         ref={containerRef}
-        className={`prose max-w-none bg-white border border-gray-200 rounded-lg p-6 ${
-          compact ? "text-sm" : "text-base"
-        }`}
+        className={`prose max-w-none bg-white border border-gray-200 rounded-lg p-3 md:p-6 font-['Times_New_Roman',_Times,_serif] ${compact ? "text-sm" : "text-base"
+          }`}
         style={{
           overflowWrap: "break-word",
           wordBreak: "break-word",
         }}
       >
-      <div className="mb-4">
-        <div>
-          {/* Title */}
-          <div style={{ fontSize: compact ? 18 : 20, fontWeight: 700 }}>
-            <span
-              className="latex"
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.title}\\)` }}
-            />
+        <div className="mb-4">
+          <div>
+            {/* Title */}
+            <div style={{ fontSize: compact ? 18 : 20, fontWeight: 700 }}>
+              <span
+                className="latex"
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.title}\\)` }}
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <div
-          className="latex text-sm"
-          style={{ fontSize: "0.875rem" }}
-          dangerouslySetInnerHTML={{ __html: `\\(${latex.intro}\\)` }}
-        />
-      </div>
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div
+            className="latex text-sm"
+            style={{ fontSize: "0.875rem" }}
+            dangerouslySetInnerHTML={{ __html: `\\(${latex.intro}\\)` }}
+          />
+        </div>
 
-      <ol className="space-y-4 list-decimal pl-5">
-        <li>
-          <div className="mb-2 font-semibold">
-            Decision Matrix Construction: Construct the decision matrix with alternatives as rows and
-            criteria as columns.
-          </div>
-          <div className="bg-gray-50 p-3 rounded">
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step1}\\)` }}
-            />
-          </div>
-        </li>
+        <ol className="space-y-4 list-decimal pl-5">
+          <li>
+            <div className="mb-2 font-semibold">
+              Decision Matrix Construction: Construct the decision matrix with alternatives as rows and
+              criteria as columns.
+            </div>
+            <div className="bg-gray-50 rounded-lg mb-4">
+              <div
+                className="latex text-sm text-center"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step1}\\)` }}
+              />
+            </div>
+          </li>
 
-        <li>
-          <div className="mb-2 font-semibold">
-            Normalization: Normalize the decision matrix using min-max normalization for each criterion.
-          </div>
-          <div className="bg-gray-50 p-3 rounded space-y-2">
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_beneficial}\\)` }}
-            />
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_nonbeneficial}\\)` }}
-            />
-          </div>
-        </li>
+          <li>
+            <div className="mb-2 font-semibold">
+              Normalization: Normalize the decision matrix using min-max normalization for each criterion.
+            </div>
+            <div className="bg-gray-50 rounded-lg mb-4">
+              <div
+                className="latex text-sm text-center mb-2"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_beneficial}\\)` }}
+              />
+              <div
+                className="latex text-sm text-center"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_nonbeneficial}\\)` }}
+              />
+            </div>
+          </li>
 
-        <li>
-          <div className="mb-2 font-semibold">
-            Relative Weights: Calculate relative weights normalized by the maximum weight.
-          </div>
-          <div className="bg-gray-50 p-3 rounded">
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step3_formula}\\)` }}
-            />
-          </div>
-        </li>
+          <li>
+            <div className="mb-2 font-semibold">
+              Relative Weights: Calculate relative weights normalized by the maximum weight.
+            </div>
+            <div className="bg-gray-50 rounded-lg mb-4">
+              <div
+                className="latex text-sm text-center"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step3_formula}\\)` }}
+              />
+            </div>
+          </li>
 
-        <li>
-          <div className="mb-2 font-semibold">
-            Dominance Degree: For each pair of alternatives, calculate the dominance degree using Prospect Theory value function.
-          </div>
-          <div className="bg-gray-50 p-3 rounded space-y-2">
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step4_formula}\\)` }}
-            />
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step4_params}\\)` }}
-            />
-          </div>
-        </li>
+          <li>
+            <div className="mb-2 font-semibold">
+              Dominance Degree: For each pair of alternatives, calculate the dominance degree using Prospect Theory value function.
+            </div>
+            <div className="bg-gray-50 rounded-lg mb-4">
+              <div
+                className="latex text-sm text-center mb-2"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step4_formula}\\)` }}
+              />
+              <div
+                className="latex text-sm text-center"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step4_params}\\)` }}
+              />
+            </div>
+          </li>
 
-        <li>
-          <div className="mb-2 font-semibold">
-            Overall Dominance: Calculate the overall dominance of each alternative over others by summing dominance degrees across all criteria.
-          </div>
-          <div className="bg-gray-50 p-3 rounded">
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step5_formula}\\)` }}
-            />
-          </div>
-        </li>
+          <li>
+            <div className="mb-2 font-semibold">
+              Overall Dominance: Calculate the overall dominance of each alternative over others by summing dominance degrees across all criteria.
+            </div>
+            <div className="bg-gray-50 rounded-lg mb-4">
+              <div
+                className="latex text-sm text-center"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step5_formula}\\)` }}
+              />
+            </div>
+          </li>
 
-        <li>
-          <div className="mb-2 font-semibold">
-            Global Value: Calculate the global value for each alternative by summing its dominance over all other alternatives.
-          </div>
-          <div className="bg-gray-50 p-3 rounded">
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step6_formula}\\)` }}
-            />
-          </div>
-        </li>
+          <li>
+            <div className="mb-2 font-semibold">
+              Global Value: Calculate the global value for each alternative by summing its dominance over all other alternatives.
+            </div>
+            <div className="bg-gray-50 rounded-lg mb-4">
+              <div
+                className="latex text-sm text-center"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step6_formula}\\)` }}
+              />
+            </div>
+          </li>
 
-        <li>
-          <div className="mb-2 font-semibold">
-            Normalized Global Value: Normalize the global values to obtain final scores.
-          </div>
-          <div className="bg-gray-50 p-3 rounded">
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.step7_formula}\\)` }}
-            />
-          </div>
-        </li>
+          <li>
+            <div className="mb-2 font-semibold">
+              Normalized Global Value: Normalize the global values to obtain final scores.
+            </div>
+            <div className="bg-gray-50 rounded-lg mb-4">
+              <div
+                className="latex text-sm text-center"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.step7_formula}\\)` }}
+              />
+            </div>
+          </li>
 
-        <li>
-          <div className="mb-2 font-semibold">
-            Ranking: Rank alternatives based on their normalized global values.
-          </div>
-          <div className="bg-gray-50 p-3 rounded">
-            <div
-              className="latex text-sm"
-              style={{ fontSize: "0.875rem" }}
-              dangerouslySetInnerHTML={{ __html: `\\(${latex.ranking}\\)` }}
-            />
-          </div>
-        </li>
-      </ol>
+          <li>
+            <div className="mb-2 font-semibold">
+              Ranking: Rank alternatives based on their normalized global values.
+            </div>
+            <div className="bg-gray-50 rounded-lg mb-4">
+              <div
+                className="latex text-sm text-center"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\(${latex.ranking}\\)` }}
+              />
+            </div>
+          </li>
+        </ol>
 
-      <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="text-sm font-semibold text-blue-900 mb-2">Interpretation</div>
-        <div
-          className="latex text-sm"
-          style={{ fontSize: "0.875rem" }}
-          dangerouslySetInnerHTML={{ __html: `\\(${latex.interpretation}\\)` }}
-        />
-      </div>
+        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="text-sm font-semibold text-blue-900 mb-2">Interpretation</div>
+          <div
+            className="latex text-sm"
+            style={{ fontSize: "0.875rem" }}
+            dangerouslySetInnerHTML={{ __html: `\\(${latex.interpretation}\\)` }}
+          />
+        </div>
 
-      <div className="mt-4 text-xs text-gray-500">
-        Source: TODIM method formulation (Gomes & Lima, 1992). The method is based on Prospect Theory
-        and evaluates alternatives by considering the relative dominance of each option over others
-        across various criteria, effectively capturing the decision-maker's risk preferences through
-        gain and loss functions.
-      </div>
+        <div className="mt-4 text-xs text-gray-500">
+          Source: TODIM method formulation (Gomes & Lima, 1992). The method is based on Prospect Theory
+          and evaluates alternatives by considering the relative dominance of each option over others
+          across various criteria, effectively capturing the decision-maker's risk preferences through
+          gain and loss functions.
+        </div>
       </div>
     </>
   );
 }
+
+
 
