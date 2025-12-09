@@ -108,9 +108,9 @@ export default function MOOSRAFormula({ compact = false }: MOOSRAFormulaProps) {
           .latex mjx-container {
             font-size: 0.875rem !important;
             max-width: 100% !important;
-            overflow-x: auto !important;
-            overflow-y: visible !important;
-            display: block !important;
+            overflow-x: auto;
+            overflow-y: hidden;
+            
             margin: 0.75rem 0 !important;
             padding: 0.5rem 0 !important;
             text-align: center !important; 
@@ -175,7 +175,7 @@ export default function MOOSRAFormula({ compact = false }: MOOSRAFormulaProps) {
             <div style={{ fontSize: compact ? 18 : 20, fontWeight: 700 }}>
               <span
                 className="latex"
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.title}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.title}\\]` }}
               />
             </div>
           </div>
@@ -185,7 +185,7 @@ export default function MOOSRAFormula({ compact = false }: MOOSRAFormulaProps) {
           <div
             className="latex text-sm"
             style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\(${latex.intro}\\)` }}
+            dangerouslySetInnerHTML={{ __html: `\\[${latex.intro}\\]` }}
           />
         </div>
 
@@ -199,7 +199,7 @@ export default function MOOSRAFormula({ compact = false }: MOOSRAFormulaProps) {
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step1}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }}
               />
             </div>
           </li>
@@ -212,7 +212,7 @@ export default function MOOSRAFormula({ compact = false }: MOOSRAFormulaProps) {
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_formula}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_formula}\\]` }}
               />
             </div>
           </li>
@@ -225,7 +225,7 @@ export default function MOOSRAFormula({ compact = false }: MOOSRAFormulaProps) {
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step3_formula}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_formula}\\]` }}
               />
             </div>
           </li>
@@ -238,7 +238,7 @@ export default function MOOSRAFormula({ compact = false }: MOOSRAFormulaProps) {
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step4_formula}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_formula}\\]` }}
               />
             </div>
           </li>
@@ -251,7 +251,7 @@ export default function MOOSRAFormula({ compact = false }: MOOSRAFormulaProps) {
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step5_formula}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_formula}\\]` }}
               />
             </div>
           </li>
@@ -264,7 +264,7 @@ export default function MOOSRAFormula({ compact = false }: MOOSRAFormulaProps) {
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step6_formula}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_formula}\\]` }}
               />
             </div>
           </li>
@@ -277,7 +277,7 @@ export default function MOOSRAFormula({ compact = false }: MOOSRAFormulaProps) {
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.ranking}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.ranking}\\]` }}
               />
             </div>
           </li>
@@ -288,7 +288,7 @@ export default function MOOSRAFormula({ compact = false }: MOOSRAFormulaProps) {
           <div
             className="latex text-sm"
             style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\(${latex.interpretation}\\)` }}
+            dangerouslySetInnerHTML={{ __html: `\\[${latex.interpretation}\\]` }}
           />
         </div>
 

@@ -29,10 +29,11 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog"
 import * as XLSX from "xlsx"
 import { Upload, ChevronDown, ChevronRight, Home, Download } from "lucide-react"
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts"
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar, PieChart, Pie, ReferenceLine } from "recharts"
 import SWEIFormula from "@/components/SWEIFormula"
 import SWIFormula from "@/components/SWIFormula"
 import TOPSISFormula from "@/components/TOPSISFormula"
@@ -58,6 +59,7 @@ import COCOSOFormula from "@/components/COCOSOFormula"
 import EntropyFormula from "@/components/EntropyFormula"
 import CRITICFormula from "@/components/CRITICFormula"
 import EqualWeightsFormula from "@/components/EqualWeightsFormula"
+import PIPRECIAFormula from "@/components/PIPRECIAFormula"
 
 interface Criterion {
   id: string
@@ -73,7 +75,7 @@ interface Alternative {
 }
 
 type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "multimoora" | "todim" | "codas" | "moosra" | "mairca" | "marcos" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2"
-type WeightMethod = "equal" | "entropy" | "critic" | "ahp"
+type WeightMethod = "equal" | "entropy" | "critic" | "ahp" | "piprecia"
 type PageStep = "home" | "input" | "table" | "matrix" | "calculate"
 type ComparisonResult = {
   method: MCDMMethod
@@ -81,11 +83,30 @@ type ComparisonResult = {
   ranking: { alternativeName: string; rank: number; score: number | string }[]
 }
 
+interface PipreciaResult {
+  weights: Record<string, number>
+  s_values: Record<string, number>
+  k_values: Record<string, number>
+  q_values: Record<string, number>
+}
+
 interface EntropyResult {
   weights: Record<string, number>
   normalizedMatrix: Record<string, Record<string, number>>
   entropyValues: Record<string, number>
   diversityValues: Record<string, number>
+}
+
+interface SensitivityRankingItem {
+  alternativeName: string;
+  rank: number;
+  score: number | string;
+}
+
+interface SensitivityResult {
+  weight: number;
+  weightLabel: string;
+  ranking: SensitivityRankingItem[];
 }
 
 interface CriticResult {
@@ -255,6 +276,11 @@ const WEIGHT_METHODS: { value: WeightMethod; label: string; description: string 
     label: "AHP",
     description: "Analytic Hierarchy Process (AHP) derives weights from a pairwise comparison matrix; here derived from provided priority scores.",
   },
+  {
+    value: "piprecia",
+    label: "PIPRECIA",
+    description: "Pivot Pairwise Relative Criteria Importance Assessment (PIPRECIA) determines weights based on subjective relative importance of criteria.",
+  },
 ]
 
 const CHART_COLORS = [
@@ -286,8 +312,10 @@ export default function MCDMCalculator() {
   const comparisonFileInputRef = useRef<HTMLInputElement>(null)
   const [currentStep, setCurrentStep] = useState<PageStep>("home")
   const [rankingOpen, setRankingOpen] = useState(true)
-  const [weightOpen, setWeightOpen] = useState(false)
+  const [weightOpen, setWeightOpen] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [comparisonChartType, setComparisonChartType] = useState<string>("composed")
+  const comparisonChartRef = useRef<HTMLDivElement>(null)
 
   // State to track where to return after completing input flow
   const [returnToTab, setReturnToTab] = useState<"rankingMethods" | "weightMethods" | "rankingComparison" | "sensitivityAnalysis" | null>(null)
@@ -307,16 +335,41 @@ export default function MCDMCalculator() {
   const [entropyResult, setEntropyResult] = useState<EntropyResult | null>(null)
   const [criticResult, setCriticResult] = useState<CriticResult | null>(null)
   const [ahpResult, setAhpResult] = useState<AHPResult | null>(null)
+  const [pipreciaResult, setPipreciaResult] = useState<PipreciaResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Sensitivity Analysis state
   const [sensitivityCriterion, setSensitivityCriterion] = useState<string>("")
   const [sensitivityMethod, setSensitivityMethod] = useState<MCDMMethod>("topsis")
-  const [sensitivityResults, setSensitivityResults] = useState<any[]>([])
+  const [sensitivityResults, setSensitivityResults] = useState<SensitivityResult[]>([])
   const [sensitivityLoading, setSensitivityLoading] = useState(false)
   const [sensitivityError, setSensitivityError] = useState<string | null>(null)
-  const [sensitivityChartType, setSensitivityChartType] = useState<"line" | "bar">("line")
+  // Replaced with string type below for more options
+  // const [sensitivityChartType, setSensitivityChartType] = useState<"line" | "bar">("line")
+  const [sensitivityChartType, setSensitivityChartType] = useState<string>("line")
   const sensitivityChartRef = useRef<HTMLDivElement>(null)
+  const weightChartRef = useRef<HTMLDivElement>(null)
+
+  // New state for Weight Method Comparison in Sensitivity Analysis
+  const [sensitivityWeightMethods, setSensitivityWeightMethods] = useState<string[]>([])
+  const [sensitivityCustomWeights, setSensitivityCustomWeights] = useState<Record<string, number>>({})
+  const [isCustomWeightsDialogOpen, setIsCustomWeightsDialogOpen] = useState(false)
+
+  // PIPRECIA State
+  const [isPipreciaDialogOpen, setIsPipreciaDialogOpen] = useState(false)
+  const [pipreciaCalculatedWeights, setPipreciaCalculatedWeights] = useState<Record<string, number> | null>(null)
+  const [pipreciaScores, setPipreciaScores] = useState<Record<number, string>>({})
+
+  // AHP State
+  const [isAhpDialogOpen, setIsAhpDialogOpen] = useState(false)
+  const [ahpCalculatedWeights, setAhpCalculatedWeights] = useState<Record<string, number> | null>(null)
+  const [ahpMatrix, setAhpMatrix] = useState<number[][]>([])
+
+  const [isWeightSelectorOpen, setIsWeightSelectorOpen] = useState(false)
+  const [sensitivityAnalysisType, setSensitivityAnalysisType] = useState<"criterion" | "weights">("criterion") // Toggle between old and new analysis
+  const [sensitivityWeightComparisonResults, setSensitivityWeightComparisonResults] = useState<any[]>([])
+  const [sensitivityCriteriaWeights, setSensitivityCriteriaWeights] = useState<any[]>([])
+  const [weightChartType, setWeightChartType] = useState<string>("bar")
 
 
   const parseExcelData = (data: any[][]) => {
@@ -526,8 +579,8 @@ export default function MCDMCalculator() {
 
       const payloadAlternatives = alternatives
 
-      const results = await Promise.all(
-        selectedRankingMethods.map(async (m) => {
+      const resultsPromises = selectedRankingMethods.map(async (m) => {
+        try {
           const response = await fetch("/api/calculate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -539,8 +592,8 @@ export default function MCDMCalculator() {
           })
           const data = await response.json()
           if (!response.ok) {
-            const errorMsg = data.error || `Failed to calculate ${m} ranking`
-            throw new Error(errorMsg)
+            console.warn(`Method ${m} failed:`, data.error)
+            return null
           }
           const info = MCDM_METHODS.find((item) => item.value === m)
           return {
@@ -548,16 +601,68 @@ export default function MCDMCalculator() {
             label: info?.label || m,
             ranking: data.ranking || [],
           } as ComparisonResult
-        }),
-      )
+        } catch (err) {
+          console.error(`Error calculating ${m}:`, err)
+          return null
+        }
+      })
+
+      const resultsRaw = await Promise.all(resultsPromises)
+      const results = resultsRaw.filter((r): r is ComparisonResult => r !== null)
+
+      if (results.length === 0) {
+        throw new Error("All selected methods failed. Check input data (e.g. SWEI requires positive values).")
+      }
 
       setComparisonResults(results)
+      console.log("Comparison results set:", results)
     } catch (error: any) {
-      console.error(error)
+      console.error("Comparison error:", error)
       setComparisonError(error?.message || "Error while calculating comparison.")
     } finally {
       setComparisonLoading(false)
     }
+  }
+
+  const downloadComparisonChartAsJpeg = () => {
+    if (!comparisonChartRef.current) return
+    const svgElement = comparisonChartRef.current.querySelector("svg")
+    if (!svgElement) return
+
+    const serializer = new XMLSerializer()
+    const svgString = serializer.serializeToString(svgElement)
+    const blob = new Blob([svgString], { type: "image/svg+xml" })
+    const url = URL.createObjectURL(blob)
+
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement("canvas")
+      const width = svgElement.clientWidth || svgElement.getBoundingClientRect().width
+      const height = svgElement.clientHeight || svgElement.getBoundingClientRect().height
+      // Scale up for better quality
+      const scale = 2
+      canvas.width = width * scale
+      canvas.height = height * scale
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return
+
+      // Fill white background for JPEG
+      ctx.fillStyle = "#ffffff"
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+      ctx.setTransform(scale, 0, 0, scale, 0, 0)
+      ctx.drawImage(img, 0, 0, width, height)
+
+      const imgUrl = canvas.toDataURL("image/jpeg", 0.9)
+      const link = document.createElement("a")
+      link.href = imgUrl
+      link.download = `ranking-comparison-${Date.now()}.jpg`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    }
+    img.src = url
   }
 
   const comparisonChartData = useMemo(() => {
@@ -589,6 +694,23 @@ export default function MCDMCalculator() {
       r.ranking?.forEach((item) => alternativesSet.add(item.alternativeName))
     })
     return Array.from(alternativesSet)
+  }, [comparisonResults])
+
+  const composedChartData = useMemo(() => {
+    if (comparisonResults.length === 0) return []
+    const alts = Array.from(new Set(comparisonResults.flatMap((r) => r.ranking?.map((x) => x.alternativeName) || [])))
+
+    return alts.map((altName) => {
+      const row: any = { name: altName }
+      comparisonResults.forEach((res) => {
+        const item = res.ranking?.find((r) => r.alternativeName === altName)
+        if (item) {
+          row[`${res.method}_rank`] = item.rank
+          row[`${res.method}_score`] = Number(item.score)
+        }
+      })
+      return row
+    })
   }, [comparisonResults])
 
   // Validation warning for SWEI and SWI methods - check if any values are <= 0
@@ -697,7 +819,127 @@ export default function MCDMCalculator() {
     setCriteria(criteria.map((crit) => (crit.id === id ? { ...crit, ...updates } : crit)))
   }
 
-  const handleSaveTable = async () => {
+  const calculateWeights = async (methodToUse: WeightMethod) => {
+    setIsLoading(true)
+    setWeightMethod(methodToUse)
+
+    // Reset previous results
+    setEntropyResult(null)
+    setCriticResult(null)
+    setAhpResult(null)
+
+    if (methodToUse === "equal") {
+      const weight = 1 / criteria.length
+      setCriteria(criteria.map((c) => ({ ...c, weight })))
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      if (methodToUse === "entropy") {
+        const response = await fetch("/api/calculate/entropy-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            alternatives,
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate entropy weights")
+        }
+
+        const data: EntropyResult = await response.json()
+        setEntropyResult(data)
+        setCriteria(
+          criteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          })),
+        )
+      } else if (methodToUse === "critic") {
+        const response = await fetch("/api/calculate/critic-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            alternatives,
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate CRITIC weights")
+        }
+
+        const data: CriticResult = await response.json()
+        setCriticResult(data)
+        setCriteria(
+          criteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          })),
+        )
+      } else if (methodToUse === "ahp") {
+        const response = await fetch("/api/calculate/ahp-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate AHP weights")
+        }
+
+        const data: AHPResult = await response.json()
+        setAhpResult(data)
+        setCriteria(
+          criteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          })),
+        )
+      } else if (methodToUse === "piprecia") {
+        const response = await fetch("/api/calculate/piprecia-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate PIPRECIA weights")
+        }
+
+        const data: PipreciaResult = await response.json()
+        setPipreciaResult(data)
+        setCriteria(
+          criteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          })),
+        )
+      }
+    } catch (error) {
+      console.error("Error calculating weights:", error)
+      alert(`Error calculating ${methodToUse} weights.`)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSaveTable = async (shouldNavigate = true): Promise<boolean> => {
     const allScoresFilled = alternatives.every((alt) =>
       criteria.every((crit) => {
         const score = alt.scores[crit.id]
@@ -707,13 +949,14 @@ export default function MCDMCalculator() {
 
     if (!allScoresFilled) {
       alert("Please fill in all score values with numbers greater than or equal to 0")
-      return
+      return false
     }
 
     // Reset previous weight calculation results
     setEntropyResult(null)
     setCriticResult(null)
     setAhpResult(null)
+    setPipreciaResult(null)
 
     // Calculate entropy weights if entropy method is selected
     if (weightMethod === "entropy") {
@@ -828,27 +1071,75 @@ export default function MCDMCalculator() {
       }
     }
 
-    // Check if we need to return to a specific tab after completing input
-    if (returnToTab === "rankingComparison") {
-      setHomeTab("rankingComparison")
-      setReturnToTab(null)
-      setCurrentStep("home")
-    } else if (returnToTab === "sensitivityAnalysis") {
-      setHomeTab("sensitivityAnalysis")
-      setReturnToTab(null)
-      setCurrentStep("home")
-    } else {
-      setCurrentStep("matrix")
+    // Calculate PIPRECIA weights if PIPRECIA method is selected
+    if (weightMethod === "piprecia") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/calculate/piprecia-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate PIPRECIA weights")
+        }
+
+        const data: PipreciaResult = await response.json()
+
+        setPipreciaResult(data)
+        setCriteria(
+          criteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          })),
+        )
+      } catch (error) {
+        console.error("Error calculating PIPRECIA weights:", error)
+        alert("Error calculating PIPRECIA weights. Using equal weights instead.")
+      } finally {
+        setIsLoading(false)
+      }
     }
+
+    // Check if we need to return to a specific tab after completing input
+    if (shouldNavigate) {
+      if (returnToTab === "rankingComparison") {
+        alert("Data has uploaded")
+        setHomeTab("rankingComparison")
+        setReturnToTab(null)
+        setCurrentStep("home")
+      } else if (returnToTab === "sensitivityAnalysis") {
+        alert("Data has uploaded")
+        setHomeTab("sensitivityAnalysis")
+        setReturnToTab(null)
+        setCurrentStep("home")
+      } else if (returnToTab === "rankingMethods") {
+        setHomeTab("rankingMethods")
+        setReturnToTab(null)
+        setCurrentStep("home")
+      } else if (returnToTab === "weightMethods") {
+        setHomeTab("weightMethods")
+        setReturnToTab(null)
+        setCurrentStep("home")
+      } else {
+        setCurrentStep("matrix")
+      }
+    }
+    return true
   }
 
-  const handleCalculate = async () => {
+  const handleCalculate = async (methodOverride?: string) => {
     setIsLoading(true)
     setApiResults(null)
 
     try {
       const payload = {
-        method,
+        method: methodOverride || method,
         alternatives,
         criteria,
       }
@@ -899,7 +1190,9 @@ export default function MCDMCalculator() {
         ? "w_j = C_j / ΣC_j, where C_j = σ_j × Σ(1 - r_jk)"
         : weightMethod === "ahp"
           ? "w = eigenvector of pairwise matrix a_ij = w_i / w_j; check CR = CI / RI"
-          : weightMethodInfo?.label
+          : weightMethod === "piprecia"
+            ? "w_j = q_j / Σq, where q_j = q_{j-1}/k_j, k_j derived from relative importance sort"
+            : weightMethodInfo?.label
     : methodInfo?.formula
 
   const cardLongDescription = showingWeightFormula
@@ -909,7 +1202,9 @@ export default function MCDMCalculator() {
         ? "CRITIC method determines weights based on both contrast intensity (standard deviation) and conflict (correlation) between criteria. Higher information content (higher contrast and lower correlation) results in higher weights."
         : weightMethod === "ahp"
           ? "AHP derives weights from pairwise comparisons (here built from provided priority scores). It computes the eigenvector of the pairwise matrix and checks consistency (CI/CR)."
-          : weightMethodInfo?.description
+          : weightMethod === "piprecia"
+            ? "PIPRECIA determines weights based on the relative importance of each criterion compared to the previous one in a sorted sequence."
+            : weightMethodInfo?.description
     : methodInfo?.description
 
   // Sensitivity Analysis calculation function
@@ -986,12 +1281,53 @@ export default function MCDMCalculator() {
     }
   }
 
-  // Download chart function
+  // Download chart as JPEG function
+  const downloadChartAsJpeg = (ref: React.RefObject<HTMLDivElement>, filename: string) => {
+    if (!ref.current) return
+
+    const svgElement = ref.current.querySelector('svg')
+    if (!svgElement) return
+
+    const serializer = new XMLSerializer()
+    const svgString = serializer.serializeToString(svgElement)
+
+    // Get dimensions
+    const width = svgElement.viewBox.baseVal.width || svgElement.clientWidth || 600
+    const height = svgElement.viewBox.baseVal.height || svgElement.clientHeight || 400
+
+    const canvas = document.createElement('canvas')
+    canvas.width = width * 2 // 2x for high quality
+    canvas.height = height * 2
+    const ctx = canvas.getContext('2d')
+
+    if (!ctx) return
+
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.scale(2, 2)
+
+    const img = new Image()
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, width, height)
+      const imgUrl = canvas.toDataURL('image/jpeg', 0.9)
+      const link = document.createElement('a')
+      link.href = imgUrl
+      link.download = `${filename}.jpg`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    }
+    img.src = url
+  }
+
+  // Download chart function (SVG)
   const downloadChart = () => {
     if (!sensitivityChartRef.current) return
-
-    // Use html2canvas or a similar library to export to image
-    // For now, we'll use a simple SVG export approach
+    // ... existing SVG export logic preserved for backward compatibility/preference
     const svgElement = sensitivityChartRef.current.querySelector('svg')
     if (!svgElement) return
 
@@ -1029,10 +1365,190 @@ export default function MCDMCalculator() {
 
   const sensitivityAlternatives = useMemo(() => {
     if (sensitivityResults.length === 0 || sensitivityResults[0].ranking.length === 0) return []
-    return sensitivityResults[0].ranking.map((item: any) => item.alternativeName)
+    return sensitivityResults[0].ranking.map((item: SensitivityRankingItem) => item.alternativeName)
   }, [sensitivityResults])
 
 
+  // New Logic: Compare Ranking across Weight Methods
+  const handleWeightSensitivityAnalysis = async (pipreciaWeightsOverride?: Record<string, number>) => {
+    if (sensitivityWeightMethods.length === 0) {
+      setSensitivityError("Please select at least one weight method.")
+      return
+    }
+    if (alternatives.length === 0 || criteria.length === 0) {
+      setSensitivityError("Please add alternatives and criteria first.")
+      return
+    }
+
+    setSensitivityLoading(true)
+    setSensitivityError(null)
+    setSensitivityWeightComparisonResults([])
+
+    try {
+      const results = await Promise.all(
+        sensitivityWeightMethods.map(async (wm) => {
+          let weightedCriteria = [...criteria]
+
+          // Apply weight method
+          if (wm === "equal") {
+            weightedCriteria = criteria.map(c => ({ ...c, weight: 1 / criteria.length }))
+          } else if (wm === "entropy") {
+            // We can allow reusing cached results if available, but for safety call API
+            // Or better, extract the weight calculation logic to a reusable function "applyWeightMethod"
+            // reusing applyWeightMethodForComparison I previously defined for Ranking Comparison
+            const res = await applyWeightMethodForComparison("entropy", alternatives, criteria)
+            weightedCriteria = res.criteria
+          } else if (wm === "critic") {
+            const res = await applyWeightMethodForComparison("critic", alternatives, criteria)
+            weightedCriteria = res.criteria
+          } else if (wm === "ahp") {
+            // Use stored or overridden weights for AHP
+            const weightsToUse = ahpCalculatedWeights || {};
+            weightedCriteria = criteria.map(c => ({
+              ...c,
+              weight: weightsToUse[c.id] !== undefined ? weightsToUse[c.id] : (1 / criteria.length)
+            }))
+          } else if (wm === "piprecia") {
+            // Use stored or overridden weights for PIPRECIA
+            const weightsToUse = pipreciaWeightsOverride || pipreciaCalculatedWeights || {};
+            weightedCriteria = criteria.map(c => ({
+              ...c,
+              weight: weightsToUse[c.id] !== undefined ? weightsToUse[c.id] : (1 / criteria.length)
+            }))
+          }
+
+          // Special handling for "Custom" if I add "custom" to WeightMethod type or handle separately
+          // Re-using applyWeightMethodForComparison might be limited because it returns Promise
+
+          return { wm, criteria: weightedCriteria }
+        })
+      )
+
+      // Calculate Ranking for each weight set
+      const finalResults = await Promise.all(
+        results.map(async ({ wm, criteria: wCrits }) => {
+          const response = await fetch("/api/calculate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              method: sensitivityMethod,
+              alternatives,
+              criteria: wCrits,
+            }),
+          })
+          const data = await response.json()
+          if (!response.ok) throw new Error(`Failed to calculate for ${wm}`)
+
+          const label = WEIGHT_METHODS.find(w => w.value === wm)?.label || wm
+          return {
+            method: sensitivityMethod,
+            weightMethod: wm,
+            weightLabel: label,
+            ranking: data.ranking || []
+          }
+        })
+      )
+
+      // Handle "Custom" weights
+      if (sensitivityWeightMethods.includes("custom")) {
+        const customCriteria = criteria.map(c => ({
+          ...c,
+          weight: sensitivityCustomWeights[c.id] !== undefined ? sensitivityCustomWeights[c.id] : (1 / criteria.length)
+        }))
+
+        const response = await fetch("/api/calculate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            method: sensitivityMethod,
+            alternatives,
+            criteria: customCriteria,
+          }),
+        })
+        const data = await response.json()
+        if (response.ok) {
+          finalResults.push({
+            method: sensitivityMethod,
+            weightMethod: "custom",
+            weightLabel: "Custom Weights",
+            ranking: data.ranking || []
+          })
+        }
+      }
+
+      setSensitivityWeightComparisonResults(finalResults)
+
+      // --- New: Prepare Weight Variation Data ---
+      const weightDataMap: Record<string, any> = {}
+      criteria.forEach(c => {
+        weightDataMap[c.id] = { name: c.name }
+      })
+
+      const allWeightResults = [...results]
+      if (sensitivityWeightMethods.includes("custom")) {
+        // We need to reconstruct the custom criteria locally since it wasn't in the Promise.all loop results with the same structure
+        const customCriteria = criteria.map(c => ({
+          ...c,
+          weight: sensitivityCustomWeights[c.id] !== undefined ? sensitivityCustomWeights[c.id] : (1 / criteria.length)
+        }))
+        allWeightResults.push({ wm: 'custom', criteria: customCriteria })
+      }
+
+      allWeightResults.forEach(({ wm, criteria: wCrits }) => {
+        const label = WEIGHT_METHODS.find(w => w.value === wm)?.label || (wm === 'custom' ? 'Custom' : wm)
+        wCrits.forEach(c => {
+          if (weightDataMap[c.id]) {
+            weightDataMap[c.id][label] = c.weight
+          }
+        })
+      })
+      setSensitivityCriteriaWeights(Object.values(weightDataMap))
+      // ------------------------------------------
+
+    } catch (error: any) {
+      console.error(error)
+      setSensitivityError(error?.message || "Error calculating weight comparison")
+    } finally {
+      setSensitivityLoading(false)
+    }
+  }
+
+  // Helper for toggle
+  const toggleSensitivityWeightMethod = (method: string) => {
+    setSensitivityWeightMethods(prev =>
+      prev.includes(method) ? prev.filter(m => m !== method) : [...prev, method]
+    )
+  }
+
+  const alternativesList = useMemo(() => alternatives.map(a => a.name), [alternatives])
+
+  // Chart data preparation for Sensitivity Weight Comparison
+  const sensitivityWeightChartData = useMemo(() => {
+    if (sensitivityWeightComparisonResults.length === 0) return []
+
+    // X-axis: Alternatives
+    // Series: Weight Methods (Score or Rank)
+
+    // We need to pivot the data
+    const alternativesMap: Record<string, any> = {}
+
+    // Initialize with alternative names
+    alternativesList.forEach(alt => {
+      alternativesMap[alt] = { name: alt }
+    })
+
+    sensitivityWeightComparisonResults.forEach(res => {
+      res.ranking.forEach((item: any) => {
+        if (alternativesMap[item.alternativeName]) {
+          alternativesMap[item.alternativeName][`${res.weightLabel} Score`] = typeof item.score === 'number' ? item.score : parseFloat(item.score)
+          alternativesMap[item.alternativeName][`${res.weightLabel} Rank`] = item.rank
+        }
+      })
+    })
+
+    return Object.values(alternativesMap)
+
+  }, [sensitivityWeightComparisonResults, alternativesList])
 
 
   if (currentStep === "home") {
@@ -1091,7 +1607,10 @@ export default function MCDMCalculator() {
               </CardHeader>
               <CardContent className="space-y-2">
                 <Button
-                  onClick={() => setCurrentStep("input")}
+                  onClick={() => {
+                    setReturnToTab(homeTab === "weightMethods" ? "weightMethods" : "rankingMethods")
+                    setCurrentStep("input")
+                  }}
                   className="w-full bg-black text-white hover:bg-gray-800 text-xs h-8"
                 >
                   + Add Alternative & Criteria
@@ -1147,9 +1666,9 @@ export default function MCDMCalculator() {
             <>
               <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">Weight Methods</CardTitle>
+                  <CardTitle className="text-sm text-black">Weight Methods Reference</CardTitle>
                   <CardDescription className="text-xs text-gray-700">
-                    Select a weight method to use in your calculations
+                    Click on a method to view its formula and description
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -1176,6 +1695,304 @@ export default function MCDMCalculator() {
                   </div>
                 </CardContent>
               </Card>
+
+              <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-black">Weight Comparison Analysis</CardTitle>
+                  <CardDescription className="text-xs text-gray-700">
+                    Select methods to calculate and compare criteria weights
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-black">Select Methods to Compare:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {WEIGHT_METHODS.map((w) => (
+                        <label key={w.value} className="flex items-center gap-2 text-xs p-2 rounded border border-gray-100 hover:bg-gray-50 cursor-pointer text-black">
+                          <input
+                            type="checkbox"
+                            checked={sensitivityWeightMethods.includes(w.value)}
+                            onChange={() => {
+                              if (w.value === "piprecia" && !sensitivityWeightMethods.includes("piprecia")) {
+                                setIsPipreciaDialogOpen(true)
+                              }
+                              if (w.value === "ahp" && !sensitivityWeightMethods.includes("ahp")) {
+                                setIsAhpDialogOpen(true)
+                              }
+                              toggleSensitivityWeightMethod(w.value)
+                            }}
+                            className="rounded border-gray-300"
+                          />
+                          {w.label}
+                        </label>
+                      ))}
+                      <label className="flex items-center gap-2 text-xs p-2 rounded border border-gray-100 hover:bg-gray-50 cursor-pointer text-black">
+                        <input
+                          type="checkbox"
+                          checked={sensitivityWeightMethods.includes("custom")}
+                          onChange={(e) => {
+                            toggleSensitivityWeightMethod("custom")
+                            if (e.target.checked) setIsCustomWeightsDialogOpen(true)
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                        Enter own weights
+                      </label>
+                    </div>
+
+                    <Dialog open={isCustomWeightsDialogOpen} onOpenChange={setIsCustomWeightsDialogOpen}>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Enter Custom Weights</DialogTitle>
+                          <DialogDescription>Sum must equal 1</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                          {criteria.map((crit) => (
+                            <div key={crit.id} className="grid grid-cols-4 items-center gap-4">
+                              <label className="text-right text-xs col-span-2">{crit.name}</label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                className="col-span-2 h-8 text-xs"
+                                value={sensitivityCustomWeights[crit.id] || ""}
+                                onChange={(e) => setSensitivityCustomWeights(prev => ({ ...prev, [crit.id]: parseFloat(e.target.value) }))}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <div className="text-xs flex items-center mr-auto">
+                            Total: {Object.values(sensitivityCustomWeights).reduce((a, b) => a + (b || 0), 0).toFixed(2)}
+                          </div>
+                          <Button onClick={() => setIsCustomWeightsDialogOpen(false)} size="sm">Save</Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+
+                    {/* --- PIPRECIA Dialog (Weight Methods Tab) --- */}
+                    <Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen}>
+                      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+                        <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
+                        <PIPRECIAFormula
+                          criteria={criteria}
+                          initialScores={pipreciaScores}
+                          onScoresChange={setPipreciaScores}
+                          onWeightsCalculated={(weights) => {
+                            setPipreciaCalculatedWeights(weights)
+                            setIsPipreciaDialogOpen(false)
+                            // Automatically trigger analysis update with new weights
+                            handleWeightSensitivityAnalysis(weights)
+                          }}
+                        />
+                      </DialogContent>
+                    </Dialog>
+
+                    {/* --- AHP Dialog (Weight Methods Tab) --- */}
+                    <Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen}>
+                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
+                        <DialogTitle>AHP Weight Calculator</DialogTitle>
+                        <AHPFormula
+                          criteria={criteria}
+                          initialMatrix={ahpMatrix}
+                          onMatrixChange={setAhpMatrix}
+                          onWeightsCalculated={(weights) => {
+                            setAhpCalculatedWeights(weights)
+                            setIsAhpDialogOpen(false)
+                            // Automatically trigger analysis update with new weights
+                            handleWeightSensitivityAnalysis()
+                          }}
+                        />
+                      </DialogContent>
+                    </Dialog>
+
+                  </div>
+
+                  {sensitivityError && (
+                    <div className="text-xs text-red-600 border border-red-200 bg-red-50 p-2 rounded">
+                      {sensitivityError}
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={handleWeightSensitivityAnalysis}
+                    disabled={sensitivityLoading}
+                    className="w-full sm:w-auto bg-black text-white hover:bg-gray-800 text-xs h-8"
+                  >
+                    {sensitivityLoading ? "Calculating..." : "Calculate Weights & Compare"}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {sensitivityCriteriaWeights.length > 0 && (
+                <>
+                  <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
+                    <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle className="text-sm text-black">Weight Variation Chart</CardTitle>
+                        <CardDescription className="text-xs text-gray-700">Visualizing weights across different methods</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Select value={weightChartType} onValueChange={setWeightChartType}>
+                          <SelectTrigger className="w-32 h-7 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="bar">Bar Chart</SelectItem>
+                            <SelectItem value="stackedBar">Stacked Bar</SelectItem>
+                            <SelectItem value="line">Line Chart</SelectItem>
+                            <SelectItem value="area">Area Chart</SelectItem>
+                            <SelectItem value="radar">Radar Chart</SelectItem>
+                            <SelectItem value="scatter">Scatter Plot</SelectItem>
+                            <SelectItem value="composed">Composed</SelectItem>
+                            <SelectItem value="radial">Radial Bar</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button onClick={() => downloadChartAsJpeg(weightChartRef, 'weight-analysis')} variant="outline" size="sm" className="h-7 text-xs"><Download className="w-3 h-3 mr-1" /> JPG</Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div style={{ height: 400 }} ref={weightChartRef}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          {weightChartType === 'radar' ? (
+                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={sensitivityCriteriaWeights}>
+                              <PolarGrid />
+                              <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
+                              <PolarRadiusAxis />
+                              <Legend wrapperStyle={{ fontSize: "10px" }} />
+                              <Tooltip />
+                              {sensitivityWeightComparisonResults.map((res, i) => (
+                                <Radar
+                                  key={res.weightLabel}
+                                  name={res.weightLabel}
+                                  dataKey={res.weightLabel}
+                                  stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                                  fill={CHART_COLORS[i % CHART_COLORS.length]}
+                                  fillOpacity={0.1}
+                                />
+                              ))}
+                            </RadarChart>
+                          ) : weightChartType === 'bar' ? (
+                            <BarChart data={sensitivityCriteriaWeights}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                              <YAxis label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
+                              <Tooltip />
+                              <Legend wrapperStyle={{ fontSize: "10px" }} />
+                              {sensitivityWeightComparisonResults.map((res, i) => (
+                                <Bar key={res.weightLabel} dataKey={res.weightLabel} fill={CHART_COLORS[i % CHART_COLORS.length]} name={res.weightLabel} />
+                              ))}
+                            </BarChart>
+                          ) : weightChartType === 'stackedBar' ? (
+                            <BarChart data={sensitivityCriteriaWeights}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                              <YAxis label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
+                              <Tooltip />
+                              <Legend wrapperStyle={{ fontSize: "10px" }} />
+                              {sensitivityWeightComparisonResults.map((res, i) => (
+                                <Bar key={res.weightLabel} stackId="a" dataKey={res.weightLabel} fill={CHART_COLORS[i % CHART_COLORS.length]} name={res.weightLabel} />
+                              ))}
+                            </BarChart>
+                          ) : weightChartType === 'line' ? (
+                            <LineChart data={sensitivityCriteriaWeights}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                              <YAxis label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
+                              <Tooltip />
+                              <Legend wrapperStyle={{ fontSize: "10px" }} />
+                              {sensitivityWeightComparisonResults.map((res, i) => (
+                                <Line key={res.weightLabel} type="monotone" dataKey={res.weightLabel} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2} name={res.weightLabel} />
+                              ))}
+                            </LineChart>
+                          ) : weightChartType === 'area' ? (
+                            <AreaChart data={sensitivityCriteriaWeights}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                              <YAxis label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
+                              <Tooltip />
+                              <Legend wrapperStyle={{ fontSize: "10px" }} />
+                              {sensitivityWeightComparisonResults.map((res, i) => (
+                                <Area key={res.weightLabel} type="monotone" dataKey={res.weightLabel} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={res.weightLabel} />
+                              ))}
+                            </AreaChart>
+                          ) : weightChartType === 'composed' ? (
+                            <ComposedChart data={sensitivityCriteriaWeights}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                              <YAxis label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
+                              <Tooltip />
+                              <Legend wrapperStyle={{ fontSize: "10px" }} />
+                              {sensitivityWeightComparisonResults.map((res, i) => (
+                                <Fragment key={i}>
+                                  <Bar dataKey={res.weightLabel} fill={CHART_COLORS[i % CHART_COLORS.length]} name={res.weightLabel} barSize={20} />
+                                  <Line type="monotone" dataKey={res.weightLabel} stroke={CHART_COLORS[(i + 1) % CHART_COLORS.length]} name={res.weightLabel} strokeWidth={2} />
+                                </Fragment>
+                              ))}
+                            </ComposedChart>
+                          ) : weightChartType === 'scatter' ? (
+                            <ScatterChart>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} />
+                              <YAxis dataKey="weight" name="Weight" label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
+                              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                              <Legend wrapperStyle={{ fontSize: "10px" }} />
+                              {sensitivityWeightComparisonResults.map((res, i) => (
+                                <Scatter key={res.weightLabel} name={res.weightLabel} data={sensitivityCriteriaWeights.map(d => ({ name: d.name, weight: d[res.weightLabel] }))} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                              ))}
+                            </ScatterChart>
+                          ) : (
+                            <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" barSize={10} data={sensitivityCriteriaWeights}>
+                              <RadialBar
+                                label={{ position: 'insideStart', fill: '#fff' }}
+                                background
+                                dataKey={sensitivityWeightComparisonResults[0]?.weightLabel}
+                              />
+                              <Legend iconSize={10} wrapperStyle={{ fontSize: "10px" }} />
+                              {sensitivityWeightComparisonResults.map((res, i) => (
+                                <RadialBar key={res.weightLabel} name={res.weightLabel} dataKey={res.weightLabel} fill={CHART_COLORS[i % CHART_COLORS.length]} background />
+                              ))}
+                              <Tooltip />
+                            </RadialBarChart>
+                          )}
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Weight Values Table</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">Detailed numerical weights for each criterion</CardDescription>
+                    </CardHeader>
+                    <CardContent className="overflow-x-auto">
+                      <table className="min-w-full text-xs border border-gray-200 rounded-lg">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left border-b border-r text-black font-semibold">Criterion</th>
+                            {sensitivityWeightComparisonResults.map((res, i) => (
+                              <th key={i} className="px-3 py-2 text-center border-b border-l text-black font-semibold">
+                                {res.weightLabel}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sensitivityCriteriaWeights.map((row, i) => (
+                            <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
+                              <td className="px-3 py-2 font-medium text-black border-r border-gray-200">{row.name}</td>
+                              {sensitivityWeightComparisonResults.map((res, k) => (
+                                <td key={k} className="px-3 py-2 text-center text-black border-l border-gray-200">
+                                  {row[res.weightLabel] !== undefined ? Number(row[res.weightLabel]).toFixed(4) : "-"}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
 
 
 
@@ -1216,7 +2033,7 @@ export default function MCDMCalculator() {
                   {alternatives.length > 0 && criteria.length > 0 ? (
                     <div className="space-y-3">
                       <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
-                        <p className="font-semibold">✓ Decision Matrix Loaded</p>
+                        <p className="font-semibold">✓ Data has uploaded</p>
                         <p className="mt-1">
                           {alternatives.length} alternatives × {criteria.length} criteria
                         </p>
@@ -1289,7 +2106,15 @@ export default function MCDMCalculator() {
                               <input
                                 type="checkbox"
                                 checked={comparisonWeightMethod === w.value}
-                                onChange={() => setComparisonWeightMethod(w.value)}
+                                onChange={() => {
+                                  if (w.value === "piprecia") {
+                                    setIsPipreciaDialogOpen(true)
+                                  }
+                                  if (w.value === "ahp") {
+                                    setIsAhpDialogOpen(true)
+                                  }
+                                  setComparisonWeightMethod(w.value)
+                                }}
                                 disabled={comparisonLoading}
                                 className="mt-0.5"
                               />
@@ -1358,12 +2183,82 @@ export default function MCDMCalculator() {
                 </CardContent>
               </Card>
 
+              {/* --- PIPRECIA Dialog (Ranking Comparison Tab) --- */}
+              <Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen}>
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+                  <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
+                  <PIPRECIAFormula
+                    criteria={comparisonCriteria.length > 0 ? comparisonCriteria : criteria}
+                    initialScores={pipreciaScores}
+                    onScoresChange={setPipreciaScores}
+                    onWeightsCalculated={(weights) => {
+                      setPipreciaCalculatedWeights(weights)
+                      setIsPipreciaDialogOpen(false)
+
+                      // Update criteria with new weights
+                      const targetCriteria = comparisonCriteria.length > 0 ? comparisonCriteria : criteria
+                      const updatedCriteria = targetCriteria.map(c => ({
+                        ...c,
+                        weight: weights[c.id] || 0
+                      }))
+
+                      if (comparisonCriteria.length > 0) {
+                        setComparisonCriteria(updatedCriteria)
+                      } else {
+                        setCriteria(updatedCriteria)
+                      }
+
+                      // Set weight method to PIPRECIA
+                      setComparisonWeightMethod("piprecia")
+
+                      // Automatically trigger comparison calculation
+                      setTimeout(() => handleComparisonCalculate(), 100)
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
+
+              {/* --- AHP Dialog (Ranking Comparison Tab) --- */}
+              <Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
+                  <DialogTitle>AHP Weight Calculator</DialogTitle>
+                  <AHPFormula
+                    criteria={comparisonCriteria.length > 0 ? comparisonCriteria : criteria}
+                    initialMatrix={ahpMatrix}
+                    onMatrixChange={setAhpMatrix}
+                    onWeightsCalculated={(weights) => {
+                      setAhpCalculatedWeights(weights)
+                      setIsAhpDialogOpen(false)
+
+                      // Update criteria with new weights
+                      const targetCriteria = comparisonCriteria.length > 0 ? comparisonCriteria : criteria
+                      const updatedCriteria = targetCriteria.map(c => ({
+                        ...c,
+                        weight: weights[c.id] || 0
+                      }))
+
+                      if (comparisonCriteria.length > 0) {
+                        setComparisonCriteria(updatedCriteria)
+                      } else {
+                        setCriteria(updatedCriteria)
+                      }
+
+                      // Set weight method to AHP
+                      setComparisonWeightMethod("ahp")
+
+                      // Automatically trigger comparison calculation
+                      setTimeout(() => handleComparisonCalculate(), 100)
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
+
               {comparisonResults.length > 0 && (
                 <Card className="border-gray-200 bg-white shadow-none w-full mb-4">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm text-black">Ranking table</CardTitle>
                     <CardDescription className="text-xs text-gray-700">
-                      Score and rankings by method. Lower rank is better.
+                      Scores and rankings generated by the methods. Ranking depends on the method used.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="overflow-x-auto">
@@ -1425,31 +2320,245 @@ export default function MCDMCalculator() {
 
               {comparisonResults.length > 0 && comparisonChartData.length > 0 && (
                 <Card className="border-gray-200 bg-white shadow-none w-full">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm text-black">Ranking variation</CardTitle>
-                    <CardDescription className="text-xs text-gray-700">
-                      Line chart comparing alternative ranks across selected methods.
-                    </CardDescription>
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle className="text-sm text-black">Ranking variation</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        {comparisonChartType === "composed"
+                          ? "Deviation from average rank - bars extending left are better than average."
+                          : "Chart comparing alternative ranks across selected methods."}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Select value={comparisonChartType} onValueChange={setComparisonChartType}>
+                        <SelectTrigger className="w-32 h-7 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="line">Line Chart</SelectItem>
+                          <SelectItem value="step">Step Line Chart</SelectItem>
+                          <SelectItem value="bar">Bar Chart</SelectItem>
+                          <SelectItem value="stackedBar">Stacked Bar Chart</SelectItem>
+                          <SelectItem value="area">Area Chart</SelectItem>
+                          <SelectItem value="stackedArea">Stacked Area Chart</SelectItem>
+                          <SelectItem value="scatter">Scatter Plot</SelectItem>
+                          <SelectItem value="composed">Diverging Bar Chart</SelectItem>
+                          <SelectItem value="radar">Radar Chart</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button onClick={downloadComparisonChartAsJpeg} variant="outline" size="sm" className="h-7 text-xs">
+                        <Download className="w-3 h-3 mr-1" /> JPG
+                      </Button>
+                    </div>
                   </CardHeader>
-                  <CardContent style={{ height: 360 }}>
+                  <CardContent style={{ height: comparisonChartType === "composed" ? 500 : 400 }} ref={comparisonChartRef}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={comparisonChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                        <YAxis reversed allowDecimals={false} tick={{ fontSize: 10 }} />
-                        <Tooltip />
-                        <Legend wrapperStyle={{ fontSize: "10px" }} />
-                        {comparisonChartAlternatives.map((alt, idx) => (
-                          <Line
-                            key={alt}
-                            type="monotone"
-                            dataKey={alt}
-                            stroke={CHART_COLORS[idx % CHART_COLORS.length]}
-                            activeDot={{ r: 4 }}
-                            strokeWidth={2}
+                      {comparisonChartType === "radar" ? (
+                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
+                          <PolarGrid />
+                          <PolarAngleAxis dataKey="method" tick={{ fontSize: 10 }} />
+                          <PolarRadiusAxis />
+                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                          <Tooltip />
+                          {comparisonChartAlternatives.map((alt, idx) => (
+                            <Radar
+                              key={alt}
+                              name={alt}
+                              dataKey={alt}
+                              stroke={CHART_COLORS[idx % CHART_COLORS.length]}
+                              fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                              fillOpacity={0.1}
+                            />
+                          ))}
+                        </RadarChart>
+                      ) : comparisonChartType === "bar" ? (
+                        <BarChart data={comparisonChartData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                          <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
+                          <Tooltip />
+                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                          {comparisonChartAlternatives.map((alt, idx) => (
+                            <Bar
+                              key={alt}
+                              dataKey={alt}
+                              fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                              name={alt}
+                            />
+                          ))}
+                        </BarChart>
+                      ) : comparisonChartType === "stackedBar" ? (
+                        <BarChart data={comparisonChartData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                          <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
+                          <Tooltip />
+                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                          {comparisonChartAlternatives.map((alt, idx) => (
+                            <Bar
+                              key={alt}
+                              stackId="a"
+                              dataKey={alt}
+                              fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                              name={alt}
+                            />
+                          ))}
+                        </BarChart>
+                      ) : comparisonChartType === "area" ? (
+                        <AreaChart data={comparisonChartData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                          {comparisonChartAlternatives.map((alt, idx) => (
+                            <Area
+                              type="monotone"
+                              key={alt}
+                              dataKey={alt}
+                              stroke={CHART_COLORS[idx % CHART_COLORS.length]}
+                              fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                              fillOpacity={0.3}
+                              name={alt}
+                            />
+                          ))}
+                        </AreaChart>
+                      ) : comparisonChartType === "stackedArea" ? (
+                        <AreaChart data={comparisonChartData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                          {comparisonChartAlternatives.map((alt, idx) => (
+                            <Area
+                              type="monotone"
+                              stackId="1"
+                              key={alt}
+                              dataKey={alt}
+                              stroke={CHART_COLORS[idx % CHART_COLORS.length]}
+                              fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                              fillOpacity={0.3}
+                              name={alt}
+                            />
+                          ))}
+                        </AreaChart>
+                      ) : comparisonChartType === "composed" ? (
+                        <BarChart
+                          data={comparisonChartData.map(d => {
+                            // Calculate average rank for each alternative across all methods
+                            const avgRank = comparisonChartAlternatives.reduce((sum, alt) => sum + (d[alt] || 0), 0) / comparisonChartAlternatives.length;
+                            // Create diverging data (deviation from average)
+                            const divergingData: any = { method: d.method };
+                            comparisonChartAlternatives.forEach(alt => {
+                              const rank = d[alt] || 0;
+                              divergingData[alt] = rank - avgRank; // Positive = worse than avg, Negative = better than avg
+                            });
+                            return divergingData;
+                          })}
+                          layout="vertical"
+                          margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            type="number"
+                            label={{ value: "Deviation from Average Rank", position: "insideBottom", offset: -10 }}
+                            tick={{ fontSize: 10 }}
                           />
-                        ))}
-                      </LineChart>
+                          <YAxis
+                            type="category"
+                            dataKey="method"
+                            tick={{ fontSize: 10 }}
+                            width={90}
+                          />
+                          <Tooltip
+                            formatter={(value: any, name: string) => {
+                              const deviation = parseFloat(value);
+                              return [
+                                `${deviation > 0 ? '+' : ''}${deviation.toFixed(2)} (${deviation < 0 ? 'Better' : 'Worse'} than avg)`,
+                                name
+                              ];
+                            }}
+                          />
+                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                          <ReferenceLine x={0} stroke="#666" strokeWidth={2} />
+                          {comparisonChartAlternatives.map((alt, idx) => (
+                            <Bar
+                              key={alt}
+                              dataKey={alt}
+                              fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                              name={alt}
+                              stackId="stack"
+                            >
+                              {comparisonChartData.map((entry, index) => (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                                  opacity={0.8}
+                                />
+                              ))}
+                            </Bar>
+                          ))}
+                        </BarChart>
+                      ) : comparisonChartType === "scatter" ? (
+                        <ScatterChart>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            dataKey="x"
+                            type="category"
+                            allowDuplicatedCategory={false}
+                            tick={{ fontSize: 10 }}
+                            name="Method"
+                          />
+                          <YAxis
+                            dataKey="y"
+                            type="number"
+                            name="Rank"
+                            label={{ value: "Rank", angle: -90, position: "insideLeft" }}
+                          />
+                          <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                          {comparisonChartAlternatives.map((alt, idx) => (
+                            <Scatter
+                              key={alt}
+                              name={alt}
+                              data={comparisonChartData.map((d) => ({ x: d.method, y: d[alt] }))}
+                              fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                              shape={["circle", "cross", "diamond", "square", "star", "triangle", "wye"][idx % 7] as any}
+                              line
+                            >
+                              {comparisonChartData.map((entry, i) => (
+                                <Cell key={`cell-${i}`} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
+                              ))}
+                            </Scatter>
+                          ))}
+                        </ScatterChart>
+                      ) : (
+                        <LineChart data={comparisonChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                          <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                          <Tooltip />
+                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                          {comparisonChartAlternatives.map((alt, idx) => (
+                            <Line
+                              key={alt}
+                              type={comparisonChartType === "step" ? "step" : "monotone"}
+                              dataKey={alt}
+                              stroke={CHART_COLORS[idx % CHART_COLORS.length]}
+                              strokeWidth={2}
+                              strokeDasharray={["0", "5 5", "3 3", "10 5", "2 2", "15 5"][idx % 6]}
+                              activeDot={{ r: 6 }}
+                              dot={{
+                                r: 4,
+                                strokeWidth: 1,
+                                fill: "white",
+                                stroke: CHART_COLORS[idx % CHART_COLORS.length],
+                              }}
+                            />
+                          ))}
+                        </LineChart>
+                      )}
                     </ResponsiveContainer>
                   </CardContent>
                 </Card>
@@ -1490,7 +2599,7 @@ export default function MCDMCalculator() {
                   {alternatives.length > 0 && criteria.length > 0 ? (
                     <>
                       <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
-                        <p className="font-semibold">✓ Decision Matrix Loaded</p>
+                        <p className="font-semibold">✓ Data has uploaded</p>
                         <p className="mt-1">
                           {alternatives.length} alternatives × {criteria.length} criteria
                         </p>
@@ -1534,7 +2643,7 @@ export default function MCDMCalculator() {
                         </Table>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2">
                           <label className="text-xs font-semibold text-black">Select Criterion to Vary</label>
                           <Select value={sensitivityCriterion} onValueChange={setSensitivityCriterion}>
@@ -1555,6 +2664,57 @@ export default function MCDMCalculator() {
                         </div>
 
                         <div className="space-y-2">
+                          <label className="text-xs font-semibold text-black">Choose weight method</label>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setIsWeightSelectorOpen(!isWeightSelectorOpen)}
+                              className="w-full flex items-center justify-between text-xs h-8 border border-gray-200 rounded px-3 bg-white"
+                            >
+                              <span>{sensitivityWeightMethods.length > 0 ? `${sensitivityWeightMethods.length} selected` : "Select weight methods..."}</span>
+                              <ChevronDown className="w-4 h-4 text-gray-500" />
+                            </button>
+                            {isWeightSelectorOpen && (
+                              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-60 overflow-y-auto p-2">
+                                {WEIGHT_METHODS.map((w) => (
+                                  <label key={w.value} className="flex items-center gap-2 text-xs p-1 hover:bg-gray-50 cursor-pointer text-black">
+                                    <input
+                                      type="checkbox"
+                                      checked={sensitivityWeightMethods.includes(w.value)}
+                                      onChange={() => {
+                                        if (w.value === "piprecia" && !sensitivityWeightMethods.includes("piprecia")) {
+                                          setIsPipreciaDialogOpen(true)
+                                        }
+                                        if (w.value === "ahp" && !sensitivityWeightMethods.includes("ahp")) {
+                                          setIsAhpDialogOpen(true)
+                                        }
+                                        toggleSensitivityWeightMethod(w.value)
+                                      }}
+                                    />
+                                    {w.label}
+                                  </label>
+                                ))}
+                                <div className="border-t my-1"></div>
+                                <label className="flex items-center gap-2 text-xs p-1 hover:bg-gray-50 cursor-pointer text-black">
+                                  <input
+                                    type="checkbox"
+                                    checked={sensitivityWeightMethods.includes("custom")}
+                                    onChange={(e) => {
+                                      toggleSensitivityWeightMethod("custom")
+                                      if (e.target.checked) setIsCustomWeightsDialogOpen(true)
+                                    }}
+                                  />
+                                  Enter own weights
+                                </label>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-gray-500">
+                            Select methods to compare outcomes
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
                           <label className="text-xs font-semibold text-black">Select MCDM Method</label>
                           <Select value={sensitivityMethod} onValueChange={(value) => setSensitivityMethod(value as MCDMMethod)}>
                             <SelectTrigger className="text-xs h-8 border-gray-200">
@@ -1569,10 +2729,351 @@ export default function MCDMCalculator() {
                             </SelectContent>
                           </Select>
                           <p className="text-[10px] text-gray-500">
-                            Method used to calculate rankings at each weight variation
+                            Method used to calculate rankings
                           </p>
                         </div>
+
                       </div>
+
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          onClick={handleWeightSensitivityAnalysis}
+                          className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                          disabled={sensitivityLoading}
+                        >
+                          {sensitivityLoading ? "Calculating..." : "Calculate Sensitivity"}
+                        </Button>
+                      </div>
+
+                      <Dialog open={isCustomWeightsDialogOpen} onOpenChange={setIsCustomWeightsDialogOpen}>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Enter Custom Weights</DialogTitle>
+                            <DialogDescription>Sum must equal 1</DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                            {criteria.map((crit) => (
+                              <div key={crit.id} className="grid grid-cols-4 items-center gap-4">
+                                <label className="text-right text-xs col-span-2">{crit.name}</label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  className="col-span-2 h-8 text-xs"
+                                  value={sensitivityCustomWeights[crit.id] || ""}
+                                  onChange={(e) => setSensitivityCustomWeights(prev => ({ ...prev, [crit.id]: parseFloat(e.target.value) }))}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <div className="text-xs flex items-center mr-auto">
+                              Total: {Object.values(sensitivityCustomWeights).reduce((a, b) => a + (b || 0), 0).toFixed(2)}
+                            </div>
+                            <Button onClick={() => setIsCustomWeightsDialogOpen(false)} size="sm">Save</Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+
+
+
+                      {/* --- PIPRECIA Dialog --- */}
+                      <Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen}>
+                        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+                          <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
+                          <PIPRECIAFormula
+                            criteria={criteria}
+                            initialScores={pipreciaScores}
+                            onScoresChange={setPipreciaScores}
+                            onWeightsCalculated={(weights) => {
+                              setPipreciaCalculatedWeights(weights)
+                              setIsPipreciaDialogOpen(false)
+                              // Automatically trigger analysis update with new weights
+                              handleWeightSensitivityAnalysis(weights)
+                            }}
+                          />
+                        </DialogContent>
+                      </Dialog>
+
+                      {/* --- AHP Dialog (Sensitivity Analysis Tab) --- */}
+                      <Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen}>
+                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
+                          <DialogTitle>AHP Weight Calculator</DialogTitle>
+                          <AHPFormula
+                            criteria={criteria}
+                            initialMatrix={ahpMatrix}
+                            onMatrixChange={setAhpMatrix}
+                            onWeightsCalculated={(weights) => {
+                              setAhpCalculatedWeights(weights)
+                              setIsAhpDialogOpen(false)
+                              // Automatically trigger analysis update with new weights
+                              handleWeightSensitivityAnalysis()
+                            }}
+                          />
+                        </DialogContent>
+                      </Dialog>
+
+                      {sensitivityWeightComparisonResults.length > 0 && (
+                        <div className="space-y-6 animate-in fade-in duration-500">
+                          <Card className="border-gray-200 bg-white shadow-none w-full">
+                            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                              <div>
+                                <CardTitle className="text-sm text-black">Comparison Results</CardTitle>
+                                <CardDescription className="text-xs text-gray-700">Ranking variations across weight methods</CardDescription>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="overflow-x-auto">
+                              <table className="min-w-full text-xs border border-gray-200 rounded-lg">
+                                <thead className="bg-gray-50">
+                                  <tr>
+                                    <th className="px-3 py-2 text-left border-b text-black font-semibold">Alternative</th>
+                                    {sensitivityWeightComparisonResults.map((res, i) => (
+                                      <Fragment key={i}>
+                                        <th className="px-3 py-2 text-center border-b text-black font-semibold border-l border-gray-200" colSpan={2}>
+                                          {res.weightLabel} ({res.method})
+                                        </th>
+                                      </Fragment>
+                                    ))}
+                                  </tr>
+                                  <tr>
+                                    <th className="border-b"></th>
+                                    {sensitivityWeightComparisonResults.map((res, i) => (
+                                      <Fragment key={i}>
+                                        <th className="px-2 py-1 text-center border-b text-gray-500 font-medium text-[10px] border-l border-gray-200">Score</th>
+                                        <th className="px-2 py-1 text-center border-b text-gray-500 font-medium text-[10px]">Rank</th>
+                                      </Fragment>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {alternatives.map((alt) => (
+                                    <tr key={alt.id} className="hover:bg-gray-50 border-b last:border-0 border-gray-100">
+                                      <td className="px-3 py-2 text-black font-medium">{alt.name}</td>
+                                      {sensitivityWeightComparisonResults.map((res, i) => {
+                                        const item = res.ranking.find((r: any) => r.alternativeName === alt.name)
+                                        return (
+                                          <Fragment key={i}>
+                                            <td className="px-2 py-2 text-center text-black border-l border-gray-200">
+                                              {item?.score !== undefined ? Number(item.score).toFixed(4) : "-"}
+                                            </td>
+                                            <td className="px-2 py-2 text-center text-black font-bold">
+                                              {item?.rank}
+                                            </td>
+                                          </Fragment>
+                                        )
+                                      })}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </CardContent>
+                          </Card>
+
+                          <Card className="border-gray-200 bg-white shadow-none w-full">
+                            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                              <div>
+                                <CardTitle className="text-sm text-black">Graphical Variation</CardTitle>
+                                <CardDescription className="text-xs text-gray-700">Visualizing the impact of weight methods</CardDescription>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Select value={sensitivityChartType} onValueChange={setSensitivityChartType}>
+                                  <SelectTrigger className="w-32 h-7 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="line">Line Chart</SelectItem>
+                                    <SelectItem value="step">Step Line Chart</SelectItem>
+                                    <SelectItem value="bar">Bar Chart</SelectItem>
+                                    <SelectItem value="stackedBar">Stacked Bar Chart</SelectItem>
+                                    <SelectItem value="area">Area Chart</SelectItem>
+                                    <SelectItem value="stackedArea">Stacked Area Chart</SelectItem>
+                                    <SelectItem value="scatter">Scatter Plot</SelectItem>
+                                    <SelectItem value="composed">Gantt Chart (Range)</SelectItem>
+                                    <SelectItem value="radar">Radar Chart</SelectItem>
+                                    <SelectItem value="radial">Radial Bar Chart</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Button onClick={downloadChart} variant="outline" size="sm" className="h-7 text-xs"><Download className="w-3 h-3 mr-1" /> SVG</Button>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              <div style={{ height: 400 }} ref={sensitivityChartRef}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                  {sensitivityChartType === 'radar' ? (
+                                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={sensitivityWeightChartData}>
+                                      <PolarGrid />
+                                      <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                      <PolarRadiusAxis />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      <Tooltip />
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Radar
+                                          key={res.weightLabel}
+                                          name={`${res.weightLabel} Rank`}
+                                          dataKey={`${res.weightLabel} Rank`}
+                                          stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                                          fill={CHART_COLORS[i % CHART_COLORS.length]}
+                                          fillOpacity={0.1}
+                                        />
+                                      ))}
+                                    </RadarChart>
+                                  ) : sensitivityChartType === "bar" ? (
+                                    <BarChart data={sensitivityWeightChartData}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                      <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} reversed />
+                                      <Tooltip />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Bar key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} name={`${res.weightLabel} Rank`} />
+                                      ))}
+                                    </BarChart>
+                                  ) : sensitivityChartType === "stackedBar" ? (
+                                    <BarChart data={sensitivityWeightChartData}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                      <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} reversed />
+                                      <Tooltip />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Bar key={res.weightLabel} stackId="a" dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} name={`${res.weightLabel} Rank`} />
+                                      ))}
+                                    </BarChart>
+                                  ) : sensitivityChartType === "area" ? (
+                                    <AreaChart data={sensitivityWeightChartData}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                      <YAxis reversed />
+                                      <Tooltip />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Area type="monotone" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={`${res.weightLabel} Rank`} />
+                                      ))}
+                                    </AreaChart>
+                                  ) : sensitivityChartType === "stackedArea" ? (
+                                    <AreaChart data={sensitivityWeightChartData}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                      <YAxis reversed />
+                                      <Tooltip />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Area type="monotone" stackId="1" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={`${res.weightLabel} Rank`} />
+                                      ))}
+                                    </AreaChart>
+                                  ) : sensitivityChartType === "composed" ? (
+                                    <BarChart
+                                      data={sensitivityWeightComparisonResults.map((res, idx) => {
+                                        // Get all ranks for this weight method across alternatives
+                                        const ranks = sensitivityWeightChartData.map(d => d[`${res.weightLabel} Rank`] || 0);
+                                        const minRank = Math.min(...ranks);
+                                        const maxRank = Math.max(...ranks);
+                                        const avgRank = ranks.reduce((a, b) => a + b, 0) / ranks.length;
+
+                                        return {
+                                          method: res.weightLabel,
+                                          start: minRank,
+                                          range: maxRank - minRank,
+                                          avg: avgRank,
+                                          min: minRank,
+                                          max: maxRank
+                                        };
+                                      })}
+                                      layout="vertical"
+                                      margin={{ top: 20, right: 30, left: 120, bottom: 20 }}
+                                    >
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis
+                                        type="number"
+                                        domain={[0, 'dataMax']}
+                                        label={{ value: "Rank Range (Best to Worst)", position: "insideBottom", offset: -10 }}
+                                        tick={{ fontSize: 10 }}
+                                      />
+                                      <YAxis
+                                        type="category"
+                                        dataKey="method"
+                                        tick={{ fontSize: 10 }}
+                                        width={110}
+                                      />
+                                      <Tooltip
+                                        formatter={(value: any, name: string, props: any) => {
+                                          const data = props.payload;
+                                          if (name === 'range') {
+                                            return [`Best: ${data.min}, Worst: ${data.max}, Avg: ${data.avg.toFixed(2)}`, 'Rank Range'];
+                                          }
+                                          return [value, name];
+                                        }}
+                                      />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {/* Base bar showing starting position */}
+                                      <Bar
+                                        dataKey="start"
+                                        stackId="a"
+                                        fill="transparent"
+                                      />
+                                      {/* Range bar showing the spread */}
+                                      <Bar
+                                        dataKey="range"
+                                        stackId="a"
+                                        name="Rank Range"
+                                      >
+                                        {sensitivityWeightComparisonResults.map((res, index) => (
+                                          <Cell
+                                            key={`cell-${index}`}
+                                            fill={CHART_COLORS[index % CHART_COLORS.length]}
+                                            opacity={0.7}
+                                          />
+                                        ))}
+                                      </Bar>
+                                      {/* Markers for average */}
+                                      <Scatter
+                                        dataKey="avg"
+                                        fill="#000"
+                                        shape="diamond"
+                                        name="Average Rank"
+                                      />
+                                    </BarChart>
+                                  ) : sensitivityChartType === "scatter" ? (
+                                    <ScatterChart>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="name" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} />
+                                      <YAxis type="number" reversed dataKey="rank" name="Rank" label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} />
+                                      <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Scatter key={res.weightLabel} name={`${res.weightLabel} Rank`} data={sensitivityWeightChartData.map(d => ({ name: d.name, rank: d[`${res.weightLabel} Rank`] }))} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                                      ))}
+                                    </ScatterChart>
+                                  ) : sensitivityChartType === "radial" ? (
+                                    <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" barSize={10} data={sensitivityWeightChartData}>
+                                      <RadialBar
+                                        label={{ position: 'insideStart', fill: '#fff' }}
+                                        background
+                                        dataKey="Equal Weights Rank"
+                                      />
+                                      <Legend iconSize={10} wrapperStyle={{ fontSize: "10px" }} />
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <RadialBar key={res.weightLabel} name={`${res.weightLabel} Rank`} dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} background />
+                                      ))}
+                                      <Tooltip />
+                                    </RadialBarChart>
+                                  ) : (
+                                    <LineChart data={sensitivityWeightChartData}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                      <YAxis reversed label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} />
+                                      <Tooltip />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Line type={sensitivityChartType === "step" ? "step" : "monotone"} key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2} name={`${res.weightLabel} Rank`} />
+                                      ))}
+                                    </LineChart>
+                                  )}
+                                </ResponsiveContainer>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      )}
 
                       {sensitivityError && (
                         <div className="text-xs text-red-600 border border-red-200 bg-red-50 p-2 rounded">
@@ -1729,7 +3230,7 @@ export default function MCDMCalculator() {
                                 {result.weightLabel}
                               </td>
                               {sensitivityAlternatives.map((alt) => {
-                                const ranking = result.ranking.find((r: any) => r.alternativeName === alt)
+                                const ranking = result.ranking.find((r: SensitivityRankingItem) => r.alternativeName === alt)
                                 return (
                                   <td key={alt} className="px-3 py-2 text-center text-black border-r border-gray-200">
                                     {ranking?.rank ?? "-"}
@@ -1746,7 +3247,7 @@ export default function MCDMCalculator() {
               )}
             </>
           )}
-        </div>
+        </div >
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="w-full sm:w-[70vw] h-screen max-w-none rounded-none border-0 flex flex-col">
@@ -1784,6 +3285,7 @@ export default function MCDMCalculator() {
                   {weightMethod === "entropy" && <EntropyFormula />}
                   {weightMethod === "critic" && <CRITICFormula />}
                   {weightMethod === "ahp" && <AHPFormula />}
+                  {weightMethod === "piprecia" && <PIPRECIAFormula />}
                   {weightMethod === "equal" && (
                     <div className="space-y-2 text-xs">
                       <div>
@@ -1805,11 +3307,7 @@ export default function MCDMCalculator() {
             </div>
           </DialogContent>
         </Dialog>
-
-
-
-      </main>
-
+      </main >
     )
   }
 
@@ -1967,13 +3465,26 @@ export default function MCDMCalculator() {
                     {WEIGHT_METHODS.map((w) => (
                       <SidebarMenuItem key={w.value}>
                         <SidebarMenuButton
-                          onClick={() => {
-                            setActiveFormulaType("weight")
-                            setWeightMethod(w.value)
+                          onClick={async () => {
+                            const allScoresFilled = alternatives.every((alt) =>
+                              criteria.every((crit) => {
+                                const score = alt.scores[crit.id]
+                                return score !== undefined && score !== "" && Number(score) >= 0
+                              }),
+                            )
+
+                            if (!allScoresFilled) {
+                              alert("Please fill in all score values with numbers greater than or equal to 0")
+                              setWeightMethod(w.value)
+                              return
+                            }
+
+                            await calculateWeights(w.value)
+                            setCurrentStep("matrix")
                           }}
                           isActive={weightMethod === w.value}
                           className={`text-xs ${weightMethod === w.value
-                            ? "bg-gray-900 text-white"
+                            ? "bg-black text-white"
                             : "text-black hover:bg-gray-100"
                             }`}
                         >
@@ -2179,14 +3690,30 @@ export default function MCDMCalculator() {
                 >
                   Back
                 </Button>
-                <Button onClick={handleSaveTable} className="bg-black text-white hover:bg-gray-800 text-xs h-8">
+                <Button
+                  onClick={async () => {
+                    const isSpecialWeight = ["entropy", "critic", "ahp", "piprecia"].includes(weightMethod)
+                    // Always pass false to handleSaveTable to prevent auto-navigation to dashboard
+                    // We want to proceed to the matrix step or calculation results instead
+                    const success = await handleSaveTable(false)
+
+                    if (success) {
+                      if (isSpecialWeight) {
+                        setCurrentStep("matrix")
+                      } else {
+                        handleCalculate()
+                      }
+                    }
+                  }}
+                  className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                >
                   {weightMethod === "entropy"
                     ? "Calculate Entropy Weights"
                     : weightMethod === "critic"
                       ? "Calculate CRITIC Weights"
                       : weightMethod === "ahp"
                         ? "Calculate AHP Weights"
-                        : "Next"}
+                        : "Calculate Ranking"}
                 </Button>
               </div>
             </div>
@@ -2199,132 +3726,104 @@ export default function MCDMCalculator() {
   if (currentStep === "matrix") {
     return (
       <SidebarProvider>
-        <Sidebar className="border-r border-gray-200 bg-gray-50">
-          <SidebarHeader className="py-2 px-3">
-            <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
+        <Sidebar>
+          <SidebarHeader>
+            <div className="px-4 py-2 font-bold text-lg">Weight Methods</div>
           </SidebarHeader>
-          <SidebarContent className="px-2">
-            <div className="space-y-3">
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setRankingOpen((prev) => !prev)}
-                  className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
-                >
-                  <span>Ranking Methods</span>
-                  {rankingOpen ? (
-                    <ChevronDown className="w-3 h-3" />
-                  ) : (
-                    <ChevronRight className="w-3 h-3" />
-                  )}
-                </button>
-                {rankingOpen && (
-                  <SidebarMenu>
-                    {MCDM_METHODS.map((m) => (
-                      <SidebarMenuItem key={m.value}>
-                        <SidebarMenuButton
-                          onClick={() => {
-                            setActiveFormulaType("method")
-                            setMethod(m.value)
-                          }}
-                          isActive={method === m.value}
-                          className={`text-xs ${method === m.value
-                            ? "bg-black text-white"
-                            : "text-black hover:bg-gray-100"
-                            }`}
-                        >
-                          <span>{m.label}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                )}
-              </div>
+          <SidebarContent>
+            <SidebarMenu>
+              {WEIGHT_METHODS.map((w) => (
+                <SidebarMenuItem key={w.value}>
+                  <SidebarMenuButton
+                    isActive={weightMethod === w.value}
+                    onClick={() => {
+                      if (w.value === "piprecia") {
+                        setIsPipreciaDialogOpen(true)
+                      } else if (w.value === "ahp") {
+                        setIsAhpDialogOpen(true)
+                      } else {
+                        calculateWeights(w.value)
+                      }
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <span className="truncate">{w.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+        </Sidebar>
 
+        {/* --- PIPRECIA Dialog (Matrix Step) --- */}
+        <Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+            <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
+            <PIPRECIAFormula
+              criteria={criteria}
+              initialScores={pipreciaScores}
+              onScoresChange={setPipreciaScores}
+              onWeightsCalculated={(weights) => {
+                setPipreciaCalculatedWeights(weights)
+                setIsPipreciaDialogOpen(false)
+
+                // Update criteria with new weights
+                const updatedCriteria = criteria.map(c => ({
+                  ...c,
+                  weight: weights[c.id] || 0
+                }))
+                setCriteria(updatedCriteria)
+                setWeightMethod("piprecia")
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* --- AHP Dialog (Matrix Step) --- */}
+        <Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
+            <DialogTitle>AHP Weight Calculator</DialogTitle>
+            <AHPFormula
+              criteria={criteria}
+              initialMatrix={ahpMatrix}
+              onMatrixChange={setAhpMatrix}
+              onWeightsCalculated={(weights) => {
+                setAhpCalculatedWeights(weights)
+                setIsAhpDialogOpen(false)
+
+                // Update criteria with new weights
+                const updatedCriteria = criteria.map(c => ({
+                  ...c,
+                  weight: weights[c.id] || 0
+                }))
+                setCriteria(updatedCriteria)
+                setWeightMethod("ahp")
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+
+        <main className="flex-1 min-h-screen bg-white p-2 md:p-3 flex flex-col">
+          <div className="flex items-center gap-2 mb-2">
+            <SidebarTrigger />
+          </div>
+
+          <div className="max-w-7xl mx-auto w-full">
+            <div className="flex items-center gap-3 mb-4">
+              <Button
+                onClick={() => setCurrentStep("home")}
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
+                title="Go to Home"
+              >
+                <Home className="h-4 w-4" />
+              </Button>
               <div>
-                <button
-                  type="button"
-                  onClick={() => setWeightOpen((prev) => !prev)}
-                  className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
-                >
-                  <span>Weight Methods</span>
-                  {weightOpen ? (
-                    <ChevronDown className="w-3 h-3" />
-                  ) : (
-                    <ChevronRight className="w-3 h-3" />
-                  )}
-                </button>
-                {weightOpen && (
-                  <SidebarMenu>
-                    {WEIGHT_METHODS.map((w) => (
-                      <SidebarMenuItem key={w.value}>
-                        <SidebarMenuButton
-                          onClick={() => {
-                            setActiveFormulaType("weight")
-                            setWeightMethod(w.value)
-                          }}
-                          isActive={weightMethod === w.value}
-                          className={`text-xs ${weightMethod === w.value
-                            ? "bg-gray-900 text-white"
-                            : "text-black hover:bg-gray-100"
-                            }`}
-                        >
-                          <span>{w.label}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                )}
+                <h1 className="text-xl md:text-2xl font-bold text-black">Decision Matrix</h1>
+                <p className="text-xs text-gray-700">Step 3 of 3</p>
               </div>
             </div>
-          </SidebarContent >
-        </Sidebar >
-
-        <main className="flex-1 min-h-screen bg-white p-2 md:p-3">
-          <div className="max-w-full lg:max-w-6xl mx-auto">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <div className="flex items-center gap-3">
-                <SidebarTrigger className="md:hidden border-gray-200 text-black" />
-                <Button
-                  onClick={() => setCurrentStep("home")}
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
-                  title="Go to Home"
-                >
-                  <Home className="h-4 w-4" />
-                </Button>
-                <div>
-                  <h1 className="text-lg md:text-2xl font-bold text-black">Decision Matrix</h1>
-                  <p className="text-xs text-gray-700">Step 3 of 3</p>
-                </div>
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  onClick={() => setCurrentStep("table")}
-                  className="bg-black text-white hover:bg-gray-800 text-xs h-8"
-                >
-                  Edit
-                </Button>
-                <Button
-                  onClick={handleCalculate}
-                  disabled={isLoading}
-                  className="bg-black text-white hover:bg-gray-800 text-xs h-8"
-                >
-                  {isLoading ? "Calculating..." : "Calculate"}
-                </Button>
-              </div>
-            </div>
-
-            {sweiSwiValidationWarning && (
-              <div className="mb-4 p-3 bg-amber-50 border border-amber-300 rounded-lg text-amber-800 text-xs">
-                <p className="font-semibold">⚠️ {sweiSwiValidationWarning.message}</p>
-                <p className="mt-1 text-amber-700">
-                  Invalid values found in: {sweiSwiValidationWarning.invalidCells.slice(0, 5).join(", ")}
-                  {sweiSwiValidationWarning.invalidCells.length > 5 && ` and ${sweiSwiValidationWarning.invalidCells.length - 5} more...`}
-                </p>
-              </div>
-            )}
 
             <Breadcrumb className="mb-6">
               <BreadcrumbList>
@@ -2352,28 +3851,38 @@ export default function MCDMCalculator() {
               </BreadcrumbList>
             </Breadcrumb>
 
-            {/* Evaluation Matrix (Normalized) - First Table */}
+            <div className="flex justify-end gap-2 mb-4">
+              <Button
+                onClick={() => setCurrentStep("table")}
+                variant="outline"
+                className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
+              >
+                Edit
+              </Button>
+
+            </div>
+
             <Card className="border-gray-200 bg-white shadow-none mb-6">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs text-black">
-                  {(weightMethod === "entropy" && entropyResult) || (weightMethod === "critic" && criticResult)
-                    ? "Evaluation Matrix (Normalized)"
-                    : "Evaluation Matrix"}
-                </CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm text-black">Evaluation Matrix</CardTitle>
+                <CardDescription className="text-xs text-gray-700">
+                  Review your decision matrix before calculation
+                </CardDescription>
               </CardHeader>
-              <CardContent className="pt-2 pb-2">
+              <CardContent className="pt-3">
                 <div className="overflow-x-auto border border-gray-200 rounded-lg">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50 border-b border-gray-200">
-                        <TableHead className="text-left py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                          Alternative
-                        </TableHead>
+                        <TableHead className="text-xs font-semibold text-black py-3 px-4 min-w-32">Alternative</TableHead>
                         {criteria.map((crit) => (
-                          <TableHead key={crit.id} className="text-center py-2 px-3 font-semibold text-black text-xs">
-                            <div className="text-xs whitespace-nowrap">{crit.name}</div>
-                            <div className="text-xs text-gray-700">
-                              {crit.type === "beneficial" ? "↑" : "↓"} ({crit.weight.toFixed(3)})
+                          <TableHead
+                            key={crit.id}
+                            className="text-xs font-semibold text-black text-center py-3 px-4 min-w-40"
+                          >
+                            <div className="flex flex-col items-center">
+                              <span>{crit.name}</span>
+                              <span className="text-[10px] text-gray-500 mt-1">↓ ({crit.weight.toFixed(4)})</span>
                             </div>
                           </TableHead>
                         ))}
@@ -2382,14 +3891,14 @@ export default function MCDMCalculator() {
                     <TableBody>
                       {alternatives.map((alt) => (
                         <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
-                          <TableCell className="py-2 px-3 font-medium text-black text-xs">{alt.name}</TableCell>
+                          <TableCell className="py-3 px-4 font-medium text-black text-xs">
+                            {alt.name}
+                          </TableCell>
                           {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-2 px-3 text-black text-xs">
-                              {weightMethod === "entropy" && entropyResult
-                                ? entropyResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) ?? "-"
-                                : weightMethod === "critic" && criticResult
-                                  ? criticResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) ?? "-"
-                                  : alt.scores[crit.id] || "-"}
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                              {alt.scores[crit.id] !== undefined && alt.scores[crit.id] !== ""
+                                ? Number(alt.scores[crit.id]).toString()
+                                : "-"}
                             </TableCell>
                           ))}
                         </TableRow>
@@ -2400,96 +3909,56 @@ export default function MCDMCalculator() {
               </CardContent>
             </Card>
 
-            {/* Entropy Weight Calculation Results - Second Table */}
-            {weightMethod === "entropy" && entropyResult && (
+            {entropyResult && weightMethod === "entropy" && (
               <Card className="border-gray-200 bg-white shadow-none mb-6">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs text-black">Entropy Weight Calculation Results</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-black">Entropy Weight Calculation Results</CardTitle>
                 </CardHeader>
-                <CardContent className="pt-2 pb-2">
+                <CardContent className="pt-3">
                   <div className="overflow-x-auto border border-gray-200 rounded-lg">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-left py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                            Alternative
-                          </TableHead>
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                           {criteria.map((crit) => (
-                            <TableHead
-                              key={crit.id}
-                              className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap"
-                            >
+                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
                               {crit.name}
                             </TableHead>
                           ))}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {/* Individual entropy contributions (pᵢⱼ × log₂(pᵢⱼ)) for each alternative */}
                         {alternatives.map((alt) => (
                           <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-2 px-3 font-medium text-black text-xs whitespace-nowrap">
-                              {alt.name}
-                            </TableCell>
-                            {criteria.map((crit) => {
-                              const p_ij = entropyResult.normalizedMatrix[alt.id]?.[crit.id]
-                              const epsilon = 1e-12
-                              // Calculate pᵢⱼ × log₂(pᵢⱼ)
-                              const entropyContribution =
-                                p_ij && p_ij > epsilon ? p_ij * Math.log2(p_ij) : 0
-                              return (
-                                <TableCell
-                                  key={crit.id}
-                                  className="text-center py-2 px-3 text-black text-xs whitespace-nowrap"
-                                >
-                                  {entropyContribution.toFixed(4)}
-                                </TableCell>
-                              )
-                            })}
+                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                            {criteria.map((crit) => (
+                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                {entropyResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                              </TableCell>
+                            ))}
                           </TableRow>
                         ))}
-
-                        {/* Entropy (Ej) row - highlighted */}
-                        <TableRow className="bg-yellow-50 border-b-2 border-yellow-300">
-                          <TableCell className="py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                            Eⱼ
-                          </TableCell>
+                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Ej</TableCell>
                           {criteria.map((crit) => (
-                            <TableCell
-                              key={crit.id}
-                              className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap"
-                            >
-                              {entropyResult.entropyValues[crit.id]?.toFixed(3) ?? "-"}
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                              {entropyResult.entropyValues[crit.id]?.toFixed(4)}
                             </TableCell>
                           ))}
                         </TableRow>
-
-                        {/* Diversity Degree (dj=1-Ej) row - highlighted */}
-                        <TableRow className="bg-yellow-50 border-b-2 border-yellow-300">
-                          <TableCell className="py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                            dⱼ = 1 - Eⱼ
-                          </TableCell>
+                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">dj = 1 - Ej</TableCell>
                           {criteria.map((crit) => (
-                            <TableCell
-                              key={crit.id}
-                              className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap"
-                            >
-                              {entropyResult.diversityValues[crit.id]?.toFixed(3) ?? "-"}
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                              {entropyResult.diversityValues[crit.id]?.toFixed(4)}
                             </TableCell>
                           ))}
                         </TableRow>
-
-                        {/* Weight Calculation (Wj) row - highlighted */}
-                        <TableRow className="bg-yellow-50 border-b-2 border-yellow-300">
-                          <TableCell className="py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                            Wⱼ
-                          </TableCell>
+                        <TableRow className="bg-yellow-50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Wj</TableCell>
                           {criteria.map((crit) => (
-                            <TableCell
-                              key={crit.id}
-                              className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap"
-                            >
-                              {entropyResult.weights[crit.id]?.toFixed(3) ?? "-"}
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                              {entropyResult.weights[crit.id]?.toFixed(4)}
                             </TableCell>
                           ))}
                         </TableRow>
@@ -2500,95 +3969,59 @@ export default function MCDMCalculator() {
               </Card>
             )}
 
-            {/* CRITIC Weight Calculation Results - Second Table */}
-            {weightMethod === "critic" && criticResult && (
+            {criticResult && weightMethod === "critic" && (
               <Card className="border-gray-200 bg-white shadow-none mb-6">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs text-black">CRITIC Weight Calculation Results</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-black">CRITIC Weight Calculation Results</CardTitle>
                 </CardHeader>
-                <CardContent className="pt-2 pb-2">
+                <CardContent className="pt-3">
                   <div className="overflow-x-auto border border-gray-200 rounded-lg">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-left py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                            Criteria
-                          </TableHead>
-                          <TableHead className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                            Standard Deviation (σⱼ)
-                          </TableHead>
-                          <TableHead className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                            Information Amount (Cⱼ)
-                          </TableHead>
-                          <TableHead className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                            Weight (Wⱼ)
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {criteria.map((crit) => (
-                          <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-2 px-3 font-medium text-black text-xs whitespace-nowrap">
-                              {crit.name}
-                            </TableCell>
-                            <TableCell className="text-center py-2 px-3 text-black text-xs whitespace-nowrap">
-                              {criticResult.standardDeviations[crit.id]?.toFixed(4) ?? "-"}
-                            </TableCell>
-                            <TableCell className="text-center py-2 px-3 text-black text-xs whitespace-nowrap">
-                              {criticResult.informationAmounts[crit.id]?.toFixed(4) ?? "-"}
-                            </TableCell>
-                            <TableCell className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                              {criticResult.weights[crit.id]?.toFixed(4) ?? "-"}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* CRITIC Correlation Matrix - Third Table */}
-            {weightMethod === "critic" && criticResult && (
-              <Card className="border-gray-200 bg-white shadow-none mb-6">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs text-black">Correlation Matrix</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-2 pb-2">
-                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-left py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                            Criteria
-                          </TableHead>
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                           {criteria.map((crit) => (
-                            <TableHead
-                              key={crit.id}
-                              className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap"
-                            >
+                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
                               {crit.name}
                             </TableHead>
                           ))}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {criteria.map((crit) => (
-                          <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-2 px-3 font-medium text-black text-xs whitespace-nowrap">
-                              {crit.name}
-                            </TableCell>
-                            {criteria.map((crit2) => (
-                              <TableCell
-                                key={crit2.id}
-                                className="text-center py-2 px-3 text-black text-xs whitespace-nowrap"
-                              >
-                                {criticResult.correlationMatrix[crit.id]?.[crit2.id]?.toFixed(4) ?? "-"}
+                        {alternatives.map((alt) => (
+                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                            {criteria.map((crit) => (
+                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                {criticResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
                               </TableCell>
                             ))}
                           </TableRow>
                         ))}
+                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Std. Dev (σ)</TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                              {criticResult.standardDeviations[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Info Amount (Cj)</TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                              {criticResult.informationAmounts[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                        <TableRow className="bg-yellow-50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Wj</TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                              {criticResult.weights[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
                       </TableBody>
                     </Table>
                   </div>
@@ -2596,222 +4029,178 @@ export default function MCDMCalculator() {
               </Card>
             )}
 
-            {weightMethod === "ahp" && ahpResult && (
-              <>
-                <Card className="border-gray-200 bg-white shadow-none mb-6">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xs text-black">AHP Pairwise Comparison Matrix</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-2 pb-2">
-                    <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50 border-b border-gray-200">
-                            <TableHead className="text-left py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                              Criteria
-                            </TableHead>
-                            {criteria.map((crit) => (
-                              <TableHead
-                                key={crit.id}
-                                className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap"
-                              >
-                                {crit.name}
-                              </TableHead>
-                            ))}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {criteria.map((crit, rowIdx) => (
-                            <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                              <TableCell className="py-2 px-3 font-medium text-black text-xs whitespace-nowrap">
-                                {crit.name}
-                              </TableCell>
-                              {criteria.map((_, colIdx) => (
-                                <TableCell
-                                  key={`${crit.id}-${colIdx}`}
-                                  className="text-center py-2 px-3 text-black text-xs whitespace-nowrap"
-                                >
-                                  {ahpResult.pairwiseMatrix[rowIdx]?.[colIdx]?.toFixed(4) ?? "-"}
-                                </TableCell>
-                              ))}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-gray-200 bg-white shadow-none mb-6">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xs text-black">AHP Normalized Matrix</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-2 pb-2">
-                    <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50 border-b border-gray-200">
-                            <TableHead className="text-left py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                              Criteria
-                            </TableHead>
-                            {criteria.map((crit) => (
-                              <TableHead
-                                key={crit.id}
-                                className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap"
-                              >
-                                {crit.name}
-                              </TableHead>
-                            ))}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {criteria.map((crit, rowIdx) => (
-                            <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                              <TableCell className="py-2 px-3 font-medium text-black text-xs whitespace-nowrap">
-                                {crit.name}
-                              </TableCell>
-                              {criteria.map((_, colIdx) => (
-                                <TableCell
-                                  key={`${crit.id}-norm-${colIdx}`}
-                                  className="text-center py-2 px-3 text-black text-xs whitespace-nowrap"
-                                >
-                                  {ahpResult.normalizedMatrix[rowIdx]?.[colIdx]?.toFixed(4) ?? "-"}
-                                </TableCell>
-                              ))}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-gray-200 bg-white shadow-none mb-6">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xs text-black">AHP Weights & Consistency</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-2 pb-3 space-y-3">
-                    <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50 border-b border-gray-200">
-                            <TableHead className="text-left py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                              Criteria
-                            </TableHead>
-                            <TableHead className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                              Weight (Wⱼ)
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
+            {ahpResult && weightMethod === "ahp" && (
+              <Card className="border-gray-200 bg-white shadow-none mb-6">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-black">AHP Weight Calculation Results</CardTitle>
+                  <CardDescription className="text-xs text-gray-700">
+                    λmax = {ahpResult.lambdaMax.toFixed(4)} | CI = {ahpResult.consistencyIndex.toFixed(4)} | CR = {ahpResult.consistencyRatio.toFixed(4)}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-3">
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Criteria</TableHead>
                           {criteria.map((crit) => (
-                            <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                              <TableCell className="py-2 px-3 font-medium text-black text-xs whitespace-nowrap">
-                                {crit.name}
-                              </TableCell>
-                              <TableCell className="text-center py-2 px-3 font-semibold text-black text-xs whitespace-nowrap">
-                                {ahpResult.weights[crit.id]?.toFixed(4) ?? "-"}
-                              </TableCell>
-                            </TableRow>
+                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                              {crit.name}
+                            </TableHead>
                           ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-black">
-                      <div className="border border-gray-200 rounded-lg p-2 bg-gray-50">
-                        <div className="font-semibold">λ_max</div>
-                        <div>{ahpResult.lambdaMax.toFixed(4)}</div>
-                      </div>
-                      <div className="border border-gray-200 rounded-lg p-2 bg-gray-50">
-                        <div className="font-semibold">Consistency Index (CI)</div>
-                        <div>{ahpResult.consistencyIndex.toFixed(4)}</div>
-                      </div>
-                      <div className="border border-gray-200 rounded-lg p-2 bg-gray-50">
-                        <div className="font-semibold">Consistency Ratio (CR)</div>
-                        <div>{ahpResult.consistencyRatio.toFixed(4)}</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {criteria.map((rowCrit, i) => (
+                          <TableRow key={rowCrit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowCrit.name}</TableCell>
+                            {criteria.map((colCrit, j) => (
+                              <TableCell key={colCrit.id} className="text-center py-3 px-4 text-xs text-black">
+                                {ahpResult.pairwiseMatrix[i]?.[j]?.toFixed(2)}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                        <TableRow className="bg-yellow-50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Weights (Wj)</TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                              {ahpResult.weights[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {pipreciaResult && weightMethod === "piprecia" && (
+              <Card className="border-gray-200 bg-white shadow-none mb-6">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-black">PIPRECIA Weight Calculation Results</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-3">
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-left">Criterion</TableHead>
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">s<sub>j</sub></TableHead>
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">k<sub>j</sub></TableHead>
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">q<sub>j</sub></TableHead>
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Weight (w<sub>j</sub>)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {criteria.map((crit) => (
+                          <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                            <TableCell className="text-center py-3 px-4 text-xs text-black">
+                              {pipreciaResult.s_values[crit.id]?.toFixed(4)}
+                            </TableCell>
+                            <TableCell className="text-center py-3 px-4 text-xs text-black">
+                              {pipreciaResult.k_values[crit.id]?.toFixed(4)}
+                            </TableCell>
+                            <TableCell className="text-center py-3 px-4 text-xs text-black">
+                              {pipreciaResult.q_values[crit.id]?.toFixed(4)}
+                            </TableCell>
+                            <TableCell className="text-center py-3 px-4 text-xs text-black font-bold">
+                              {pipreciaResult.weights[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
         </main>
-      </SidebarProvider >
+      </SidebarProvider>
     )
   }
 
+  // Results view after calculation
   if (currentStep === "calculate") {
     return (
       <SidebarProvider>
-        <Sidebar className="border-r border-gray-200 bg-gray-50">
-          <SidebarHeader className="py-2">
-            <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
+        <Sidebar>
+          <SidebarHeader>
+            <div className="px-4 py-2 font-bold text-lg">MCDM Methods</div>
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
               {MCDM_METHODS.map((m) => (
                 <SidebarMenuItem key={m.value}>
                   <SidebarMenuButton
-                    onClick={async () => {
-                      if (m.value !== method) {
-                        setActiveFormulaType("method")
-                        setMethod(m.value)
-                        setApiResults(null)
-                        setIsLoading(true)
-                        try {
-                          const response = await fetch("/api/calculate", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              method: m.value,
-                              alternatives,
-                              criteria,
-                            }),
-                          })
-                          if (response.ok) {
-                            const data = await response.json()
-                            setApiResults(data)
-                          }
-                        } catch (error) {
-                          console.error("Recalculation error:", error)
-                        } finally {
-                          setIsLoading(false)
-                        }
-                      }
-                    }}
                     isActive={method === m.value}
-                    className={`text-xs ${method === m.value ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
+                    onClick={() => {
+                      setMethod(m.value)
+                      handleCalculate(m.value)
+                    }}
+                    className="cursor-pointer"
                   >
-                    <span>{m.label}</span>
+                    <span className="truncate">{m.label}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
-          </SidebarContent >
-        </Sidebar >
+          </SidebarContent>
+        </Sidebar>
 
-        <main className="flex-1 min-h-screen bg-white p-2 md:p-3">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center gap-3 mb-4">
-              <SidebarTrigger className="md:hidden border-gray-200 text-black" />
-              <Button
-                onClick={() => setCurrentStep("home")}
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
-                title="Go to Home"
-              >
-                <Home className="h-4 w-4" />
-              </Button>
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold text-black">Results</h1>
-                <p className="text-xs text-gray-700">Calculation Results</p>
+        <main className="flex-1 min-h-screen bg-white p-2 md:p-3 flex flex-col">
+          <div className="flex items-center gap-2 mb-2">
+            <SidebarTrigger />
+          </div>
+
+          {!apiResults ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin h-8 w-8 border-4 border-black border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-sm text-gray-700">Loading results...</p>
               </div>
             </div>
+          ) : (
+            <div className="max-w-7xl mx-auto w-full">
+              <div className="flex items-center gap-3 mb-4">
+                <Button
+                  onClick={() => setCurrentStep("home")}
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
+                  title="Go to Home"
+                >
+                  <Home className="h-4 w-4" />
+                </Button>
+                <div>
+                  <h1 className="text-xl md:text-2xl font-bold text-black">Results</h1>
+                  <p className="text-xs text-gray-700">Calculation Results</p>
+                </div>
+              </div>
 
-            {apiResults && (
-              <Card className="border-gray-200 bg-white shadow-none">
+              <div className="flex justify-end gap-2 mb-4">
+                <Button
+                  onClick={() => {
+                    setCurrentStep("matrix")
+                    setMethod(method)
+                  }}
+                  variant="outline"
+                  className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={() => setCurrentStep("matrix")}
+                  className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                >
+                  New Calculation
+                </Button>
+              </div>
+
+              <Card className="border-gray-200 bg-white shadow-none mb-6">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm text-black">{methodInfo?.label} Results</CardTitle>
                   <CardDescription className="text-xs text-gray-700">
@@ -2820,59 +4209,41 @@ export default function MCDMCalculator() {
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Rank</TableHead>
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-right">Score</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {apiResults.ranking?.map((item: any, index: number) => (
-                          <TableRow key={index} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="text-xs py-3 px-4 text-black font-medium">{item.rank}</TableCell>
-                            <TableCell className="text-xs py-3 px-4 text-black">{item.alternativeName}</TableCell>
-                            <TableCell className="text-xs py-3 px-4 text-black text-right">
-                              {typeof item.score === "number" ? item.score.toFixed(4) : item.score}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                    <table className="min-w-full text-xs">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left border-b border-gray-200 text-black font-semibold">Rank</th>
+                          <th className="px-3 py-2 text-left border-b border-gray-200 text-black font-semibold">Alternative</th>
+                          <th className="px-3 py-2 text-right border-b border-gray-200 text-black font-semibold">Score</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {apiResults.ranking && apiResults.ranking.length > 0 ? (
+                          apiResults.ranking.map((item: any, index: number) => (
+                            <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
+                              <td className="px-3 py-2 text-left text-black font-bold">{item.rank}</td>
+                              <td className="px-3 py-2 text-left text-black">{item.alternativeName}</td>
+                              <td className="px-3 py-2 text-right text-black">
+                                {typeof item.score === "number" ? item.score.toFixed(4) : item.score}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={3} className="px-3 py-4 text-center text-gray-500 text-xs">
+                              No ranking results available. Please check your inputs.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </CardContent>
               </Card>
-            )}
-
-            <div className="flex gap-2 justify-end mt-4">
-              <Button
-                onClick={() => setCurrentStep("matrix")}
-                variant="outline"
-                className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
-              >
-                Back
-              </Button>
-              <Button
-                onClick={() => {
-                  setCurrentStep("home")
-                  setApiResults(null)
-                  setAlternatives([])
-                  setCriteria([])
-                  setEntropyResult(null)
-                  setCriticResult(null)
-                  setAhpResult(null)
-                }}
-                className="bg-black text-white hover:bg-gray-800 text-xs h-8"
-              >
-                New Calculation
-              </Button>
             </div>
-          </div>
+          )}
         </main>
-      </SidebarProvider >
+      </SidebarProvider>
     )
   }
-
-  return null
 }

@@ -1,5 +1,5 @@
 "use client"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 declare global {
   interface Window {
@@ -9,23 +9,49 @@ declare global {
 
 export default function COCOSOFormula() {
   const latex = {
-    step1: "X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}",
-    step2_benefit: "r_{i,j} = \\frac{x_{i,j} - \\min_i x_{i,j}}{\\max_i x_{i,j} - \\min_i x_{i,j}}",
-    step2_cost: "r_{i,j} = \\frac{\\max_i x_{i,j} - x_{i,j}}{\\max_i x_{i,j} - \\min_i x_{i,j}}",
-    step3_wsm: "S_i = \\sum_{j=1}^{n} (w_j r_{i,j})",
-    step3_wpm: "P_i = \\sum_{j=1}^{n} (r_{i,j})^{w_j}",
-    step4_ka: "k_{ia} = \\frac{P_i + S_i}{\\sum (P_i + S_i)}",
-    step4_kb: "k_{ib} = \\frac{S_i}{\\min S_i} + \\frac{P_i}{\\min P_i}",
-    step4_kc: "k_{ic} = \\frac{\\lambda S_i + (1-\\lambda) P_i}{\\lambda \\max S_i + (1-\\lambda) \\max P_i}",
-    step5_final: "k_i = (k_{ia} k_{ib} k_{ic})^{1/3} + \\frac{1}{3} (k_{ia} + k_{ib} + k_{ic})",
+    step1: "X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix} \\tag{1}",
+    step2_benefit: "r_{i,j} = \\frac{x_{i,j} - \\min_i x_{i,j}}{\\max_i x_{i,j} - \\min_i x_{i,j}} \\tag{2}",
+    step2_cost: "r_{i,j} = \\frac{\\max_i x_{i,j} - x_{i,j}}{\\max_i x_{i,j} - \\min_i x_{i,j}} \\tag{3}",
+    step3_wsm: "S_i = \\sum_{j=1}^{n} (w_j r_{i,j}) \\tag{4}",
+    step3_wpm: "P_i = \\sum_{j=1}^{n} (r_{i,j})^{w_j} \\tag{5}",
+    step4_ka: "k_{ia} = \\frac{P_i + S_i}{\\sum (P_i + S_i)} \\tag{6}",
+    step4_kb: "k_{ib} = \\frac{S_i}{\\min S_i} + \\frac{P_i}{\\min P_i} \\tag{7}",
+    step4_kc: "k_{ic} = \\frac{\\lambda S_i + (1-\\lambda) P_i}{\\lambda \\max S_i + (1-\\lambda) \\max P_i} \\tag{8}",
+    step5_final: "k_i = (k_{ia} k_{ib} k_{ic})^{1/3} + \\frac{1}{3} (k_{ia} + k_{ib} + k_{ic}) \\tag{9}",
     ranking: "\\text{Rank } A_i \\downarrow \\text{ by } k_i \\text{ (Descending)}"
   }
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Robust MathJax loader
   useEffect(() => {
-    if (window.MathJax) {
-      window.MathJax.typesetPromise?.()
+    if (typeof window === "undefined") return;
+
+    const existing = document.querySelector('script[data-mathjax="loaded"]');
+    if (!existing) {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js";
+      script.async = true;
+      script.setAttribute("data-mathjax", "loaded");
+      document.head.appendChild(script);
+      script.onload = () => {
+        if (window.MathJax) {
+          window.MathJax.startup = {
+            ...window.MathJax.startup,
+            typeset: false,
+          };
+        }
+        setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
+      };
+    } else {
+      setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
     }
-  })
+  }, []);
+
+  // Re-run typeset on updates
+  useEffect(() => {
+    setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
+  });
 
   return (
     <>
@@ -40,9 +66,9 @@ export default function COCOSOFormula() {
           .latex mjx-container {
             font-size: 0.875rem !important;
             max-width: 100% !important;
-            overflow-x: auto !important;
-            overflow-y: visible !important;
-            display: block !important;
+            overflow-x: auto;
+            overflow-y: hidden;
+            
             margin: 0.75rem 0 !important;
             padding: 0.5rem 0 !important;
             text-align: center !important; 
@@ -92,7 +118,7 @@ export default function COCOSOFormula() {
           }
         `
       }} />
-      <div style={{ overflowWrap: "break-word", wordBreak: "break-word" }} className="prose max-w-none bg-white border border-gray-200 rounded-lg p-3 md:p-6 text-justify font-['Times_New_Roman',_Times,_serif] leading-relaxed">
+      <div ref={containerRef} style={{ overflowWrap: "break-word", wordBreak: "break-word" }} className="prose max-w-none bg-white border border-gray-200 rounded-lg p-3 md:p-6 text-justify font-['Times_New_Roman',_Times,_serif] leading-relaxed">
         <h1 className="text-2xl font-bold text-center mb-6">
           COCOSO (Combined Compromise Solution)
         </h1>
@@ -104,7 +130,7 @@ export default function COCOSOFormula() {
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 1. Decision Matrix</h2>
         <p className="mb-2">Construct the decision matrix:</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step1} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 2. Normalization</h2>
@@ -112,12 +138,12 @@ export default function COCOSOFormula() {
 
         <p className="font-semibold mb-2 text-center">Beneficial criteria (Desirable or Maximum)</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step2_benefit} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_benefit}\\]` }} />
         </div>
 
         <p className="font-semibold mb-2 text-center">Non-beneficial criteria (Undesirable or Minimum)</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step2_cost} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_cost}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 3. WSM and WPM Scores</h2>
@@ -125,12 +151,12 @@ export default function COCOSOFormula() {
 
         <p className="font-semibold mb-2 text-center">WSM Score (S)</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step3_wsm} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_wsm}\\]` }} />
         </div>
 
         <p className="font-semibold mb-2 text-center">WPM Score (P)</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step3_wpm} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_wpm}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 4. Compromise Strategies</h2>
@@ -138,40 +164,35 @@ export default function COCOSOFormula() {
 
         <p className="font-semibold mb-2 text-center">Arithmetic (ka)</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step4_ka} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_ka}\\]` }} />
         </div>
 
         <p className="font-semibold mb-2 text-center">Relative (kb)</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step4_kb} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_kb}\\]` }} />
         </div>
 
         <p className="font-semibold mb-2 text-center">Balanced (kc)</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step4_kc} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_kc}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 5. Final Score</h2>
         <p className="mb-2">Calculate the final COCOSO score:</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step5_final} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_final}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 6. Ranking</h2>
         <p className="mb-2">Rank alternatives by score (higher is better):</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.ranking} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.ranking}\\]` }} />
         </div>
 
         <div className="mt-6 text-xs text-gray-500">
           Source: Yazdani et al. (2019).
         </div>
       </div>
-
     </>
   )
 }
-
-
-
-

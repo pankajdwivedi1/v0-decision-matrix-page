@@ -1,5 +1,5 @@
 "use client"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 declare global {
   interface Window {
@@ -9,22 +9,48 @@ declare global {
 
 export default function VIKORFormula() {
   const latex = {
-    step1: "X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad i=1,\\dots,m, \\quad j=1,\\dots,n",
-    step2_benefit: "f_{i,j} = \\frac{x_{i,j}}{\\max_i x_{i,j}}",
-    step2_cost: "f_{i,j} = \\frac{\\min_i x_{i,j}}{x_{i,j}}",
-    step3_best: "f_j^* = \\begin{cases} \\max_i f_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\min_i f_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
-    step3_worst: "f_j^- = \\begin{cases} \\min_i f_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\max_i f_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
-    step4_formula: "S_i = \\sum_{j=1}^{n} w_j \\frac{f_j^* - f_{i,j}}{f_j^* - f_j^-}, \\quad \\sum_{j=1}^{n} w_j = 1",
-    step5_formula: "R_i = \\max_j \\left[ w_j \\frac{f_j^* - f_{i,j}}{f_j^* - f_j^-} \\right]",
-    step6_formula: "Q_i = v \\frac{S_i - S^*}{S^- - S^*} + (1-v) \\frac{R_i - R^*}{R^- - R^*}, \\quad S^*=\\min S_i, R^*=\\min R_i",
+    step1: "X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad i=1,\\dots,m, \\quad j=1,\\dots,n \\tag{1}",
+    step2_benefit: "f_{i,j} = \\frac{x_{i,j}}{\\max_i x_{i,j}} \\tag{2}",
+    step2_cost: "f_{i,j} = \\frac{\\min_i x_{i,j}}{x_{i,j}} \\tag{3}",
+    step3_best: "f_j^* = \\begin{cases} \\max_i f_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\min_i f_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases} \\tag{4}",
+    step3_worst: "f_j^- = \\begin{cases} \\min_i f_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\max_i f_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases} \\tag{5}",
+    step4_formula: "S_i = \\sum_{j=1}^{n} w_j \\frac{f_j^* - f_{i,j}}{f_j^* - f_j^-}, \\quad \\sum_{j=1}^{n} w_j = 1 \\tag{6}",
+    step5_formula: "R_i = \\max_j \\left[ w_j \\frac{f_j^* - f_{i,j}}{f_j^* - f_j^-} \\right] \\tag{7}",
+    step6_formula: "Q_i = v \\frac{S_i - S^*}{S^- - S^*} + (1-v) \\frac{R_i - R^*}{R^- - R^*}, \\quad S^*=\\min S_i, R^*=\\min R_i \\tag{8}",
     ranking: "\\text{Rank } A_i \\downarrow \\text{ by } Q_i \\text{ (Ascending)}"
   }
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Robust MathJax loader copied from PROMETHEEFormula
   useEffect(() => {
-    if (window.MathJax) {
-      window.MathJax.typesetPromise?.()
+    if (typeof window === "undefined") return;
+
+    const existing = document.querySelector('script[data-mathjax="loaded"]');
+    if (!existing) {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js";
+      script.async = true;
+      script.setAttribute("data-mathjax", "loaded");
+      document.head.appendChild(script);
+      script.onload = () => {
+        if (window.MathJax) {
+          window.MathJax.startup = {
+            ...window.MathJax.startup,
+            typeset: false,
+          };
+        }
+        setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
+      };
+    } else {
+      setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
     }
-  })
+  }, []);
+
+  // Re-run typeset on updates
+  useEffect(() => {
+    setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
+  });
 
   return (
     <>
@@ -39,9 +65,9 @@ export default function VIKORFormula() {
           .latex mjx-container {
             font-size: 0.875rem !important;
             max-width: 100% !important;
-            overflow-x: auto !important;
-            overflow-y: visible !important;
-            display: block !important;
+            overflow-x: auto;
+            overflow-y: hidden;
+            
             margin: 0.75rem 0 !important;
             padding: 0.5rem 0 !important;
             text-align: center !important; 
@@ -91,7 +117,7 @@ export default function VIKORFormula() {
           }
         `
       }} />
-      <div style={{ overflowWrap: "break-word", wordBreak: "break-word" }} className="prose max-w-none bg-white border border-gray-200 rounded-lg p-3 md:p-6 text-justify font-['Times_New_Roman',_Times,_serif] leading-relaxed">
+      <div ref={containerRef} style={{ overflowWrap: "break-word", wordBreak: "break-word" }} className="prose max-w-none bg-white border border-gray-200 rounded-lg p-3 md:p-6 text-justify font-['Times_New_Roman',_Times,_serif] leading-relaxed">
         <h1 className="text-2xl font-bold text-center mb-6">
           VIKOR (VlseKriterijumska Optimizacija I Kompromisno Resenje) Steps
         </h1>
@@ -103,7 +129,7 @@ export default function VIKORFormula() {
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 1. Decision Matrix</h2>
         <p className="mb-2">Construct the decision matrix:</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step1} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 2. Normalization</h2>
@@ -111,12 +137,12 @@ export default function VIKORFormula() {
 
         <p className="font-semibold mb-2 text-center">Beneficial criteria (Desirable or Maximum)</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step2_benefit} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_benefit}\\]` }} />
         </div>
 
         <p className="font-semibold mb-2 text-center">Non-beneficial criteria (Undesirable or Minimum)</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step2_cost} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_cost}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 3. Best and Worst Values</h2>
@@ -124,47 +150,42 @@ export default function VIKORFormula() {
 
         <p className="font-semibold mb-2 text-center">Best Value (f*)</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step3_best} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_best}\\]` }} />
         </div>
 
         <p className="font-semibold mb-2 text-center">Worst Value (f-)</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step3_worst} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_worst}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 4. Utility Measure (Si)</h2>
         <p className="mb-2">Calculate the weighted sum of normalized distances (Group Utility):</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step4_formula} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_formula}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 5. Regret Measure (Ri)</h2>
         <p className="mb-2">Calculate the maximum weighted normalized distance (Individual Regret):</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step5_formula} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_formula}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 6. VIKOR Index (Qi)</h2>
         <p className="mb-2">Calculate the compromise index (v ≈ 0.5):</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.step6_formula} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_formula}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 7. Ranking</h2>
         <p className="mb-2">Rank alternatives by Qi (lower is better):</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <p className="text-center">{`$$ ${latex.ranking} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.ranking}\\]` }} />
         </div>
 
         <div className="mt-6 text-xs text-gray-500">
           Source: VIKOR method formulation (Opricovic, 1998).
         </div>
       </div>
-
     </>
   )
 }
-
-
-
-

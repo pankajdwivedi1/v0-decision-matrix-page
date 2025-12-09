@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 declare global {
     interface Window {
@@ -23,11 +23,37 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
         step4_formula2: "SWEI''_i = \\sum_{j=1}^{n} \\left( \\log_{2} \\left\\{ \\frac{1}{\\overline{IDM}_{i,j}} \\right\\} \\right)^{w_j} \\tag{5}"
     }
 
+    const containerRef = useRef<HTMLDivElement | null>(null);
+
+    // Robust MathJax loader copied from PROMETHEEFormula
     useEffect(() => {
-        if (window.MathJax) {
-            window.MathJax.typesetPromise?.()
+        if (typeof window === "undefined") return;
+
+        const existing = document.querySelector('script[data-mathjax="loaded"]');
+        if (!existing) {
+            const script = document.createElement("script");
+            script.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js";
+            script.async = true;
+            script.setAttribute("data-mathjax", "loaded");
+            document.head.appendChild(script);
+            script.onload = () => {
+                if (window.MathJax) {
+                    window.MathJax.startup = {
+                        ...window.MathJax.startup,
+                        typeset: false,
+                    };
+                }
+                setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
+            };
+        } else {
+            setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
         }
-    })
+    }, []);
+
+    // Re-run typeset on updates
+    useEffect(() => {
+        setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
+    });
 
     return (
         <>
@@ -42,9 +68,9 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
           .latex mjx-container {
             font-size: 0.875rem !important;
             max-width: 100% !important;
-            overflow-x: auto !important;
-            overflow-y: visible !important;
-            display: block !important;
+            overflow-x: auto;
+            overflow-y: hidden;
+            
             margin: 0.75rem 0 !important;
             padding: 0.5rem 0 !important;
             text-align: center !important; 
@@ -94,7 +120,7 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
           }
         `
             }} />
-            <div style={{ overflowWrap: "break-word", wordBreak: "break-word" }} className="prose max-w-none bg-white border border-gray-200 rounded-lg p-3 md:p-6 text-justify font-['Times_New_Roman',_Times,_serif] leading-relaxed">
+            <div ref={containerRef} style={{ overflowWrap: "break-word", wordBreak: "break-word" }} className="prose max-w-none bg-white border border-gray-200 rounded-lg p-3 md:p-6 text-justify font-['Times_New_Roman',_Times,_serif] leading-relaxed">
                 <h1 className="text-2xl font-bold text-center mb-6">
                     SWEI (Sum Weighted Exponential Information) Method
                 </h1>
@@ -109,9 +135,7 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
                     {`which is \\( IDM_{{i},{j}} = [a_{i,j}]_{m\\times n} \\), to solve the MADM problem:`}
                 </p>
                 <div className="bg-gray-50 rounded-lg mb-4">
-                    <p className="text-center">
-                        {`$$ ${latex.step1} $$`}
-                    </p>
+                    <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }} />
                 </div>
                 <p className="mb-4">
                     {`where \\( i = 1, 2, \\dots, m \\) represents the alternatives and \\( j = 1, 2, \\dots, n \\) represents the criteria.`}
@@ -124,17 +148,13 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
                     <li>
                         For benefit (desirable) criteria:
                         <div className="bg-gray-50 rounded-lg my-2">
-                            <p className="text-center">
-                                {`$$ ${latex.step2_benefit} $$`}
-                            </p>
+                            <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_benefit}\\]` }} />
                         </div>
                     </li>
                     <li>
                         For cost (undesirable) criteria:
                         <div className="bg-gray-50 rounded-lg my-2">
-                            <p className="text-center">
-                                {`$$ ${latex.step2_cost} $$`}
-                            </p>
+                            <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_cost}\\]` }} />
                         </div>
                     </li>
                 </ul>
@@ -149,12 +169,8 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
                     Calculate the amount of information and weighted exponential information for all attributes:
                 </p>
                 <div className="bg-gray-50 rounded-lg mb-4 space-y-4">
-                    <p className="text-center">
-                        {`$$ ${latex.step3_info} $$`}
-                    </p>
-                    <p className="text-center">
-                        {`$$ ${latex.step3_swei} $$`}
-                    </p>
+                    <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_info}\\]` }} />
+                    <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_swei}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2">Step&nbsp;IV. SWEI Scores</h2>
@@ -162,12 +178,8 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
                     Calculate the amount of information and weighted exponential information for all attributes:
                 </p>
                 <div className="bg-gray-50 rounded-lg mb-4 space-y-4">
-                    <p className="text-center">
-                        {`$$ ${latex.step4_formula} $$`}
-                    </p>
-                    <p className="text-center">
-                        {`$$ ${latex.step4_formula2} $$`}
-                    </p>
+                    <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_formula}\\]` }} />
+                    <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_formula2}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2">Step&nbsp;V. Ranking</h2>

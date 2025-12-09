@@ -122,9 +122,9 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
           .latex mjx-container {
             font-size: 0.875rem !important;
             max-width: 100% !important;
-            overflow-x: auto !important;
-            overflow-y: visible !important;
-            display: block !important;
+            overflow-x: auto;
+            overflow-y: hidden;
+            
             margin: 0.75rem 0 !important;
             padding: 0.5rem 0 !important;
             text-align: center !important; 
@@ -189,7 +189,7 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
             <div style={{ fontSize: compact ? 18 : 20, fontWeight: 700 }}>
               <span
                 className="latex"
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.title}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.title}\\]` }}
               />
             </div>
           </div>
@@ -199,7 +199,7 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
           <div
             className="latex text-sm"
             style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\(${latex.intro}\\)` }}
+            dangerouslySetInnerHTML={{ __html: `\\[${latex.intro}\\]` }}
           />
         </div>
 
@@ -213,7 +213,7 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step1}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }}
               />
             </div>
           </li>
@@ -226,12 +226,12 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
               <div
                 className="latex text-sm text-center mb-2"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_ideal}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_ideal}\\]` }}
               />
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_antiideal}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_antiideal}\\]` }}
               />
             </div>
           </li>
@@ -244,12 +244,12 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
               <div
                 className="latex text-sm text-center mb-2"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step3_beneficial}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_beneficial}\\]` }}
               />
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step3_nonbeneficial}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_nonbeneficial}\\]` }}
               />
             </div>
           </li>
@@ -262,7 +262,7 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step4_formula}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_formula}\\]` }}
               />
             </div>
           </li>
@@ -275,17 +275,17 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
               <div
                 className="latex text-sm text-center mb-2"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step5_alternative}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_alternative}\\]` }}
               />
               <div
                 className="latex text-sm text-center mb-2"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step5_ideal}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_ideal}\\]` }}
               />
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step5_antiideal}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_antiideal}\\]` }}
               />
             </div>
           </li>
@@ -298,12 +298,12 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
               <div
                 className="latex text-sm text-center mb-2"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step6_plus}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_plus}\\]` }}
               />
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step6_minus}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_minus}\\]` }}
               />
             </div>
           </li>
@@ -316,7 +316,7 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step7_formula}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step7_formula}\\]` }}
               />
             </div>
           </li>
@@ -329,7 +329,7 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.ranking}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.ranking}\\]` }}
               />
             </div>
           </li>
@@ -340,7 +340,7 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
           <div
             className="latex text-sm"
             style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\(${latex.interpretation}\\)` }}
+            dangerouslySetInnerHTML={{ __html: `\\[${latex.interpretation}\\]` }}
           />
         </div>
 

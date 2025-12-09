@@ -1,9 +1,8 @@
 "use client"
-import { useEffect } from "react"
-// import "mathjax/es5/tex-mml-chtml.js"
+
+import { useEffect, useRef } from "react"
 
 declare global {
-  // MathJax global (loaded from CDN)
   interface Window {
     MathJax?: any;
   }
@@ -19,11 +18,37 @@ export default function SWIFormula() {
     ranking: "\\text{Rank}(A_i) \\uparrow \; \\text{as} \; SWI'_i \\downarrow"
   };
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Robust MathJax loader copied from PROMETHEEFormula
   useEffect(() => {
-    if (window.MathJax) {
-      window.MathJax.typesetPromise();
+    if (typeof window === "undefined") return;
+
+    const existing = document.querySelector('script[data-mathjax="loaded"]');
+    if (!existing) {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js";
+      script.async = true;
+      script.setAttribute("data-mathjax", "loaded");
+      document.head.appendChild(script);
+      script.onload = () => {
+        if (window.MathJax) {
+          window.MathJax.startup = {
+            ...window.MathJax.startup,
+            typeset: false,
+          };
+        }
+        setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
+      };
+    } else {
+      setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
     }
   }, []);
+
+  // Re-run typeset on updates
+  useEffect(() => {
+    setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
+  });
 
   return (
     <>
@@ -38,9 +63,9 @@ export default function SWIFormula() {
           .latex mjx-container {
             font-size: 0.875rem !important;
             max-width: 100% !important;
-            overflow-x: auto !important;
-            overflow-y: visible !important;
-            display: block !important;
+            overflow-x: auto;
+            overflow-y: hidden;
+            
             margin: 0.75rem 0 !important;
             padding: 0.5rem 0 !important;
             text-align: center !important; 
@@ -90,7 +115,7 @@ export default function SWIFormula() {
           }
         `
       }} />
-      <div style={{ overflowWrap: "break-word", wordBreak: "break-word" }} className="prose max-w-none bg-white border border-gray-200 rounded-lg p-3 md:p-6 text-justify font-['Times_New_Roman',_Times,_serif] leading-relaxed">
+      <div ref={containerRef} style={{ overflowWrap: "break-word", wordBreak: "break-word" }} className="prose max-w-none bg-white border border-gray-200 rounded-lg p-3 md:p-6 text-justify font-['Times_New_Roman',_Times,_serif] leading-relaxed">
         <h1 className="text-2xl font-bold text-center mb-6">
           SWI (Sum Weighted Information) Method
         </h1>
@@ -107,7 +132,7 @@ export default function SWIFormula() {
         </p>
 
         <div className="bg-gray-50 rounded-lg mb-4">
-          <p className="text-center">{`$$ ${latex.IDM} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.IDM}\\]` }} />
         </div>
         <p className="mb-4">
           where \( i = 1, 2, \dots, m \) represents the alternatives and \( j = 1, 2, \dots, n \)
@@ -121,13 +146,13 @@ export default function SWIFormula() {
           <li>
             For benefit (desirable) criteria:
             <div className="bg-gray-50 rounded-lg my-2">
-              <p className="text-center">{`$$ ${latex.normalizationBenefit} $$`}</p>
+              <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.normalizationBenefit}\\]` }} />
             </div>
           </li>
           <li>
             For cost (undesirable) criteria:
             <div className="bg-gray-50 rounded-lg my-2">
-              <p className="text-center">{`$$ ${latex.normalizationCost} $$`}</p>
+              <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.normalizationCost}\\]` }} />
             </div>
           </li>
         </ul>
@@ -142,7 +167,7 @@ export default function SWIFormula() {
           The information score for each attributes is calculated as:
         </p>
         <div className="bg-gray-50 rounded-lg mb-4">
-          <p className="text-center">{`$$ ${latex.informationEntropy} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.informationEntropy}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step&nbsp;IV. Sum Weighted Information </h2>
@@ -152,19 +177,15 @@ export default function SWIFormula() {
         </p>
 
         <div className="bg-gray-50 rounded-lg mb-4">
-          <p className="text-center">{`$$ ${latex.weightedInformationSum} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.weightedInformationSum}\\]` }} />
         </div>
-
-        {/* <p className="text-center mb-4">
-        {`$$ SWI'_i = \sum_{j=1}^{n} w_j \, \log_{2} \left( \frac{1}{IDM'_{i,j}} \right) $$`}
-      </p> */}
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step&nbsp;V. Ranking of Alternatives</h2>
         <p className="mb-4">
           The alternatives are ranked in ascending order of their \( SWI'_i \) values:
         </p>
         <div className="bg-gray-50 rounded-lg mb-4">
-          <p className="text-center">{`$$ ${latex.ranking} $$`}</p>
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.ranking}\\]` }} />
         </div>
 
         <p className="text-gray-700 mt-6 italic">
@@ -178,7 +199,3 @@ export default function SWIFormula() {
     </>
   );
 }
-
-
-
-
