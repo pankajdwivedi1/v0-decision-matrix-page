@@ -186,11 +186,9 @@ export default function CODASFormula({ compact = false }: CODASFormulaProps) {
         </div>
 
         <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div
-            className="latex text-sm"
-            style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\[${latex.intro}\\]` }}
-          />
+          <p className="text-sm text-gray-700 leading-relaxed" style={{ fontSize: "0.875rem" }}>
+            CODAS is a multi-criteria decision-making method that evaluates alternatives based on their distances from a negative-ideal solution, utilizing both Euclidean and Taxicab (Manhattan) distances.
+          </p>
         </div>
 
         <ol className="space-y-4 list-decimal pl-5">
@@ -299,11 +297,9 @@ export default function CODASFormula({ compact = false }: CODASFormulaProps) {
 
         <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="text-sm font-semibold text-blue-900 mb-2">Interpretation</div>
-          <div
-            className="latex text-sm"
-            style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\[${latex.interpretation}\\]` }}
-          />
+          <p className="text-sm text-gray-700 leading-relaxed" style={{ fontSize: "0.875rem" }}>
+            CODAS uses Euclidean distance as the primary measure and Taxicab distance as a tiebreaker. Alternatives farther from the negative-ideal solution (higher scores) are preferred.
+          </p>
         </div>
 
         <div className="mt-4 text-xs text-gray-500">

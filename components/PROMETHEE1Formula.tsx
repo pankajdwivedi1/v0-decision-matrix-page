@@ -174,11 +174,9 @@ export default function PROMETHEE1Formula({ compact = false }: PROMETHEE1Formula
         </div>
 
         <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div
-            className="latex text-sm"
-            style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\[${latex.intro}\\]` }}
-          />
+          <p className="text-sm text-gray-700 leading-relaxed" style={{ fontSize: "0.875rem" }}>
+            PROMETHEE I provides a partial preorder (partial ranking) based on positive and negative flows. Unlike PROMETHEE II which uses net flow for complete ranking, PROMETHEE I uses outranking relations.
+          </p>
         </div>
 
         <ol className="space-y-4 list-decimal pl-5">
@@ -302,11 +300,9 @@ export default function PROMETHEE1Formula({ compact = false }: PROMETHEE1Formula
 
         <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="text-sm font-semibold text-blue-900 mb-2">Interpretation</div>
-          <div
-            className="latex text-sm"
-            style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\[${latex.interpretation}\\]` }}
-          />
+          <p className="text-sm text-gray-700 leading-relaxed" style={{ fontSize: "0.875rem" }}>
+            PROMETHEE I provides a partial preorder where alternatives may be incomparable. Higher score indicates an alternative that outranks more alternatives and is outranked by fewer alternatives.
+          </p>
         </div>
 
         <div className="mt-4 text-xs text-gray-500">

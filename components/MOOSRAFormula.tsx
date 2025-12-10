@@ -182,11 +182,9 @@ export default function MOOSRAFormula({ compact = false }: MOOSRAFormulaProps) {
         </div>
 
         <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div
-            className="latex text-sm"
-            style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\[${latex.intro}\\]` }}
-          />
+          <p className="text-sm text-gray-700 leading-relaxed" style={{ fontSize: "0.875rem" }}>
+            MOOSRA is a multi-criteria decision-making method that evaluates alternatives by calculating the ratio of weighted sum of beneficial criteria to weighted sum of non-beneficial criteria.
+          </p>
         </div>
 
         <ol className="space-y-4 list-decimal pl-5">
@@ -285,11 +283,9 @@ export default function MOOSRAFormula({ compact = false }: MOOSRAFormulaProps) {
 
         <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="text-sm font-semibold text-blue-900 mb-2">Interpretation</div>
-          <div
-            className="latex text-sm"
-            style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\[${latex.interpretation}\\]` }}
-          />
+          <p className="text-sm text-gray-700 leading-relaxed" style={{ fontSize: "0.875rem" }}>
+            MOOSRA evaluates alternatives by comparing the ratio of beneficial to non-beneficial criteria. Higher ratios indicate alternatives with better performance.
+          </p>
         </div>
 
         <div className="mt-4 text-xs text-gray-500">

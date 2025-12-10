@@ -186,11 +186,9 @@ export default function MAIRCAFormula({ compact = false }: MAIRCAFormulaProps) {
         </div>
 
         <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div
-            className="latex text-sm"
-            style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\[${latex.intro}\\]` }}
-          />
+          <p className="text-sm text-gray-700 leading-relaxed" style={{ fontSize: "0.875rem" }}>
+            MAIRCA is a multi-criteria decision-making method that evaluates alternatives by comparing their performance against ideal values, calculating the gap between theoretical (ideal) and real (actual) ratings.
+          </p>
         </div>
 
         <ol className="space-y-4 list-decimal pl-5">
@@ -299,11 +297,9 @@ export default function MAIRCAFormula({ compact = false }: MAIRCAFormulaProps) {
 
         <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="text-sm font-semibold text-blue-900 mb-2">Interpretation</div>
-          <div
-            className="latex text-sm"
-            style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\[${latex.interpretation}\\]` }}
-          />
+          <p className="text-sm text-gray-700 leading-relaxed" style={{ fontSize: "0.875rem" }}>
+            MAIRCA evaluates alternatives by measuring their deviation from ideal values. Lower total gap indicates an alternative that is closer to the ideal solution across all criteria.
+          </p>
         </div>
 
         <div className="mt-4 text-xs text-gray-500">

@@ -168,11 +168,9 @@ export default function ELECTRE1Formula({ compact = false }: ELECTRE1FormulaProp
         </div>
 
         <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div
-            className="latex text-sm"
-            style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\[${latex.intro}\\]` }}
-          />
+          <p className="text-sm text-gray-700 leading-relaxed" style={{ fontSize: "0.875rem" }}>
+            ELECTRE I is the basic version that uses single thresholds for concordance and discordance to build outranking relations. It may produce partial rankings with incomparabilities.
+          </p>
         </div>
 
         <ol className="space-y-4 list-decimal pl-5">
@@ -275,11 +273,9 @@ export default function ELECTRE1Formula({ compact = false }: ELECTRE1FormulaProp
 
         <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="text-sm font-semibold text-blue-900 mb-2">Interpretation</div>
-          <div
-            className="latex text-sm"
-            style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\[${latex.interpretation}\\]` }}
-          />
+          <p className="text-sm text-gray-700 leading-relaxed" style={{ fontSize: "0.875rem" }}>
+            ELECTRE I uses single thresholds for concordance and discordance, which may result in partial rankings with incomparabilities. Higher score indicates an alternative that outranks more alternatives and is outranked by fewer alternatives.
+          </p>
         </div>
 
         <div className="mt-4 text-xs text-gray-500">

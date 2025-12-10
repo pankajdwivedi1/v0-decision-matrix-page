@@ -170,11 +170,9 @@ export default function PROMETHEE2Formula({ compact = false }: PROMETHEE2Formula
         </div>
 
         <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div
-            className="latex text-sm"
-            style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\[${latex.intro}\\]` }}
-          />
+          <p className="text-sm text-gray-700 leading-relaxed" style={{ fontSize: "0.875rem" }}>
+            PROMETHEE II provides a complete ranking based on net flow. Unlike PROMETHEE I which provides partial preorder, PROMETHEE II uses net flow for complete ranking.
+          </p>
         </div>
 
         <ol className="space-y-4 list-decimal pl-5">
@@ -285,11 +283,9 @@ export default function PROMETHEE2Formula({ compact = false }: PROMETHEE2Formula
 
         <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="text-sm font-semibold text-blue-900 mb-2">Interpretation</div>
-          <div
-            className="latex text-sm"
-            style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\[${latex.interpretation}\\]` }}
-          />
+          <p className="text-sm text-gray-700 leading-relaxed" style={{ fontSize: "0.875rem" }}>
+            PROMETHEE II provides a complete ranking based on net flow, which measures how much an alternative outranks others relative to how much it is outranked. Higher net flow indicates a better alternative.
+          </p>
         </div>
 
         <div className="mt-4 text-xs text-gray-500">

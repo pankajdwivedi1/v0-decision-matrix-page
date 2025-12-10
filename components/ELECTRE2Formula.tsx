@@ -174,11 +174,9 @@ export default function ELECTRE2Formula({ compact = false }: ELECTRE2FormulaProp
         </div>
 
         <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div
-            className="latex text-sm"
-            style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\[${latex.intro}\\]` }}
-          />
+          <p className="text-sm text-gray-700 leading-relaxed" style={{ fontSize: "0.875rem" }}>
+            ELECTRE II provides a complete ranking using strong and weak outranking relations. Unlike ELECTRE I which may have incomparabilities, ELECTRE II uses two sets of thresholds to establish a complete ranking.
+          </p>
         </div>
 
         <ol className="space-y-4 list-decimal pl-5">
@@ -299,11 +297,9 @@ export default function ELECTRE2Formula({ compact = false }: ELECTRE2FormulaProp
 
         <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="text-sm font-semibold text-blue-900 mb-2">Interpretation</div>
-          <div
-            className="latex text-sm"
-            style={{ fontSize: "0.875rem" }}
-            dangerouslySetInnerHTML={{ __html: `\\[${latex.interpretation}\\]` }}
-          />
+          <p className="text-sm text-gray-700 leading-relaxed" style={{ fontSize: "0.875rem" }}>
+            ELECTRE II uses two sets of thresholds (strong and weak) to build outranking relations, ensuring a complete ranking. Higher score indicates an alternative that strongly outranks more alternatives and is strongly outranked by fewer alternatives.
+          </p>
         </div>
 
         <div className="mt-4 text-xs text-gray-500">

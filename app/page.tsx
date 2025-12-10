@@ -32,8 +32,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import * as XLSX from "xlsx"
-import { Upload, ChevronDown, ChevronRight, Home, Download } from "lucide-react"
+import { Upload, ChevronDown, ChevronRight, Home, Download, LayoutGrid } from "lucide-react"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar, PieChart, Pie, ReferenceLine } from "recharts"
+import { toJpeg } from "html-to-image"
 import SWEIFormula from "@/components/SWEIFormula"
 import SWIFormula from "@/components/SWIFormula"
 import TOPSISFormula from "@/components/TOPSISFormula"
@@ -258,8 +259,8 @@ const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; for
 const WEIGHT_METHODS: { value: WeightMethod; label: string; description: string }[] = [
   {
     value: "equal",
-    label: "Equal Weights",
-    description: "Assigns equal weights to all criteria.",
+    label: "Equal Weight",
+    description: "Assigns equal weight to all criteria.",
   },
   {
     value: "entropy",
@@ -268,17 +269,17 @@ const WEIGHT_METHODS: { value: WeightMethod; label: string; description: string 
   },
   {
     value: "critic",
-    label: "CRITIC Method",
+    label: "CRITIC Weight",
     description: "CRITIC (Criteria Importance Through Intercriteria Correlation) method that determines weights based on contrast intensity and conflict between criteria.",
   },
   {
     value: "ahp",
-    label: "AHP",
+    label: "AHP Weight",
     description: "Analytic Hierarchy Process (AHP) derives weights from a pairwise comparison matrix; here derived from provided priority scores.",
   },
   {
     value: "piprecia",
-    label: "PIPRECIA",
+    label: "PIPRECIA Weight",
     description: "Pivot Pairwise Relative Criteria Importance Assessment (PIPRECIA) determines weights based on subjective relative importance of criteria.",
   },
 ]
@@ -316,6 +317,8 @@ export default function MCDMCalculator() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [comparisonChartType, setComparisonChartType] = useState<string>("composed")
   const comparisonChartRef = useRef<HTMLDivElement>(null)
+  const sensitivityGraphicalVariationRef = useRef<HTMLDivElement>(null)
+  const sensitivityResultsRef = useRef<HTMLDivElement>(null)
 
   // State to track where to return after completing input flow
   const [returnToTab, setReturnToTab] = useState<"rankingMethods" | "weightMethods" | "rankingComparison" | "sensitivityAnalysis" | null>(null)
@@ -370,6 +373,17 @@ export default function MCDMCalculator() {
   const [sensitivityWeightComparisonResults, setSensitivityWeightComparisonResults] = useState<any[]>([])
   const [sensitivityCriteriaWeights, setSensitivityCriteriaWeights] = useState<any[]>([])
   const [weightChartType, setWeightChartType] = useState<string>("bar")
+
+  // Excel data selection state
+  const [excelPreviewData, setExcelPreviewData] = useState<any[][] | null>(null)
+  const [isExcelPreviewOpen, setIsExcelPreviewOpen] = useState(false)
+  const [selectedDataRange, setSelectedDataRange] = useState<{
+    startRow: number
+    endRow: number
+    startCol: number
+    endCol: number
+  }>({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 })
+  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set())
 
 
   const parseExcelData = (data: any[][]) => {
@@ -624,45 +638,38 @@ export default function MCDMCalculator() {
     }
   }
 
+  const downloadChartAsJpeg = (ref: React.RefObject<HTMLDivElement>, prefix: string) => {
+    if (!ref.current) return
+
+    toJpeg(ref.current, { quality: 1.0, backgroundColor: "#ffffff", pixelRatio: 4 })
+      .then((dataUrl) => {
+        const link = document.createElement("a")
+        link.download = `${prefix}-${Date.now()}.jpg`
+        link.href = dataUrl
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      })
+      .catch((err) => {
+        console.error("Error exporting chart", err)
+      })
+  }
+
   const downloadComparisonChartAsJpeg = () => {
     if (!comparisonChartRef.current) return
-    const svgElement = comparisonChartRef.current.querySelector("svg")
-    if (!svgElement) return
 
-    const serializer = new XMLSerializer()
-    const svgString = serializer.serializeToString(svgElement)
-    const blob = new Blob([svgString], { type: "image/svg+xml" })
-    const url = URL.createObjectURL(blob)
-
-    const img = new Image()
-    img.onload = () => {
-      const canvas = document.createElement("canvas")
-      const width = svgElement.clientWidth || svgElement.getBoundingClientRect().width
-      const height = svgElement.clientHeight || svgElement.getBoundingClientRect().height
-      // Scale up for better quality
-      const scale = 2
-      canvas.width = width * scale
-      canvas.height = height * scale
-      const ctx = canvas.getContext("2d")
-      if (!ctx) return
-
-      // Fill white background for JPEG
-      ctx.fillStyle = "#ffffff"
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-      ctx.setTransform(scale, 0, 0, scale, 0, 0)
-      ctx.drawImage(img, 0, 0, width, height)
-
-      const imgUrl = canvas.toDataURL("image/jpeg", 0.9)
-      const link = document.createElement("a")
-      link.href = imgUrl
-      link.download = `ranking-comparison-${Date.now()}.jpg`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-    }
-    img.src = url
+    toJpeg(comparisonChartRef.current, { quality: 1.0, backgroundColor: "#ffffff", pixelRatio: 4 })
+      .then((dataUrl) => {
+        const link = document.createElement("a")
+        link.download = `ranking-comparison-${Date.now()}.jpg`
+        link.href = dataUrl
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      })
+      .catch((err) => {
+        console.error("Error exporting chart", err)
+      })
   }
 
   const comparisonChartData = useMemo(() => {
@@ -753,8 +760,22 @@ export default function MCDMCalculator() {
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
         const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 })
         console.log("JSON data extracted, rows:", (jsonData as any[][]).length)
-        parseExcelData(jsonData as any[][])
-        console.log("File parsed successfully!")
+
+        // Store the data and open preview dialog
+        setExcelPreviewData(jsonData as any[][])
+        setIsExcelPreviewOpen(true)
+
+        // Initialize selection to include all data
+        const rows = (jsonData as any[][]).length
+        const cols = Math.max(...(jsonData as any[][]).map(row => row.length))
+        setSelectedDataRange({
+          startRow: 0,
+          endRow: rows - 1,
+          startCol: 0,
+          endCol: cols - 1
+        })
+
+        console.log("Excel preview opened")
       } catch (error) {
         alert("Error reading Excel file. Please ensure it's a valid Excel file.")
         console.error("Error parsing file:", error)
@@ -768,6 +789,57 @@ export default function MCDMCalculator() {
       fileInputRef.current.value = ""
     }
   }
+
+  const toggleCellSelection = (rowIdx: number, colIdx: number) => {
+    const cellKey = `${rowIdx}-${colIdx}`
+    setSelectedCells(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(cellKey)) {
+        newSet.delete(cellKey)
+      } else {
+        newSet.add(cellKey)
+      }
+      return newSet
+    })
+  }
+
+  const handleImportSelectedData = () => {
+    if (!excelPreviewData) return
+
+    // Extract selected data based on selectedDataRange
+    const { startRow, endRow, startCol, endCol } = selectedDataRange
+    const selectedData = excelPreviewData
+      .slice(startRow, endRow + 1)
+      .map(row => row.slice(startCol, endCol + 1))
+
+    // Parse the selected data
+    parseExcelData(selectedData)
+
+    // Close the dialog
+    setIsExcelPreviewOpen(false)
+    setExcelPreviewData(null)
+    setSelectedCells(new Set())
+  }
+
+  const selectAllData = () => {
+    if (!excelPreviewData) return
+    const rows = excelPreviewData.length
+    const cols = Math.max(...excelPreviewData.map(row => row.length))
+    setSelectedDataRange({
+      startRow: 0,
+      endRow: rows - 1,
+      startCol: 0,
+      endCol: cols - 1
+    })
+  }
+
+  const updateSelectionRange = (type: 'startRow' | 'endRow' | 'startCol' | 'endCol', value: number) => {
+    setSelectedDataRange(prev => ({
+      ...prev,
+      [type]: value
+    }))
+  }
+
 
   const generateTable = () => {
     const newAlts: Alternative[] = Array.from({ length: numAlternatives }, (_, i) => ({
@@ -991,13 +1063,13 @@ export default function MCDMCalculator() {
         )
       } catch (error) {
         console.error("Error calculating entropy weights:", error)
-        alert("Error calculating entropy weights. Using equal weights instead.")
+        alert("Error calculating entropy weights. Using equal weight instead.")
       } finally {
         setIsLoading(false)
       }
     }
 
-    // Calculate CRITIC weights if CRITIC method is selected
+    // Calculate CRITIC weights if CRITIC weight is selected
     if (weightMethod === "critic") {
       setIsLoading(true)
       try {
@@ -1030,7 +1102,7 @@ export default function MCDMCalculator() {
         )
       } catch (error) {
         console.error("Error calculating CRITIC weights:", error)
-        alert("Error calculating CRITIC weights. Using equal weights instead.")
+        alert("Error calculating CRITIC weights. Using equal weight instead.")
       } finally {
         setIsLoading(false)
       }
@@ -1065,7 +1137,7 @@ export default function MCDMCalculator() {
         )
       } catch (error) {
         console.error("Error calculating AHP weights:", error)
-        alert("Error calculating AHP weights. Using equal weights instead.")
+        alert("Error calculating AHP weights. Using equal weight instead.")
       } finally {
         setIsLoading(false)
       }
@@ -1100,7 +1172,7 @@ export default function MCDMCalculator() {
         )
       } catch (error) {
         console.error("Error calculating PIPRECIA weights:", error)
-        alert("Error calculating PIPRECIA weights. Using equal weights instead.")
+        alert("Error calculating PIPRECIA weights. Using equal weight instead.")
       } finally {
         setIsLoading(false)
       }
@@ -1133,7 +1205,7 @@ export default function MCDMCalculator() {
     return true
   }
 
-  const handleCalculate = async (methodOverride?: string) => {
+  const handleCalculate = async (methodOverride?: string, criteriaOverride?: Criterion[]) => {
     setIsLoading(true)
     setApiResults(null)
 
@@ -1141,7 +1213,7 @@ export default function MCDMCalculator() {
       const payload = {
         method: methodOverride || method,
         alternatives,
-        criteria,
+        criteria: criteriaOverride || criteria,
       }
 
       const response = await fetch("/api/calculate", {
@@ -1199,7 +1271,7 @@ export default function MCDMCalculator() {
     ? weightMethod === "entropy"
       ? "Entropy-based objective weighting method that calculates weights based on information content in the decision matrix. Higher entropy means more uncertainty (less information), resulting in lower weight. Lower entropy means more information content, resulting in higher weight."
       : weightMethod === "critic"
-        ? "CRITIC method determines weights based on both contrast intensity (standard deviation) and conflict (correlation) between criteria. Higher information content (higher contrast and lower correlation) results in higher weights."
+        ? "CRITIC weight determines weights based on both contrast intensity (standard deviation) and conflict (correlation) between criteria. Higher information content (higher contrast and lower correlation) results in higher weights."
         : weightMethod === "ahp"
           ? "AHP derives weights from pairwise comparisons (here built from provided priority scores). It computes the eigenvector of the pairwise matrix and checks consistency (CI/CR)."
           : weightMethod === "piprecia"
@@ -1281,48 +1353,7 @@ export default function MCDMCalculator() {
     }
   }
 
-  // Download chart as JPEG function
-  const downloadChartAsJpeg = (ref: React.RefObject<HTMLDivElement>, filename: string) => {
-    if (!ref.current) return
 
-    const svgElement = ref.current.querySelector('svg')
-    if (!svgElement) return
-
-    const serializer = new XMLSerializer()
-    const svgString = serializer.serializeToString(svgElement)
-
-    // Get dimensions
-    const width = svgElement.viewBox.baseVal.width || svgElement.clientWidth || 600
-    const height = svgElement.viewBox.baseVal.height || svgElement.clientHeight || 400
-
-    const canvas = document.createElement('canvas')
-    canvas.width = width * 2 // 2x for high quality
-    canvas.height = height * 2
-    const ctx = canvas.getContext('2d')
-
-    if (!ctx) return
-
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.scale(2, 2)
-
-    const img = new Image()
-    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
-    const url = URL.createObjectURL(svgBlob)
-
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, width, height)
-      const imgUrl = canvas.toDataURL('image/jpeg', 0.9)
-      const link = document.createElement('a')
-      link.href = imgUrl
-      link.download = `${filename}.jpg`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-    }
-    img.src = url
-  }
 
   // Download chart function (SVG)
   const downloadChart = () => {
@@ -1553,47 +1584,51 @@ export default function MCDMCalculator() {
 
   if (currentStep === "home") {
     return (
-      <main className="flex-1 min-h-screen bg-white p-2 md:p-3">
-        <div className="max-w-2xl mx-auto py-6">
-          <div className="flex items-center justify-between gap-3 mb-6">
+      <main className="flex-1 min-h-screen bg-white p-2 sm:p-3 md:p-4">
+        <div className="w-full max-w-2xl mx-auto py-4 sm:py-6 px-1 sm:px-0">
+          <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
             {/* SidebarTrigger removed */}
-            <div>
-              <h1 className="text-2xl font-bold text-black">Decision Matrix</h1>
-              <p className="text-xs text-gray-700">Multicriteria Decision Making Calculator</p>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-black truncate">Decision Matrix</h1>
+              <p className="text-[10px] sm:text-xs text-gray-700">Multicriteria Decision Making Calculator</p>
             </div>
-            <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 shrink-0">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border border-gray-200 shrink-0">
               <img src="/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
             </div>
           </div>
 
-          <div className="flex gap-2 mb-4 flex-wrap">
+          <div className="flex gap-1.5 sm:gap-2 mb-4 flex-wrap">
             <Button
               variant="outline"
-              className={`text-xs h-8 cursor-pointer ${homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+              className={`text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 cursor-pointer ${homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("rankingMethods")}
             >
-              Ranking Methods / Calculator
+              <span className="hidden sm:inline">Ranking Methods / Calculator</span>
+              <span className="sm:hidden">Ranking</span>
             </Button>
             <Button
               variant="outline"
-              className={`text-xs h-8 cursor-pointer ${homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+              className={`text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 cursor-pointer ${homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("weightMethods")}
             >
-              Weight Methods
+              <span className="hidden sm:inline">Weight Methods</span>
+              <span className="sm:hidden">Weights</span>
             </Button>
             <Button
               variant="outline"
-              className={`text-xs h-8 cursor-pointer ${homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+              className={`text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 cursor-pointer ${homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("rankingComparison")}
             >
-              Ranking comparison
+              <span className="hidden sm:inline">Ranking comparison</span>
+              <span className="sm:hidden">Compare</span>
             </Button>
             <Button
               variant="outline"
-              className={`text-xs h-8 cursor-pointer ${homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+              className={`text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 cursor-pointer ${homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("sensitivityAnalysis")}
             >
-              Sensitivity Analysis
+              <span className="hidden sm:inline">Sensitivity Analysis</span>
+              <span className="sm:hidden">Sensitivity</span>
             </Button>
           </div>
 
@@ -1621,6 +1656,66 @@ export default function MCDMCalculator() {
 
           {homeTab === "rankingMethods" && (
             <>
+              {alternatives.length > 0 && criteria.length > 0 && (
+                <div className="space-y-3 mb-6">
+                  <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
+                    <p className="font-semibold">✓ Data has uploaded</p>
+                    <p className="mt-1">
+                      {alternatives.length} alternatives × {criteria.length} criteria
+                    </p>
+                  </div>
+
+                  <div className="border border-gray-200 rounded-lg overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="text-xs text-black font-semibold w-24">Alternative</TableHead>
+                          {criteria.map((crit) => (
+                            <TableHead key={crit.id} className="text-xs text-black font-semibold text-center min-w-20">
+                              <div>{crit.name}</div>
+                              <div className="text-[10px] text-gray-500 font-normal">
+                                {crit.type === "beneficial" ? "Max" : "Min"}
+                              </div>
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {alternatives.map((alt) => (
+                          <TableRow key={alt.id}>
+                            <TableCell className="text-xs text-black font-medium">{alt.name}</TableCell>
+                            {criteria.map((crit) => (
+                              <TableCell key={crit.id} className="p-1">
+                                <Input
+                                  type="number"
+                                  step="any"
+                                  min="0"
+                                  value={alt.scores[crit.id] ?? ""}
+                                  onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                  className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
+                                />
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {alternatives.length > 0 && criteria.length > 0 && (
+                <div className="mb-6">
+                  <Button
+                    onClick={() => {
+                      handleCalculate()
+                    }}
+                    className="w-full bg-black text-white hover:bg-gray-800 text-sm h-10 shadow-sm"
+                  >
+                    Calculate ranking
+                  </Button>
+                </div>
+              )}
               <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm text-black">Ranking Methods</CardTitle>
@@ -1631,26 +1726,40 @@ export default function MCDMCalculator() {
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {MCDM_METHODS.map((m) => (
-                      <button
+                      <div
                         key={m.value}
                         onClick={() => {
                           setMethod(m.value)
                           setActiveFormulaType("method")
                           setIsDialogOpen(true)
                         }}
-                        className={`text-left p-3 rounded-lg border-2 transition-all hover:shadow-md ${method === m.value
+                        className={`text-left p-3 rounded-lg border-2 transition-all hover:shadow-md relative cursor-pointer ${method === m.value
                           ? "border-[#F8BBD0] bg-[#FCE4EC] text-black"
                           : "border-gray-200 bg-white text-black hover:border-[#F8BBD0] hover:bg-[#FCE4EC]"
                           }`}
                       >
-                        <div className="font-semibold text-sm mb-1">{m.label}</div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 absolute top-2 right-2 text-gray-400 hover:text-black z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMethod(m.value);
+                            setActiveFormulaType("method");
+                            setIsDialogOpen(true);
+                          }}
+                        >
+                          <span className="sr-only">Info</span>
+                          <div className="border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic">i</div>
+                        </Button>
+                        <div className="font-semibold text-sm mb-1 pr-6">{m.label}</div>
                         <div className="text-xs mb-2 text-gray-700">
                           {m.description}
                         </div>
                         <div className="text-[11px] font-mono text-gray-600">
                           {m.formula}
                         </div>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </CardContent>
@@ -1664,6 +1773,68 @@ export default function MCDMCalculator() {
 
           {homeTab === "weightMethods" && (
             <>
+              {alternatives.length > 0 && criteria.length > 0 && (
+                <div className="space-y-3 mb-6">
+                  <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
+                    <p className="font-semibold">✓ Data has uploaded</p>
+                    <p className="mt-1">
+                      {alternatives.length} alternatives × {criteria.length} criteria
+                    </p>
+                  </div>
+
+                  <div className="border border-gray-200 rounded-lg overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="text-xs text-black font-semibold w-24">Alternative</TableHead>
+                          {criteria.map((crit) => (
+                            <TableHead key={crit.id} className="text-xs text-black font-semibold text-center min-w-20">
+                              <div>{crit.name}</div>
+                              <div className="text-[10px] text-gray-500 font-normal">
+                                {crit.type === "beneficial" ? "Max" : "Min"}
+                              </div>
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {alternatives.map((alt) => (
+                          <TableRow key={alt.id}>
+                            <TableCell className="text-xs text-black font-medium">{alt.name}</TableCell>
+                            {criteria.map((crit) => (
+                              <TableCell key={crit.id} className="p-1">
+                                <Input
+                                  type="number"
+                                  step="any"
+                                  min="0"
+                                  value={alt.scores[crit.id] ?? ""}
+                                  onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                  className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
+                                />
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  <div className="mt-4 mb-2">
+                    <Button
+                      onClick={async () => {
+                        const methodToUse = weightMethod || "equal"
+                        // Calculate weights and update state (entropyResult etc.)
+                        await calculateWeights(methodToUse)
+                        // Navigate to Matrix step where sidebar shows Weight Methods
+                        setCurrentStep("matrix")
+                      }}
+                      className="w-full bg-black text-white hover:bg-gray-800 text-sm h-10 shadow-sm"
+                    >
+                      Calculate weight
+                    </Button>
+                  </div>
+                </div>
+              )}
               <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm text-black">Weight Methods Reference</CardTitle>
@@ -1674,23 +1845,37 @@ export default function MCDMCalculator() {
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {WEIGHT_METHODS.map((w) => (
-                      <button
+                      <div
                         key={w.value}
                         onClick={() => {
                           setWeightMethod(w.value)
                           setActiveFormulaType("weight")
                           setIsDialogOpen(true)
                         }}
-                        className={`text-left p-3 rounded-lg border-2 transition-all hover:shadow-md ${weightMethod === w.value
+                        className={`text-left p-3 rounded-lg border-2 transition-all hover:shadow-md relative cursor-pointer ${weightMethod === w.value
                           ? "border-[#90CAF9] bg-[#E3F2FD] text-black"
                           : "border-gray-200 bg-white text-black hover:border-[#90CAF9] hover:bg-[#E3F2FD]"
                           }`}
                       >
-                        <div className="font-semibold text-sm mb-1">{w.label}</div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 absolute top-2 right-2 text-gray-400 hover:text-black z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setWeightMethod(w.value);
+                            setActiveFormulaType("weight");
+                            setIsDialogOpen(true);
+                          }}
+                        >
+                          <span className="sr-only">Info</span>
+                          <div className="border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic">i</div>
+                        </Button>
+                        <div className="font-semibold text-sm mb-1 pr-6">{w.label}</div>
                         <div className="text-xs text-gray-700">
                           {w.description}
                         </div>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </CardContent>
@@ -1736,7 +1921,7 @@ export default function MCDMCalculator() {
                           }}
                           className="rounded border-gray-300"
                         />
-                        Enter own weights
+                        Enter own weight
                       </label>
                     </div>
 
@@ -1826,14 +2011,14 @@ export default function MCDMCalculator() {
               {sensitivityCriteriaWeights.length > 0 && (
                 <>
                   <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                    <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                    <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div>
                         <CardTitle className="text-sm text-black">Weight Variation Chart</CardTitle>
                         <CardDescription className="text-xs text-gray-700">Visualizing weights across different methods</CardDescription>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Select value={weightChartType} onValueChange={setWeightChartType}>
-                          <SelectTrigger className="w-32 h-7 text-xs">
+                          <SelectTrigger className="w-28 sm:w-32 h-7 text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1851,8 +2036,8 @@ export default function MCDMCalculator() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div style={{ height: 400 }} ref={weightChartRef}>
-                        <ResponsiveContainer width="100%" height="100%">
+                      <div className="h-[350px] sm:h-[500px] w-full mt-4">
+                        <ResponsiveContainer width="100%" height="100%" ref={weightChartRef}>
                           {weightChartType === 'radar' ? (
                             <RadarChart cx="50%" cy="50%" outerRadius="80%" data={sensitivityCriteriaWeights}>
                               <PolarGrid />
@@ -1964,7 +2149,7 @@ export default function MCDMCalculator() {
                       <CardTitle className="text-sm text-black">Weight Values Table</CardTitle>
                       <CardDescription className="text-xs text-gray-700">Detailed numerical weights for each criterion</CardDescription>
                     </CardHeader>
-                    <CardContent className="overflow-x-auto">
+                    <CardContent className="table-responsive">
                       <table className="min-w-full text-xs border border-gray-200 rounded-lg">
                         <thead className="bg-gray-50">
                           <tr>
@@ -2261,7 +2446,7 @@ export default function MCDMCalculator() {
                       Scores and rankings generated by the methods. Ranking depends on the method used.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="overflow-x-auto">
+                  <CardContent className="table-responsive">
                     <table className="min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden">
                       <thead className="bg-gray-50">
                         <tr>
@@ -2320,7 +2505,7 @@ export default function MCDMCalculator() {
 
               {comparisonResults.length > 0 && comparisonChartData.length > 0 && (
                 <Card className="border-gray-200 bg-white shadow-none w-full">
-                  <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                  <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div>
                       <CardTitle className="text-sm text-black">Ranking variation</CardTitle>
                       <CardDescription className="text-xs text-gray-700">
@@ -2329,9 +2514,9 @@ export default function MCDMCalculator() {
                           : "Chart comparing alternative ranks across selected methods."}
                       </CardDescription>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Select value={comparisonChartType} onValueChange={setComparisonChartType}>
-                        <SelectTrigger className="w-32 h-7 text-xs">
+                        <SelectTrigger className="w-28 sm:w-32 h-7 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -2351,8 +2536,8 @@ export default function MCDMCalculator() {
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent style={{ height: comparisonChartType === "composed" ? 500 : 400 }} ref={comparisonChartRef}>
-                    <ResponsiveContainer width="100%" height="100%">
+                  <CardContent className="h-[300px] sm:h-[400px] p-0 sm:p-6 mt-4">
+                    <ResponsiveContainer width="100%" height="100%" ref={comparisonChartRef}>
                       {comparisonChartType === "radar" ? (
                         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
                           <PolarGrid />
@@ -2704,7 +2889,7 @@ export default function MCDMCalculator() {
                                       if (e.target.checked) setIsCustomWeightsDialogOpen(true)
                                     }}
                                   />
-                                  Enter own weights
+                                  Enter own weight
                                 </label>
                               </div>
                             )}
@@ -2821,7 +3006,7 @@ export default function MCDMCalculator() {
                                 <CardDescription className="text-xs text-gray-700">Ranking variations across weight methods</CardDescription>
                               </div>
                             </CardHeader>
-                            <CardContent className="overflow-x-auto">
+                            <CardContent className="table-responsive">
                               <table className="min-w-full text-xs border border-gray-200 rounded-lg">
                                 <thead className="bg-gray-50">
                                   <tr>
@@ -2869,14 +3054,14 @@ export default function MCDMCalculator() {
                           </Card>
 
                           <Card className="border-gray-200 bg-white shadow-none w-full">
-                            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                            <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                               <div>
                                 <CardTitle className="text-sm text-black">Graphical Variation</CardTitle>
                                 <CardDescription className="text-xs text-gray-700">Visualizing the impact of weight methods</CardDescription>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <Select value={sensitivityChartType} onValueChange={setSensitivityChartType}>
-                                  <SelectTrigger className="w-32 h-7 text-xs">
+                                  <SelectTrigger className="w-28 sm:w-32 h-7 text-xs">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -2892,11 +3077,11 @@ export default function MCDMCalculator() {
                                     <SelectItem value="radial">Radial Bar Chart</SelectItem>
                                   </SelectContent>
                                 </Select>
-                                <Button onClick={downloadChart} variant="outline" size="sm" className="h-7 text-xs"><Download className="w-3 h-3 mr-1" /> SVG</Button>
+                                <Button onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation")} variant="outline" size="sm" className="h-7 text-xs"><Download className="w-3 h-3 mr-1" /> JPG</Button>
                               </div>
                             </CardHeader>
                             <CardContent>
-                              <div style={{ height: 400 }} ref={sensitivityChartRef}>
+                              <div className="chart-container" ref={sensitivityGraphicalVariationRef}>
                                 <ResponsiveContainer width="100%" height="100%">
                                   {sensitivityChartType === 'radar' ? (
                                     <RadarChart cx="50%" cy="50%" outerRadius="80%" data={sensitivityWeightChartData}>
@@ -2920,7 +3105,7 @@ export default function MCDMCalculator() {
                                     <BarChart data={sensitivityWeightChartData}>
                                       <CartesianGrid strokeDasharray="3 3" />
                                       <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                      <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} reversed />
+                                      <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
                                       <Tooltip />
                                       <Legend wrapperStyle={{ fontSize: "10px" }} />
                                       {sensitivityWeightComparisonResults.map((res, i) => (
@@ -2931,7 +3116,7 @@ export default function MCDMCalculator() {
                                     <BarChart data={sensitivityWeightChartData}>
                                       <CartesianGrid strokeDasharray="3 3" />
                                       <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                      <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} reversed />
+                                      <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
                                       <Tooltip />
                                       <Legend wrapperStyle={{ fontSize: "10px" }} />
                                       {sensitivityWeightComparisonResults.map((res, i) => (
@@ -2942,7 +3127,7 @@ export default function MCDMCalculator() {
                                     <AreaChart data={sensitivityWeightChartData}>
                                       <CartesianGrid strokeDasharray="3 3" />
                                       <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                      <YAxis reversed />
+                                      <YAxis interval={0} domain={[0, 'dataMax']} />
                                       <Tooltip />
                                       <Legend wrapperStyle={{ fontSize: "10px" }} />
                                       {sensitivityWeightComparisonResults.map((res, i) => (
@@ -2953,7 +3138,7 @@ export default function MCDMCalculator() {
                                     <AreaChart data={sensitivityWeightChartData}>
                                       <CartesianGrid strokeDasharray="3 3" />
                                       <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                      <YAxis reversed />
+                                      <YAxis interval={0} domain={[0, 'dataMax']} />
                                       <Tooltip />
                                       <Legend wrapperStyle={{ fontSize: "10px" }} />
                                       {sensitivityWeightComparisonResults.map((res, i) => (
@@ -2979,14 +3164,16 @@ export default function MCDMCalculator() {
                                         };
                                       })}
                                       layout="vertical"
-                                      margin={{ top: 20, right: 30, left: 120, bottom: 20 }}
+                                      margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
                                     >
                                       <CartesianGrid strokeDasharray="3 3" />
                                       <XAxis
                                         type="number"
                                         domain={[0, 'dataMax']}
-                                        label={{ value: "Rank Range (Best to Worst)", position: "insideBottom", offset: -10 }}
+                                        label={{ value: "Rank Range (Best to Worst)", position: "bottom", offset: 0 }}
                                         tick={{ fontSize: 10 }}
+                                        interval={0}
+                                        allowDecimals={false}
                                       />
                                       <YAxis
                                         type="category"
@@ -3036,7 +3223,7 @@ export default function MCDMCalculator() {
                                     <ScatterChart>
                                       <CartesianGrid strokeDasharray="3 3" />
                                       <XAxis dataKey="name" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} />
-                                      <YAxis type="number" reversed dataKey="rank" name="Rank" label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} />
+                                      <YAxis type="number" dataKey="rank" name="Rank" label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
                                       <Tooltip cursor={{ strokeDasharray: '3 3' }} />
                                       <Legend wrapperStyle={{ fontSize: "10px" }} />
                                       {sensitivityWeightComparisonResults.map((res, i) => (
@@ -3048,7 +3235,7 @@ export default function MCDMCalculator() {
                                       <RadialBar
                                         label={{ position: 'insideStart', fill: '#fff' }}
                                         background
-                                        dataKey="Equal Weights Rank"
+                                        dataKey="Equal Weight Rank"
                                       />
                                       <Legend iconSize={10} wrapperStyle={{ fontSize: "10px" }} />
                                       {sensitivityWeightComparisonResults.map((res, i) => (
@@ -3060,7 +3247,7 @@ export default function MCDMCalculator() {
                                     <LineChart data={sensitivityWeightChartData}>
                                       <CartesianGrid strokeDasharray="3 3" />
                                       <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                      <YAxis reversed label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} />
+                                      <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
                                       <Tooltip />
                                       <Legend wrapperStyle={{ fontSize: "10px" }} />
                                       {sensitivityWeightComparisonResults.map((res, i) => (
@@ -3137,13 +3324,22 @@ export default function MCDMCalculator() {
                             onClick={downloadChart}
                           >
                             <Download className="w-3 h-3 mr-1" />
-                            Download
+                            SVG (Legacy)
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-7"
+                            onClick={() => downloadChartAsJpeg(sensitivityResultsRef, "sensitivity-results")}
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            JPG
                           </Button>
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div ref={sensitivityChartRef} style={{ height: 400 }}>
+                      <div ref={sensitivityResultsRef} className="chart-container">
                         <ResponsiveContainer width="100%" height="100%">
                           {sensitivityChartType === "line" ? (
                             <LineChart data={sensitivityChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -3209,7 +3405,7 @@ export default function MCDMCalculator() {
                         Complete ranking data for each weight variation
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="overflow-x-auto">
+                    <CardContent className="table-responsive">
                       <table className="min-w-full text-xs border border-gray-200 rounded-lg">
                         <thead className="bg-gray-50">
                           <tr>
@@ -3250,10 +3446,10 @@ export default function MCDMCalculator() {
         </div >
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="w-full sm:w-[70vw] h-screen max-w-none rounded-none border-0 flex flex-col">
+          <DialogContent className="w-[95vw] sm:w-[85vw] md:w-[70vw] h-[90vh] sm:h-screen max-w-none rounded-lg sm:rounded-none border sm:border-0 flex flex-col p-3 sm:p-6">
             <DialogHeader>
-              <DialogTitle>{cardTitle}</DialogTitle>
-              <DialogDescription>{cardDescription}</DialogDescription>
+              <DialogTitle className="text-base sm:text-lg">{cardTitle}</DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm">{cardDescription}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 pt-4 flex-1 overflow-y-auto">
               {activeFormulaType === "method" ? (
@@ -3286,22 +3482,7 @@ export default function MCDMCalculator() {
                   {weightMethod === "critic" && <CRITICFormula />}
                   {weightMethod === "ahp" && <AHPFormula />}
                   {weightMethod === "piprecia" && <PIPRECIAFormula />}
-                  {weightMethod === "equal" && (
-                    <div className="space-y-2 text-xs">
-                      <div>
-                        <p className="font-semibold text-black mb-1">Formula:</p>
-                        <p className="text-gray-700 bg-gray-50 p-2 rounded border border-gray-200">
-                          w_i = 1/n for all criteria
-                        </p>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-black mb-1">Description:</p>
-                        <p className="text-gray-700">
-                          Equal weighting assigns the same weight to all criteria, calculated as 1 divided by the number of criteria.
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                  {weightMethod === "equal" && <EqualWeightsFormula />}
                 </>
               )}
             </div>
@@ -3330,22 +3511,24 @@ export default function MCDMCalculator() {
               <p className="text-xs text-gray-700">Step 1 of 3</p>
             </div>
           </div>
-
-          <Breadcrumb className="mb-6">
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink className="text-xs text-black cursor-pointer">Input</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="text-gray-400" />
-              <BreadcrumbItem>
-                <span className="text-xs text-gray-400">Table</span>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="text-gray-400" />
-              <BreadcrumbItem>
-                <span className="text-xs text-gray-400">Matrix</span>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+          {/* Progress Section */}
+          <div className="mb-6 md:mb-8">
+            <Breadcrumb className="mb-4 overflow-x-auto whitespace-nowrap pb-2">
+              <BreadcrumbList className="flex-nowrap">
+                <BreadcrumbItem>
+                  <span className="text-xs md:text-sm font-semibold text-black">Input</span>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="text-gray-400" />
+                <BreadcrumbItem>
+                  <span className="text-xs md:text-sm text-gray-400">Table</span>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="text-gray-400" />
+                <BreadcrumbItem>
+                  <span className="text-xs md:text-sm text-gray-400">Matrix</span>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
 
           <Card className="border-gray-200 bg-white shadow-none">
             <CardHeader className="pb-3">
@@ -3355,32 +3538,34 @@ export default function MCDMCalculator() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-black">Number of Alternatives</label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  value={numAlternatives === 0 ? "" : numAlternatives}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setNumAlternatives(val === "" ? 0 : Number.parseInt(val) || 0)
-                  }}
-                  className="text-sm h-10 border-gray-200 text-black shadow-none"
-                />
-              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-black">Number of Alternatives</label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={numAlternatives === 0 ? "" : numAlternatives}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setNumAlternatives(val === "" ? 0 : Number.parseInt(val) || 0)
+                    }}
+                    className="text-sm h-10 border-gray-200 text-black shadow-none"
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-black">Number of Criteria</label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  value={numCriteria === 0 ? "" : numCriteria}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setNumCriteria(val === "" ? 0 : Number.parseInt(val) || 0)
-                  }}
-                  className="text-sm h-10 border-gray-200 text-black shadow-none"
-                />
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-black">Number of Criteria</label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={numCriteria === 0 ? "" : numCriteria}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setNumCriteria(val === "" ? 0 : Number.parseInt(val) || 0)
+                    }}
+                    className="text-sm h-10 border-gray-200 text-black shadow-none"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -3570,6 +3755,143 @@ export default function MCDMCalculator() {
                 </CardContent>
               </Card>
 
+              {/* Excel Data Preview Dialog */}
+              <Dialog open={isExcelPreviewOpen} onOpenChange={setIsExcelPreviewOpen}>
+                <DialogContent className="w-[95vw] sm:w-auto sm:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col p-3 sm:p-6">
+                  <DialogHeader>
+                    <DialogTitle className="text-base sm:text-lg font-bold text-black">Select Data to Import</DialogTitle>
+                    <DialogDescription className="text-[10px] sm:text-xs text-gray-700">
+                      Review the Excel data and select the range you want to import.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="flex flex-wrap gap-2 sm:gap-4 mb-4">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-black">Start Row:</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={excelPreviewData ? excelPreviewData.length - 1 : 0}
+                        value={selectedDataRange.startRow}
+                        onChange={(e) => updateSelectionRange('startRow', parseInt(e.target.value) || 0)}
+                        className="w-20 h-8 text-xs border-gray-200"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-black">End Row:</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={excelPreviewData ? excelPreviewData.length - 1 : 0}
+                        value={selectedDataRange.endRow}
+                        onChange={(e) => updateSelectionRange('endRow', parseInt(e.target.value) || 0)}
+                        className="w-20 h-8 text-xs border-gray-200"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-black">Start Col:</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={excelPreviewData ? Math.max(...excelPreviewData.map(row => row.length)) - 1 : 0}
+                        value={selectedDataRange.startCol}
+                        onChange={(e) => updateSelectionRange('startCol', parseInt(e.target.value) || 0)}
+                        className="w-20 h-8 text-xs border-gray-200"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-black">End Col:</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={excelPreviewData ? Math.max(...excelPreviewData.map(row => row.length)) - 1 : 0}
+                        value={selectedDataRange.endCol}
+                        onChange={(e) => updateSelectionRange('endCol', parseInt(e.target.value) || 0)}
+                        className="w-20 h-8 text-xs border-gray-200"
+                      />
+                    </div>
+                    <Button
+                      onClick={selectAllData}
+                      variant="outline"
+                      className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100"
+                    >
+                      Select All
+                    </Button>
+                  </div>
+
+                  <div className="flex-1 overflow-auto border border-gray-200 rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="text-xs font-semibold text-black w-12 text-center">#</TableHead>
+                          {excelPreviewData && excelPreviewData[0] &&
+                            Array.from({ length: Math.max(...excelPreviewData.map(row => row.length)) }).map((_, colIdx) => (
+                              <TableHead key={colIdx} className="text-xs font-semibold text-black text-center min-w-24">
+                                Col {colIdx}
+                              </TableHead>
+                            ))
+                          }
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {excelPreviewData?.map((row, rowIdx) => (
+                          <TableRow
+                            key={rowIdx}
+                            className={`border-b border-gray-200 ${rowIdx >= selectedDataRange.startRow &&
+                              rowIdx <= selectedDataRange.endRow
+                              ? 'bg-blue-50'
+                              : 'hover:bg-gray-50'
+                              }`}
+                          >
+                            <TableCell className="text-xs font-semibold text-gray-600 text-center">
+                              {rowIdx}
+                            </TableCell>
+                            {Array.from({ length: Math.max(...excelPreviewData.map(r => r.length)) }).map((_, colIdx) => {
+                              const isSelected =
+                                rowIdx >= selectedDataRange.startRow &&
+                                rowIdx <= selectedDataRange.endRow &&
+                                colIdx >= selectedDataRange.startCol &&
+                                colIdx <= selectedDataRange.endCol
+
+                              return (
+                                <TableCell
+                                  key={colIdx}
+                                  className={`text-xs text-black text-center ${isSelected ? 'bg-blue-100 font-semibold' : ''
+                                    }`}
+                                >
+                                  {row[colIdx] !== undefined && row[colIdx] !== null ? String(row[colIdx]) : ''}
+                                </TableCell>
+                              )
+                            })}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  <DialogFooter className="mt-4">
+                    <Button
+                      onClick={() => {
+                        setIsExcelPreviewOpen(false)
+                        setExcelPreviewData(null)
+                        setSelectedCells(new Set())
+                      }}
+                      variant="outline"
+                      className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleImportSelectedData}
+                      className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                    >
+                      Import Selected Data
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+
               <Card className="border-gray-200 bg-white shadow-none">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm text-black">Decision Matrix</CardTitle>
@@ -3578,7 +3900,7 @@ export default function MCDMCalculator() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-3">
-                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <div className="table-responsive border border-gray-200 rounded-lg">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -3710,7 +4032,7 @@ export default function MCDMCalculator() {
                   {weightMethod === "entropy"
                     ? "Calculate Entropy Weights"
                     : weightMethod === "critic"
-                      ? "Calculate CRITIC Weights"
+                      ? "Calculate CRITIC Weight"
                       : weightMethod === "ahp"
                         ? "Calculate AHP Weights"
                         : "Calculate Ranking"}
@@ -3809,19 +4131,27 @@ export default function MCDMCalculator() {
           </div>
 
           <div className="max-w-7xl mx-auto w-full">
-            <div className="flex items-center gap-3 mb-4">
-              <Button
-                onClick={() => setCurrentStep("home")}
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
-                title="Go to Home"
-              >
-                <Home className="h-4 w-4" />
-              </Button>
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold text-black">Decision Matrix</h1>
-                <p className="text-xs text-gray-700">Step 3 of 3</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="bg-black/5 p-2 rounded-lg">
+                  <LayoutGrid className="h-5 w-5 md:h-6 md:w-6 text-black" />
+                </div>
+                <div>
+                  <h1 className="text-xl md:text-2xl font-bold text-black tracking-tight">Decision Matrix</h1>
+                  <p className="text-xs md:text-sm text-gray-500 font-medium">Step 3: Results & Analysis</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
+                <Button
+                  onClick={() => setCurrentStep("home")}
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
+                  title="Go to Home"
+                >
+                  <Home className="h-4 w-4" />
+                </Button>
               </div>
             </div>
 
@@ -3870,7 +4200,7 @@ export default function MCDMCalculator() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-3">
-                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                <div className="table-responsive border border-gray-200 rounded-lg">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -3915,7 +4245,7 @@ export default function MCDMCalculator() {
                   <CardTitle className="text-sm text-black">Entropy Weight Calculation Results</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-3">
-                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <div className="table-responsive border border-gray-200 rounded-lg">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -3975,7 +4305,7 @@ export default function MCDMCalculator() {
                   <CardTitle className="text-sm text-black">CRITIC Weight Calculation Results</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-3">
-                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <div className="table-responsive border border-gray-200 rounded-lg">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -4038,7 +4368,7 @@ export default function MCDMCalculator() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-3">
-                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <div className="table-responsive border border-gray-200 rounded-lg">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -4082,7 +4412,7 @@ export default function MCDMCalculator() {
                   <CardTitle className="text-sm text-black">PIPRECIA Weight Calculation Results</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-3">
-                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <div className="table-responsive border border-gray-200 rounded-lg">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -4208,7 +4538,7 @@ export default function MCDMCalculator() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <div className="table-responsive border border-gray-200 rounded-lg">
                     <table className="min-w-full text-xs">
                       <thead className="bg-gray-50">
                         <tr>

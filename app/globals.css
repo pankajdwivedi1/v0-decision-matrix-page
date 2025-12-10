@@ -132,3 +132,117 @@
     -moz-appearance: textfield;
   }
 }
+
+/* Mobile-Responsive Utilities */
+@layer utilities {
+  /* Responsive Table Container */
+  .table-responsive {
+    @apply overflow-x-auto -mx-2 px-2;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .table-responsive::-webkit-scrollbar {
+    height: 6px;
+  }
+  
+  .table-responsive::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+  
+  .table-responsive::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
+
+  /* Responsive Chart Container */
+  .chart-container {
+    @apply w-full;
+    min-height: 250px;
+    height: clamp(250px, 50vw, 400px);
+  }
+  
+  @media (min-width: 640px) {
+    .chart-container {
+      height: 400px;
+    }
+  }
+
+  /* Touch-friendly targets */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Responsive flex stacking */
+  .flex-stack {
+    @apply flex flex-col gap-2;
+  }
+  
+  @media (min-width: 640px) {
+    .flex-stack {
+      @apply flex-row items-center justify-between;
+    }
+  }
+
+  /* Responsive card header */
+  .card-header-responsive {
+    @apply flex flex-col gap-3;
+  }
+  
+  @media (min-width: 640px) {
+    .card-header-responsive {
+      @apply flex-row items-center justify-between;
+    }
+  }
+
+  /* Mobile-friendly dialogs */
+  .dialog-mobile {
+    @apply w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh];
+  }
+  
+  @media (min-width: 640px) {
+    .dialog-mobile {
+      @apply w-auto max-w-4xl h-auto max-h-[90vh];
+    }
+  }
+
+  /* Horizontal scroll indicator gradient */
+  .scroll-indicator {
+    position: relative;
+  }
+  
+  .scroll-indicator::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 30px;
+    background: linear-gradient(to left, rgba(255,255,255,0.9), transparent);
+    pointer-events: none;
+  }
+  
+  @media (min-width: 768px) {
+    .scroll-indicator::after {
+      display: none;
+    }
+  }
+
+  /* Responsive text sizing */
+  .text-responsive-xs {
+    @apply text-[10px] sm:text-xs;
+  }
+  
+  .text-responsive-sm {
+    @apply text-xs sm:text-sm;
+  }
+
+  /* Responsive padding */
+  .p-responsive {
+    @apply p-2 sm:p-3 md:p-4;
+  }
+
+  /* Mobile-friendly button group */
+  .btn-group-responsive {
+    @apply flex flex-wrap gap-1.5 sm:gap-2;
+  }
+}
