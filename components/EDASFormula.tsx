@@ -53,7 +53,7 @@ export default function EDASFormula() {
   // Re-run typeset on updates
   useEffect(() => {
     setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
-  });
+  }, []);
 
   return (
     <>

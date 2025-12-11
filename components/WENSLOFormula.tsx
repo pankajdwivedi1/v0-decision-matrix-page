@@ -7,13 +7,14 @@ declare global {
   }
 }
 
-export default function EntropyFormula() {
+export default function WENSLOFormula() {
   const latex = {
-    step1: "X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad i=1,\\dots,m, \\quad j=1,\\dots,n \\tag{1}",
-    step2_formula: "p_{i,j} = \\frac{x_{i,j}}{\\sum_{i=1}^{m} x_{i,j}} \\tag{2}",
-    step3_formula: "E_j = -k \\sum_{i=1}^{m} p_{i,j} \\log_2 p_{i,j}, \\quad k = \\frac{1}{\\log_2 m} \\tag{3}",
-    step4_formula: "d_j = 1 - E_j \\tag{4}",
-    step5_formula: "w_j = \\frac{d_j}{\\sum_{j=1}^{n} d_j}, \\quad \\sum_{j=1}^{n} w_j = 1 \\tag{5}"
+    step1: "X = [x_{ij}]_{m \\times n} \\tag{1}",
+    step2: "d_j = \\begin{cases} +1, & \\text{benefit (MAX)}\\\\ -1, & \\text{cost (MIN)} \\end{cases} \\tag{2}",
+    step3_benefit: "r_{ij}=\\frac{x_{ij}-\\min_i x_{ij}}{\\max_i x_{ij}-\\min_i x_{ij}} \\tag{3}",
+    step3_cost: "r_{ij}=\\frac{\\max_i x_{ij}-x_{ij}}{\\max_i x_{ij}-\\min_i x_{ij}} \\tag{4}",
+    step4: "s_j = \\sum_{i=1}^{m} r_{ij} \\tag{5}",
+    step5: "w_j = \\frac{s_j}{\\sum_{k=1}^{n} s_k}, \\qquad \\sum_{j=1}^{n} w_j = 1 \\tag{6}"
   }
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -115,46 +116,38 @@ export default function EntropyFormula() {
       }} />
       <div ref={containerRef} style={{ overflowWrap: "break-word", wordBreak: "break-word" }} className="prose max-w-none bg-white border border-gray-200 rounded-lg p-3 md:p-6 text-justify font-['Times_New_Roman',_Times,_serif] leading-relaxed">
         <h1 className="text-2xl font-bold text-center mb-6">
-          Entropy Weight Method
+          WENSLO Weighting Method
         </h1>
 
-        <p className="mb-4">
-          The Entropy method determines weights objectively based on the information content of each criterion. Higher entropy implies less information and lower weight.
-        </p>
-
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 1. Decision Matrix</h2>
-        <p className="mb-2">Construct the decision matrix:</p>
+        <p className="mb-2">The decision matrix is defined as:</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }} />
         </div>
 
-        <h2 className="text-xl font-semibold mt-6 mb-2">Step 2. Normalization</h2>
-        <p className="mb-2">Calculate the probability of each alternative per criterion:</p>
+        <h2 className="text-xl font-semibold mt-6 mb-2">Step 2. Criterion Type</h2>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_formula}\\]` }} />
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2}\\]` }} />
         </div>
 
-        <h2 className="text-xl font-semibold mt-6 mb-2">Step 3. Entropy (E)</h2>
-        <p className="mb-2">Calculate the entropy value (measure of uncertainty) for each criterion:</p>
+        <h2 className="text-xl font-semibold mt-6 mb-2">Step 3. Normalization</h2>
+        <p className="mb-2">For benefit criteria:</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_formula}\\]` }} />
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_benefit}\\]` }} />
         </div>
-        <p className="text-sm text-gray-600 text-center mb-4">Note: If pij = 0, assume pij * log(pij) = 0.</p>
-
-        <h2 className="text-xl font-semibold mt-6 mb-2">Step 4. Diversity Degree (d)</h2>
-        <p className="mb-2">Calculate the degree of divergence (information content):</p>
+        <p className="mb-2">For cost criteria:</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_formula}\\]` }} />
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_cost}\\]` }} />
         </div>
 
-        <h2 className="text-xl font-semibold mt-6 mb-2">Step 5. Weights (w)</h2>
-        <p className="mb-2">Normalize the diversity degree to get the final weights:</p>
+        <h2 className="text-xl font-semibold mt-6 mb-2">Step 4. Criterion Statistical Score</h2>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
-          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_formula}\\]` }} />
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4}\\]` }} />
         </div>
 
-        <div className="mt-6 text-xs text-gray-500">
-          Source: Shannon, C. E. (1948). A Mathematical Theory of Communication.
+        <h2 className="text-xl font-semibold mt-6 mb-2">Step 5. WENSLO Weights</h2>
+        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+          <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step5}\\]` }} />
         </div>
       </div>
     </>

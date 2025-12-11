@@ -53,7 +53,7 @@ export default function SWEIFormula({ compact = false }: SWEIFormulaProps) {
     // Re-run typeset on updates
     useEffect(() => {
         setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
-    });
+    }, []);
 
     return (
         <>

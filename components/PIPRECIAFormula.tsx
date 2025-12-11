@@ -16,12 +16,14 @@ export default function PIPRECIAFormula({
   criteria: externalCriteria,
   onWeightsCalculated,
   initialScores,
-  onScoresChange
+  onScoresChange,
+  onWeightsChange
 }: {
   criteria?: { id: string; name: string }[];
   onWeightsCalculated?: (weights: Record<string, number>) => void;
   initialScores?: Record<number, string>;
   onScoresChange?: (scores: Record<number, string>) => void;
+  onWeightsChange?: (weights: Record<string, number>) => void;
 }) {
   // --- Original Description State & Logic ---
   const latex = {
@@ -72,7 +74,7 @@ export default function PIPRECIAFormula({
 
   useEffect(() => {
     setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
-  });
+  }, []);
 
   // --- Interactive Calculator State & Logic ---
   // If external criteria provided, use them. Otherwise default values.
@@ -145,6 +147,16 @@ export default function PIPRECIAFormula({
   useEffect(() => {
     const w = computeWeights();
     setWeights(w);
+
+    if (onWeightsChange && externalCriteria) {
+      const weightMap: Record<string, number> = {};
+      w.forEach((weight, i) => {
+        if (externalCriteria[i]) {
+          weightMap[externalCriteria[i].id] = weight;
+        }
+      });
+      onWeightsChange(weightMap);
+    }
   }, [scores, criteriaNames]);
 
   const handleApplyWeights = () => {

@@ -61,6 +61,12 @@ import EntropyFormula from "@/components/EntropyFormula"
 import CRITICFormula from "@/components/CRITICFormula"
 import EqualWeightsFormula from "@/components/EqualWeightsFormula"
 import PIPRECIAFormula from "@/components/PIPRECIAFormula"
+import MERECFormula from "@/components/MERECFormula"
+
+import SWARAFormula from "@/components/SWARAFormula"
+import WENSLOFormula from "@/components/WENSLOFormula"
+import LOPCOWFormula from "@/components/LOPCOWFormula"
+import DEMATELFormula from "@/components/DEMATELFormula"
 
 interface Criterion {
   id: string
@@ -76,7 +82,9 @@ interface Alternative {
 }
 
 type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "multimoora" | "todim" | "codas" | "moosra" | "mairca" | "marcos" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2"
-type WeightMethod = "equal" | "entropy" | "critic" | "ahp" | "piprecia"
+type WeightMethod = "equal" | "entropy" | "critic" | "ahp" | "piprecia" | "merec" | "swara" | "wenslo"
+  | "lopcow"
+  | "dematel"
 type PageStep = "home" | "input" | "table" | "matrix" | "calculate"
 type ComparisonResult = {
   method: MCDMMethod
@@ -126,6 +134,47 @@ interface AHPResult {
   consistencyIndex: number
   consistencyRatio: number
 }
+
+interface MERECResult {
+  weights: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  performanceScores: Record<string, number>
+  removalScores: Record<string, Record<string, number>>
+  removalEffects: Record<string, number>
+}
+
+interface SWARAResult {
+  weights: Record<string, number>
+  stepFactors: Record<string, number>
+  preliminaryWeights: Record<string, number>
+  coefficients: Record<string, number>
+}
+
+interface WensloResult {
+  weights: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  wensloValues: Record<string, number>
+  diversityValues: Record<string, number>
+}
+
+interface LopcowResult {
+  weights: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  geometricMeans: Record<string, number>
+  logPercentages: Record<string, number>
+}
+
+interface DematelResult {
+  weights: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  directRelationMatrix: Record<string, Record<string, number>>
+  totalRelationMatrix: Record<string, Record<string, number>>
+  dValues: Record<string, number>
+  rValues: Record<string, number>
+  pValues: Record<string, number>
+  eValues: Record<string, number>
+}
+
 
 const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; formula: string }[] = [
   {
@@ -282,6 +331,31 @@ const WEIGHT_METHODS: { value: WeightMethod; label: string; description: string 
     label: "PIPRECIA Weight",
     description: "Pivot Pairwise Relative Criteria Importance Assessment (PIPRECIA) determines weights based on subjective relative importance of criteria.",
   },
+  {
+    value: "merec",
+    label: "MEREC Weight",
+    description: "Method based on the Removal Effects of Criteria (MEREC) determines objective weights by analyzing the effect of removing each criterion.",
+  },
+  {
+    value: "swara",
+    label: "SWARA Weight",
+    description: "Step-wise Weight Assessment Ratio Analysis (SWARA) determines weights based on expert assessment of relative importance differences between criteria.",
+  },
+  {
+    value: "wenslo",
+    label: "WENSLO Weight",
+    description: "WENSLO weight method determines weights based on objective calculation similar to Entropy and MEREC.",
+  },
+  {
+    value: "lopcow",
+    label: "LOPCOW Weight",
+    description: "LOPCOW (Logarithmic Percentage Change-driven Objective Weighting) method determines weights using the magnitude of data variability.",
+  },
+  {
+    value: "dematel",
+    label: "DEMATEL Weight",
+    description: "DEMATEL (Decision Making Trial and Evaluation Laboratory) visualizes the structure of complex causal relationships between criteria.",
+  },
 ]
 
 const CHART_COLORS = [
@@ -339,6 +413,11 @@ export default function MCDMCalculator() {
   const [criticResult, setCriticResult] = useState<CriticResult | null>(null)
   const [ahpResult, setAhpResult] = useState<AHPResult | null>(null)
   const [pipreciaResult, setPipreciaResult] = useState<PipreciaResult | null>(null)
+  const [merecResult, setMerecResult] = useState<MERECResult | null>(null)
+  const [swaraResult, setSwaraResult] = useState<SWARAResult | null>(null)
+  const [wensloResult, setWensloResult] = useState<WensloResult | null>(null)
+  const [lopcowResult, setLopcowResult] = useState<LopcowResult | null>(null)
+  const [dematelResult, setDematelResult] = useState<DematelResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Sensitivity Analysis state
@@ -362,6 +441,13 @@ export default function MCDMCalculator() {
   const [isPipreciaDialogOpen, setIsPipreciaDialogOpen] = useState(false)
   const [pipreciaCalculatedWeights, setPipreciaCalculatedWeights] = useState<Record<string, number> | null>(null)
   const [pipreciaScores, setPipreciaScores] = useState<Record<number, string>>({})
+
+  // SWARA State
+  const [isSwaraDialogOpen, setIsSwaraDialogOpen] = useState(false)
+  const [isSensitivitySwaraDialogOpen, setIsSensitivitySwaraDialogOpen] = useState(false)
+  const [isComparisonSwaraDialogOpen, setIsComparisonSwaraDialogOpen] = useState(false)
+  const [swaraCalculatedWeights, setSwaraCalculatedWeights] = useState<Record<string, number> | null>(null)
+  const [swaraCoefficients, setSwaraCoefficients] = useState<Record<string, string>>({})
 
   // AHP State
   const [isAhpDialogOpen, setIsAhpDialogOpen] = useState(false)
@@ -528,7 +614,7 @@ export default function MCDMCalculator() {
     weight: WeightMethod,
     alts: Alternative[],
     crits: Criterion[],
-  ): Promise<{ criteria: Criterion[]; entropyResult?: EntropyResult; criticResult?: CriticResult }> => {
+  ): Promise<{ criteria: Criterion[]; entropyResult?: EntropyResult; criticResult?: CriticResult; dematelResult?: DematelResult }> => {
     if (weight === "equal") {
       const equalCriteria = crits.map((crit) => ({ ...crit, weight: 1 / crits.length }))
       return { criteria: equalCriteria }
@@ -556,6 +642,64 @@ export default function MCDMCalculator() {
       const data: CriticResult = await response.json()
       const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
       return { criteria: updated, criticResult: data }
+    }
+
+    if (weight === "merec") {
+      const response = await fetch("/api/calculate/merec-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alternatives: alts, criteria: crits }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate MEREC weights")
+      const data: MERECResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated }
+    }
+
+    if (weight === "wenslo") {
+      const response = await fetch("/api/calculate/wenslo-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alternatives: alts, criteria: crits }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate WENSLO weights")
+      const data: WensloResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated }
+    }
+
+    if (weight === "lopcow") {
+      const response = await fetch("/api/calculate/lopcow-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alternatives: alts, criteria: crits }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate LOPCOW weights")
+      const data: LopcowResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated }
+    }
+
+    if (weight === "dematel") {
+      const response = await fetch("/api/calculate/dematel-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alternatives: alts, criteria: crits }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate DEMATEL weights")
+      const data: DematelResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated, dematelResult: data }
+    }
+
+    if (weight === "swara") {
+      // Use stored SWARA weights if available
+      const weightsToUse = swaraCalculatedWeights || {}
+      const updated = crits.map((crit) => ({
+        ...crit,
+        weight: weightsToUse[crit.id] !== undefined ? weightsToUse[crit.id] : (1 / crits.length)
+      }))
+      return { criteria: updated }
     }
 
     // AHP
@@ -899,6 +1043,11 @@ export default function MCDMCalculator() {
     setEntropyResult(null)
     setCriticResult(null)
     setAhpResult(null)
+    setMerecResult(null)
+    setSwaraResult(null)
+    setWensloResult(null)
+    setLopcowResult(null)
+    setDematelResult(null)
 
     if (methodToUse === "equal") {
       const weight = 1 / criteria.length
@@ -972,6 +1121,7 @@ export default function MCDMCalculator() {
         }
 
         const data: AHPResult = await response.json()
+
         setAhpResult(data)
         setCriteria(
           criteria.map((crit) => ({
@@ -995,7 +1145,108 @@ export default function MCDMCalculator() {
         }
 
         const data: PipreciaResult = await response.json()
+
         setPipreciaResult(data)
+        setCriteria(
+          criteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          })),
+        )
+      } else if (methodToUse === "merec") {
+        const response = await fetch("/api/calculate/merec-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            alternatives,
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate MEREC weights")
+        }
+
+        const data: MERECResult = await response.json()
+        setMerecResult(data)
+        setCriteria(
+          criteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          })),
+        )
+      } else if (methodToUse === "wenslo") {
+        const response = await fetch("/api/calculate/wenslo-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            alternatives,
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate WENSLO weights")
+        }
+
+        const data: WensloResult = await response.json()
+
+        setWensloResult(data)
+        setCriteria(
+          criteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          })),
+        )
+      } else if (methodToUse === "lopcow") {
+        const response = await fetch("/api/calculate/lopcow-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            alternatives,
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate LOPCOW weights")
+        }
+
+        const data: LopcowResult = await response.json()
+
+        setLopcowResult(data)
+        setCriteria(
+          criteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          })),
+        )
+      } else if (methodToUse === "dematel") {
+        console.log("Calling DEMATEL API...");
+        const response = await fetch("/api/calculate/dematel-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            alternatives,
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate DEMATEL weights")
+        }
+
+        const data: DematelResult = await response.json()
+
+        setDematelResult(data)
         setCriteria(
           criteria.map((crit) => ({
             ...crit,
@@ -1029,6 +1280,9 @@ export default function MCDMCalculator() {
     setCriticResult(null)
     setAhpResult(null)
     setPipreciaResult(null)
+    setWensloResult(null)
+    setLopcowResult(null)
+    setDematelResult(null)
 
     // Calculate entropy weights if entropy method is selected
     if (weightMethod === "entropy") {
@@ -1173,6 +1427,116 @@ export default function MCDMCalculator() {
       } catch (error) {
         console.error("Error calculating PIPRECIA weights:", error)
         alert("Error calculating PIPRECIA weights. Using equal weight instead.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    // Calculate WENSLO weights if WENSLO method is selected
+    if (weightMethod === "wenslo") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/calculate/wenslo-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            alternatives,
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate WENSLO weights")
+        }
+
+        const data: WensloResult = await response.json()
+
+        setWensloResult(data)
+        setCriteria(
+          criteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          })),
+        )
+      } catch (error) {
+        console.error("Error calculating WENSLO weights:", error)
+        alert("Error calculating WENSLO weights. Using equal weight instead.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    // Calculate LOPCOW weights if LOPCOW method is selected
+    if (weightMethod === "lopcow") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/calculate/lopcow-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            alternatives,
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate LOPCOW weights")
+        }
+
+        const data: LopcowResult = await response.json()
+
+        setLopcowResult(data)
+        setCriteria(
+          criteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          })),
+        )
+      } catch (error) {
+        console.error("Error calculating LOPCOW weights:", error)
+        alert("Error calculating LOPCOW weights. Using equal weight instead.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+
+
+    // Calculate DEMATEL weights if DEMATEL method is selected
+    if (weightMethod === "dematel") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/calculate/dematel-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            alternatives,
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate DEMATEL weights")
+        }
+
+        const data: DematelResult = await response.json()
+
+        setDematelResult(data)
+        setCriteria(
+          criteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          })),
+        )
+      } catch (error) {
+        console.error("Error calculating DEMATEL weights:", error)
+        alert("Error calculating DEMATEL weights. Using equal weight instead.")
       } finally {
         setIsLoading(false)
       }
@@ -1401,7 +1765,10 @@ export default function MCDMCalculator() {
 
 
   // New Logic: Compare Ranking across Weight Methods
-  const handleWeightSensitivityAnalysis = async (pipreciaWeightsOverride?: Record<string, number>) => {
+  const handleWeightSensitivityAnalysis = async (
+    pipreciaWeightsOverride?: Record<string, number>,
+    swaraWeightsOverride?: Record<string, number>
+  ) => {
     if (sensitivityWeightMethods.length === 0) {
       setSensitivityError("Please select at least one weight method.")
       return
@@ -1432,6 +1799,12 @@ export default function MCDMCalculator() {
           } else if (wm === "critic") {
             const res = await applyWeightMethodForComparison("critic", alternatives, criteria)
             weightedCriteria = res.criteria
+          } else if (wm === "merec") {
+            const res = await applyWeightMethodForComparison("merec", alternatives, criteria)
+            weightedCriteria = res.criteria
+          } else if (wm === "wenslo") {
+            const res = await applyWeightMethodForComparison("wenslo", alternatives, criteria)
+            weightedCriteria = res.criteria
           } else if (wm === "ahp") {
             // Use stored or overridden weights for AHP
             const weightsToUse = ahpCalculatedWeights || {};
@@ -1442,6 +1815,13 @@ export default function MCDMCalculator() {
           } else if (wm === "piprecia") {
             // Use stored or overridden weights for PIPRECIA
             const weightsToUse = pipreciaWeightsOverride || pipreciaCalculatedWeights || {};
+            weightedCriteria = criteria.map(c => ({
+              ...c,
+              weight: weightsToUse[c.id] !== undefined ? weightsToUse[c.id] : (1 / criteria.length)
+            }))
+          } else if (wm === "swara") {
+            // Use stored weights for SWARA
+            const weightsToUse = swaraWeightsOverride || swaraCalculatedWeights || {};
             weightedCriteria = criteria.map(c => ({
               ...c,
               weight: weightsToUse[c.id] !== undefined ? weightsToUse[c.id] : (1 / criteria.length)
@@ -1904,6 +2284,9 @@ export default function MCDMCalculator() {
                               if (w.value === "ahp" && !sensitivityWeightMethods.includes("ahp")) {
                                 setIsAhpDialogOpen(true)
                               }
+                              if (w.value === "swara" && !sensitivityWeightMethods.includes("swara")) {
+                                setIsSwaraDialogOpen(true)
+                              }
                               toggleSensitivityWeightMethod(w.value)
                             }}
                             className="rounded border-gray-300"
@@ -1962,6 +2345,11 @@ export default function MCDMCalculator() {
                           criteria={criteria}
                           initialScores={pipreciaScores}
                           onScoresChange={setPipreciaScores}
+                          onWeightsChange={(weights) => {
+                            setPipreciaCalculatedWeights(weights)
+                            // Automatically trigger analysis update with new weights
+                            handleWeightSensitivityAnalysis(weights)
+                          }}
                           onWeightsCalculated={(weights) => {
                             setPipreciaCalculatedWeights(weights)
                             setIsPipreciaDialogOpen(false)
@@ -2298,6 +2686,9 @@ export default function MCDMCalculator() {
                                   if (w.value === "ahp") {
                                     setIsAhpDialogOpen(true)
                                   }
+                                  if (w.value === "swara") {
+                                    setIsComparisonSwaraDialogOpen(true)
+                                  }
                                   setComparisonWeightMethod(w.value)
                                 }}
                                 disabled={comparisonLoading}
@@ -2435,6 +2826,130 @@ export default function MCDMCalculator() {
                       setTimeout(() => handleComparisonCalculate(), 100)
                     }}
                   />
+                </DialogContent>
+              </Dialog>
+
+              {/* --- SWARA Dialog (Ranking Comparison Tab) --- */}
+              <Dialog open={isComparisonSwaraDialogOpen} onOpenChange={setIsComparisonSwaraDialogOpen}>
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+                  <DialogHeader>
+                    <DialogTitle>SWARA Weight Calculator</DialogTitle>
+                    <DialogDescription className="text-xs">
+                      Enter comparative importance coefficients (s<sub>j</sub>) for each criterion.
+                      The first criterion is most important (s<sub>1</sub> = 0).
+                      Higher values indicate larger importance differences.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4 mt-4">
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50">
+                            <TableHead className="text-xs font-semibold">Rank</TableHead>
+                            <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                            <TableHead className="text-xs font-semibold text-center">
+                              Coefficient (s<sub>j</sub>)
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(comparisonCriteria.length > 0 ? comparisonCriteria : criteria).map((crit, index) => (
+                            <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableCell className="py-3 px-4 font-medium text-black text-xs">{index + 1}</TableCell>
+                              <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                              <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                {index === 0 ? (
+                                  <span className="text-xs text-gray-500">0 (most important)</span>
+                                ) : (
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={swaraCoefficients[crit.id] || ""}
+                                    onChange={(e) => setSwaraCoefficients({
+                                      ...swaraCoefficients,
+                                      [crit.id]: e.target.value,
+                                    })}
+                                    className="w-24 h-7 text-xs text-center"
+                                    placeholder="0.00"
+                                  />
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-xs text-blue-900">
+                        <strong>Note:</strong> Criteria are ordered by importance (top = most important).
+                        For each criterion j, enter how much less important it is compared to the previous criterion (j-1).
+                      </p>
+                    </div>
+                  </div>
+
+                  <DialogFooter className="mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsComparisonSwaraDialogOpen(false)}
+                      className="text-xs"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const targetCriteria = comparisonCriteria.length > 0 ? comparisonCriteria : criteria
+                          const coeffs: Record<string, number> = {}
+                          targetCriteria.forEach((crit, index) => {
+                            if (index === 0) {
+                              coeffs[crit.id] = 0
+                            } else {
+                              coeffs[crit.id] = parseFloat(swaraCoefficients[crit.id]) || 0
+                            }
+                          })
+
+                          const response = await fetch("/api/calculate/swara-weights", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ criteria: targetCriteria, coefficients: coeffs }),
+                          })
+
+                          if (!response.ok) throw new Error("Failed to calculate SWARA weights")
+
+                          const data: SWARAResult = await response.json()
+                          setSwaraResult(data)
+                          setSwaraCalculatedWeights(data.weights)
+                          setIsComparisonSwaraDialogOpen(false)
+
+                          // Update criteria with new weights
+                          const updatedCriteria = targetCriteria.map(c => ({
+                            ...c,
+                            weight: data.weights[c.id] || 0
+                          }))
+
+                          if (comparisonCriteria.length > 0) {
+                            setComparisonCriteria(updatedCriteria)
+                          } else {
+                            setCriteria(updatedCriteria)
+                          }
+
+                          setComparisonWeightMethod("swara")
+
+                          // Automatically trigger comparison calculation
+                          setTimeout(() => handleComparisonCalculate(), 100)
+                        } catch (error) {
+                          console.error("SWARA calculation error:", error)
+                          alert("Error calculating SWARA weights")
+                        }
+                      }}
+                      className="bg-black text-white hover:bg-gray-800 text-xs"
+                    >
+                      Calculate Weights
+                    </Button>
+                  </DialogFooter>
                 </DialogContent>
               </Dialog>
 
@@ -2873,6 +3388,9 @@ export default function MCDMCalculator() {
                                         if (w.value === "ahp" && !sensitivityWeightMethods.includes("ahp")) {
                                           setIsAhpDialogOpen(true)
                                         }
+                                        if (w.value === "swara" && !sensitivityWeightMethods.includes("swara")) {
+                                          setIsSensitivitySwaraDialogOpen(true)
+                                        }
                                         toggleSensitivityWeightMethod(w.value)
                                       }}
                                     />
@@ -2994,6 +3512,115 @@ export default function MCDMCalculator() {
                               handleWeightSensitivityAnalysis()
                             }}
                           />
+                        </DialogContent>
+                      </Dialog>
+
+                      {/* --- SWARA Dialog (Sensitivity Analysis Tab) --- */}
+                      <Dialog open={isSensitivitySwaraDialogOpen} onOpenChange={setIsSensitivitySwaraDialogOpen}>
+                        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+                          <DialogHeader>
+                            <DialogTitle>SWARA Weight Calculator</DialogTitle>
+                            <DialogDescription className="text-xs">
+                              Enter comparative importance coefficients (s<sub>j</sub>) for each criterion.
+                              The first criterion is most important (s<sub>1</sub> = 0).
+                              Higher values indicate larger importance differences.
+                            </DialogDescription>
+                          </DialogHeader>
+
+                          <div className="space-y-4 mt-4">
+                            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow className="bg-gray-50">
+                                    <TableHead className="text-xs font-semibold">Rank</TableHead>
+                                    <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                                    <TableHead className="text-xs font-semibold text-center">
+                                      Coefficient (s<sub>j</sub>)
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {criteria.map((crit, index) => (
+                                    <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                      <TableCell className="py-3 px-4 font-medium text-black text-xs">{index + 1}</TableCell>
+                                      <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                                      <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                        {index === 0 ? (
+                                          <span className="text-xs text-gray-500">0 (most important)</span>
+                                        ) : (
+                                          <Input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={swaraCoefficients[crit.id] || ""}
+                                            onChange={(e) => setSwaraCoefficients({
+                                              ...swaraCoefficients,
+                                              [crit.id]: e.target.value,
+                                            })}
+                                            className="w-24 h-7 text-xs text-center"
+                                            placeholder="0.00"
+                                          />
+                                        )}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <p className="text-xs text-blue-900">
+                                <strong>Note:</strong> Criteria are ordered by importance (top = most important).
+                                For each criterion j, enter how much less important it is compared to the previous criterion (j-1).
+                              </p>
+                            </div>
+                          </div>
+
+                          <DialogFooter className="mt-4">
+                            <Button
+                              variant="outline"
+                              onClick={() => setIsSensitivitySwaraDialogOpen(false)}
+                              className="text-xs"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              onClick={async () => {
+                                try {
+                                  const coeffs: Record<string, number> = {}
+                                  criteria.forEach((crit, index) => {
+                                    if (index === 0) {
+                                      coeffs[crit.id] = 0
+                                    } else {
+                                      coeffs[crit.id] = parseFloat(swaraCoefficients[crit.id]) || 0
+                                    }
+                                  })
+
+                                  const response = await fetch("/api/calculate/swara-weights", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ criteria, coefficients: coeffs }),
+                                  })
+
+                                  if (!response.ok) throw new Error("Failed to calculate SWARA weights")
+
+                                  const data: SWARAResult = await response.json()
+                                  setSwaraResult(data)
+                                  setSwaraCalculatedWeights(data.weights)
+                                  setIsSensitivitySwaraDialogOpen(false)
+
+                                  // Trigger analysis update
+                                  handleWeightSensitivityAnalysis(undefined, data.weights)
+                                } catch (error) {
+                                  console.error("SWARA calculation error:", error)
+                                  alert("Error calculating SWARA weights")
+                                }
+                              }}
+                              className="bg-black text-white hover:bg-gray-800 text-xs"
+                            >
+                              Calculate Weights
+                            </Button>
+                          </DialogFooter>
                         </DialogContent>
                       </Dialog>
 
@@ -3483,6 +4110,11 @@ export default function MCDMCalculator() {
                   {weightMethod === "ahp" && <AHPFormula />}
                   {weightMethod === "piprecia" && <PIPRECIAFormula />}
                   {weightMethod === "equal" && <EqualWeightsFormula />}
+                  {weightMethod === "merec" && <MERECFormula />}
+                  {weightMethod === "swara" && <SWARAFormula />}
+                  {weightMethod === "wenslo" && <WENSLOFormula />}
+                  {weightMethod === "lopcow" && <LOPCOWFormula />}
+                  {weightMethod === "dematel" && <DEMATELFormula />}
                 </>
               )}
             </div>
@@ -3811,6 +4443,7 @@ export default function MCDMCalculator() {
                       />
                     </div>
                     <Button
+                      type="button"
                       onClick={selectAllData}
                       variant="outline"
                       className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100"
@@ -3871,6 +4504,7 @@ export default function MCDMCalculator() {
 
                   <DialogFooter className="mt-4">
                     <Button
+                      type="button"
                       onClick={() => {
                         setIsExcelPreviewOpen(false)
                         setExcelPreviewData(null)
@@ -3882,6 +4516,7 @@ export default function MCDMCalculator() {
                       Cancel
                     </Button>
                     <Button
+                      type="button"
                       onClick={handleImportSelectedData}
                       className="bg-black text-white hover:bg-gray-800 text-xs h-8"
                     >
@@ -4006,6 +4641,7 @@ export default function MCDMCalculator() {
               )}
               <div className="flex gap-2 justify-end">
                 <Button
+                  type="button"
                   onClick={() => setCurrentStep("input")}
                   variant="outline"
                   className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
@@ -4013,8 +4649,10 @@ export default function MCDMCalculator() {
                   Back
                 </Button>
                 <Button
-                  onClick={async () => {
-                    const isSpecialWeight = ["entropy", "critic", "ahp", "piprecia"].includes(weightMethod)
+                  type="button"
+                  onClick={async (e) => {
+                    e.preventDefault()
+                    const isSpecialWeight = ["entropy", "critic", "ahp", "piprecia", "merec", "swara", "wenslo", "lopcow", "dematel"].includes(weightMethod)
                     // Always pass false to handleSaveTable to prevent auto-navigation to dashboard
                     // We want to proceed to the matrix step or calculation results instead
                     const success = await handleSaveTable(false)
@@ -4035,7 +4673,17 @@ export default function MCDMCalculator() {
                       ? "Calculate CRITIC Weight"
                       : weightMethod === "ahp"
                         ? "Calculate AHP Weights"
-                        : "Calculate Ranking"}
+                        : weightMethod === "merec"
+                          ? "Calculate MEREC Weight"
+                          : weightMethod === "swara"
+                            ? "Calculate SWARA Weight"
+                            : weightMethod === "wenslo"
+                              ? "Calculate WENSLO Weight"
+                              : weightMethod === "lopcow"
+                                ? "Calculate LOPCOW Weight"
+                                : weightMethod === "dematel"
+                                  ? "Calculate DEMATEL Weight"
+                                  : "Calculate Ranking"}
                 </Button>
               </div>
             </div>
@@ -4063,6 +4711,8 @@ export default function MCDMCalculator() {
                         setIsPipreciaDialogOpen(true)
                       } else if (w.value === "ahp") {
                         setIsAhpDialogOpen(true)
+                      } else if (w.value === "swara") {
+                        setIsSwaraDialogOpen(true)
                       } else {
                         calculateWeights(w.value)
                       }
@@ -4125,6 +4775,125 @@ export default function MCDMCalculator() {
           </DialogContent>
         </Dialog>
 
+        {/* --- SWARA Dialog (Matrix Step) --- */}
+        <Dialog open={isSwaraDialogOpen} onOpenChange={setIsSwaraDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+            <DialogHeader>
+              <DialogTitle>SWARA Weight Calculator</DialogTitle>
+              <DialogDescription className="text-xs">
+                Enter comparative importance coefficients (s<sub>j</sub>) for each criterion.
+                The first criterion is most important (s<sub>1</sub> = 0).
+                Higher values indicate larger importance differences.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 mt-4">
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="text-xs font-semibold">Rank</TableHead>
+                      <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                      <TableHead className="text-xs font-semibold text-center">
+                        Coefficient (s<sub>j</sub>)
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {criteria.map((crit, index) => (
+                      <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                        <TableCell className="py-3 px-4 font-medium text-black text-xs">{index + 1}</TableCell>
+                        <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                        <TableCell className="text-center py-3 px-4 text-xs text-black">
+                          {index === 0 ? (
+                            <span className="text-xs text-gray-500">0 (most important)</span>
+                          ) : (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={swaraCoefficients[crit.id] || ""}
+                              onChange={(e) =>
+                                setSwaraCoefficients({
+                                  ...swaraCoefficients,
+                                  [crit.id]: e.target.value,
+                                })
+                              }
+                              className="w-24 h-7 text-xs text-center"
+                              placeholder="0.00"
+                            />
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+
+                </Table>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-900">
+                  <strong>Note:</strong> Criteria are ordered by importance (top = most important).
+                  For each criterion j, enter how much less important it is compared to the previous criterion (j-1).
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter className="mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsSwaraDialogOpen(false)}
+                className="text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    // Convert string coefficients to numbers
+                    const coeffs: Record<string, number> = {}
+                    criteria.forEach((crit, index) => {
+                      if (index === 0) {
+                        coeffs[crit.id] = 0
+                      } else {
+                        coeffs[crit.id] = parseFloat(swaraCoefficients[crit.id]) || 0
+                      }
+                    })
+
+                    // Call SWARA API
+                    const response = await fetch("/api/calculate/swara-weights", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ criteria, coefficients: coeffs }),
+                    })
+
+                    if (!response.ok) throw new Error("Failed to calculate SWARA weights")
+
+                    const data: SWARAResult = await response.json()
+                    setSwaraResult(data)
+                    setSwaraCalculatedWeights(data.weights)
+                    setIsSwaraDialogOpen(false)
+
+                    // Update criteria with new weights
+                    const updatedCriteria = criteria.map(c => ({
+                      ...c,
+                      weight: data.weights[c.id] || 0
+                    }))
+                    setCriteria(updatedCriteria)
+                    setWeightMethod("swara")
+                  } catch (error) {
+                    console.error("SWARA calculation error:", error)
+                    alert("Error calculating SWARA weights")
+                  }
+                }}
+                className="bg-black text-white hover:bg-gray-800 text-xs"
+              >
+                Calculate Weights
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog >
+
         <main className="flex-1 min-h-screen bg-white p-2 md:p-3 flex flex-col">
           <div className="flex items-center gap-2 mb-2">
             <SidebarTrigger />
@@ -4144,6 +4913,7 @@ export default function MCDMCalculator() {
 
               <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
                 <Button
+                  type="button"
                   onClick={() => setCurrentStep("home")}
                   variant="outline"
                   size="icon"
@@ -4183,6 +4953,7 @@ export default function MCDMCalculator() {
 
             <div className="flex justify-end gap-2 mb-4">
               <Button
+                type="button"
                 onClick={() => setCurrentStep("table")}
                 variant="outline"
                 className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
@@ -4447,9 +5218,304 @@ export default function MCDMCalculator() {
                 </CardContent>
               </Card>
             )}
+
+            {merecResult && weightMethod === "merec" && (
+              <Card className="border-gray-200 bg-white shadow-none mb-6">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-black">MEREC Weight Calculation Results</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-3">
+                  <div className="table-responsive border border-gray-200 rounded-lg mb-4">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                          {criteria.map((crit) => (
+                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                              {crit.name}
+                            </TableHead>
+                          ))}
+                          <TableHead className="text-xs font-semibold text-black text-center py-3 px-4">S<sub>i</sub></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {alternatives.map((alt) => (
+                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                            {criteria.map((crit) => (
+                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                {merecResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                              </TableCell>
+                            ))}
+                            <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
+                              {merecResult.performanceScores[alt.id]?.toFixed(4)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  <div className="table-responsive border border-gray-200 rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-left">Criterion</TableHead>
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">E<sub>k</sub> (Removal Effect)</TableHead>
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Weight (w<sub>k</sub>)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {criteria.map((crit) => (
+                          <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                            <TableCell className="text-center py-3 px-4 text-xs text-black">
+                              {merecResult.removalEffects[crit.id]?.toFixed(4)}
+                            </TableCell>
+                            <TableCell className="text-center py-3 px-4 text-xs text-black font-bold bg-yellow-50">
+                              {merecResult.weights[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {swaraResult && weightMethod === "swara" && (
+              <Card className="border-gray-200 bg-white shadow-none mb-6">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-black">SWARA Weight Calculation Results</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-3">
+                  <div className="table-responsive border border-gray-200 rounded-lg mb-4">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-left">Criterion</TableHead>
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">s<sub>j</sub> (Coefficient)</TableHead>
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">k<sub>j</sub> (Step Factor)</TableHead>
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">q<sub>j</sub> (Preliminary)</TableHead>
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Weight (w<sub>j</sub>)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {criteria.map((crit) => (
+                          <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                            <TableCell className="text-center py-3 px-4 text-xs text-black">
+                              {swaraResult.coefficients[crit.id]?.toFixed(4)}
+                            </TableCell>
+                            <TableCell className="text-center py-3 px-4 text-xs text-black">
+                              {swaraResult.stepFactors[crit.id]?.toFixed(4)}
+                            </TableCell>
+                            <TableCell className="text-center py-3 px-4 text-xs text-black">
+                              {swaraResult.preliminaryWeights[crit.id]?.toFixed(4)}
+                            </TableCell>
+                            <TableCell className="text-center py-3 px-4 text-xs text-black font-bold bg-yellow-50">
+                              {swaraResult.weights[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {wensloResult && weightMethod === "wenslo" && (
+              <Card className="border-gray-200 bg-white shadow-none mb-6">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-black">WENSLO Weight Calculation Results</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-3">
+                  <div className="table-responsive border border-gray-200 rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                          {criteria.map((crit) => (
+                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                              {crit.name}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {alternatives.map((alt) => (
+                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                            {criteria.map((crit) => (
+                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                {wensloResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Statistical Score (S<sub>j</sub>)</TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                              {wensloResult.wensloValues[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                        <TableRow className="bg-yellow-50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Weight (wj)</TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                              {wensloResult.weights[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {lopcowResult && weightMethod === "lopcow" && (
+              <Card className="border-gray-200 bg-white shadow-none mb-6">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-black">LOPCOW Weight Calculation Results</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-3">
+                  <div className="table-responsive border border-gray-200 rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                          {criteria.map((crit) => (
+                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                              {crit.name}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {alternatives.map((alt) => (
+                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                            {criteria.map((crit) => (
+                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                {lopcowResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Geometric Mean (GM)</TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                              {lopcowResult.geometricMeans[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Log Percentage (L)</TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                              {lopcowResult.logPercentages[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                        <TableRow className="bg-yellow-50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Weight (w)</TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                              {lopcowResult.weights[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {dematelResult && weightMethod === "dematel" && (
+              <Card className="border-gray-200 bg-white shadow-none mb-6">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-black">DEMATEL Weight Calculation Results</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-3">
+                  <div className="table-responsive border border-gray-200 rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                          {criteria.map((crit) => (
+                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                              {crit.name}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {alternatives.map((alt) => (
+                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                            {criteria.map((crit) => (
+                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                {dematelResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Influence (D)</TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                              {dematelResult.dValues[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Dependence (R)</TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                              {dematelResult.rValues[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Prominence (P=D+R)</TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                              {dematelResult.pValues[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Relation (E=D-R)</TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                              {dematelResult.eValues[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                        <TableRow className="bg-yellow-50 border-b border-gray-200">
+                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Weight (w)</TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                              {dematelResult.weights[crit.id]?.toFixed(4)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </main>
-      </SidebarProvider>
+      </SidebarProvider >
     )
   }
 
@@ -4497,6 +5563,7 @@ export default function MCDMCalculator() {
             <div className="max-w-7xl mx-auto w-full">
               <div className="flex items-center gap-3 mb-4">
                 <Button
+                  type="button"
                   onClick={() => setCurrentStep("home")}
                   variant="outline"
                   size="icon"
@@ -4513,6 +5580,7 @@ export default function MCDMCalculator() {
 
               <div className="flex justify-end gap-2 mb-4">
                 <Button
+                  type="button"
                   onClick={() => {
                     setCurrentStep("matrix")
                     setMethod(method)
@@ -4523,6 +5591,7 @@ export default function MCDMCalculator() {
                   Back
                 </Button>
                 <Button
+                  type="button"
                   onClick={() => setCurrentStep("matrix")}
                   className="bg-black text-white hover:bg-gray-800 text-xs h-8"
                 >

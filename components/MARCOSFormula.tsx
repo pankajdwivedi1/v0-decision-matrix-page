@@ -61,7 +61,7 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
   // Re-typeset after every render (safe; MathJax caches)
   useEffect(() => {
     setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
-  });
+  }, []);
 
   // LaTeX strings for each step
   const latex = {

@@ -51,7 +51,7 @@ export default function COCOSOFormula() {
   // Re-run typeset on updates
   useEffect(() => {
     setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
-  });
+  }, []);
 
   return (
     <>

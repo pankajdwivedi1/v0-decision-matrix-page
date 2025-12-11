@@ -58,10 +58,10 @@ export default function TODIMFormula({ compact = false }: TODIMFormulaProps) {
     }
   }, []);
 
-  // Re-typeset after every render (safe; MathJax caches)
+  // Re-typeset after every render await (safe; MathJax caches)
   useEffect(() => {
     setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
-  });
+  }, []);
 
   // LaTeX strings for each step
   const latex = {

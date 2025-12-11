@@ -47,7 +47,7 @@ export default function ELECTREFormula({ compact = false }: ELECTREFormulaProps)
 
   useEffect(() => {
     setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
-  });
+  }, []);
 
   const latex = {
     title: "\\textbf{ELECTRE (ÉLimination Et Choix Traduisant la REalité) — Steps}",

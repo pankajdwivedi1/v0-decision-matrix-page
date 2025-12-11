@@ -52,7 +52,7 @@ export default function AHPFormula({
 
   useEffect(() => {
     setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
-  });
+  }, []);
 
   const latex = {
     title: "\\textbf{Here are the step-by-step formulas used in AHP:}",

@@ -22,7 +22,7 @@ export default function MOORAFormula() {
     if (window.MathJax) {
       window.MathJax.typesetPromise?.()
     }
-  })
+  }, [])
 
   useEffect(() => {
     if (typeof window === "undefined") return;

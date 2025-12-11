@@ -47,7 +47,7 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
 
   useEffect(() => {
     setTimeout(() => window.MathJax?.typesetPromise?.(), 50);
-  });
+  }, []);
 
   const latex = {
     title: "\\textbf{PROMETHEE (Preference Ranking Organization Method for Enrichment Evaluations) — Steps}",
