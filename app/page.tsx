@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useMemo, Fragment } from "react"
+import { useState, useRef, useMemo, Fragment, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -470,6 +470,37 @@ export default function MCDMCalculator() {
     endCol: number
   }>({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 })
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set())
+
+  // Load data from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedData = localStorage.getItem("decisionMatrixData")
+      if (savedData) {
+        const parsed = JSON.parse(savedData)
+        if (parsed.alternatives && parsed.alternatives.length > 0) setAlternatives(parsed.alternatives)
+        if (parsed.criteria && parsed.criteria.length > 0) setCriteria(parsed.criteria)
+        if (parsed.numAlternatives) setNumAlternatives(parsed.numAlternatives)
+        if (parsed.numCriteria) setNumCriteria(parsed.numCriteria)
+      }
+    } catch (e) {
+      console.error("Failed to load data from localStorage", e)
+    }
+  }, [])
+
+  // Save data to localStorage whenever relevant state changes
+  useEffect(() => {
+    if (alternatives.length > 0 || criteria.length > 0) {
+      localStorage.setItem(
+        "decisionMatrixData",
+        JSON.stringify({
+          alternatives,
+          criteria,
+          numAlternatives,
+          numCriteria,
+        })
+      )
+    }
+  }, [alternatives, criteria, numAlternatives, numCriteria])
 
 
   const parseExcelData = (data: any[][]) => {
@@ -1971,7 +2002,7 @@ export default function MCDMCalculator() {
   if (currentStep === "home") {
     return (
       <main className="flex-1 min-h-screen bg-white p-2 sm:p-3 md:p-4">
-        <div className="w-full max-w-2xl mx-auto py-4 sm:py-6 px-1 sm:px-0">
+        <div className="w-full max-w-full px-4 md:px-10 mx-auto py-4 sm:py-6">
           <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
             {/* SidebarTrigger removed */}
             <div className="min-w-0 flex-1">
@@ -2110,7 +2141,7 @@ export default function MCDMCalculator() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                     {MCDM_METHODS.map((m) => (
                       <div
                         key={m.value}
@@ -2502,7 +2533,7 @@ export default function MCDMCalculator() {
                   )}
 
                   <Button
-                    onClick={handleWeightSensitivityAnalysis}
+                    onClick={() => handleWeightSensitivityAnalysis()}
                     disabled={sensitivityLoading}
                     className="w-full sm:w-auto bg-black text-white hover:bg-gray-800 text-xs h-8"
                   >
@@ -2788,9 +2819,9 @@ export default function MCDMCalculator() {
                         )}
                       </button>
                       {comparisonWeightOpen && (
-                        <div className="space-y-2 mt-2">
+                        <div className="grid grid-cols-2 gap-2 mt-2 max-h-64 overflow-y-auto">
                           {WEIGHT_METHODS.map((w) => (
-                            <label key={w.value} className="flex items-start gap-2 text-xs text-black cursor-pointer hover:bg-gray-50 p-1 rounded">
+                            <label key={w.value} className="flex items-start gap-2 text-[11px] text-black cursor-pointer hover:bg-gray-50 p-1 rounded">
                               <input
                                 type="checkbox"
                                 checked={comparisonWeightMethod === w.value}
