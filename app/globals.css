@@ -119,6 +119,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -128,27 +129,37 @@
     -webkit-appearance: none;
     margin: 0;
   }
+
   input[type="number"] {
     -moz-appearance: textfield;
+  }
+
+  button,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    cursor: pointer;
   }
 }
 
 /* Mobile-Responsive Utilities */
 @layer utilities {
+
   /* Responsive Table Container */
   .table-responsive {
     @apply overflow-x-auto -mx-2 px-2;
     -webkit-overflow-scrolling: touch;
   }
-  
+
   .table-responsive::-webkit-scrollbar {
     height: 6px;
   }
-  
+
   .table-responsive::-webkit-scrollbar-thumb {
     @apply bg-gray-300 rounded-full;
   }
-  
+
   .table-responsive::-webkit-scrollbar-track {
     @apply bg-gray-100;
   }
@@ -159,7 +170,7 @@
     min-height: 250px;
     height: clamp(250px, 50vw, 400px);
   }
-  
+
   @media (min-width: 640px) {
     .chart-container {
       height: 400px;
@@ -176,7 +187,7 @@
   .flex-stack {
     @apply flex flex-col gap-2;
   }
-  
+
   @media (min-width: 640px) {
     .flex-stack {
       @apply flex-row items-center justify-between;
@@ -187,7 +198,7 @@
   .card-header-responsive {
     @apply flex flex-col gap-3;
   }
-  
+
   @media (min-width: 640px) {
     .card-header-responsive {
       @apply flex-row items-center justify-between;
@@ -198,7 +209,7 @@
   .dialog-mobile {
     @apply w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh];
   }
-  
+
   @media (min-width: 640px) {
     .dialog-mobile {
       @apply w-auto max-w-4xl h-auto max-h-[90vh];
@@ -209,7 +220,7 @@
   .scroll-indicator {
     position: relative;
   }
-  
+
   .scroll-indicator::after {
     content: '';
     position: absolute;
@@ -217,10 +228,10 @@
     top: 0;
     bottom: 0;
     width: 30px;
-    background: linear-gradient(to left, rgba(255,255,255,0.9), transparent);
+    background: linear-gradient(to left, rgba(255, 255, 255, 0.9), transparent);
     pointer-events: none;
   }
-  
+
   @media (min-width: 768px) {
     .scroll-indicator::after {
       display: none;
@@ -231,7 +242,7 @@
   .text-responsive-xs {
     @apply text-[10px] sm:text-xs;
   }
-  
+
   .text-responsive-sm {
     @apply text-xs sm:text-sm;
   }

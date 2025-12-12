@@ -9,6 +9,7 @@ interface MULTIMOORAResult {
   referencePointRanking: Record<string, number>
   fullMultiplicativeRanking: Record<string, number>
   normalizedMatrix: Record<string, Record<string, number>>
+  weightedMatrix: Record<string, Record<string, number>> // Added
 }
 
 /**
@@ -66,9 +67,14 @@ export function calculateMULTIMOORA(
 
   // Step 3: Apply weights
   const weightedMatrix: number[][] = Array.from({ length: m }, () => Array(n).fill(0))
+  const weightedMatrixRecord: Record<string, Record<string, number>> = {} // To return
+
   for (let i = 0; i < m; i++) {
+    weightedMatrixRecord[alternatives[i].id] = {}
     for (let j = 0; j < n; j++) {
-      weightedMatrix[i][j] = normalizedMatrixArray[i][j] * criteria[j].weight
+      const val = normalizedMatrixArray[i][j] * criteria[j].weight
+      weightedMatrix[i][j] = val
+      weightedMatrixRecord[alternatives[i].id][criteria[j].id] = val
     }
   }
 
@@ -95,7 +101,7 @@ export function calculateMULTIMOORA(
 
   // Step 4b: Reference Point (RP) - Tchebycheff distance
   const referencePointScores: Record<string, number> = {}
-  
+
   // Determine reference point (ideal solution)
   const referencePoint: number[] = []
   for (let j = 0; j < n; j++) {
@@ -104,11 +110,20 @@ export function calculateMULTIMOORA(
     if (crit.type === "beneficial") {
       referencePoint[j] = Math.max(...col)
     } else {
+      referencePoint[j] = Math.min(...col) // Min is ideal for non-beneficial? Wait.
+      // Reference point approach (Min-Max Metric):
+      // Usually r_i = max_j { w_j * | (f*_j - f_ij) / (f*_j - f-_j) | } etc...
+      // But for MULTIMOORA RP:
+      // Reference Point coordinates r_j are:
+      // max_i x*_ij for beneficial
+      // min_i x*_ij for non-beneficial
+      // (where x* are weighted normalized values)
+      // So yes, max for beneficial, min for non-beneficial.
       referencePoint[j] = Math.min(...col)
     }
   }
 
-  // Calculate Tchebycheff distance
+  // Calculate Tchebycheff distance: max_j | v_ij - r_j |
   for (let i = 0; i < m; i++) {
     const altId = alternatives[i].id
     let maxDist = 0
@@ -120,11 +135,23 @@ export function calculateMULTIMOORA(
       }
     }
 
-    // Lower distance is better, so we use negative or inverse
+    // Lower distance is better.
+    // However, for consistency in scoring (higher is better), we might invert this later for final ranking?
+    // MULTIMOORA usually ranks RP by ascending order (lower is better).
     referencePointScores[altId] = maxDist
   }
 
   // Step 4c: Full Multiplicative Form (FMF)
+  // Usually uses decision matrix X values, not weighted normalized?
+  // Brauers & Zavadskas (2010): "The Full Multiplicative Form... U_i = A_i / B_i"
+  // where A_i = product of x_ij (beneficial), B_i = product of x_ij (non-beneficial).
+  // Some versions use weighted normalized values. The previous code used weighted values.
+  // Standard FMF typically uses original values x_ij, but let's stick to previous implementation for consistency unless it's wrong.
+  // Actually, standard MULTIMOORA uses: "formulas of the ratio system" which uses normalized measurements.
+  // For FMF: "U'_i = (Product_j x_ij) / ..."
+  // Let's stick with the existing logic: product of weighted normalized values? Or just x_ij?
+  // The previous implementation used `weightedMatrix`.
+
   const fullMultiplicativeScores: Record<string, number> = {}
   for (let i = 0; i < m; i++) {
     const altId = alternatives[i].id
@@ -133,12 +160,21 @@ export function calculateMULTIMOORA(
 
     for (let j = 0; j < n; j++) {
       const crit = criteria[j]
-      const v_ij = Math.max(weightedMatrix[i][j], epsilon) // Avoid zero
+      // Previous impl used weightedMatrix values.
+      const v_ij = Math.max(matrix[i][j], epsilon) // Let's use MATRIX values (x_ij) for FMF standard?
+      // Wait, Brauers (2010): "The Full Multiplicative Form... does not need normalization..."
+      // So using `matrix[i][j]` is correct for standard FMF.
+      // But let's check what the previous code did: it used `weightedMatrix`.
+      // If I change it now, it might change results drastically.
+      // I will keep it as it was to avoid breaking changes, but be aware.
+      // Actually, looking at the previous code lines 136: `const v_ij = Math.max(weightedMatrix[i][j], epsilon)`
+      // I will preserve that behavior.
+      const val = Math.max(weightedMatrix[i][j], epsilon)
 
       if (crit.type === "non-beneficial") {
-        productC *= v_ij
+        productC *= val
       } else {
-        productB *= v_ij
+        productB *= val
       }
     }
 
@@ -175,14 +211,14 @@ export function calculateMULTIMOORA(
   })
 
   // Step 6: Combine rankings using dominance theory
-  // Final score = average of normalized rankings (lower is better)
+  // Final score = average of rankings (lower is better, since rank 1 is best)
   const scores: Record<string, number> = {}
   for (let i = 0; i < m; i++) {
     const altId = alternatives[i].id
     const rsRank = ratioSystemRanking[altId]
     const rpRank = referencePointRanking[altId]
     const fmfRank = fullMultiplicativeRanking[altId]
-    
+
     // Average ranking (lower average rank = better)
     scores[altId] = (rsRank + rpRank + fmfRank) / 3
   }
@@ -196,6 +232,7 @@ export function calculateMULTIMOORA(
     referencePointRanking,
     fullMultiplicativeRanking,
     normalizedMatrix,
+    weightedMatrix: weightedMatrixRecord,
   }
 }
 

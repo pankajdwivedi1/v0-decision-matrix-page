@@ -4,6 +4,7 @@ interface SWIResult {
   scores: Record<string, number>
   normalizedMatrix: Record<string, Record<string, number>>
   informationMatrix: Record<string, Record<string, number>>
+  weightedInformationMatrix: Record<string, Record<string, number>>
 }
 
 /**
@@ -70,15 +71,20 @@ export function calculateSWI(
 
   // Step 3: Apply weights and sum (SWI_i)
   const scores: Record<string, number> = {}
+  const weightedInformationMatrix: Record<string, Record<string, number>> = {}
 
   alternatives.forEach(a => {
     let swi = 0
+    weightedInformationMatrix[a.id] = {}
+
     criteria.forEach(c => {
       const info = informationMatrix[a.id][c.id]
-      swi += (c.weight || 0) * info
+      const weightedInfo = (c.weight || 0) * info
+      weightedInformationMatrix[a.id][c.id] = weightedInfo
+      swi += weightedInfo
     })
     scores[a.id] = swi
   })
 
-  return { scores, normalizedMatrix, informationMatrix }
+  return { scores, normalizedMatrix, informationMatrix, weightedInformationMatrix }
 }

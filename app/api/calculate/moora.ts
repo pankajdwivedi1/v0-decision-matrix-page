@@ -3,6 +3,7 @@ import type { Alternative, Criterion } from "./types"
 interface MOORAResult {
   scores: Record<string, number>
   normalizedMatrix: Record<string, Record<string, number>>
+  weightedMatrix: Record<string, Record<string, number>>
   beneficialSum: Record<string, number>
   nonBeneficialSum: Record<string, number>
 }
@@ -51,7 +52,8 @@ export function calculateMOORA(
     }
   }
 
-  // Step 3–4: Compute weighted sums
+  // Step 3–4: Compute weighted sums & Weighted Matrix
+  const weightedMatrix: Record<string, Record<string, number>> = {}
   const beneficialSum: Record<string, number> = {}
   const nonBeneficialSum: Record<string, number> = {}
   const scores: Record<string, number> = {}
@@ -60,11 +62,14 @@ export function calculateMOORA(
     const altId = alternatives[i].id
     let sumB = 0
     let sumC = 0
+    weightedMatrix[altId] = {}
 
     for (let j = 0; j < n; j++) {
       const crit = criteria[j]
       const r_ij = normalizedMatrix[altId][crit.id]
       const weighted = r_ij * crit.weight
+
+      weightedMatrix[altId][crit.id] = weighted
 
       if (crit.type === "non-beneficial") {
         sumC += weighted
@@ -81,6 +86,7 @@ export function calculateMOORA(
   return {
     scores,
     normalizedMatrix,
+    weightedMatrix,
     beneficialSum,
     nonBeneficialSum,
   }

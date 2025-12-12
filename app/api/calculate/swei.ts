@@ -4,6 +4,7 @@ interface SWEIResult {
   scores: Record<string, number>
   normalizedMatrix: Record<string, Record<string, number>>
   informationMatrix: Record<string, Record<string, number>>
+  weightedExponentialMatrix: Record<string, Record<string, number>>
 }
 
 /**
@@ -72,13 +73,16 @@ export function calculateSWEI(alternatives: Alternative[], criteria: Criterion[]
 
   // Step 3 & 4: Apply weighted exponential and sum
   const scores: Record<string, number> = {}
+  const weightedExponentialMatrix: Record<string, Record<string, number>> = {}
 
   alternatives.forEach((alt) => {
     let totalScore = 0
+    weightedExponentialMatrix[alt.id] = {}
 
     criteria.forEach((crit) => {
       const infoValue = informationMatrix[alt.id][crit.id]
       const weightedTerm = Math.pow(infoValue, crit.weight)
+      weightedExponentialMatrix[alt.id][crit.id] = weightedTerm
       totalScore += weightedTerm
     })
 
@@ -89,5 +93,6 @@ export function calculateSWEI(alternatives: Alternative[], criteria: Criterion[]
     scores,
     normalizedMatrix,
     informationMatrix,
+    weightedExponentialMatrix,
   }
 }

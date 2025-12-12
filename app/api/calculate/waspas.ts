@@ -16,18 +16,47 @@ import type { Alternative, Criterion } from "./types"
  *
  * Higher Q_i indicates a better alternative.
  */
+interface WASPASResult {
+  scores: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  wsmMatrix: Record<string, Record<string, number>>
+  wpmMatrix: Record<string, Record<string, number>>
+  wsmScores: Record<string, number>
+  wpmScores: Record<string, number>
+}
+
 export function calculateWASPAS(
   alternatives: Alternative[],
   criteria: Criterion[],
   lambda = 0.5
-): Record<string, number> {
+): WASPASResult {
   const scores: Record<string, number> = {}
   const epsilon = 1e-12
 
   const m = alternatives.length
   const n = criteria.length
 
-  if (m === 0 || n === 0) return scores
+  // Initialize result structures
+  const normalizedMatrix: Record<string, Record<string, number>> = {}
+  const wsmMatrix: Record<string, Record<string, number>> = {}
+  const wpmMatrix: Record<string, Record<string, number>> = {}
+  const wsmScores: Record<string, number> = {}
+  const wpmScores: Record<string, number> = {}
+
+  alternatives.forEach(a => {
+    normalizedMatrix[a.id] = {}
+    wsmMatrix[a.id] = {}
+    wpmMatrix[a.id] = {}
+  })
+
+  if (m === 0 || n === 0) return {
+    scores,
+    normalizedMatrix,
+    wsmMatrix,
+    wpmMatrix,
+    wsmScores: {},
+    wpmScores: {}
+  }
 
   // Build decision matrix: x_ij
   const matrix: number[][] = alternatives.map((alt) =>
@@ -80,17 +109,34 @@ export function calculateWASPAS(
       // Guard against pathological values
       if (!isFinite(q_ij) || q_ij < 0) q_ij = 0
 
+      normalizedMatrix[alt.id][crit.id] = q_ij
+
       // Step 3: WSM and WPM components
-      wsm += crit.weight * q_ij
+      const wsmTerm = crit.weight * q_ij
+      wsm += wsmTerm
+      wsmMatrix[alt.id][crit.id] = wsmTerm
+
       // Avoid multiplying by 0 in log-space style if all q_ij are zero
       const base = Math.max(q_ij, epsilon)
-      wpm *= Math.pow(base, crit.weight)
+      const wpmTerm = Math.pow(base, crit.weight)
+      wpm *= wpmTerm
+      wpmMatrix[alt.id][crit.id] = wpmTerm
     }
+
+    wsmScores[alt.id] = wsm
+    wpmScores[alt.id] = wpm
 
     // Step 4: aggregate with λ (default 0.5)
     const Q_i = lambda * wsm + (1 - lambda) * wpm
     scores[alt.id] = Q_i
   }
 
-  return scores
+  return {
+    scores,
+    normalizedMatrix,
+    wsmMatrix,
+    wpmMatrix,
+    wsmScores,
+    wpmScores
+  }
 }

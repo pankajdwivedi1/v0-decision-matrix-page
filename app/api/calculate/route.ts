@@ -103,7 +103,14 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        results = calculateSWEI(alternatives, criteria).scores;
+        const sweiData = calculateSWEI(alternatives, criteria);
+        results = sweiData.scores;
+        // Store intermediate matrices for display
+        (request as any).extraMetrics = {
+          sweiNormalizedMatrix: sweiData.normalizedMatrix,
+          sweiInformationMatrix: sweiData.informationMatrix,
+          sweiWeightedExponentialMatrix: sweiData.weightedExponentialMatrix
+        };
         break;
       }
       case "swi": {
@@ -118,33 +125,116 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        results = calculateSWI(alternatives, criteria).scores;
+        const swiData = calculateSWI(alternatives, criteria);
+        results = swiData.scores;
+        // Store intermediate matrices for display
+        (request as any).extraMetrics = {
+          swiNormalizedMatrix: swiData.normalizedMatrix,
+          swiInformationMatrix: swiData.informationMatrix,
+          swiWeightedInformationMatrix: swiData.weightedInformationMatrix
+        };
         break;
       }
-      case "topsis":
-        results = calculateTOPSIS(alternatives, criteria);
+      case "topsis": {
+        const topsisData = calculateTOPSIS(alternatives, criteria);
+        results = topsisData.scores;
+        (request as any).extraMetrics = {
+          topsisNormalizedMatrix: topsisData.normalizedMatrix,
+          topsisWeightedMatrix: topsisData.weightedMatrix,
+          topsisIdealBest: topsisData.idealBest,
+          topsisIdealWorst: topsisData.idealWorst,
+          topsisDistances: topsisData.distances
+        };
         break;
-      case "vikor":
-        results = calculateVIKOR(alternatives, criteria);
+      }
+      case "vikor": {
+        const vikorData = calculateVIKOR(alternatives, criteria);
+        results = vikorData.scores;
+        (request as any).extraMetrics = {
+          vikorNormalizedMatrix: vikorData.normalizedMatrix,
+          vikorSValues: vikorData.sValues,
+          vikorRValues: vikorData.rValues,
+          vikorQValues: vikorData.qValues,
+          vikorFBest: vikorData.fBest,
+          vikorFWorst: vikorData.fWorst
+        };
         break;
-      case "waspas":
-        results = calculateWASPAS(alternatives, criteria);
+      }
+      case "waspas": {
+        const waspasData = calculateWASPAS(alternatives, criteria);
+        results = waspasData.scores;
+        (request as any).extraMetrics = {
+          waspasNormalizedMatrix: waspasData.normalizedMatrix,
+          waspasWsmMatrix: waspasData.wsmMatrix,
+          waspasWpmMatrix: waspasData.wpmMatrix,
+          waspasWsmScores: waspasData.wsmScores,
+          waspasWpmScores: waspasData.wpmScores
+        };
         break;
-      case "edas":
-        results = calculateEDAS(alternatives, criteria);
+      }
+      case "edas": {
+        const edasData = calculateEDAS(alternatives, criteria);
+        results = edasData.scores;
+        (request as any).extraMetrics = {
+          edasAvVector: edasData.avVector,
+          edasPdaMatrix: edasData.pdaMatrix,
+          edasNdaMatrix: edasData.ndaMatrix,
+          edasSpValues: edasData.spValues,
+          edasSnValues: edasData.snValues,
+          edasNspValues: edasData.nspValues,
+          edasNsnValues: edasData.nsnValues,
+          edasAsValues: edasData.asValues
+        };
         break;
-      case "moora":
-        results = calculateMOORA(alternatives, criteria).scores;
+      }
+      case "moora": {
+        const mooraData = calculateMOORA(alternatives, criteria);
+        results = mooraData.scores;
+        (request as any).extraMetrics = {
+          mooraNormalizedMatrix: mooraData.normalizedMatrix,
+          mooraWeightedMatrix: mooraData.weightedMatrix,
+          mooraBeneficialSum: mooraData.beneficialSum,
+          mooraNonBeneficialSum: mooraData.nonBeneficialSum
+        };
         break;
-      case "multimoora":
-        results = calculateMULTIMOORA(alternatives, criteria).scores;
+      }
+      case "multimoora": {
+        const multimooraData = calculateMULTIMOORA(alternatives, criteria);
+        results = multimooraData.scores;
+        (request as any).extraMetrics = {
+          multimooraNormalizedMatrix: multimooraData.normalizedMatrix,
+          multimooraWeightedMatrix: multimooraData.weightedMatrix,
+          multimooraRatioSystemScores: multimooraData.ratioSystemScores,
+          multimooraReferencePointScores: multimooraData.referencePointScores,
+          multimooraFullMultiplicativeScores: multimooraData.fullMultiplicativeScores,
+          multimooraRatioSystemRanking: multimooraData.ratioSystemRanking,
+          multimooraReferencePointRanking: multimooraData.referencePointRanking,
+          multimooraFullMultiplicativeRanking: multimooraData.fullMultiplicativeRanking
+        };
         break;
-      case "todim":
-        results = calculateTODIM(alternatives, criteria).scores;
+      }
+      case "todim": {
+        const todimData = calculateTODIM(alternatives, criteria);
+        results = todimData.scores;
+        (request as any).extraMetrics = {
+          todimNormalizedMatrix: todimData.normalizedMatrix,
+          todimRelativeWeights: todimData.relativeWeights,
+          todimDominanceMatrix: todimData.dominanceMatrix
+        };
         break;
-      case "codas":
-        results = calculateCODAS(alternatives, criteria).scores;
+      }
+      case "codas": {
+        const codasData = calculateCODAS(alternatives, criteria);
+        results = codasData.scores;
+        (request as any).extraMetrics = {
+          codasNormalizedMatrix: codasData.normalizedMatrix,
+          codasNegativeIdealSolution: codasData.negativeIdealSolution,
+          codasEuclideanDistances: codasData.euclideanDistances,
+          codasTaxicabDistances: codasData.taxicabDistances,
+          codasRelativeAssessmentScores: codasData.relativeAssessmentScores
+        };
         break;
+      }
       case "moosra":
         results = calculateMOOSRA(alternatives, criteria).scores;
         break;
@@ -190,6 +280,11 @@ export async function POST(request: NextRequest) {
     }
 
     const response = buildResponse(method, results, alternatives);
+
+    // Attach extra metrics if any
+    if ((request as any).extraMetrics) {
+      response.metrics = (request as any).extraMetrics;
+    }
 
     console.log("=== API Response ===");
     console.log("Method:", method);
