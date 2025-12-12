@@ -1826,6 +1826,12 @@ export default function MCDMCalculator() {
               ...c,
               weight: weightsToUse[c.id] !== undefined ? weightsToUse[c.id] : (1 / criteria.length)
             }))
+          } else if (wm === "lopcow") {
+            const res = await applyWeightMethodForComparison("lopcow", alternatives, criteria)
+            weightedCriteria = res.criteria
+          } else if (wm === "dematel") {
+            const res = await applyWeightMethodForComparison("dematel", alternatives, criteria)
+            weightedCriteria = res.criteria
           }
 
           // Special handling for "Custom" if I add "custom" to WeightMethod type or handle separately
@@ -2375,6 +2381,115 @@ export default function MCDMCalculator() {
                             handleWeightSensitivityAnalysis()
                           }}
                         />
+                      </DialogContent>
+                    </Dialog>
+
+                    {/* --- SWARA Dialog (Weight Methods Tab) --- */}
+                    <Dialog open={isSwaraDialogOpen} onOpenChange={setIsSwaraDialogOpen}>
+                      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+                        <DialogHeader>
+                          <DialogTitle>SWARA Weight Calculator</DialogTitle>
+                          <DialogDescription className="text-xs">
+                            Enter comparative importance coefficients (s<sub>j</sub>) for each criterion.
+                            The first criterion is most important (s<sub>1</sub> = 0).
+                            Higher values indicate larger importance differences.
+                          </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 mt-4">
+                          <div className="border border-gray-200 rounded-lg overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-gray-50">
+                                  <TableHead className="text-xs font-semibold">Rank</TableHead>
+                                  <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                                  <TableHead className="text-xs font-semibold text-center">
+                                    Coefficient (s<sub>j</sub>)
+                                  </TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {criteria.map((crit, index) => (
+                                  <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                    <TableCell className="py-3 px-4 font-medium text-black text-xs">{index + 1}</TableCell>
+                                    <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                                    <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                      {index === 0 ? (
+                                        <span className="text-xs text-gray-500">0 (most important)</span>
+                                      ) : (
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          value={swaraCoefficients[crit.id] || ""}
+                                          onChange={(e) => setSwaraCoefficients({
+                                            ...swaraCoefficients,
+                                            [crit.id]: e.target.value,
+                                          })}
+                                          className="w-24 h-7 text-xs text-center"
+                                          placeholder="0.00"
+                                        />
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p className="text-xs text-blue-900">
+                              <strong>Note:</strong> Criteria are ordered by importance (top = most important).
+                              For each criterion j, enter how much less important it is compared to the previous criterion (j-1).
+                            </p>
+                          </div>
+                        </div>
+
+                        <DialogFooter className="mt-4">
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsSwaraDialogOpen(false)}
+                            className="text-xs"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={async () => {
+                              try {
+                                const coeffs: Record<string, number> = {}
+                                criteria.forEach((crit, index) => {
+                                  if (index === 0) {
+                                    coeffs[crit.id] = 0
+                                  } else {
+                                    coeffs[crit.id] = parseFloat(swaraCoefficients[crit.id]) || 0
+                                  }
+                                })
+
+                                const response = await fetch("/api/calculate/swara-weights", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ criteria, coefficients: coeffs }),
+                                })
+
+                                if (!response.ok) throw new Error("Failed to calculate SWARA weights")
+
+                                const data: SWARAResult = await response.json()
+                                setSwaraResult(data)
+                                setSwaraCalculatedWeights(data.weights)
+                                setIsSwaraDialogOpen(false)
+
+                                // Trigger analysis update
+                                handleWeightSensitivityAnalysis(undefined, data.weights)
+                              } catch (error) {
+                                console.error("SWARA calculation error:", error)
+                                alert("Error calculating SWARA weights")
+                              }
+                            }}
+                            className="bg-black text-white hover:bg-gray-800 text-xs"
+                          >
+                            Calculate Weights
+                          </Button>
+                        </DialogFooter>
                       </DialogContent>
                     </Dialog>
 

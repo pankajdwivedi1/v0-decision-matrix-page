@@ -96,7 +96,7 @@ export function calculateDematel(
     if (m === 0 || n === 0) {
         return {
             weights: {},
-            normalizedDecisionMatrix: {},
+            normalizedMatrix: {},
             directRelationMatrix: {},
             totalRelationMatrix: {},
             dValues: {},
