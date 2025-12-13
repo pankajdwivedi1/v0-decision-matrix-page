@@ -2090,9 +2090,16 @@ export default function MCDMCalculator() {
                           <TableHead className="text-xs text-black font-semibold w-24">Alternative</TableHead>
                           {criteria.map((crit) => (
                             <TableHead key={crit.id} className="text-xs text-black font-semibold text-center min-w-20">
-                              <div>{crit.name}</div>
-                              <div className="text-[10px] text-gray-500 font-normal">
-                                {crit.type === "beneficial" ? "Max" : "Min"}
+                              <div className="flex flex-col items-center">
+                                <div className="flex items-center gap-1">
+                                  <div>{crit.name}</div>
+                                  <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
+                                    {crit.type === "beneficial" ? "▲" : "▼"}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-gray-500 font-normal">
+                                  {crit.type === "beneficial" ? "Max" : "Min"}
+                                </div>
                               </div>
                             </TableHead>
                           ))}
@@ -2208,9 +2215,16 @@ export default function MCDMCalculator() {
                           <TableHead className="text-xs text-black font-semibold w-24">Alternative</TableHead>
                           {criteria.map((crit) => (
                             <TableHead key={crit.id} className="text-xs text-black font-semibold text-center min-w-20">
-                              <div>{crit.name}</div>
-                              <div className="text-[10px] text-gray-500 font-normal">
-                                {crit.type === "beneficial" ? "Max" : "Min"}
+                              <div className="flex flex-col items-center">
+                                <div className="flex items-center gap-1">
+                                  <div>{crit.name}</div>
+                                  <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
+                                    {crit.type === "beneficial" ? "▲" : "▼"}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-gray-500 font-normal">
+                                  {crit.type === "beneficial" ? "Max" : "Min"}
+                                </div>
                               </div>
                             </TableHead>
                           ))}
@@ -2567,8 +2581,13 @@ export default function MCDMCalculator() {
                             <SelectItem value="area">Area Chart</SelectItem>
                             <SelectItem value="radar">Radar Chart</SelectItem>
                             <SelectItem value="scatter">Scatter Plot</SelectItem>
-                            <SelectItem value="composed">Composed</SelectItem>
+                            <SelectItem value="boxPlot">Box Plot</SelectItem>
                             <SelectItem value="radial">Radial Bar</SelectItem>
+                            <SelectItem value="parallel">Parallel Coordinates</SelectItem>
+                            <SelectItem value="violin">Violin Plot</SelectItem>
+                            <SelectItem value="ridgeline">Ridgeline (Density)</SelectItem>
+                            <SelectItem value="ecdf">Empirical CDF</SelectItem>
+                            <SelectItem value="kde">KDE Density</SelectItem>
                           </SelectContent>
                         </Select>
                         <Button onClick={() => downloadChartAsJpeg(weightChartRef, 'weight-analysis')} variant="outline" size="sm" className="h-7 text-xs"><Download className="w-3 h-3 mr-1" /> JPG</Button>
@@ -2639,20 +2658,100 @@ export default function MCDMCalculator() {
                                 <Area key={res.weightLabel} type="monotone" dataKey={res.weightLabel} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={res.weightLabel} />
                               ))}
                             </AreaChart>
-                          ) : weightChartType === 'composed' ? (
-                            <ComposedChart data={sensitivityCriteriaWeights}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                              <YAxis label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
-                              <Tooltip />
-                              <Legend wrapperStyle={{ fontSize: "10px" }} />
-                              {sensitivityWeightComparisonResults.map((res, i) => (
-                                <Fragment key={i}>
-                                  <Bar dataKey={res.weightLabel} fill={CHART_COLORS[i % CHART_COLORS.length]} name={res.weightLabel} barSize={20} />
-                                  <Line type="monotone" dataKey={res.weightLabel} stroke={CHART_COLORS[(i + 1) % CHART_COLORS.length]} name={res.weightLabel} strokeWidth={2} />
-                                </Fragment>
-                              ))}
-                            </ComposedChart>
+                          ) : weightChartType === 'boxPlot' ? (
+                            (() => {
+                              const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
+                              const data = sensitivityCriteriaWeights.map(row => {
+                                const values = methods.map(m => (row[m] !== undefined ? Number(row[m]) : 0))
+                                const sorted = [...values].sort((a,b)=>a-b)
+                                const q = (arr:number[], p:number) => {
+                                  if (arr.length === 0) return 0
+                                  const pos = (arr.length - 1) * p
+                                  const base = Math.floor(pos)
+                                  const rest = pos - base
+                                  if (arr[base+1] !== undefined) return arr[base] + rest * (arr[base+1] - arr[base])
+                                  return arr[base]
+                                }
+                                const min = sorted[0] ?? 0
+                                const max = sorted[sorted.length-1] ?? 0
+                                const q1 = q(sorted, 0.25)
+                                const q2 = q(sorted, 0.5)
+                                const q3 = q(sorted, 0.75)
+                                return { name: row.name, values, min, q1, q2, q3, max }
+                              })
+
+                              const width = 800
+                              const height = 420
+                              const padding = { left: 60, right: 20, top: 20, bottom: 60 }
+                              const innerW = width - padding.left - padding.right
+                              const innerH = height - padding.top - padding.bottom
+
+                              // compute global scale based on min/max
+                              const allVals = data.flatMap(d=>d.values)
+                              const gMin = Math.min(...allVals, 0)
+                              const gMax = Math.max(...allVals, 1)
+                              const yScale = (v:number) => padding.top + innerH - ((v - gMin) / (gMax - gMin || 1)) * innerH
+
+                              const boxWidth = Math.min(48, innerW / (data.length * 1.5))
+
+                              return (
+                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+                                  {/* y axis grid */}
+                                  {Array.from({length:5}).map((_,i)=>{
+                                    const y = padding.top + (i/4)*innerH
+                                    return <line key={i} x1={padding.left} x2={width-padding.right} y1={y} y2={y} stroke="#eef2ff" />
+                                  })}
+
+                                  {/* boxes with improved styling, tooltips and outlier markers */}
+                                  {data.map((d, i) => {
+                                    const cx = padding.left + (i + 0.5) * (innerW / data.length)
+                                    const x0 = cx - boxWidth/2
+                                    const x1 = cx + boxWidth/2
+                                    const iqr = d.q3 - d.q1
+                                    const lowerFence = d.q1 - 1.5 * iqr
+                                    const upperFence = d.q3 + 1.5 * iqr
+                                    const outliers = d.values.filter(v => v < lowerFence || v > upperFence)
+                                    // determine whisker positions excluding outliers
+                                    const nonOutlierVals = d.values.filter(v => v >= lowerFence && v <= upperFence).sort((a,b)=>a-b)
+                                    const whiskerMin = nonOutlierVals.length ? nonOutlierVals[0] : d.min
+                                    const whiskerMax = nonOutlierVals.length ? nonOutlierVals[nonOutlierVals.length-1] : d.max
+                                    const tooltipText = `Q1: ${d.q1.toFixed(4)}\nMedian: ${d.q2.toFixed(4)}\nQ3: ${d.q3.toFixed(4)}\nMin: ${d.min.toFixed(4)}\nMax: ${d.max.toFixed(4)}\nOutliers: ${outliers.length}`
+
+                                    return (
+                                      <g key={d.name}>
+                                        <title>{tooltipText}</title>
+                                        {/* whiskers */}
+                                        <line x1={cx} x2={cx} y1={yScale(whiskerMin)} y2={yScale(d.q1)} stroke="#334155" strokeWidth={1.2} strokeLinecap="round" />
+                                        <line x1={cx} x2={cx} y1={yScale(d.q3)} y2={yScale(whiskerMax)} stroke="#334155" strokeWidth={1.2} strokeLinecap="round" />
+                                        {/* whisker caps */}
+                                        <line x1={x0} x2={x1} y1={yScale(whiskerMin)} y2={yScale(whiskerMin)} stroke="#334155" strokeWidth={1.2} />
+                                        <line x1={x0} x2={x1} y1={yScale(whiskerMax)} y2={yScale(whiskerMax)} stroke="#334155" strokeWidth={1.2} />
+                                        {/* box */}
+                                        <rect x={x0} y={yScale(d.q3)} width={boxWidth} height={Math.max(1, yScale(d.q1)-yScale(d.q3))} fill="#eef2ff" stroke="#1e3a8a" strokeWidth={1.4} rx={3} ry={3} />
+                                        {/* median */}
+                                        <line x1={x0} x2={x1} y1={yScale(d.q2)} y2={yScale(d.q2)} stroke="#06203a" strokeWidth={2} />
+
+                                        {/* outlier points */}
+                                        {outliers.map((ov, oi) => (
+                                          <circle key={oi} cx={cx + (oi % 2 === 0 ? -6 : 6)} cy={yScale(ov)} r={3} fill="#ef4444" stroke="#7f1d1d" strokeWidth={0.6}>
+                                            <title>{`Outlier: ${ov.toFixed(4)}`}</title>
+                                          </circle>
+                                        ))}
+
+                                        {/* label */}
+                                        <text x={cx} y={padding.top + innerH + 18} fontSize={12} fontFamily="Inter, ui-sans-serif, system-ui" textAnchor="middle" fill="#0f172a">{d.name}</text>
+                                      </g>
+                                    )
+                                  })}
+
+                                  {/* legend */}
+                                  <g transform={`translate(${width - padding.right - 140}, ${padding.top})`}>
+                                    <rect x={0} y={0} width={12} height={12} fill="#c7d2fe" stroke="#4338ca" />
+                                    <text x={18} y={10} fontSize={11} fill="#111827">Weights distribution</text>
+                                  </g>
+                                </svg>
+                              )
+                            })()
                           ) : weightChartType === 'scatter' ? (
                             <ScatterChart>
                               <CartesianGrid strokeDasharray="3 3" />
@@ -2664,6 +2763,222 @@ export default function MCDMCalculator() {
                                 <Scatter key={res.weightLabel} name={res.weightLabel} data={sensitivityCriteriaWeights.map(d => ({ name: d.name, weight: d[res.weightLabel] }))} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                               ))}
                             </ScatterChart>
+                          ) : weightChartType === 'parallel' ? (
+                            (() => {
+                              const criteriaNames = sensitivityCriteriaWeights.map(d => d.name)
+                              const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
+                              const series = methods.map((m) => ({
+                                name: m,
+                                values: criteriaNames.map(cn => {
+                                  const row = sensitivityCriteriaWeights.find(r => r.name === cn)
+                                  return row && row[m] !== undefined ? Number(row[m]) : 0
+                                })
+                              }))
+
+                              const width = 800
+                              const height = 420
+                              const padding = { left: 50, right: 20, top: 20, bottom: 40 }
+                              const innerW = width - padding.left - padding.right
+                              const innerH = height - padding.top - padding.bottom
+
+                              const xScale = (i: number) => padding.left + (i / Math.max(1, criteriaNames.length - 1)) * innerW
+                              const yScale = (v: number) => padding.top + innerH - v * innerH
+
+                              return (
+                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+                                  {criteriaNames.map((cn, i) => (
+                                    <g key={cn} transform={`translate(${xScale(i)},0)`}>
+                                      <line x1={0} x2={0} y1={padding.top} y2={height - padding.bottom} stroke="#e5e7eb" />
+                                      <text x={0} y={height - padding.bottom + 14} fontSize={11} textAnchor="middle" fill="#111827">{cn}</text>
+                                    </g>
+                                  ))}
+
+                                  {series.map((s, si) => (
+                                    <path key={s.name}
+                                      d={s.values.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(v)}`).join(' ')}
+                                      fill="none"
+                                      stroke={CHART_COLORS[si % CHART_COLORS.length]}
+                                      strokeWidth={1.6}
+                                      opacity={0.85}
+                                    />
+                                  ))}
+
+                                  {series.map((s, si) => (
+                                    <g key={s.name} transform={`translate(${width - padding.right - 120}, ${padding.top + si * 18})`}>
+                                      <rect width={10} height={10} fill={CHART_COLORS[si % CHART_COLORS.length]} />
+                                      <text x={14} y={9} fontSize={11} fill="#111827">{s.name}</text>
+                                    </g>
+                                  ))}
+                                </svg>
+                              )
+                            })()
+                          ) : weightChartType === 'violin' ? (
+                            (() => {
+                              const criteriaNames = sensitivityCriteriaWeights.map(d => d.name)
+                              const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
+                              const width = 800
+                              const height = 420
+                              const padding = { left: 60, right: 20, top: 20, bottom: 60 }
+                              const innerW = width - padding.left - padding.right
+                              const innerH = height - padding.top - padding.bottom
+
+                              const gaussian = (u: number) => Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI)
+                              const kde = (values: number[], bw = 0.05, samples = 40) => {
+                                const xs = Array.from({ length: samples }, (_, i) => i / (samples - 1))
+                                const dens = xs.map(x => {
+                                  const s = values.reduce((acc, v) => acc + gaussian((x - v) / bw), 0)
+                                  return s / (values.length * bw)
+                                })
+                                const max = Math.max(...dens) || 1
+                                return xs.map((x, i) => ({ x, y: dens[i] / max }))
+                              }
+
+                              return (
+                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+                                  {criteriaNames.map((cn, i) => {
+                                    const weights = methods.map(m => {
+                                      const row = sensitivityCriteriaWeights.find(r => r.name === cn)
+                                      return row && row[m] !== undefined ? Number(row[m]) : 0
+                                    })
+                                    const dens = kde(weights, 0.06, 60)
+                                    const xCenter = padding.left + (i / Math.max(1, criteriaNames.length - 1)) * innerW
+                                    const maxWidth = Math.min(60, innerW / (criteriaNames.length * 0.9))
+
+                                    const pathD = dens.map((pt, idx) => {
+                                      const x = xCenter + pt.y * maxWidth
+                                      const y = padding.top + (1 - pt.x) * innerH
+                                      return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`
+                                    }).join(' ') + ' ' + dens.slice().reverse().map((pt, idx) => {
+                                      const x = xCenter - pt.y * maxWidth
+                                      const y = padding.top + (1 - pt.x) * innerH
+                                      return `L ${x} ${y}`
+                                    }).join(' ') + ' Z'
+
+                                    return (
+                                      <g key={cn}>
+                                        <path d={pathD} fill="#eef2ff" stroke="#4338ca" opacity={0.9} />
+                                        <line x1={xCenter - maxWidth} x2={xCenter + maxWidth} y1={padding.top + innerH + 6} y2={padding.top + innerH + 6} stroke="#111827" />
+                                        <text x={xCenter} y={padding.top + innerH + 22} fontSize={11} textAnchor="middle" fill="#111827">{cn}</text>
+                                      </g>
+                                    )
+                                  })}
+
+                                  <g transform={`translate(${width - 150}, ${padding.top})`}>
+                                    <text x={0} y={0} fontSize={12} fontWeight={600} fill="#111827">Methods</text>
+                                    {methods.map((m, mi) => (
+                                      <g key={m} transform={`translate(0, ${16 + mi * 16})`}>
+                                        <rect width={10} height={10} fill={CHART_COLORS[mi % CHART_COLORS.length]} />
+                                        <text x={14} y={9} fontSize={11} fill="#111827">{m}</text>
+                                      </g>
+                                    ))}
+                                  </g>
+                                </svg>
+                              )
+                            })()
+                          ) : weightChartType === 'ridgeline' ? (
+                            (() => {
+                              const criteriaNames = sensitivityCriteriaWeights.map(d => d.name)
+                              const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
+                              const width = 800
+                              const height = 420
+                              const padding = { left: 80, right: 20, top: 30, bottom: 40 }
+                              const innerW = width - padding.left - padding.right
+
+                              const gaussian = (u: number) => Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI)
+                              const kde = (values: number[], bw = 0.06, samples = 60) => {
+                                const xs = Array.from({ length: samples }, (_, i) => i / (samples - 1))
+                                const dens = xs.map(x => {
+                                  const s = values.reduce((acc, v) => acc + gaussian((x - v) / bw), 0)
+                                  return s / (values.length * bw)
+                                })
+                                const max = Math.max(...dens) || 1
+                                return xs.map((x, i) => ({ x, y: dens[i] / max }))
+                              }
+
+                              return (
+                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+                                  {criteriaNames.map((cn, idx) => {
+                                    const weights = methods.map(m => {
+                                      const row = sensitivityCriteriaWeights.find(r => r.name === cn)
+                                      return row && row[m] !== undefined ? Number(row[m]) : 0
+                                    })
+                                    const dens = kde(weights, 0.06, 60)
+                                    const offsetY = padding.top + idx * ( (height - padding.top - padding.bottom) / Math.max(1, criteriaNames.length) )
+                                    const scaleX = (x: number) => padding.left + x * (innerW)
+                                    const scaleY = (v: number) => offsetY + (1 - v) * 40
+
+                                    const pathTop = dens.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(pt.x)} ${scaleY(pt.y)}`).join(' ')
+                                    const pathBottom = dens.slice().reverse().map((pt, i) => `L ${scaleX(pt.x)} ${offsetY + 4}`).join(' ')
+
+                                    return (
+                                      <g key={cn}>
+                                        <path d={`${pathTop} ${pathBottom} Z`} fill="#eef2ff" stroke="#4338ca" opacity={0.9} />
+                                        <text x={10} y={offsetY + 6} fontSize={11} fill="#111827">{cn}</text>
+                                      </g>
+                                    )
+                                  })}
+                                </svg>
+                              )
+                            })()
+                          ) : weightChartType === 'ecdf' ? (
+                            (() => {
+                              const first = sensitivityCriteriaWeights[0]
+                              if (!first) return <div className="text-xs">No data</div>
+                              const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
+                              const vals = methods.map(m => first[m] !== undefined ? Number(first[m]) : 0).sort((a,b)=>a-b)
+                              const width = 700
+                              const height = 420
+                              const padding = { left: 60, right: 20, top: 20, bottom: 60 }
+                              const innerW = width - padding.left - padding.right
+                              const innerH = height - padding.top - padding.bottom
+                              const points = vals.map((v,i) => ({ x: padding.left + (i/(vals.length-1||1))*innerW, y: padding.top + innerH - ( (i+1)/vals.length )*innerH, v }))
+
+                              const lineD = points.map((p,i) => `${i===0?'M':'L'} ${p.x} ${p.y}`).join(' ')
+
+                              return (
+                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+                                  <line x1={padding.left} x2={padding.left} y1={padding.top} y2={padding.top+innerH} stroke="#e5e7eb" />
+                                  <line x1={padding.left} x2={padding.left+innerW} y1={padding.top+innerH} y2={padding.top+innerH} stroke="#e5e7eb" />
+                                  <path d={lineD} stroke="#2563eb" fill="none" strokeWidth={2} />
+                                  {points.map((p, i) => (<circle key={i} cx={p.x} cy={p.y} r={3} fill="#2563eb" />))}
+                                  <text x={padding.left+innerW/2} y={height - 20} textAnchor="middle" fontSize={12}>{first.name} - ECDF</text>
+                                </svg>
+                              )
+                            })()
+                          ) : weightChartType === 'kde' ? (
+                            (() => {
+                              const first = sensitivityCriteriaWeights[0]
+                              if (!first) return <div className="text-xs">No data</div>
+                              const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
+                              const vals = methods.map(m => first[m] !== undefined ? Number(first[m]) : 0)
+                              const gaussian = (u: number) => Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI)
+                              const kde = (values: number[], bw = 0.06, samples = 150) => {
+                                const xs = Array.from({ length: samples }, (_, i) => i / (samples - 1))
+                                const dens = xs.map(x => {
+                                  const s = values.reduce((acc, v) => acc + gaussian((x - v) / bw), 0)
+                                  return s / (values.length * bw)
+                                })
+                                const max = Math.max(...dens) || 1
+                                return xs.map((x, i) => ({ x, y: dens[i] / max }))
+                              }
+
+                              const dens = kde(vals, 0.06, 150)
+                              const width = 700
+                              const height = 420
+                              const padding = { left: 60, right: 20, top: 20, bottom: 60 }
+                              const innerW = width - padding.left - padding.right
+                              const innerH = height - padding.top - padding.bottom
+
+                              const pathD = dens.map((pt, i) => `${i===0?'M':'L'} ${padding.left + pt.x * innerW} ${padding.top + innerH - pt.y * (innerH * 0.8)}`).join(' ')
+
+                              return (
+                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+                                  <line x1={padding.left} x2={padding.left} y1={padding.top} y2={padding.top+innerH} stroke="#e5e7eb" />
+                                  <path d={pathD} stroke="#ef4444" fill="none" strokeWidth={2} />
+                                  <text x={padding.left+innerW/2} y={height - 20} textAnchor="middle" fontSize={12}>{first.name} - KDE</text>
+                                </svg>
+                              )
+                            })()
                           ) : (
                             <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" barSize={10} data={sensitivityCriteriaWeights}>
                               <RadialBar
@@ -2771,9 +3086,16 @@ export default function MCDMCalculator() {
                               <TableHead className="text-xs text-black font-semibold w-24">Alternative</TableHead>
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className="text-xs text-black font-semibold text-center min-w-20">
-                                  <div>{crit.name}</div>
-                                  <div className="text-[10px] text-gray-500 font-normal">
-                                    {crit.type === "beneficial" ? "Max" : "Min"}
+                                  <div className="flex flex-col items-center">
+                                    <div className="flex items-center gap-1">
+                                      <div>{crit.name}</div>
+                                      <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
+                                        {crit.type === "beneficial" ? "▲" : "▼"}
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] text-gray-500 font-normal">
+                                      {crit.type === "beneficial" ? "Max" : "Min"}
+                                    </div>
                                   </div>
                                 </TableHead>
                               ))}
@@ -2939,8 +3261,7 @@ export default function MCDMCalculator() {
                       // Set weight method to PIPRECIA
                       setComparisonWeightMethod("piprecia")
 
-                      // Automatically trigger comparison calculation
-                      setTimeout(() => handleComparisonCalculate(), 100)
+                      // Do not auto-trigger - let user click Calculate button
                     }}
                   />
                 </DialogContent>
@@ -2974,8 +3295,7 @@ export default function MCDMCalculator() {
                       // Set weight method to AHP
                       setComparisonWeightMethod("ahp")
 
-                      // Automatically trigger comparison calculation
-                      setTimeout(() => handleComparisonCalculate(), 100)
+                      // Do not auto-trigger - let user click Calculate button
                     }}
                   />
                 </DialogContent>
@@ -3091,8 +3411,7 @@ export default function MCDMCalculator() {
 
                           setComparisonWeightMethod("swara")
 
-                          // Automatically trigger comparison calculation
-                          setTimeout(() => handleComparisonCalculate(), 100)
+                          // Do not auto-trigger - user will click Calculate button manually
                         } catch (error) {
                           console.error("SWARA calculation error:", error)
                           alert("Error calculating SWARA weights")
@@ -3184,7 +3503,7 @@ export default function MCDMCalculator() {
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <Select value={comparisonChartType} onValueChange={setComparisonChartType}>
-                        <SelectTrigger className="w-28 sm:w-32 h-7 text-xs">
+                        <SelectTrigger className="w-28 sm:w-40 h-7 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -3197,6 +3516,8 @@ export default function MCDMCalculator() {
                           <SelectItem value="scatter">Scatter Plot</SelectItem>
                           <SelectItem value="composed">Diverging Bar Chart</SelectItem>
                           <SelectItem value="radar">Radar Chart</SelectItem>
+                          <SelectItem value="heatmap">Heatmap</SelectItem>
+                          <SelectItem value="boxPlot">Box Plot</SelectItem>
                         </SelectContent>
                       </Select>
                       <Button onClick={downloadComparisonChartAsJpeg} variant="outline" size="sm" className="h-7 text-xs">
@@ -3386,6 +3707,215 @@ export default function MCDMCalculator() {
                             </Scatter>
                           ))}
                         </ScatterChart>
+                      ) : comparisonChartType === "heatmap" ? (
+                        // Heatmap - shows all rank values with color intensity
+                        <div className="w-full h-full flex flex-col">
+                          <div className="flex-1 flex flex-col overflow-auto">
+                            <div className="flex text-xs font-semibold border-b">
+                              <div className="w-24 sm:w-32 p-2 border-r bg-gray-50">Method</div>
+                              <div className="flex flex-1">
+                                {comparisonChartAlternatives.map((alt) => (
+                                  <div key={alt} className="flex-1 p-2 border-r text-center bg-gray-50 truncate">
+                                    {alt}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            {comparisonChartData.map((row, idx) => (
+                              <div key={idx} className="flex border-b">
+                                <div className="w-24 sm:w-32 p-2 border-r text-xs font-medium bg-gray-50 truncate">
+                                  {row.method}
+                                </div>
+                                <div className="flex flex-1">
+                                  {comparisonChartAlternatives.map((alt, altIdx) => {
+                                    const value = row[alt]
+                                    const minVal = 1
+                                    const maxVal = Math.max(...comparisonChartData.flatMap((r) => comparisonChartAlternatives.map((a) => r[a])).filter((v) => v != null))
+                                    const normalized = (value - minVal) / (maxVal - minVal)
+                                    // Red for high rank (worse), green for low rank (better)
+                                    const hue = (1 - normalized) * 120 // 120 = green, 0 = red
+                                    const bgColor = `hsl(${hue}, 70%, 60%)`
+
+                                    return (
+                                      <div
+                                        key={alt}
+                                        className="flex-1 p-3 border-r flex items-center justify-center text-xs font-medium text-white"
+                                        style={{ backgroundColor: bgColor }}
+                                      >
+                                        {value}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-2 flex items-center gap-2 text-xs">
+                            <div className="flex items-center gap-1">
+                              <div className="w-4 h-4" style={{ backgroundColor: "hsl(120, 70%, 60%)" }}></div>
+                              <span>Better (Low Rank)</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className="w-4 h-4" style={{ backgroundColor: "hsl(0, 70%, 60%)" }}></div>
+                              <span>Worse (High Rank)</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : comparisonChartType === "boxPlot" ? (
+                        // Box Plot - compact, dynamic version matching other chart sizes
+                        <ResponsiveContainer width="100%" height="100%">
+                          <svg viewBox="0 0 800 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+                            {(() => {
+                              // Calculate box plot data
+                              const boxData = comparisonChartAlternatives.map((alt) => {
+                                const values = comparisonChartData.map((r) => r[alt]).filter((v) => v != null).sort((a, b) => a - b)
+                                if (values.length === 0) return null
+                                const q1 = values[Math.floor(values.length * 0.25)]
+                                const median = values[Math.floor(values.length * 0.5)]
+                                const q3 = values[Math.floor(values.length * 0.75)]
+                                const min = Math.min(...values)
+                                const max = Math.max(...values)
+                                const iqr = q3 - q1
+                                const whiskerLow = Math.max(min, q1 - 1.5 * iqr)
+                                const whiskerHigh = Math.min(max, q3 + 1.5 * iqr)
+                                return { alt, min, q1, median, q3, max, whiskerLow, whiskerHigh, n: values.length }
+                              }).filter((d): d is typeof d & {} => d !== null)
+
+                              // Calculate scales
+                              const allValues = boxData.flatMap(d => [d!.whiskerLow, d!.whiskerHigh])
+                              const minVal = Math.min(...allValues)
+                              const maxVal = Math.max(...allValues)
+                              const yRange = maxVal - minVal || 1
+                              const padding = { top: 30, right: 30, bottom: 50, left: 50 }
+                              const chartWidth = 800 - padding.left - padding.right
+                              const chartHeight = 400 - padding.top - padding.bottom
+                              const boxWidth = Math.max(15, (chartWidth / boxData.length) * 0.6)
+                              const spacing = chartWidth / boxData.length
+
+                              const getY = (v: number) => padding.top + chartHeight - ((v - minVal) / yRange) * chartHeight
+                              const getX = (idx: number) => padding.left + (idx + 0.5) * spacing
+
+                              return (
+                                <>
+                                  {/* Y-axis */}
+                                  <line x1={padding.left} y1={padding.top} x2={padding.left} y2={padding.top + chartHeight} stroke="#999" strokeWidth="2" />
+                                  {/* X-axis */}
+                                  <line x1={padding.left} y1={padding.top + chartHeight} x2={800 - padding.right} y2={padding.top + chartHeight} stroke="#999" strokeWidth="2" />
+                                  
+                                  {/* Y-axis labels */}
+                                  {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
+                                    const yVal = minVal + pct * yRange
+                                    const y = getY(yVal)
+                                    return (
+                                      <g key={`ylabel-${pct}`}>
+                                        <line x1={padding.left - 5} y1={y} x2={padding.left} y2={y} stroke="#999" strokeWidth="1" />
+                                        <text x={padding.left - 10} y={y + 4} fontSize="11" textAnchor="end" fill="#666">
+                                          {yVal.toFixed(1)}
+                                        </text>
+                                      </g>
+                                    )
+                                  })}
+
+                                  {/* Grid lines */}
+                                  {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
+                                    const y = getY(minVal + pct * yRange)
+                                    return (
+                                      <line
+                                        key={`grid-${pct}`}
+                                        x1={padding.left}
+                                        y1={y}
+                                        x2={800 - padding.right}
+                                        y2={y}
+                                        stroke="#eee"
+                                        strokeWidth="1"
+                                        strokeDasharray="2,2"
+                                      />
+                                    )
+                                  })}
+
+                                  {/* Box plots */}
+                                  {boxData.map((data, idx) => {
+                                    const x = getX(idx)
+                                    const color = CHART_COLORS[idx % CHART_COLORS.length]
+
+                                    return (
+                                      <g key={`box-${data.alt}`}>
+                                        {/* Whisker lines */}
+                                        <line x1={x} y1={getY(data.whiskerLow)} x2={x} y2={getY(data.whiskerHigh)} stroke={color} strokeWidth="2" opacity="0.8" />
+                                        {/* Whisker caps */}
+                                        <line x1={x - boxWidth / 3} y1={getY(data.whiskerLow)} x2={x + boxWidth / 3} y2={getY(data.whiskerLow)} stroke={color} strokeWidth="2.5" opacity="0.8" />
+                                        <line x1={x - boxWidth / 3} y1={getY(data.whiskerHigh)} x2={x + boxWidth / 3} y2={getY(data.whiskerHigh)} stroke={color} strokeWidth="2.5" opacity="0.8" />
+                                        {/* Box */}
+                                        <rect
+                                          x={x - boxWidth / 2}
+                                          y={getY(data.q3)}
+                                          width={boxWidth}
+                                          height={Math.max(1, getY(data.q1) - getY(data.q3))}
+                                          fill={color}
+                                          fillOpacity="0.4"
+                                          stroke={color}
+                                          strokeWidth="2"
+                                        />
+                                        {/* Median line */}
+                                        <line
+                                          x1={x - boxWidth / 2}
+                                          y1={getY(data.median)}
+                                          x2={x + boxWidth / 2}
+                                          y2={getY(data.median)}
+                                          stroke="#ff3333"
+                                          strokeWidth="3"
+                                        />
+                                        {/* Min/Max outlier markers */}
+                                        <circle cx={x} cy={getY(data.min)} r="3" fill={color} opacity="0.6" />
+                                        <circle cx={x} cy={getY(data.max)} r="3" fill={color} opacity="0.6" />
+                                      </g>
+                                    )
+                                  })}
+
+                                  {/* X-axis labels */}
+                                  {boxData.map((data, idx) => (
+                                    <text
+                                      key={`xlabel-${data.alt}`}
+                                      x={getX(idx)}
+                                      y={padding.top + chartHeight + 25}
+                                      fontSize="12"
+                                      textAnchor="middle"
+                                      fill="#333"
+                                      fontWeight="500"
+                                    >
+                                      {data.alt.substring(0, 8)}
+                                    </text>
+                                  ))}
+
+                                  {/* Axis labels */}
+                                  <text x={25} y={15} fontSize="12" fontWeight="600" fill="#333">
+                                    Rank
+                                  </text>
+                                  <text x={750} y={padding.top + chartHeight + 40} fontSize="12" fontWeight="600" fill="#333">
+                                    Alternatives
+                                  </text>
+
+                                  {/* Legend */}
+                                  <g>
+                                    <text x={padding.left} y={padding.top + chartHeight + 70} fontSize="11" fill="#666" fontWeight="500">
+                                      Legend:
+                                    </text>
+                                    {/* Median indicator */}
+                                    <line x1={padding.left} y1={padding.top + chartHeight + 82} x2={padding.left + 30} y2={padding.top + chartHeight + 82} stroke="#ff3333" strokeWidth="2.5" />
+                                    <text x={padding.left + 40} y={padding.top + chartHeight + 86} fontSize="10" fill="#666">
+                                      Median (red)
+                                    </text>
+                                    {/* Box indicator */}
+                                    <rect x={padding.left} y={padding.top + chartHeight + 95} width="15" height="12" fill={CHART_COLORS[0]} fillOpacity="0.4" stroke={CHART_COLORS[0]} strokeWidth="1.5" />
+                                    <text x={padding.left + 40} y={padding.top + chartHeight + 104} fontSize="10" fill="#666">
+                                      IQR (interquartile range)
+                                    </text>
+                                  </g>
+                                </>
+                              )
+                            })()}
+                          </svg>
+                        </ResponsiveContainer>
                       ) : (
                         <LineChart data={comparisonChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                           <CartesianGrid strokeDasharray="3 3" />
@@ -3466,9 +3996,16 @@ export default function MCDMCalculator() {
                               <TableHead className="text-xs text-black font-semibold w-24">Alternative</TableHead>
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className="text-xs text-black font-semibold text-center min-w-20">
-                                  <div>{crit.name}</div>
-                                  <div className="text-[10px] text-gray-500 font-normal">
-                                    {crit.type === "beneficial" ? "Max" : "Min"}
+                                  <div className="flex flex-col items-center">
+                                    <div className="flex items-center gap-1">
+                                      <div>{crit.name}</div>
+                                      <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
+                                        {crit.type === "beneficial" ? "▲" : "▼"}
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] text-gray-500 font-normal">
+                                      {crit.type === "beneficial" ? "Max" : "Min"}
+                                    </div>
                                   </div>
                                 </TableHead>
                               ))}
@@ -3506,7 +4043,15 @@ export default function MCDMCalculator() {
                             <SelectContent>
                               {criteria.map((crit) => (
                                 <SelectItem key={crit.id} value={crit.id} className="text-xs">
-                                  {crit.name} ({crit.type === "beneficial" ? "Max" : "Min"})
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <span>{crit.name}</span>
+                                      <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
+                                        {crit.type === "beneficial" ? "▲" : "▼"}
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] text-gray-500">{crit.type === "beneficial" ? "Max" : "Min"}</span>
+                                  </div>
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -4718,11 +5263,18 @@ export default function MCDMCalculator() {
                               key={crit.id}
                               className="text-xs font-semibold text-black text-center py-3 px-4 min-w-40"
                             >
-                              <Input
-                                value={crit.name}
-                                onChange={(e) => updateCriterion(crit.id, { name: e.target.value })}
-                                className="text-xs h-8 border-gray-200 text-black text-center shadow-none font-semibold"
-                              />
+                              <div className="flex flex-col items-center">
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    value={crit.name}
+                                    onChange={(e) => updateCriterion(crit.id, { name: e.target.value })}
+                                    className="text-xs h-8 border-gray-200 text-black text-center shadow-none font-semibold"
+                                  />
+                                  <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
+                                    {crit.type === "beneficial" ? "▲" : "▼"}
+                                  </span>
+                                </div>
+                              </div>
                             </TableHead>
                           ))}
                         </TableRow>
@@ -4730,20 +5282,25 @@ export default function MCDMCalculator() {
                           <TableHead className="text-xs font-semibold text-black py-3 px-4">max/min</TableHead>
                           {criteria.map((crit) => (
                             <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
-                              <Select
-                                value={crit.type}
-                                onValueChange={(value) =>
-                                  updateCriterion(crit.id, { type: value as "beneficial" | "non-beneficial" })
-                                }
-                              >
-                                <SelectTrigger className="text-xs h-8 border-gray-200 bg-white text-black shadow-none">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="beneficial">max</SelectItem>
-                                  <SelectItem value="non-beneficial">min</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <div className="flex items-center justify-center gap-2">
+                                <Select
+                                  value={crit.type}
+                                  onValueChange={(value) =>
+                                    updateCriterion(crit.id, { type: value as "beneficial" | "non-beneficial" })
+                                  }
+                                >
+                                  <SelectTrigger className="text-xs h-8 border-gray-200 bg-white text-black shadow-none">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="beneficial">max</SelectItem>
+                                    <SelectItem value="non-beneficial">min</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
+                                  {crit.type === "beneficial" ? "▲" : "▼"}
+                                </span>
+                              </div>
                             </TableHead>
                           ))}
                         </TableRow>
@@ -7136,6 +7693,126 @@ export default function MCDMCalculator() {
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
                                   {apiResults.metrics?.codasRelativeAssessmentScores[alt.id]?.toFixed(4) || "-"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {method === "moosra" && apiResults?.metrics?.moosraNormalizedMatrix && (
+                <>
+                  {/* Table 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Vector Normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.moosraNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 3: Weighted Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Weighted Normalized Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Values * Weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.moosraWeightedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 4: MOOSRA Scores Breakdown */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: MOOSRA Scores Breakdown</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Beneficial Sum, Non-Beneficial Sum, and Final Ratio (Score)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <table className="min-w-full text-xs">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-3 py-2 text-left border-b border-gray-200 text-black font-semibold">Alternative</th>
+                              <th className="px-3 py-2 text-center border-b border-gray-200 text-black font-semibold">Beneficial Sum</th>
+                              <th className="px-3 py-2 text-center border-b border-gray-200 text-black font-semibold">Non-Beneficial Sum</th>
+                              <th className="px-3 py-2 text-center border-b border-gray-200 text-black font-semibold">MOOSRA Score</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {alternatives.map((alt) => (
+                              <tr key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <td className="px-3 py-2 text-left text-black font-medium">{alt.name}</td>
+                                <td className="px-3 py-2 text-center text-black">
+                                  {apiResults.metrics?.moosraBeneficialSum[alt.id]?.toFixed(4) || "-"}
+                                </td>
+                                <td className="px-3 py-2 text-center text-black">
+                                  {apiResults.metrics?.moosraNonBeneficialSum[alt.id]?.toFixed(4) || "-"}
+                                </td>
+                                <td className="px-3 py-2 text-center text-black">
+                                  {apiResults.ranking.find((r: any) => r.alternativeId === alt.id)?.score?.toFixed(4) || "-"}
                                 </td>
                               </tr>
                             ))}

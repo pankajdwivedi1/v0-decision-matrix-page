@@ -68,35 +68,35 @@ export default function TODIMFormula({ compact = false }: TODIMFormulaProps) {
     title: "\\textbf{TODIM (Tomada de Decisão Interativa e Multicritério) — Steps}",
     intro: "\\text{TODIM is a multi-criteria decision-making method based on Prospect Theory. It evaluates alternatives by considering the relative dominance of each option over others, capturing decision-maker's risk preferences.}",
     step1:
-      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)}",
+      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)} \\tag{1}",
     step2_intro:
       "\\textbf{2. Normalization:} \\quad \\text{For each criterion } j, \\text{ normalize the decision matrix using min-max normalization.}",
     step2_beneficial:
-      "\\text{For beneficial criteria:} \\quad r_{i,j} = \\frac{x_{i,j} - \\min_i(x_{i,j})}{\\max_i(x_{i,j}) - \\min_i(x_{i,j})}",
+      "\\text{For beneficial criteria:} \\quad r_{i,j} = \\frac{x_{i,j} - \\min_i(x_{i,j})}{\\max_i(x_{i,j}) - \\min_i(x_{i,j})} \\tag{2}",
     step2_nonbeneficial:
-      "\\text{For non-beneficial criteria:} \\quad r_{i,j} = \\frac{\\max_i(x_{i,j}) - x_{i,j}}{\\max_i(x_{i,j}) - \\min_i(x_{i,j})}",
+      "\\text{For non-beneficial criteria:} \\quad r_{i,j} = \\frac{\\max_i(x_{i,j}) - x_{i,j}}{\\max_i(x_{i,j}) - \\min_i(x_{i,j})} \\tag{3}",
     step3_intro:
       "\\textbf{3. Relative Weights:} \\quad \\text{Calculate relative weights normalized by the maximum weight.}",
     step3_formula:
-      "w_j^r = \\frac{w_j}{w_{\\max}}, \\quad \\text{where } w_{\\max} = \\max_j(w_j)",
+      "w_j^r = \\frac{w_j}{w_{\\max}}, \\quad \\text{where } w_{\\max} = \\max_j(w_j) \\tag{4}",
     step4_intro:
       "\\textbf{4. Dominance Degree:} \\quad \\text{For each pair of alternatives } A_i \\text{ and } A_j \\text{ concerning criterion } C_k, \\text{ calculate the dominance degree using Prospect Theory value function.}",
     step4_formula:
-      "\\Phi_k(A_i, A_j) = \\begin{cases} w_k^r \\cdot (z_{i,k} - z_{j,k})^\\alpha & \\text{if } z_{i,k} \\geq z_{j,k} \\text{ (gain)} \\\\ -\\lambda \\cdot w_k^r \\cdot (z_{j,k} - z_{i,k})^\\beta & \\text{if } z_{i,k} < z_{j,k} \\text{ (loss)} \\end{cases}",
+      "\\Phi_k(A_i, A_j) = \\begin{cases} w_k^r \\cdot (z_{i,k} - z_{j,k})^\\alpha & \\text{if } z_{i,k} \\geq z_{j,k} \\text{ (gain)} \\\\ -\\lambda \\cdot w_k^r \\cdot (z_{j,k} - z_{i,k})^\\beta & \\text{if } z_{i,k} < z_{j,k} \\text{ (loss)} \\end{cases} \\tag{5}",
     step4_params:
       "\\text{where } \\alpha = 0.88 \\text{ (gain parameter)}, \\quad \\beta = 0.88 \\text{ (loss parameter)}, \\quad \\lambda = 2.25 \\text{ (loss aversion coefficient)}",
     step5_intro:
       "\\textbf{5. Overall Dominance:} \\quad \\text{Calculate the overall dominance of alternative } A_i \\text{ over } A_j \\text{ by summing dominance degrees across all criteria.}",
     step5_formula:
-      "\\delta(A_i, A_j) = \\sum_{k=1}^{n} \\Phi_k(A_i, A_j), \\quad i, j = 1, 2, \\ldots, m",
+      "\\delta(A_i, A_j) = \\sum_{k=1}^{n} \\Phi_k(A_i, A_j), \\quad i, j = 1, 2, \\ldots, m \\tag{6}",
     step6_intro:
       "\\textbf{6. Global Value:} \\quad \\text{Calculate the global value for each alternative by summing its dominance over all other alternatives.}",
     step6_formula:
-      "\\xi_i = \\sum_{j=1}^{m} \\delta(A_i, A_j), \\quad i = 1, 2, \\ldots, m",
+      "\\xi_i = \\sum_{j=1}^{m} \\delta(A_i, A_j), \\quad i = 1, 2, \\ldots, m \\tag{7}",
     step7_intro:
       "\\textbf{7. Normalized Global Value:} \\quad \\text{Normalize the global values to obtain final scores.}",
     step7_formula:
-      "\\xi_i^{norm} = \\frac{\\xi_i - \\xi_{\\min}}{\\xi_{\\max} - \\xi_{\\min}}, \\quad i = 1, 2, \\ldots, m",
+      "\\xi_i^{norm} = \\frac{\\xi_i - \\xi_{\\min}}{\\xi_{\\max} - \\xi_{\\min}}, \\quad i = 1, 2, \\ldots, m \\tag{8}",
     ranking:
       "\\textbf{8. Ranking:} \\quad \\text{Alternatives are ranked in descending order of } \\xi_i^{norm}. \\text{ (Higher } \\xi_i^{norm} \\Rightarrow \\text{better alternative)}",
     interpretation:

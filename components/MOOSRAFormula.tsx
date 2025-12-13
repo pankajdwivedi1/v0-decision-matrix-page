@@ -68,27 +68,27 @@ export default function MOOSRAFormula({ compact = false }: MOOSRAFormulaProps) {
     title: "\\textbf{MOOSRA (Multi-Objective Optimization on the basis of Simple Ratio Analysis) — Steps}",
     intro: "\\text{MOOSRA is a multi-criteria decision-making method that evaluates alternatives by calculating the ratio of weighted sum of beneficial criteria to weighted sum of non-beneficial criteria.}",
     step1:
-      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)}",
+      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)} \\tag{1}",
     step2_intro:
       "\\textbf{2. Normalization:} \\quad \\text{For each criterion } j, \\text{ normalize the decision matrix using vector normalization.}",
     step2_formula:
-      "r_{i,j} = \\frac{x_{i,j}}{\\sqrt{\\sum_{i=1}^{m} x_{i,j}^2}}, \\quad i = 1, 2, \\ldots, m, \\quad j = 1, 2, \\ldots, n",
+      "r_{i,j} = \\frac{x_{i,j}}{\\sqrt{\\sum_{i=1}^{m} x_{i,j}^2}}, \\quad i = 1, 2, \\ldots, m, \\quad j = 1, 2, \\ldots, n \\tag{2}",
     step3_intro:
       "\\textbf{3. Weighted Normalized Matrix:} \\quad \\text{Multiply each normalized value by its corresponding criterion weight.}",
     step3_formula:
-      "v_{i,j} = w_j \\times r_{i,j}, \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1",
+      "v_{i,j} = w_j \\times r_{i,j}, \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1 \\tag{3}",
     step4_intro:
       "\\textbf{4. Sum for Beneficial Criteria:} \\quad \\text{Calculate the weighted sum of normalized values for beneficial (maximizing) criteria.}",
     step4_formula:
-      "S_i^+ = \\sum_{j \\in \\theta_{\\max}} w_j \\, r_{i,j}, \\quad \\text{where } \\theta_{\\max} \\text{ is the set of beneficial criteria}",
+      "S_i^+ = \\sum_{j \\in \\theta_{\\max}} w_j \\, r_{i,j}, \\quad \\text{where } \\theta_{\\max} \\text{ is the set of beneficial criteria} \\tag{4}",
     step5_intro:
       "\\textbf{5. Sum for Non-Beneficial Criteria:} \\quad \\text{Calculate the weighted sum of normalized values for non-beneficial (minimizing) criteria.}",
     step5_formula:
-      "S_i^- = \\sum_{j \\in \\theta_{\\min}} w_j \\, r_{i,j}, \\quad \\text{where } \\theta_{\\min} \\text{ is the set of non-beneficial criteria}",
+      "S_i^- = \\sum_{j \\in \\theta_{\\min}} w_j \\, r_{i,j}, \\quad \\text{where } \\theta_{\\min} \\text{ is the set of non-beneficial criteria} \\tag{5}",
     step6_intro:
       "\\textbf{6. Performance Score:} \\quad \\text{Calculate the performance score as the ratio of beneficial sum to non-beneficial sum.}",
     step6_formula:
-      "v_i = \\frac{S_i^+}{S_i^-}, \\quad i = 1, 2, \\ldots, m",
+      "v_i = \\frac{S_i^+}{S_i^-}, \\quad i = 1, 2, \\ldots, m \\tag{6}",
     ranking:
       "\\textbf{7. Ranking:} \\quad \\text{Alternatives are ranked in descending order of } v_i. \\text{ (Higher } v_i \\Rightarrow \\text{better alternative)}",
     interpretation:

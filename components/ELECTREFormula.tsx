@@ -53,29 +53,29 @@ export default function ELECTREFormula({ compact = false }: ELECTREFormulaProps)
     title: "\\textbf{ELECTRE (ÉLimination Et Choix Traduisant la REalité) — Steps}",
     intro: "\\text{ELECTRE evaluates alternatives by building outranking relations based on concordance and discordance indices. An alternative outranks another if it has sufficient concordance and limited discordance.}",
     step1:
-      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)}",
+      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)} \\tag{1}",
     step2_intro:
       "\\textbf{2. Normalization:} \\quad \\text{For each criterion } j, \\text{ normalize the decision matrix using vector normalization.}",
     step2_formula:
-      "r_{i,j} = \\frac{x_{i,j}}{\\sqrt{\\sum_{i=1}^{m} x_{i,j}^2}}, \\quad i = 1, 2, \\ldots, m, \\quad j = 1, 2, \\ldots, n",
+      "r_{i,j} = \\frac{x_{i,j}}{\\sqrt{\\sum_{i=1}^{m} x_{i,j}^2}}, \\quad i = 1, 2, \\ldots, m, \\quad j = 1, 2, \\ldots, n \\tag{2}",
     step3_intro:
       "\\textbf{3. Concordance Index:} \\quad \\text{For each pair of alternatives } (a, b), \\text{ calculate the concordance index.}",
     step3_formula:
-      "C(a, b) = \\sum_{j \\in J^+} w_j, \\quad \\text{where } J^+ = \\{j: a_j \\geq b_j \\text{ (beneficial)} \\text{ or } a_j \\leq b_j \\text{ (non-beneficial)}\\}",
+      "C(a, b) = \\sum_{j \\in J^+} w_j, \\quad \\text{where } J^+ = \\{j: a_j \\geq b_j \\text{ (beneficial)} \\text{ or } a_j \\leq b_j \\text{ (non-beneficial)}\\} \\tag{3}",
     step4_intro:
       "\\textbf{4. Discordance Index:} \\quad \\text{For each pair of alternatives } (a, b), \\text{ calculate the discordance index.}",
     step4_formula:
-      "D(a, b) = \\max_j \\frac{|r_{b,j} - r_{a,j}|}{R_j}, \\quad \\text{where } R_j = \\max_i r_{i,j} - \\min_i r_{i,j}",
+      "D(a, b) = \\max_j \\frac{|r_{b,j} - r_{a,j}|}{R_j}, \\quad \\text{where } R_j = \\max_i r_{i,j} - \\min_i r_{i,j} \\tag{4}",
     step5_intro:
       "\\textbf{5. Outranking Relation:} \\quad \\text{Build outranking relation based on concordance and discordance thresholds.}",
     step5_formula:
-      "a \\text{ outranks } b \\text{ if: } C(a, b) \\geq c^* \\text{ AND } D(a, b) \\leq d^*",
+      "a \\text{ outranks } b \\text{ if: } C(a, b) \\geq c^* \\text{ AND } D(a, b) \\leq d^* \\tag{5}",
     step5_thresholds:
       "\\text{where } c^* = 0.5 \\text{ (concordance threshold)}, \\quad d^* = 0.5 \\text{ (discordance threshold)}",
     step6_intro:
       "\\textbf{6. Score Calculation:} \\quad \\text{Calculate score based on outranking relations.}",
     step6_formula:
-      "\\text{Score}(a) = |\\{b: a \\text{ outranks } b\\}| - |\\{b: b \\text{ outranks } a\\}|",
+      "\\text{Score}(a) = |\\{b: a \\text{ outranks } b\\}| - |\\{b: b \\text{ outranks } a\\}| \\tag{6}",
     ranking:
       "\\textbf{7. Ranking:} \\quad \\text{Alternatives are ranked in descending order of score. Higher score indicates a better alternative.}",
     interpretation:

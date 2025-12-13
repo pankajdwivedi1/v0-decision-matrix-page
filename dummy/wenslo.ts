@@ -1,4 +1,4 @@
-import type { Alternative, Criterion } from "../app/types"
+import type { Alternative, Criterion } from "../app/api/calculate/types"
 
 export interface WensloResult {
   weights: Record<string, number>

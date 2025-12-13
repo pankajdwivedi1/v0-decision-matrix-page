@@ -3,6 +3,7 @@ import type { Alternative, Criterion } from "./types"
 interface MOOSRAResult {
   scores: Record<string, number>
   normalizedMatrix: Record<string, Record<string, number>>
+  weightedMatrix: Record<string, Record<string, number>>
   beneficialSum: Record<string, number>
   nonBeneficialSum: Record<string, number>
 }
@@ -11,7 +12,8 @@ interface MOOSRAResult {
  * MOOSRA (Multi-Objective Optimization on the basis of Simple Ratio Analysis) Method
  *
  * Reference:
- * Brauers, W.K.M., & Zavadskas, E.K. (2006)
+ * Brauers, W.K.M., & Zavadskas, E.K. (2006). "The MOORA method and its application to privatization 
+ * in a transition economy." Control and Cybernetics, 35(2), 445-469.
  *
  * Steps:
  * (1) Construct decision matrix X = [x_ij]
@@ -20,8 +22,11 @@ interface MOOSRAResult {
  * (4) For each alternative:
  *     - Sum beneficial criteria: Σ (w_j * r_ij) for beneficial
  *     - Sum non-beneficial criteria: Σ (w_j * r_ij) for non-beneficial
- *     - Performance score: v_i = (beneficial sum) / (non-beneficial sum)
+ *     - Performance score: v_i = (beneficial sum) / max(1, non-beneficial sum)
  * (5) Rank alternatives by v_i (higher is better)
+ *
+ * Note: When non-beneficial sum is 0 or very small (all beneficial criteria),
+ * score = beneficial sum / 1 to avoid artificial inflation
  */
 
 export function calculateMOOSRA(
@@ -36,6 +41,7 @@ export function calculateMOOSRA(
     return {
       scores: {},
       normalizedMatrix: {},
+      weightedMatrix: {},
       beneficialSum: {},
       nonBeneficialSum: {},
     }
@@ -64,6 +70,7 @@ export function calculateMOOSRA(
   }
 
   // Step 3 & 4: Compute weighted sums and performance scores
+  const weightedMatrix: Record<string, Record<string, number>> = {}
   const beneficialSum: Record<string, number> = {}
   const nonBeneficialSum: Record<string, number> = {}
   const scores: Record<string, number> = {}
@@ -72,11 +79,14 @@ export function calculateMOOSRA(
     const altId = alternatives[i].id
     let sumB = 0
     let sumC = 0
+    weightedMatrix[altId] = {}
 
     for (let j = 0; j < n; j++) {
       const crit = criteria[j]
       const r_ij = normalizedMatrixArray[i][j]
       const weighted = r_ij * crit.weight
+
+      weightedMatrix[altId][crit.id] = weighted
 
       if (crit.type === "non-beneficial") {
         sumC += weighted
@@ -87,14 +97,24 @@ export function calculateMOOSRA(
 
     beneficialSum[altId] = sumB
     nonBeneficialSum[altId] = sumC
-    
+
     // Performance score: ratio of beneficial to non-beneficial
-    scores[altId] = sumB / (sumC + epsilon)
+    // Standard MOOSRA uses score = sumB / sumC. However, when there are no non-beneficial
+    // criteria (sumC === 0) dividing by a tiny epsilon produces extremely large numbers.
+    // In that case we will show the beneficial sum itself as the score (so score == sumB),
+    // which matches the common expectation when only beneficial criteria exist.
+    if (Math.abs(sumC) < epsilon) {
+      // No non-beneficial contribution: use beneficial sum as final score
+      scores[altId] = sumB
+    } else {
+      scores[altId] = sumB / sumC
+    }
   }
 
   return {
     scores,
     normalizedMatrix,
+    weightedMatrix,
     beneficialSum,
     nonBeneficialSum,
   }

@@ -53,33 +53,33 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
     title: "\\textbf{PROMETHEE (Preference Ranking Organization Method for Enrichment Evaluations) — Steps}",
     intro: "\\text{PROMETHEE evaluates alternatives by calculating preference degrees between pairs of alternatives and aggregating them into positive and negative flows, then computing net flow for complete ranking.}",
     step1:
-      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)}",
+      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)} \\tag{1}",
     step2_intro:
       "\\textbf{2. Normalization:} \\quad \\text{For each criterion } j, \\text{ normalize the decision matrix using vector normalization.}",
     step2_formula:
-      "r_{i,j} = \\frac{x_{i,j}}{\\sqrt{\\sum_{i=1}^{m} x_{i,j}^2}}, \\quad i = 1, 2, \\ldots, m, \\quad j = 1, 2, \\ldots, n",
+      "r_{i,j} = \\frac{x_{i,j}}{\\sqrt{\\sum_{i=1}^{m} x_{i,j}^2}}, \\quad i = 1, 2, \\ldots, m, \\quad j = 1, 2, \\ldots, n \\tag{2}",
     step3_intro:
       "\\textbf{3. Preference Degree:} \\quad \\text{For each pair of alternatives } (a, b) \\text{ and criterion } j, \\text{ calculate the preference degree using linear preference function.}",
     step3_formula:
-      "P_j(a, b) = \\begin{cases} \\frac{r_{a,j} - r_{b,j}}{R_j} & \\text{if } r_{a,j} > r_{b,j} \\text{ (for beneficial)} \\text{ or } r_{b,j} > r_{a,j} \\text{ (for non-beneficial)} \\\\ 0 & \\text{otherwise} \\end{cases}",
+      "P_j(a, b) = \\begin{cases} \\frac{r_{a,j} - r_{b,j}}{R_j} & \\text{if } r_{a,j} > r_{b,j} \\text{ (for beneficial)} \\text{ or } r_{b,j} > r_{a,j} \\text{ (for non-beneficial)} \\\\ 0 & \\text{otherwise} \\end{cases} \\tag{3}",
     step3_range:
       "\\text{where } R_j = \\max_i r_{i,j} - \\min_i r_{i,j} \\text{ is the range of criterion } j",
     step4_intro:
       "\\textbf{4. Aggregated Preference Degree:} \\quad \\text{Calculate the aggregated preference degree by weighting preference degrees across all criteria.}",
     step4_formula:
-      "\\pi(a, b) = \\sum_{j=1}^{n} w_j \\times P_j(a, b), \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1",
+      "\\pi(a, b) = \\sum_{j=1}^{n} w_j \\times P_j(a, b), \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1 \\tag{4}",
     step5_intro:
       "\\textbf{5. Positive Flow:} \\quad \\text{Calculate the positive flow (outranking flow) for each alternative.}",
     step5_formula:
-      "\\phi^+(a) = \\frac{1}{m-1} \\sum_{b \\neq a} \\pi(a, b), \\quad a = 1, 2, \\ldots, m",
+      "\\phi^+(a) = \\frac{1}{m-1} \\sum_{b \\neq a} \\pi(a, b), \\quad a = 1, 2, \\ldots, m \\tag{5}",
     step6_intro:
       "\\textbf{6. Negative Flow:} \\quad \\text{Calculate the negative flow (outranked flow) for each alternative.}",
     step6_formula:
-      "\\phi^-(a) = \\frac{1}{m-1} \\sum_{b \\neq a} \\pi(b, a), \\quad a = 1, 2, \\ldots, m",
+      "\\phi^-(a) = \\frac{1}{m-1} \\sum_{b \\neq a} \\pi(b, a), \\quad a = 1, 2, \\ldots, m \\tag{6}",
     step7_intro:
       "\\textbf{7. Net Flow:} \\quad \\text{Calculate the net flow for each alternative.}",
     step7_formula:
-      "\\phi(a) = \\phi^+(a) - \\phi^-(a), \\quad a = 1, 2, \\ldots, m",
+      "\\phi(a) = \\phi^+(a) - \\phi^-(a), \\quad a = 1, 2, \\ldots, m \\tag{7}",
     ranking:
       "\\textbf{8. Ranking:} \\quad \\text{Alternatives are ranked in descending order of } \\phi(a). \\text{ (Higher } \\phi(a) \\Rightarrow \\text{better alternative)}",
     interpretation:

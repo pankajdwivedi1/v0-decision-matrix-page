@@ -235,9 +235,17 @@ export async function POST(request: NextRequest) {
         };
         break;
       }
-      case "moosra":
-        results = calculateMOOSRA(alternatives, criteria).scores;
+      case "moosra": {
+        const moosraData = calculateMOOSRA(alternatives, criteria);
+        results = moosraData.scores;
+        (request as any).extraMetrics = {
+          moosraNormalizedMatrix: moosraData.normalizedMatrix,
+          moosraWeightedMatrix: moosraData.weightedMatrix,
+          moosraBeneficialSum: moosraData.beneficialSum,
+          moosraNonBeneficialSum: moosraData.nonBeneficialSum
+        };
         break;
+      }
       case "mairca":
         results = calculateMAIRCA(alternatives, criteria).scores;
         break;

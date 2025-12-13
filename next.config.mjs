@@ -10,6 +10,23 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Prevent Next dev server from watching files that may be written/updated
+  // during calculations or by local scripts. This avoids automatic full-page
+  // reloads when those files change on disk.
+  webpackDevMiddleware: (config) => {
+    config.watchOptions = {
+      // ignore patterns relative to the project root
+      ignored: [
+        '**/scripts/**',
+        '**/fix-*.js',
+        '**/*.md',
+        '**/fixed.txt',
+        '**/temp_ending.txt',
+        '**/fixed.*',
+      ],
+    };
+    return config;
+  },
 }
 
 export default nextConfig

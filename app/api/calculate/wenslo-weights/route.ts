@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Alternative, Criterion } from "../../types";
+import type { Alternative, Criterion } from "../types";
 import { calculateWenslo } from "../wenslo";
 
 export interface WensloWeightsRequest {

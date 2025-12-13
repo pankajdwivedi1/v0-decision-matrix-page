@@ -68,41 +68,41 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
     title: "\\textbf{MARCOS (Measurement of Alternatives and Ranking according to Compromise Solution) — Steps}",
     intro: "\\text{MARCOS is a multi-criteria decision-making method that evaluates alternatives by comparing them to both ideal and anti-ideal solutions, calculating utility degrees to determine the final ranking.}",
     step1:
-      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)}",
+      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)} \\tag{1}",
     step2_intro:
       "\\textbf{2. Ideal and Anti-Ideal Solutions:} \\quad \\text{Determine the ideal (AI) and anti-ideal (AAI) solutions for each criterion.}",
     step2_ideal:
-      "AI_j = \\begin{cases} \\max_i x_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\min_i x_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
+      "AI_j = \\begin{cases} \\max_i x_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\min_i x_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases} \\tag{2}",
     step2_antiideal:
-      "AAI_j = \\begin{cases} \\min_i x_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\max_i x_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
+      "AAI_j = \\begin{cases} \\min_i x_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\max_i x_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases} \\tag{3}",
     step3_intro:
       "\\textbf{3. Normalization:} \\quad \\text{Normalize the decision matrix using ideal values.}",
     step3_beneficial:
-      "\\text{For beneficial criteria:} \\quad n_{i,j} = \\frac{x_{i,j}}{AI_j}",
+      "\\text{For beneficial criteria:} \\quad n_{i,j} = \\frac{x_{i,j}}{AI_j} \\tag{4}",
     step3_nonbeneficial:
-      "\\text{For non-beneficial criteria:} \\quad n_{i,j} = \\frac{AI_j}{x_{i,j}}",
+      "\\text{For non-beneficial criteria:} \\quad n_{i,j} = \\frac{AI_j}{x_{i,j}} \\tag{5}",
     step4_intro:
       "\\textbf{4. Weighted Normalized Matrix:} \\quad \\text{Apply criterion weights to the normalized matrix.}",
     step4_formula:
-      "v_{i,j} = w_j \\times n_{i,j}, \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1",
+      "v_{i,j} = w_j \\times n_{i,j}, \\quad \\text{where } \\sum_{j=1}^{n} w_j = 1 \\tag{6}",
     step5_intro:
       "\\textbf{5. Sum of Weighted Values:} \\quad \\text{Calculate the sum of weighted normalized values for each alternative and reference solutions.}",
     step5_alternative:
-      "S_i = \\sum_{j=1}^{n} v_{i,j}, \\quad i = 1, 2, \\ldots, m",
+      "S_i = \\sum_{j=1}^{n} v_{i,j}, \\quad i = 1, 2, \\ldots, m \\tag{7}",
     step5_ideal:
-      "S_{AI} = \\sum_{j=1}^{n} w_j \\times n_{AI,j}",
+      "S_{AI} = \\sum_{j=1}^{n} w_j \\times n_{AI,j} \\tag{8}",
     step5_antiideal:
-      "S_{AAI} = \\sum_{j=1}^{n} w_j \\times n_{AAI,j}",
+      "S_{AAI} = \\sum_{j=1}^{n} w_j \\times n_{AAI,j} \\tag{9}",
     step6_intro:
       "\\textbf{6. Utility Degrees:} \\quad \\text{Calculate utility degrees relative to ideal and anti-ideal solutions.}",
     step6_plus:
-      "K_i^+ = \\frac{S_i}{S_{AAI}}, \\quad i = 1, 2, \\ldots, m",
+      "K_i^+ = \\frac{S_i}{S_{AAI}}, \\quad i = 1, 2, \\ldots, m \\tag{10}",
     step6_minus:
-      "K_i^- = \\frac{S_i}{S_{AI}}, \\quad i = 1, 2, \\ldots, m",
+      "K_i^- = \\frac{S_i}{S_{AI}}, \\quad i = 1, 2, \\ldots, m \\tag{11}",
     step7_intro:
       "\\textbf{7. Final Utility Function:} \\quad \\text{Calculate the final utility function for each alternative.}",
     step7_formula:
-      "f(K_i) = \\frac{K_i^+}{K_i^+ + K_i^-}, \\quad i = 1, 2, \\ldots, m",
+      "f(K_i) = \\frac{K_i^+}{K_i^+ + K_i^-}, \\quad i = 1, 2, \\ldots, m \\tag{12}",
     ranking:
       "\\textbf{8. Ranking:} \\quad \\text{Alternatives are ranked in descending order of } f(K_i). \\text{ (Higher } f(K_i) \\Rightarrow \\text{better alternative)}",
     interpretation:

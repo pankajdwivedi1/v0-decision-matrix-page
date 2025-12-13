@@ -68,31 +68,31 @@ export default function MAIRCAFormula({ compact = false }: MAIRCAFormulaProps) {
     title: "\\textbf{MAIRCA (Multi-Attributive Ideal-Real Comparative Analysis) — Steps}",
     intro: "\\text{MAIRCA is a multi-criteria decision-making method that evaluates alternatives by comparing their performance against ideal values, calculating the gap between theoretical (ideal) and real (actual) ratings.}",
     step1:
-      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)}",
+      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)} \\tag{1}",
     step2_intro:
       "\\textbf{2. Normalization:} \\quad \\text{For each criterion } j, \\text{ normalize the decision matrix using linear normalization.}",
     step2_beneficial:
-      "\\text{For beneficial criteria:} \\quad r_{i,j} = \\frac{x_{i,j} - \\min_i(x_{i,j})}{\\max_i(x_{i,j}) - \\min_i(x_{i,j})}",
+      "\\text{For beneficial criteria:} \\quad r_{i,j} = \\frac{x_{i,j} - \\min_i(x_{i,j})}{\\max_i(x_{i,j}) - \\min_i(x_{i,j})} \\tag{2}",
     step2_nonbeneficial:
-      "\\text{For non-beneficial criteria:} \\quad r_{i,j} = \\frac{\\max_i(x_{i,j}) - x_{i,j}}{\\max_i(x_{i,j}) - \\min_i(x_{i,j})}",
+      "\\text{For non-beneficial criteria:} \\quad r_{i,j} = \\frac{\\max_i(x_{i,j}) - x_{i,j}}{\\max_i(x_{i,j}) - \\min_i(x_{i,j})} \\tag{3}",
     step3_intro:
       "\\textbf{3. Theoretical Ratings:} \\quad \\text{Calculate theoretical ratings based on ideal values for each criterion.}",
     step3_ideal:
-      "\\text{Ideal value:} \\quad r_j^* = \\begin{cases} \\max_i r_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\min_i r_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
+      "\\text{Ideal value:} \\quad r_j^* = \\begin{cases} \\max_i r_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\min_i r_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases} \\tag{4}",
     step3_formula:
-      "T_{p,j} = w_j \\times r_j^*, \\quad p = 1, 2, \\ldots, m, \\quad j = 1, 2, \\ldots, n",
+      "T_{p,j} = w_j \\times r_j^*, \\quad p = 1, 2, \\ldots, m, \\quad j = 1, 2, \\ldots, n \\tag{5}",
     step4_intro:
       "\\textbf{4. Real Ratings:} \\quad \\text{Calculate real ratings based on actual normalized values for each alternative.}",
     step4_formula:
-      "R_{p,j} = w_j \\times r_{p,j}, \\quad p = 1, 2, \\ldots, m, \\quad j = 1, 2, \\ldots, n",
+      "R_{p,j} = w_j \\times r_{p,j}, \\quad p = 1, 2, \\ldots, m, \\quad j = 1, 2, \\ldots, n \\tag{6}",
     step5_intro:
       "\\textbf{5. Gap Matrix:} \\quad \\text{Calculate the gap between theoretical and real ratings for each alternative-criterion pair.}",
     step5_formula:
-      "g_{p,j} = T_{p,j} - R_{p,j}, \\quad p = 1, 2, \\ldots, m, \\quad j = 1, 2, \\ldots, n",
+      "g_{p,j} = T_{p,j} - R_{p,j}, \\quad p = 1, 2, \\ldots, m, \\quad j = 1, 2, \\ldots, n \\tag{7}",
     step6_intro:
       "\\textbf{6. Total Gap:} \\quad \\text{Calculate the total gap for each alternative by summing gaps across all criteria.}",
     step6_formula:
-      "G_p = \\sum_{j=1}^{n} g_{p,j}, \\quad p = 1, 2, \\ldots, m",
+      "G_p = \\sum_{j=1}^{n} g_{p,j}, \\quad p = 1, 2, \\ldots, m \\tag{8}",
     ranking:
       "\\textbf{7. Ranking:} \\quad \\text{Alternatives are ranked in ascending order of } G_p. \\text{ (Lower } G_p \\Rightarrow \\text{better alternative)}",
     interpretation:

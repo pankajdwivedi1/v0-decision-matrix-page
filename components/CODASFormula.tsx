@@ -68,29 +68,29 @@ export default function CODASFormula({ compact = false }: CODASFormulaProps) {
     title: "\\textbf{CODAS (Combinative Distance-based Assessment) — Steps}",
     intro: "\\text{CODAS is a multi-criteria decision-making method that evaluates alternatives based on their distances from a negative-ideal solution, utilizing both Euclidean and Taxicab (Manhattan) distances.}",
     step1:
-      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)}",
+      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)} \\tag{1}",
     step2_intro:
       "\\textbf{2. Normalization:} \\quad \\text{For each criterion } j, \\text{ normalize the decision matrix using linear normalization.}",
     step2_beneficial:
-      "\\text{For beneficial criteria:} \\quad r_{i,j} = \\frac{x_{i,j} - \\min_i(x_{i,j})}{\\max_i(x_{i,j}) - \\min_i(x_{i,j})}",
+      "\\text{For beneficial criteria:} \\quad r_{i,j} = \\frac{x_{i,j} - \\min_i(x_{i,j})}{\\max_i(x_{i,j}) - \\min_i(x_{i,j})} \\tag{2}",
     step2_nonbeneficial:
-      "\\text{For non-beneficial criteria:} \\quad r_{i,j} = \\frac{\\max_i(x_{i,j}) - x_{i,j}}{\\max_i(x_{i,j}) - \\min_i(x_{i,j})}",
+      "\\text{For non-beneficial criteria:} \\quad r_{i,j} = \\frac{\\max_i(x_{i,j}) - x_{i,j}}{\\max_i(x_{i,j}) - \\min_i(x_{i,j})} \\tag{3}",
     step3_intro:
       "\\textbf{3. Negative-Ideal Solution (NIS):} \\quad \\text{Determine the worst performance values across all criteria to form the negative-ideal solution.}",
     step3_formula:
-      "NIS_j = \\begin{cases} \\min_i r_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\max_i r_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases}",
+      "NIS_j = \\begin{cases} \\min_i r_{i,j} & \\text{if } j \\in \\text{beneficial} \\\\ \\max_i r_{i,j} & \\text{if } j \\in \\text{non-beneficial} \\end{cases} \\tag{4}",
     step4_intro:
       "\\textbf{4. Euclidean Distance:} \\quad \\text{Calculate the weighted Euclidean distance of each alternative from the negative-ideal solution.}",
     step4_formula:
-      "d_i^E = \\sqrt{\\sum_{j=1}^{n} w_j (r_{i,j} - NIS_j)^2}, \\quad i = 1, 2, \\ldots, m",
+      "d_i^E = \\sqrt{\\sum_{j=1}^{n} w_j (r_{i,j} - NIS_j)^2}, \\quad i = 1, 2, \\ldots, m \\tag{5}",
     step5_intro:
       "\\textbf{5. Taxicab Distance:} \\quad \\text{Calculate the weighted Taxicab (Manhattan) distance of each alternative from the negative-ideal solution.}",
     step5_formula:
-      "d_i^T = \\sum_{j=1}^{n} w_j |r_{i,j} - NIS_j|, \\quad i = 1, 2, \\ldots, m",
+      "d_i^T = \\sum_{j=1}^{n} w_j |r_{i,j} - NIS_j|, \\quad i = 1, 2, \\ldots, m \\tag{6}",
     step6_intro:
       "\\textbf{6. Relative Assessment Score:} \\quad \\text{Calculate the relative assessment score by combining Euclidean and Taxicab distances.}",
     step6_formula:
-      "RA_i = d_i^E + \\tau \\cdot d_i^T, \\quad i = 1, 2, \\ldots, m",
+      "RA_i = d_i^E + \\tau \\cdot d_i^T, \\quad i = 1, 2, \\ldots, m \\tag{7}",
     step6_param:
       "\\text{where } \\tau = 0.02 \\text{ (threshold parameter, typically } 0.01 \\text{ to } 0.05\\text{)}",
     ranking:
