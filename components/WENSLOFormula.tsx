@@ -9,11 +9,11 @@ declare global {
 
 export default function WENSLOFormula() {
   const latex = {
-    step1: "X = [x_{ij}]_{m \\times n} \\tag{1}",
+    step1: "X = [x_{i,j}]_{m \\times n} \\tag{1}",
     step2: "d_j = \\begin{cases} +1, & \\text{benefit (MAX)}\\\\ -1, & \\text{cost (MIN)} \\end{cases} \\tag{2}",
-    step3_benefit: "r_{ij}=\\frac{x_{ij}-\\min_i x_{ij}}{\\max_i x_{ij}-\\min_i x_{ij}} \\tag{3}",
-    step3_cost: "r_{ij}=\\frac{\\max_i x_{ij}-x_{ij}}{\\max_i x_{ij}-\\min_i x_{ij}} \\tag{4}",
-    step4: "s_j = \\sum_{i=1}^{m} r_{ij} \\tag{5}",
+    step3_benefit: "r_{i,j}=\\frac{x_{i,j}-\\min_i x_{i,j}}{\\max_i x_{i,j}-\\min_i x_{i,j}} \\tag{3}",
+    step3_cost: "r_{i,j}=\\frac{\\max_i x_{i,j}-x_{i,j}}{\\max_i x_{i,j}-\\min_i x_{i,j}} \\tag{4}",
+    step4: "s_j = \\sum_{i=1}^{m} r_{i,j} \\tag{5}",
     step5: "w_j = \\frac{s_j}{\\sum_{k=1}^{n} s_k}, \\qquad \\sum_{j=1}^{n} w_j = 1 \\tag{6}"
   }
 

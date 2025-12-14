@@ -118,7 +118,7 @@ export default function LOPCOWFormula() {
                 <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{
                         __html: `\\[
-X = [x_{ij}]_{m \\times n}
+X = [x_{i,j}]_{m \\times n}
 \\]` }} />
                 </div>
 
@@ -128,7 +128,7 @@ X = [x_{ij}]_{m \\times n}
                 <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{
                         __html: `\\[
-r_{ij}=\\frac{x_{ij}}{\\sqrt{\\sum_{i=1}^{m} x_{ij}^2}}
+r_{i,j}=\\frac{x_{i,j}}{\\sqrt{\\sum_{i=1}^{m} x_{i,j}^2}}
 \\]` }} />
                 </div>
 
@@ -136,7 +136,7 @@ r_{ij}=\\frac{x_{ij}}{\\sqrt{\\sum_{i=1}^{m} x_{ij}^2}}
                 <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{
                         __html: `\\[
-r_{ij}=\\frac{\\frac{1}{x_{ij}}}{\\sqrt{\\sum_{i=1}^{m} \\left(\\frac{1}{x_{ij}}\\right)^2}}
+r_{i,j}=\\frac{\\frac{1}{x_{i,j}}}{\\sqrt{\\sum_{i=1}^{m} \\left(\\frac{1}{x_{i,j}}\\right)^2}}
 \\]` }} />
                 </div>
 
@@ -144,7 +144,7 @@ r_{ij}=\\frac{\\frac{1}{x_{ij}}}{\\sqrt{\\sum_{i=1}^{m} \\left(\\frac{1}{x_{ij}}
                 <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{
                         __html: `\\[
-GM_j = \\left( \\prod_{i=1}^{m} r_{ij} \\right)^{1/m}
+GM_j = \\left( \\prod_{i=1}^{m} r_{i,j} \\right)^{1/m}
 \\]` }} />
                 </div>
 

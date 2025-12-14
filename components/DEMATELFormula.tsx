@@ -9,11 +9,11 @@ declare global {
 
 export default function DEMATELFormula() {
     const latex = {
-        step1: "A = [a_{ij}]_{n \\times n}",
-        step2_1: "\\alpha = \\max_i \\left( \\sum_{j=1}^n a_{ij} \\right)",
+        step1: "A = [a_{i,j}]_{n \\times n}",
+        step2_1: "\\alpha = \\max_i \\left( \\sum_{j=1}^n a_{i,j} \\right)",
         step2_2: "X = \\frac{1}{\\alpha} A",
         step3: "T = X(I - X)^{-1}",
-        step4: "D_i = \\sum_{j=1}^n t_{ij}, \\qquad R_i = \\sum_{j=1}^n t_{ji}",
+        step4: "D_i = \\sum_{j=1}^n t_{i,j}, \\qquad R_i = \\sum_{j=1}^n t_{j,i}",
         step5_1: "P_i = D_i + R_i",
         step5_2: "E_i = D_i - R_i",
         step6: "w_i = \\frac{P_i}{\\sum_{k=1}^{n} P_k}, \\qquad \\sum_i w_i = 1"

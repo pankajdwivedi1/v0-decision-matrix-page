@@ -23,6 +23,7 @@ import { calculatePROMETHEE2 } from "./promethee2";
 import { calculateELECTRE } from "./electre";
 import { calculateELECTRE1 } from "./electre1";
 import { calculateELECTRE2 } from "./electre2";
+import { calculateMABAC } from "./mabac";
 import { calculateEntropy } from "./entropy";
 
 // Helper: build ranking and response
@@ -280,6 +281,17 @@ export async function POST(request: NextRequest) {
       case "electre2":
         results = calculateELECTRE2(alternatives, criteria);
         break;
+      case "mabac": {
+        const mabacData = calculateMABAC(alternatives, criteria);
+        results = mabacData.scores;
+        (request as any).extraMetrics = {
+          mabacNormalizedMatrix: mabacData.normalizedMatrix,
+          mabacWeightedMatrix: mabacData.weightedMatrix,
+          mabacBorderApproximationArea: mabacData.borderApproximationArea,
+          mabacDistanceMatrix: mabacData.distanceMatrix
+        };
+        break;
+      }
       default:
         return NextResponse.json(
           { error: `Invalid method: ${method}` },

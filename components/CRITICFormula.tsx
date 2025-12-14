@@ -124,7 +124,13 @@ export default function CRITICFormula() {
           CRITIC determines weights based on the contrast intensity (standard deviation) and conflict (correlation) between criteria.
         </p>
 
-        <h2 className="text-xl font-semibold mt-6 mb-2">Step 1. Normalization</h2>
+        <h2 className="text-xl font-semibold mt-6 mb-2">Step 1. Decision Matrix</h2>
+        <p className="mb-2">The process begins with a decision matrix of alternatives vs. criteria:</p>
+        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }} />
+        </div>
+
+        <h2 className="text-xl font-semibold mt-6 mb-2">Step 2. Normalization</h2>
         <p className="mb-2">Normalize the decision matrix (Min-Max):</p>
 
         <p className="font-semibold mb-2 text-center">Beneficial criteria (Desirable or Maximum)</p>
@@ -137,25 +143,25 @@ export default function CRITICFormula() {
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_cost}\\]` }} />
         </div>
 
-        <h2 className="text-xl font-semibold mt-6 mb-2">Step 2. Standard Deviation (Contrast)</h2>
+        <h2 className="text-xl font-semibold mt-6 mb-2">Step 3. Standard Deviation (Contrast)</h2>
         <p className="mb-2">Calculate the standard deviation of each normalized criterion:</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_std}\\]` }} />
         </div>
 
-        <h2 className="text-xl font-semibold mt-6 mb-2">Step 3. Correlation (Conflict)</h2>
+        <h2 className="text-xl font-semibold mt-6 mb-2">Step 4. Correlation (Conflict)</h2>
         <p className="mb-2">Calculate the correlation coefficient between criteria pairs:</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_corr}\\]` }} />
         </div>
 
-        <h2 className="text-xl font-semibold mt-6 mb-2">Step 4. Information Measure</h2>
+        <h2 className="text-xl font-semibold mt-6 mb-2">Step 5. Information Measure</h2>
         <p className="mb-2">Calculate the total information contained in each criterion:</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_info}\\]` }} />
         </div>
 
-        <h2 className="text-xl font-semibold mt-6 mb-2">Step 5. Weights</h2>
+        <h2 className="text-xl font-semibold mt-6 mb-2">Step 6. Weights</h2>
         <p className="mb-2">Normalize the information measure to get final weights:</p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_weight}\\]` }} />

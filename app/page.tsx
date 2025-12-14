@@ -67,6 +67,7 @@ import SWARAFormula from "@/components/SWARAFormula"
 import WENSLOFormula from "@/components/WENSLOFormula"
 import LOPCOWFormula from "@/components/LOPCOWFormula"
 import DEMATELFormula from "@/components/DEMATELFormula"
+import MABACFormula from "@/components/MABACFormula"
 
 declare global {
   interface Window {
@@ -87,7 +88,7 @@ interface Alternative {
   scores: Record<string, number | "">
 }
 
-type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "multimoora" | "todim" | "codas" | "moosra" | "mairca" | "marcos" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2"
+type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "multimoora" | "todim" | "codas" | "moosra" | "mairca" | "marcos" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2" | "mabac"
 type WeightMethod = "equal" | "entropy" | "critic" | "ahp" | "piprecia" | "merec" | "swara" | "wenslo"
   | "lopcow"
   | "dematel"
@@ -256,6 +257,12 @@ const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; for
     formula: "G_p = Σ(T_pj - R_pj)"
   },
   {
+    value: "mabac",
+    label: "MABAC",
+    description: "Multi-Attributive Border Approximation Area Comparison",
+    formula: "S_i = Σ(v_ij - g_j)"
+  },
+  {
     value: "marcos",
     label: "MARCOS",
     description: "Measurement of Alternatives and Ranking according to Compromise Solution",
@@ -409,6 +416,7 @@ export default function MCDMCalculator() {
   
   // State for Ranking Methods carousel
   const [rankingMethodsCarouselIndex, setRankingMethodsCarouselIndex] = useState(0)
+  const [weightMethodsCarouselIndex, setWeightMethodsCarouselIndex] = useState(0)
 
   const [alternatives, setAlternatives] = useState<Alternative[]>([])
   const [criteria, setCriteria] = useState<Criterion[]>([])
@@ -2099,8 +2107,13 @@ export default function MCDMCalculator() {
               <h1 className="text-xl sm:text-2xl font-bold text-black truncate">Decision Matrix</h1>
               <p className="text-[10px] sm:text-xs text-gray-700">Multicriteria Decision Making Calculator</p>
             </div>
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border border-gray-200 shrink-0">
-              <img src="/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
+            <div className="flex items-center gap-4">
+                <Button variant="outline" onClick={() => window.location.reload()}>
+                    <Home className="mr-2 h-4 w-4" /> Home
+                </Button>
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border border-gray-200 shrink-0">
+                    <img src="/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
+                </div>
             </div>
           </div>
 
@@ -2257,7 +2270,7 @@ export default function MCDMCalculator() {
                     </button>
 
                     {/* Methods Grid - 3 Columns, 2 Rows (6 items) */}
-                    <div className="w-full flex-1">
+                    <div className="w-full flex-1 bg-muted/40 rounded-lg">
                       <div className="grid grid-cols-3 gap-3 min-h-[300px]">
                         {MCDM_METHODS.slice(rankingMethodsCarouselIndex, rankingMethodsCarouselIndex + 6).map((m) => (
                           <div
@@ -2423,39 +2436,95 @@ export default function MCDMCalculator() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {WEIGHT_METHODS.map((w) => (
-                      <div
-                        key={w.value}
-                        onClick={() => {
-                          setWeightMethod(w.value)
-                          setActiveFormulaType("weight")
-                          setIsDialogOpen(true)
-                        }}
-                        className={`text-left p-3 rounded-lg border-2 transition-all hover:shadow-md relative cursor-pointer ${weightMethod === w.value
-                          ? "border-[#90CAF9] bg-[#E3F2FD] text-black"
-                          : "border-gray-200 bg-white text-black hover:border-[#90CAF9] hover:bg-[#E3F2FD]"
-                          }`}
-                      >
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 absolute top-2 right-2 text-gray-400 hover:text-black z-10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setWeightMethod(w.value);
-                            setActiveFormulaType("weight");
-                            setIsDialogOpen(true);
-                          }}
-                        >
-                          <span className="sr-only">Info</span>
-                          <div className="border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic">i</div>
-                        </Button>
-                        <div className="font-semibold text-sm mb-1 pr-6">{w.label}</div>
-                        <div className="text-xs text-gray-700">
-                          {w.description}
-                        </div>
+                  <div className="relative flex flex-row items-center gap-4">
+                    {/* Left Navigation Button */}
+                    <button
+                      onClick={() => {
+                        const numPages = Math.ceil(WEIGHT_METHODS.length / 6)
+                        const maxIndex = (numPages - 1) * 6
+                        setWeightMethodsCarouselIndex(prev => {
+                          const prevIndex = prev - 6
+                          return prevIndex < 0 ? maxIndex : prevIndex
+                        })
+                      }}
+                      className="p-2 rounded-lg border border-gray-300 hover:border-gray-400 hover:bg-gray-100 transition-colors flex-shrink-0"
+                      aria-label="Previous methods"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+
+                    {/* Methods Grid */}
+                    <div className="w-full flex-1 bg-muted/40 rounded-lg">
+                      <div className="grid grid-cols-3 gap-3 min-h-[300px]">
+                        {WEIGHT_METHODS.slice(weightMethodsCarouselIndex, weightMethodsCarouselIndex + 6).map((w) => (
+                          <div
+                            key={w.value}
+                            onClick={() => {
+                              setWeightMethod(w.value)
+                              setActiveFormulaType("weight")
+                              setIsDialogOpen(true)
+                            }}
+                            className={`text-left p-3 rounded-lg border-2 transition-all hover:shadow-md relative cursor-pointer ${weightMethod === w.value
+                              ? "border-[#90CAF9] bg-[#E3F2FD] text-black"
+                              : "border-gray-200 bg-white text-black hover:border-[#90CAF9] hover:bg-[#E3F2FD]"
+                              }`}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 absolute top-2 right-2 text-gray-400 hover:text-black z-10"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setWeightMethod(w.value);
+                                setActiveFormulaType("weight");
+                                setIsDialogOpen(true);
+                              }}
+                            >
+                              <span className="sr-only">Info</span>
+                              <div className="border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic">i</div>
+                            </Button>
+                            <div className="font-semibold text-sm mb-1 pr-6">{w.label}</div>
+                            <div className="text-xs text-gray-700">
+                              {w.description}
+                            </div>
+                          </div>
+                        ))}
+                        {Array.from({ length: Math.max(0, 6 - WEIGHT_METHODS.slice(weightMethodsCarouselIndex, weightMethodsCarouselIndex + 6).length) }).map((_, i) => (
+                          <div key={`placeholder-${i}`} />
+                        ))}
                       </div>
+                    </div>
+
+                    {/* Right Navigation Button */}
+                    <button
+                      onClick={() => {
+                        const numPages = Math.ceil(WEIGHT_METHODS.length / 6)
+                        const maxIndex = (numPages - 1) * 6
+                        setWeightMethodsCarouselIndex(prev => {
+                          const nextIndex = prev + 6
+                          return nextIndex > maxIndex ? 0 : nextIndex
+                        })
+                      }}
+                      className="p-2 rounded-lg border border-gray-300 hover:border-gray-400 hover:bg-gray-100 transition-colors flex-shrink-0"
+                      aria-label="Next methods"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Carousel Indicators */}
+                  <div className="flex justify-center gap-1 mt-4">
+                    {Array.from({ length: Math.ceil(WEIGHT_METHODS.length / 6) }).map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setWeightMethodsCarouselIndex(index * 6)}
+                        className={`h-2 rounded-full transition-all ${
+                          Math.floor(weightMethodsCarouselIndex / 6) === index
+                            ? "bg-[#90CAF9] w-6"
+                            : "bg-gray-300 w-2 hover:bg-gray-400"
+                        }`}
+                        aria-label={`Go to carousel page ${index + 1}`}
+                      />
                     ))}
                   </div>
                 </CardContent>
@@ -2806,97 +2875,110 @@ export default function MCDMCalculator() {
                             </AreaChart>
                           ) : weightChartType === 'boxPlot' ? (
                             (() => {
-                              const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
+                              const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel);
                               const data = sensitivityCriteriaWeights.map(row => {
-                                const values = methods.map(m => (row[m] !== undefined ? Number(row[m]) : 0))
-                                const sorted = [...values].sort((a,b)=>a-b)
-                                const q = (arr:number[], p:number) => {
-                                  if (arr.length === 0) return 0
-                                  const pos = (arr.length - 1) * p
-                                  const base = Math.floor(pos)
-                                  const rest = pos - base
-                                  if (arr[base+1] !== undefined) return arr[base] + rest * (arr[base+1] - arr[base])
-                                  return arr[base]
-                                }
-                                const min = sorted[0] ?? 0
-                                const max = sorted[sorted.length-1] ?? 0
-                                const q1 = q(sorted, 0.25)
-                                const q2 = q(sorted, 0.5)
-                                const q3 = q(sorted, 0.75)
-                                return { name: row.name, values, min, q1, q2, q3, max }
-                              })
+                                const values = methods.map(m => (row[m] !== undefined ? Number(row[m]) : 0));
+                                const sorted = [...values].sort((a, b) => a - b);
+                                const q = (arr: number[], p: number) => {
+                                  if (arr.length === 0) return 0;
+                                  const pos = (arr.length - 1) * p;
+                                  const base = Math.floor(pos);
+                                  const rest = pos - base;
+                                  if (arr[base + 1] !== undefined) return arr[base] + rest * (arr[base + 1] - arr[base]);
+                                  return arr[base];
+                                };
+                                const min = sorted[0] ?? 0;
+                                const max = sorted[sorted.length-1] ?? 0;
+                                const q1 = q(sorted, 0.25);
+                                const q2 = q(sorted, 0.5);
+                                const q3 = q(sorted, 0.75);
+                                return { name: row.name, values, min, q1, q2, q3, max };
+                              });
 
-                              const width = 800
-                              const height = 420
-                              const padding = { left: 60, right: 20, top: 20, bottom: 60 }
-                              const innerW = width - padding.left - padding.right
-                              const innerH = height - padding.top - padding.bottom
+                              const width = 800;
+                              const height = 420;
+                              const padding = { left: 60, right: 20, top: 20, bottom: 60 };
+                              const innerW = width - padding.left - padding.right;
+                              const innerH = height - padding.top - padding.bottom;
+                              
+                              const allVals = data.flatMap(d => d.values);
+                              const gMin = Math.min(...allVals, 0);
+                              const gMax = Math.max(...allVals, 1);
+                              const yScale = (v: number) => padding.top + innerH - ((v - gMin) / (gMax - gMin || 1)) * innerH;
 
-                              // compute global scale based on min/max
-                              const allVals = data.flatMap(d=>d.values)
-                              const gMin = Math.min(...allVals, 0)
-                              const gMax = Math.max(...allVals, 1)
-                              const yScale = (v:number) => padding.top + innerH - ((v - gMin) / (gMax - gMin || 1)) * innerH
+                              const boxWidth = Math.min(60, innerW / (data.length * 1.2));
 
-                              const boxWidth = Math.min(48, innerW / (data.length * 1.5))
+                              const gaussian = (u: number) => Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI);
+                              const kde = (values: number[], bw = 0.04, samples = 50) => {
+                                const xs = Array.from({ length: samples }, (_, i) => gMin + (i / (samples - 1)) * (gMax - gMin));
+                                const dens = xs.map(x => {
+                                  const s = values.reduce((acc, v) => acc + gaussian((x - v) / bw), 0);
+                                  return s / (values.length * bw);
+                                });
+                                const max = Math.max(...dens) || 1;
+                                return xs.map((x, i) => ({ x, y: dens[i] / max }));
+                              };
 
                               return (
-                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
-                                  {/* y axis grid */}
-                                  {Array.from({length:5}).map((_,i)=>{
-                                    const y = padding.top + (i/4)*innerH
-                                    return <line key={i} x1={padding.left} x2={width-padding.right} y1={y} y2={y} stroke="#eef2ff" />
+                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" style={{ fontFamily: 'sans-serif' }}>
+                                  {/* Y-axis and grid */}
+                                  {Array.from({ length: 6 }).map((_, i) => {
+                                    const yVal = gMin + (i / 5) * (gMax - gMin);
+                                    const y = yScale(yVal);
+                                    return (
+                                      <g key={i}>
+                                        <line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke="#e5e7eb" />
+                                        <text x={padding.left - 8} y={y + 4} fontSize={10} textAnchor="end" fill="#6b7280">{yVal.toFixed(2)}</text>
+                                      </g>
+                                    );
                                   })}
+                                  <text x={padding.left / 2} y={padding.top + innerH / 2} transform={`rotate(-90, ${padding.left / 2}, ${padding.top + innerH/2})`} textAnchor="middle" fontSize="12" fill="#374151">Weight</text>
 
-                                  {/* boxes with improved styling, tooltips and outlier markers */}
                                   {data.map((d, i) => {
-                                    const cx = padding.left + (i + 0.5) * (innerW / data.length)
-                                    const x0 = cx - boxWidth/2
-                                    const x1 = cx + boxWidth/2
-                                    const iqr = d.q3 - d.q1
-                                    const lowerFence = d.q1 - 1.5 * iqr
-                                    const upperFence = d.q3 + 1.5 * iqr
-                                    const outliers = d.values.filter(v => v < lowerFence || v > upperFence)
-                                    // determine whisker positions excluding outliers
-                                    const nonOutlierVals = d.values.filter(v => v >= lowerFence && v <= upperFence).sort((a,b)=>a-b)
-                                    const whiskerMin = nonOutlierVals.length ? nonOutlierVals[0] : d.min
-                                    const whiskerMax = nonOutlierVals.length ? nonOutlierVals[nonOutlierVals.length-1] : d.max
-                                    const tooltipText = `Q1: ${d.q1.toFixed(4)}\nMedian: ${d.q2.toFixed(4)}\nQ3: ${d.q3.toFixed(4)}\nMin: ${d.min.toFixed(4)}\nMax: ${d.max.toFixed(4)}\nOutliers: ${outliers.length}`
+                                    const cx = padding.left + (i + 0.5) * (innerW / data.length);
+                                    const color = CHART_COLORS[i % CHART_COLORS.length];
+                                    const dens = kde(d.values);
+                                    const violinWidth = boxWidth * 0.8;
 
+                                    const pathD = dens.map((pt, idx) => {
+                                        const x = cx + pt.y * violinWidth;
+                                        const y = yScale(pt.x);
+                                        return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
+                                      }).join(' ') + ` L ${cx} ${yScale(gMax)} L ${cx} ${yScale(gMin)} Z`;
+                                    
                                     return (
                                       <g key={d.name}>
-                                        <title>{tooltipText}</title>
-                                        {/* whiskers */}
-                                        <line x1={cx} x2={cx} y1={yScale(whiskerMin)} y2={yScale(d.q1)} stroke="#334155" strokeWidth={1.2} strokeLinecap="round" />
-                                        <line x1={cx} x2={cx} y1={yScale(d.q3)} y2={yScale(whiskerMax)} stroke="#334155" strokeWidth={1.2} strokeLinecap="round" />
-                                        {/* whisker caps */}
-                                        <line x1={x0} x2={x1} y1={yScale(whiskerMin)} y2={yScale(whiskerMin)} stroke="#334155" strokeWidth={1.2} />
-                                        <line x1={x0} x2={x1} y1={yScale(whiskerMax)} y2={yScale(whiskerMax)} stroke="#334155" strokeWidth={1.2} />
-                                        {/* box */}
-                                        <rect x={x0} y={yScale(d.q3)} width={boxWidth} height={Math.max(1, yScale(d.q1)-yScale(d.q3))} fill="#eef2ff" stroke="#1e3a8a" strokeWidth={1.4} rx={3} ry={3} />
-                                        {/* median */}
-                                        <line x1={x0} x2={x1} y1={yScale(d.q2)} y2={yScale(d.q2)} stroke="#06203a" strokeWidth={2} />
+                                        {/* Half-violin */}
+                                        <path d={pathD} fill={color} stroke={color} fillOpacity={0.2} strokeWidth={1.5} />
 
-                                        {/* outlier points */}
-                                        {outliers.map((ov, oi) => (
-                                          <circle key={oi} cx={cx + (oi % 2 === 0 ? -6 : 6)} cy={yScale(ov)} r={3} fill="#ef4444" stroke="#7f1d1d" strokeWidth={0.6}>
-                                            <title>{`Outlier: ${ov.toFixed(4)}`}</title>
+                                        {/* Box plot part */}
+                                        <line x1={cx - 10} x2={cx - 10} y1={yScale(d.q1)} y2={yScale(d.q3)} stroke="#374151" strokeWidth={3} />
+                                        <line x1={cx - 15} x2={cx - 5} y1={yScale(d.q2)} y2={yScale(d.q2)} stroke="#374151" strokeWidth={2} />
+                                        <line x1={cx - 10} x2={cx - 10} y1={yScale(d.min)} y2={yScale(d.q1)} stroke="#6b7280" strokeWidth={1} strokeDasharray="3 3" />
+                                        <line x1={cx - 10} x2={cx - 10} y1={yScale(d.q3)} y2={yScale(d.max)} stroke="#6b7280" strokeWidth={1} strokeDasharray="3 3" />
+
+                                        {/* Jittered points */}
+                                        {d.values.map((val, j) => (
+                                          <circle
+                                            key={j}
+                                            cx={cx - 30 + (Math.random() - 0.5) * 20}
+                                            cy={yScale(val)}
+                                            r={3}
+                                            fill={color}
+                                            fillOpacity={0.6}
+                                            stroke="#fff"
+                                            strokeWidth={0.5}
+                                          >
+                                            <title>{`${d.name}: ${val.toFixed(4)}`}</title>
                                           </circle>
                                         ))}
 
-                                        {/* label */}
-                                        <text x={cx} y={padding.top + innerH + 18} fontSize={12} fontFamily="Inter, ui-sans-serif, system-ui" textAnchor="middle" fill="#0f172a">{d.name}</text>
+                                        <text x={cx} y={padding.top + innerH + 18} fontSize={12} textAnchor="middle" fill="#0f172a">{d.name}</text>
                                       </g>
-                                    )
+                                    );
                                   })}
-
-                                  {/* legend */}
-                                  <g transform={`translate(${width - padding.right - 140}, ${padding.top})`}>
-                                    <rect x={0} y={0} width={12} height={12} fill="#c7d2fe" stroke="#4338ca" />
-                                    <text x={18} y={10} fontSize={11} fill="#111827">Weights distribution</text>
-                                  </g>
                                 </svg>
-                              )
+                              );
                             })()
                           ) : weightChartType === 'scatter' ? (
                             <ScatterChart>
@@ -3899,11 +3981,11 @@ export default function MCDMCalculator() {
                           <div className="mt-2 flex items-center gap-2 text-xs">
                             <div className="flex items-center gap-1">
                               <div className="w-4 h-4" style={{ backgroundColor: "hsl(120, 70%, 60%)" }}></div>
-                              <span>Better (Low Rank)</span>
+                              <span>Better Alternative (Rank)</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <div className="w-4 h-4" style={{ backgroundColor: "hsl(0, 70%, 60%)" }}></div>
-                              <span>Worse (High Rank)</span>
+                              <span>Worse Alternative (Rank)</span>
                             </div>
                           </div>
                         </div>
@@ -4923,7 +5005,7 @@ export default function MCDMCalculator() {
               <DialogTitle className="text-base sm:text-lg">{cardTitle}</DialogTitle>
               <DialogDescription className="text-xs sm:text-sm">{cardDescription}</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 pt-4 flex-1 overflow-y-auto">
+            <div className="space-y-4 pt-4 flex-1 overflow-y-auto" key={method + activeFormulaType}>
               {activeFormulaType === "method" ? (
                 <>
                   {method === "swei" && <SWEIFormula />}
@@ -4946,6 +5028,7 @@ export default function MCDMCalculator() {
                   {method === "electre" && <ELECTREFormula />}
                   {method === "electre1" && <ELECTRE1Formula />}
                   {method === "electre2" && <ELECTRE2Formula />}
+                  {method === "mabac" && <MABACFormula />}
                   {method === "cocoso" && <COCOSOFormula />}
                 </>
               ) : (
