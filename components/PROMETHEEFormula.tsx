@@ -99,9 +99,8 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
           .latex mjx-container {
             font-size: 0.875rem !important;
             max-width: 100% !important;
-            overflow-x: auto !important;
-            overflow-y: visible !important;
-            display: block !important;
+            overflow-x: hidden !important;
+            overflow-y: hidden !important;
             margin: 0.75rem 0 !important;
             padding: 0.5rem 0 !important;
             text-align: center !important; 
@@ -121,7 +120,7 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             margin: 1rem 0 !important;
             display: block !important;
             width: 100% !important;
-            overflow-x: auto;
+            overflow-x: hidden;
           }
 
           /* Mobile adjustments */
@@ -182,24 +181,24 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             <div className="mb-2 font-semibold">
               Decision Matrix Construction: Construct the decision matrix with alternatives as rows and criteria as columns.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step1}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }}
               />
             </div>
           </li>
 
           <li>
             <div className="mb-2 font-semibold">
-              Normalization: Normalize the decision matrix using vector normalization to make criteria comparable.
+              Normalization: Normalize the decision matrix using vector normalization.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step2_formula}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_formula}\\]` }}
               />
             </div>
           </li>
@@ -208,16 +207,16 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             <div className="mb-2 font-semibold">
               Preference Degree: For each pair of alternatives and criterion, calculate the preference degree using linear preference function.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center mb-2"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step3_formula}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_formula}\\]` }}
               />
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step3_range}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_range}\\]` }}
               />
             </div>
           </li>
@@ -226,11 +225,11 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             <div className="mb-2 font-semibold">
               Aggregated Preference Degree: Calculate the aggregated preference degree by weighting preference degrees across all criteria.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step4_formula}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_formula}\\]` }}
               />
             </div>
           </li>
@@ -239,11 +238,11 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             <div className="mb-2 font-semibold">
               Positive Flow: Calculate the positive flow (outranking flow) for each alternative.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step5_formula}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_formula}\\]` }}
               />
             </div>
           </li>
@@ -252,11 +251,11 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             <div className="mb-2 font-semibold">
               Negative Flow: Calculate the negative flow (outranked flow) for each alternative.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step6_formula}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_formula}\\]` }}
               />
             </div>
           </li>
@@ -265,11 +264,11 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             <div className="mb-2 font-semibold">
               Net Flow: Calculate the net flow for each alternative.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.step7_formula}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step7_formula}\\]` }}
               />
             </div>
           </li>
@@ -278,11 +277,11 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             <div className="mb-2 font-semibold">
               Ranking: Rank alternatives based on their net flow values.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\(${latex.ranking}\\)` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.ranking}\\]` }}
               />
             </div>
           </li>

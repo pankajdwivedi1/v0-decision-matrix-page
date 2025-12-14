@@ -180,7 +180,7 @@ export default function PROMETHEE2Formula({ compact = false }: PROMETHEE2Formula
             <div className="mb-2 font-semibold">
               Decision Matrix Construction: Construct the decision matrix with alternatives as rows and criteria as columns.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -193,7 +193,7 @@ export default function PROMETHEE2Formula({ compact = false }: PROMETHEE2Formula
             <div className="mb-2 font-semibold">
               Normalization: Normalize the decision matrix using vector normalization.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -206,7 +206,7 @@ export default function PROMETHEE2Formula({ compact = false }: PROMETHEE2Formula
             <div className="mb-2 font-semibold">
               Preference Degree: Calculate preference degrees between pairs of alternatives for each criterion.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -219,7 +219,7 @@ export default function PROMETHEE2Formula({ compact = false }: PROMETHEE2Formula
             <div className="mb-2 font-semibold">
               Aggregated Preference Degree: Calculate aggregated preference degrees by weighting across all criteria.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -232,7 +232,7 @@ export default function PROMETHEE2Formula({ compact = false }: PROMETHEE2Formula
             <div className="mb-2 font-semibold">
               Positive Flow: Calculate the positive flow (outranking flow) for each alternative.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -245,7 +245,7 @@ export default function PROMETHEE2Formula({ compact = false }: PROMETHEE2Formula
             <div className="mb-2 font-semibold">
               Negative Flow: Calculate the negative flow (outranked flow) for each alternative.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -258,7 +258,7 @@ export default function PROMETHEE2Formula({ compact = false }: PROMETHEE2Formula
             <div className="mb-2 font-semibold">
               Net Flow: Calculate the net flow for each alternative (PROMETHEE II characteristic).
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -271,7 +271,7 @@ export default function PROMETHEE2Formula({ compact = false }: PROMETHEE2Formula
             <div className="mb-2 font-semibold">
               Ranking: Rank alternatives based on their net flow values.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}

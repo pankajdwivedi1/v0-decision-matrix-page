@@ -53,35 +53,35 @@ export default function ELECTRE2Formula({ compact = false }: ELECTRE2FormulaProp
     title: "\\textbf{ELECTRE II (ÉLimination Et Choix Traduisant la REalité — Complete Ranking) — Steps}",
     intro: "\\text{ELECTRE II provides a complete ranking using strong and weak outranking relations. Unlike ELECTRE I which may have incomparabilities, ELECTRE II uses two sets of thresholds to establish a complete ranking.}",
     step1:
-      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)}",
+      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)} \\tag{1}",
     step2_intro:
       "\\textbf{2. Normalization:} \\quad \\text{For each criterion } j, \\text{ normalize the decision matrix using vector normalization.}",
     step2_formula:
-      "r_{i,j} = \\frac{x_{i,j}}{\\sqrt{\\sum_{i=1}^{m} x_{i,j}^2}}, \\quad i = 1, 2, \\ldots, m, \\quad j = 1, 2, \\ldots, n",
+      "r_{i,j} = \\frac{x_{i,j}}{\\sqrt{\\sum_{i=1}^{m} x_{i,j}^2}}, \\quad i = 1, 2, \\ldots, m, \\quad j = 1, 2, \\ldots, n \\tag{2}",
     step3_intro:
       "\\textbf{3. Concordance Index:} \\quad \\text{For each pair of alternatives } (a, b), \\text{ calculate the concordance index.}",
     step3_formula:
-      "C(a, b) = \\sum_{j \\in J^+} w_j, \\quad \\text{where } J^+ = \\{j: a_j \\geq b_j \\text{ (beneficial)} \\text{ or } a_j \\leq b_j \\text{ (non-beneficial)}\\}",
+      "C(a, b) = \\sum_{j \\in J^+} w_j, \\quad \\text{where } J^+ = \\{j: a_j \\geq b_j \\text{ (beneficial)} \\text{ or } a_j \\leq b_j \\text{ (non-beneficial)}\\} \\tag{3}",
     step4_intro:
       "\\textbf{4. Discordance Index:} \\quad \\text{For each pair of alternatives } (a, b), \\text{ calculate the discordance index.}",
     step4_formula:
-      "D(a, b) = \\max_j \\frac{|r_{b,j} - r_{a,j}|}{R_j}, \\quad \\text{where } R_j = \\max_i r_{i,j} - \\min_i r_{i,j}",
+      "D(a, b) = \\max_j \\frac{|r_{b,j} - r_{a,j}|}{R_j}, \\quad \\text{where } R_j = \\max_i r_{i,j} - \\min_i r_{i,j} \\tag{4}",
     step5_intro:
       "\\textbf{5. Strong Outranking Relation:} \\quad \\text{Build strong outranking relation using strict thresholds.}",
     step5_formula:
-      "a \\text{ strongly outranks } b \\text{ if: } C(a, b) \\geq c_s \\text{ AND } D(a, b) \\leq d_s",
+      "a \\text{ strongly outranks } b \\text{ if: } C(a, b) \\geq c_s \\text{ AND } D(a, b) \\leq d_s \\tag{5}",
     step5_thresholds:
       "\\text{where } c_s = 0.6 \\text{ (strong concordance)}, \\quad d_s = 0.4 \\text{ (strong discordance)}",
     step6_intro:
       "\\textbf{6. Weak Outranking Relation:} \\quad \\text{Build weak outranking relation using relaxed thresholds.}",
     step6_formula:
-      "a \\text{ weakly outranks } b \\text{ if: } C(a, b) \\geq c_w \\text{ AND } D(a, b) \\leq d_w",
+      "a \\text{ weakly outranks } b \\text{ if: } C(a, b) \\geq c_w \\text{ AND } D(a, b) \\leq d_w \\tag{6}",
     step6_thresholds:
       "\\text{where } c_w = 0.5 \\text{ (weak concordance)}, \\quad d_w = 0.5 \\text{ (weak discordance)}, \\quad \\text{and } c_s > c_w, \\quad d_s < d_w",
     step7_intro:
       "\\textbf{7. Score Calculation:} \\quad \\text{Calculate score based on strong outranking relations for complete ranking.}",
     step7_formula:
-      "\\text{Score}(a) = |\\{b: a \\text{ strongly outranks } b\\}| - |\\{b: b \\text{ strongly outranks } a\\}|",
+      "\\text{Score}(a) = |\\{b: a \\text{ strongly outranks } b\\}| - |\\{b: b \\text{ strongly outranks } a\\}| \\tag{7}",
     ranking:
       "\\textbf{8. Ranking:} \\quad \\text{Alternatives are ranked in descending order of score. Higher score indicates a better alternative.}",
     interpretation:
