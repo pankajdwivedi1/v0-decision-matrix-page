@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useRef, useMemo, Fragment, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -397,6 +397,7 @@ export default function MCDMCalculator() {
   const [comparisonLoading, setComparisonLoading] = useState(false)
   const [comparisonError, setComparisonError] = useState<string | null>(null)
   const [comparisonFileName, setComparisonFileName] = useState<string>("")
+
   const comparisonFileInputRef = useRef<HTMLInputElement>(null)
   const [currentStep, setCurrentStep] = useState<PageStep>("home")
   const [rankingOpen, setRankingOpen] = useState(true)
@@ -413,7 +414,7 @@ export default function MCDMCalculator() {
   // State for comparison tab collapsible sections
   const [comparisonWeightOpen, setComparisonWeightOpen] = useState(true)
   const [comparisonRankingOpen, setComparisonRankingOpen] = useState(true)
-  
+
   // State for Ranking Methods carousel
   const [rankingMethodsCarouselIndex, setRankingMethodsCarouselIndex] = useState(0)
   const [weightMethodsCarouselIndex, setWeightMethodsCarouselIndex] = useState(0)
@@ -428,6 +429,21 @@ export default function MCDMCalculator() {
   const [apiResults, setApiResults] = useState<any>(null)
   const [entropyResult, setEntropyResult] = useState<EntropyResult | null>(null)
   const [criticResult, setCriticResult] = useState<CriticResult | null>(null)
+
+  // Responsive items per page for carousels
+  const [itemsPerPage, setItemsPerPage] = useState(6)
+
+  useEffect(() => {
+    const handleResize = () => {
+      setItemsPerPage(window.innerWidth < 768 ? 3 : 6)
+    }
+
+    // Set initial
+    handleResize()
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
   const [ahpResult, setAhpResult] = useState<AHPResult | null>(null)
   const [pipreciaResult, setPipreciaResult] = useState<PipreciaResult | null>(null)
   const [merecResult, setMerecResult] = useState<MERECResult | null>(null)
@@ -1658,7 +1674,7 @@ export default function MCDMCalculator() {
 
     try {
       const methodLabel = MCDM_METHODS.find(m => m.value === method)?.label || method.toUpperCase()
-      
+
       // Prepare data for export
       const exportData = {
         method: methodLabel,
@@ -2099,8 +2115,8 @@ export default function MCDMCalculator() {
 
   if (currentStep === "home") {
     return (
-      <main className="flex-1 min-h-screen bg-white p-2 sm:p-3 md:p-4">
-        <div className="w-full max-w-full px-4 md:px-10 mx-auto py-4 sm:py-6">
+      <main className="flex-1 min-h-screen bg-white p-0 sm:p-4">
+        <div className="w-full max-w-7xl px-4 sm:px-6 md:px-8 mx-auto py-4 sm:py-6">
           <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
             {/* SidebarTrigger removed */}
             <div className="min-w-0 flex-1">
@@ -2108,12 +2124,12 @@ export default function MCDMCalculator() {
               <p className="text-[10px] sm:text-xs text-gray-700">Multicriteria Decision Making Calculator</p>
             </div>
             <div className="flex items-center gap-4">
-                <Button variant="outline" onClick={() => window.location.reload()}>
-                    <Home className="mr-2 h-4 w-4" /> Home
-                </Button>
-                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border border-gray-200 shrink-0">
-                    <img src="/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
-                </div>
+              <Button variant="outline" onClick={() => window.location.reload()}>
+                <Home className="mr-2 h-4 w-4" /> Home
+              </Button>
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border border-gray-200 shrink-0">
+                <img src="/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
+              </div>
             </div>
           </div>
 
@@ -2123,32 +2139,28 @@ export default function MCDMCalculator() {
               className={`text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 cursor-pointer ${homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("rankingMethods")}
             >
-              <span className="hidden sm:inline">Ranking Methods / Calculator</span>
-              <span className="sm:hidden">Ranking</span>
+              <span className="truncate">Ranking Methods / Calculator</span>
             </Button>
             <Button
               variant="outline"
               className={`text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 cursor-pointer ${homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("weightMethods")}
             >
-              <span className="hidden sm:inline">Weight Methods</span>
-              <span className="sm:hidden">Weights</span>
+              <span className="truncate">Weight Methods</span>
             </Button>
             <Button
               variant="outline"
               className={`text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 cursor-pointer ${homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("rankingComparison")}
             >
-              <span className="hidden sm:inline">Ranking comparison</span>
-              <span className="sm:hidden">Compare</span>
+              <span className="truncate">Ranking comparison</span>
             </Button>
             <Button
               variant="outline"
               className={`text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 cursor-pointer ${homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("sensitivityAnalysis")}
             >
-              <span className="hidden sm:inline">Sensitivity Analysis</span>
-              <span className="sm:hidden">Sensitivity</span>
+              <span className="truncate">Sensitivity Analysis</span>
             </Button>
           </div>
 
@@ -2185,7 +2197,7 @@ export default function MCDMCalculator() {
                     </p>
                   </div>
 
-                  <div className="border border-gray-200 rounded-lg overflow-x-auto">
+                  <div className="table-responsive border border-gray-200 rounded-lg">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50">
@@ -2248,104 +2260,51 @@ export default function MCDMCalculator() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm text-black">Ranking Methods</CardTitle>
                   <CardDescription className="text-xs text-gray-700">
-                    Select a ranking method to use in your calculations
+                    Select a ranking method to use in your calculations, and view the Mathmatical formula
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="relative flex flex-row items-center gap-4">
-                    {/* Left Navigation Button */}
-                    <button
-                      onClick={() => {
-                        const numPages = Math.ceil(MCDM_METHODS.length / 6)
-                        const maxIndex = (numPages - 1) * 6
-                        setRankingMethodsCarouselIndex(prev => {
-                          const prevIndex = prev - 6
-                          return prevIndex < 0 ? maxIndex : prevIndex
-                        })
-                      }}
-                      className="p-2 rounded-lg border border-gray-300 hover:border-gray-400 hover:bg-gray-100 transition-colors flex-shrink-0"
-                      aria-label="Previous methods"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-
-                    {/* Methods Grid - 3 Columns, 2 Rows (6 items) */}
-                    <div className="w-full flex-1 bg-muted/40 rounded-lg">
-                      <div className="grid grid-cols-3 gap-3 min-h-[300px]">
-                        {MCDM_METHODS.slice(rankingMethodsCarouselIndex, rankingMethodsCarouselIndex + 6).map((m) => (
-                          <div
-                            key={m.value}
-                            onClick={() => {
-                              setMethod(m.value)
-                              setActiveFormulaType("method")
-                              setIsDialogOpen(true)
+                  <div className="w-full overflow-hidden">
+                    <div className="animate-marquee hover:pause">
+                      {[...MCDM_METHODS, ...MCDM_METHODS].map((m, index) => (
+                        <div
+                          key={`${m.value}-${index}`}
+                          onClick={() => {
+                            setMethod(m.value)
+                            setActiveFormulaType("method")
+                            setIsDialogOpen(true)
+                          }}
+                          className={`flex-shrink-0 w-[280px] text-left p-3 rounded-lg border-2 transition-all hover:shadow-md relative cursor-pointer h-[100px] flex flex-col justify-between overflow-hidden font-serif ${method === m.value
+                            ? "border-[#1E88E5] bg-[#E3F2FD] text-black"
+                            : "border-[#1E88E5]/40 bg-white text-black hover:border-[#1E88E5] hover:bg-[#E3F2FD]"
+                            }`}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 absolute top-2 right-2 text-gray-400 hover:text-black z-10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMethod(m.value);
+                              setActiveFormulaType("method");
+                              setIsDialogOpen(true);
                             }}
-                            className={`text-left p-3 rounded-lg border-2 transition-all hover:shadow-md relative cursor-pointer ${method === m.value
-                              ? "border-[#F8BBD0] bg-[#FCE4EC] text-black"
-                              : "border-gray-200 bg-white text-black hover:border-[#F8BBD0] hover:bg-[#FCE4EC]"
-                              }`}
                           >
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 absolute top-2 right-2 text-gray-400 hover:text-black z-10"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setMethod(m.value);
-                                setActiveFormulaType("method");
-                                setIsDialogOpen(true);
-                              }}
-                            >
-                              <span className="sr-only">Info</span>
-                              <div className="border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic">i</div>
-                            </Button>
-                            <div className="font-semibold text-sm mb-1 pr-6">{m.label}</div>
-                            <div className="text-xs mb-2 text-gray-700">
+                            <span className="sr-only">Info</span>
+                            <div className="border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic">i</div>
+                          </Button>
+                          <div>
+                            <div className="font-bold text-sm mb-1 pr-6">{m.label}</div>
+                            <div className="text-xs mb-2 text-black line-clamp-2">
                               {m.description}
                             </div>
-                            <div className="text-[11px] font-mono text-gray-600">
-                              {m.formula}
-                            </div>
                           </div>
-                        ))}
-                        {/* Padding to maintain grid size when fewer items */}
-                        {Array.from({ length: Math.max(0, 6 - MCDM_METHODS.slice(rankingMethodsCarouselIndex, rankingMethodsCarouselIndex + 6).length) }).map((_, i) => (
-                          <div key={`placeholder-${i}`} />
-                        ))}
-                      </div>
+                          <div className="text-[11px] font-mono text-black truncate mt-auto">
+                            {m.formula}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-
-                    {/* Right Navigation Button */}
-                    <button
-                      onClick={() => {
-                        const numPages = Math.ceil(MCDM_METHODS.length / 6)
-                        const maxIndex = (numPages - 1) * 6
-                        setRankingMethodsCarouselIndex(prev => {
-                          const nextIndex = prev + 6
-                          return nextIndex > maxIndex ? 0 : nextIndex
-                        })
-                      }}
-                      className="p-2 rounded-lg border border-gray-300 hover:border-gray-400 hover:bg-gray-100 transition-colors flex-shrink-0"
-                      aria-label="Next methods"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  {/* Carousel Indicators */}
-                  <div className="flex justify-center gap-1 mt-4">
-                    {Array.from({ length: Math.ceil(MCDM_METHODS.length / 6) }).map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setRankingMethodsCarouselIndex(index * 6)}
-                        className={`h-2 rounded-full transition-all ${
-                          Math.floor(rankingMethodsCarouselIndex / 6) === index
-                            ? "bg-[#F8BBD0] w-6"
-                            : "bg-gray-300 w-2 hover:bg-gray-400"
-                        }`}
-                        aria-label={`Go to carousel page ${index + 1}`}
-                      />
-                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -2436,96 +2395,44 @@ export default function MCDMCalculator() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="relative flex flex-row items-center gap-4">
-                    {/* Left Navigation Button */}
-                    <button
-                      onClick={() => {
-                        const numPages = Math.ceil(WEIGHT_METHODS.length / 6)
-                        const maxIndex = (numPages - 1) * 6
-                        setWeightMethodsCarouselIndex(prev => {
-                          const prevIndex = prev - 6
-                          return prevIndex < 0 ? maxIndex : prevIndex
-                        })
-                      }}
-                      className="p-2 rounded-lg border border-gray-300 hover:border-gray-400 hover:bg-gray-100 transition-colors flex-shrink-0"
-                      aria-label="Previous methods"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-
-                    {/* Methods Grid */}
-                    <div className="w-full flex-1 bg-muted/40 rounded-lg">
-                      <div className="grid grid-cols-3 gap-3 min-h-[300px]">
-                        {WEIGHT_METHODS.slice(weightMethodsCarouselIndex, weightMethodsCarouselIndex + 6).map((w) => (
-                          <div
-                            key={w.value}
-                            onClick={() => {
-                              setWeightMethod(w.value)
-                              setActiveFormulaType("weight")
-                              setIsDialogOpen(true)
+                  <div className="w-full overflow-hidden">
+                    <div className="animate-marquee hover:pause">
+                      {[...WEIGHT_METHODS, ...WEIGHT_METHODS].map((w, index) => (
+                        <div
+                          key={`${w.value}-${index}`}
+                          onClick={() => {
+                            setWeightMethod(w.value)
+                            setActiveFormulaType("weight")
+                            setIsDialogOpen(true)
+                          }}
+                          className={`flex-shrink-0 w-[280px] text-left p-3 rounded-lg border-2 transition-all hover:shadow-md relative cursor-pointer h-[100px] flex flex-col justify-between overflow-hidden font-serif ${weightMethod === w.value
+                            ? "border-[#00695C] bg-[#E0F2F1] text-black"
+                            : "border-[#00695C]/40 bg-white text-black hover:border-[#00695C] hover:bg-[#E0F2F1]"
+                            }`}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 absolute top-2 right-2 text-gray-400 hover:text-black z-10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setWeightMethod(w.value);
+                              setActiveFormulaType("weight");
+                              setIsDialogOpen(true);
                             }}
-                            className={`text-left p-3 rounded-lg border-2 transition-all hover:shadow-md relative cursor-pointer ${weightMethod === w.value
-                              ? "border-[#90CAF9] bg-[#E3F2FD] text-black"
-                              : "border-gray-200 bg-white text-black hover:border-[#90CAF9] hover:bg-[#E3F2FD]"
-                              }`}
                           >
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 absolute top-2 right-2 text-gray-400 hover:text-black z-10"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setWeightMethod(w.value);
-                                setActiveFormulaType("weight");
-                                setIsDialogOpen(true);
-                              }}
-                            >
-                              <span className="sr-only">Info</span>
-                              <div className="border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic">i</div>
-                            </Button>
-                            <div className="font-semibold text-sm mb-1 pr-6">{w.label}</div>
-                            <div className="text-xs text-gray-700">
+                            <span className="sr-only">Info</span>
+                            <div className="border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic">i</div>
+                          </Button>
+                          <div>
+                            <div className="font-bold text-sm mb-1 pr-6">{w.label}</div>
+                            <div className="text-xs text-black line-clamp-2">
                               {w.description}
                             </div>
                           </div>
-                        ))}
-                        {Array.from({ length: Math.max(0, 6 - WEIGHT_METHODS.slice(weightMethodsCarouselIndex, weightMethodsCarouselIndex + 6).length) }).map((_, i) => (
-                          <div key={`placeholder-${i}`} />
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
-
-                    {/* Right Navigation Button */}
-                    <button
-                      onClick={() => {
-                        const numPages = Math.ceil(WEIGHT_METHODS.length / 6)
-                        const maxIndex = (numPages - 1) * 6
-                        setWeightMethodsCarouselIndex(prev => {
-                          const nextIndex = prev + 6
-                          return nextIndex > maxIndex ? 0 : nextIndex
-                        })
-                      }}
-                      className="p-2 rounded-lg border border-gray-300 hover:border-gray-400 hover:bg-gray-100 transition-colors flex-shrink-0"
-                      aria-label="Next methods"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  {/* Carousel Indicators */}
-                  <div className="flex justify-center gap-1 mt-4">
-                    {Array.from({ length: Math.ceil(WEIGHT_METHODS.length / 6) }).map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setWeightMethodsCarouselIndex(index * 6)}
-                        className={`h-2 rounded-full transition-all ${
-                          Math.floor(weightMethodsCarouselIndex / 6) === index
-                            ? "bg-[#90CAF9] w-6"
-                            : "bg-gray-300 w-2 hover:bg-gray-400"
-                        }`}
-                        aria-label={`Go to carousel page ${index + 1}`}
-                      />
-                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -2888,7 +2795,7 @@ export default function MCDMCalculator() {
                                   return arr[base];
                                 };
                                 const min = sorted[0] ?? 0;
-                                const max = sorted[sorted.length-1] ?? 0;
+                                const max = sorted[sorted.length - 1] ?? 0;
                                 const q1 = q(sorted, 0.25);
                                 const q2 = q(sorted, 0.5);
                                 const q3 = q(sorted, 0.75);
@@ -2900,7 +2807,7 @@ export default function MCDMCalculator() {
                               const padding = { left: 60, right: 20, top: 20, bottom: 60 };
                               const innerW = width - padding.left - padding.right;
                               const innerH = height - padding.top - padding.bottom;
-                              
+
                               const allVals = data.flatMap(d => d.values);
                               const gMin = Math.min(...allVals, 0);
                               const gMax = Math.max(...allVals, 1);
@@ -2932,7 +2839,7 @@ export default function MCDMCalculator() {
                                       </g>
                                     );
                                   })}
-                                  <text x={padding.left / 2} y={padding.top + innerH / 2} transform={`rotate(-90, ${padding.left / 2}, ${padding.top + innerH/2})`} textAnchor="middle" fontSize="12" fill="#374151">Weight</text>
+                                  <text x={padding.left / 2} y={padding.top + innerH / 2} transform={`rotate(-90, ${padding.left / 2}, ${padding.top + innerH / 2})`} textAnchor="middle" fontSize="12" fill="#374151">Weight</text>
 
                                   {data.map((d, i) => {
                                     const cx = padding.left + (i + 0.5) * (innerW / data.length);
@@ -2941,11 +2848,11 @@ export default function MCDMCalculator() {
                                     const violinWidth = boxWidth * 0.8;
 
                                     const pathD = dens.map((pt, idx) => {
-                                        const x = cx + pt.y * violinWidth;
-                                        const y = yScale(pt.x);
-                                        return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
-                                      }).join(' ') + ` L ${cx} ${yScale(gMax)} L ${cx} ${yScale(gMin)} Z`;
-                                    
+                                      const x = cx + pt.y * violinWidth;
+                                      const y = yScale(pt.x);
+                                      return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
+                                    }).join(' ') + ` L ${cx} ${yScale(gMax)} L ${cx} ${yScale(gMin)} Z`;
+
                                     return (
                                       <g key={d.name}>
                                         {/* Half-violin */}
@@ -3131,7 +3038,7 @@ export default function MCDMCalculator() {
                                       return row && row[m] !== undefined ? Number(row[m]) : 0
                                     })
                                     const dens = kde(weights, 0.06, 60)
-                                    const offsetY = padding.top + idx * ( (height - padding.top - padding.bottom) / Math.max(1, criteriaNames.length) )
+                                    const offsetY = padding.top + idx * ((height - padding.top - padding.bottom) / Math.max(1, criteriaNames.length))
                                     const scaleX = (x: number) => padding.left + x * (innerW)
                                     const scaleY = (v: number) => offsetY + (1 - v) * 40
 
@@ -3153,23 +3060,23 @@ export default function MCDMCalculator() {
                               const first = sensitivityCriteriaWeights[0]
                               if (!first) return <div className="text-xs">No data</div>
                               const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
-                              const vals = methods.map(m => first[m] !== undefined ? Number(first[m]) : 0).sort((a,b)=>a-b)
+                              const vals = methods.map(m => first[m] !== undefined ? Number(first[m]) : 0).sort((a, b) => a - b)
                               const width = 700
                               const height = 420
                               const padding = { left: 60, right: 20, top: 20, bottom: 60 }
                               const innerW = width - padding.left - padding.right
                               const innerH = height - padding.top - padding.bottom
-                              const points = vals.map((v,i) => ({ x: padding.left + (i/(vals.length-1||1))*innerW, y: padding.top + innerH - ( (i+1)/vals.length )*innerH, v }))
+                              const points = vals.map((v, i) => ({ x: padding.left + (i / (vals.length - 1 || 1)) * innerW, y: padding.top + innerH - ((i + 1) / vals.length) * innerH, v }))
 
-                              const lineD = points.map((p,i) => `${i===0?'M':'L'} ${p.x} ${p.y}`).join(' ')
+                              const lineD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
 
                               return (
                                 <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
-                                  <line x1={padding.left} x2={padding.left} y1={padding.top} y2={padding.top+innerH} stroke="#e5e7eb" />
-                                  <line x1={padding.left} x2={padding.left+innerW} y1={padding.top+innerH} y2={padding.top+innerH} stroke="#e5e7eb" />
+                                  <line x1={padding.left} x2={padding.left} y1={padding.top} y2={padding.top + innerH} stroke="#e5e7eb" />
+                                  <line x1={padding.left} x2={padding.left + innerW} y1={padding.top + innerH} y2={padding.top + innerH} stroke="#e5e7eb" />
                                   <path d={lineD} stroke="#2563eb" fill="none" strokeWidth={2} />
                                   {points.map((p, i) => (<circle key={i} cx={p.x} cy={p.y} r={3} fill="#2563eb" />))}
-                                  <text x={padding.left+innerW/2} y={height - 20} textAnchor="middle" fontSize={12}>{first.name} - ECDF</text>
+                                  <text x={padding.left + innerW / 2} y={height - 20} textAnchor="middle" fontSize={12}>{first.name} - ECDF</text>
                                 </svg>
                               )
                             })()
@@ -3197,13 +3104,13 @@ export default function MCDMCalculator() {
                               const innerW = width - padding.left - padding.right
                               const innerH = height - padding.top - padding.bottom
 
-                              const pathD = dens.map((pt, i) => `${i===0?'M':'L'} ${padding.left + pt.x * innerW} ${padding.top + innerH - pt.y * (innerH * 0.8)}`).join(' ')
+                              const pathD = dens.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${padding.left + pt.x * innerW} ${padding.top + innerH - pt.y * (innerH * 0.8)}`).join(' ')
 
                               return (
                                 <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
-                                  <line x1={padding.left} x2={padding.left} y1={padding.top} y2={padding.top+innerH} stroke="#e5e7eb" />
+                                  <line x1={padding.left} x2={padding.left} y1={padding.top} y2={padding.top + innerH} stroke="#e5e7eb" />
                                   <path d={pathD} stroke="#ef4444" fill="none" strokeWidth={2} />
-                                  <text x={padding.left+innerW/2} y={height - 20} textAnchor="middle" fontSize={12}>{first.name} - KDE</text>
+                                  <text x={padding.left + innerW / 2} y={height - 20} textAnchor="middle" fontSize={12}>{first.name} - KDE</text>
                                 </svg>
                               )
                             })()
@@ -4029,7 +3936,7 @@ export default function MCDMCalculator() {
                                   <line x1={padding.left} y1={padding.top} x2={padding.left} y2={padding.top + chartHeight} stroke="#999" strokeWidth="2" />
                                   {/* X-axis */}
                                   <line x1={padding.left} y1={padding.top + chartHeight} x2={800 - padding.right} y2={padding.top + chartHeight} stroke="#999" strokeWidth="2" />
-                                  
+
                                   {/* Y-axis labels */}
                                   {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
                                     const yVal = minVal + pct * yRange
@@ -5207,36 +5114,75 @@ export default function MCDMCalculator() {
                 </button>
                 {weightOpen && (
                   <SidebarMenu>
-                    {WEIGHT_METHODS.map((w) => (
-                      <SidebarMenuItem key={w.value}>
-                        <SidebarMenuButton
-                          onClick={async () => {
-                            const allScoresFilled = alternatives.every((alt) =>
-                              criteria.every((crit) => {
-                                const score = alt.scores[crit.id]
-                                return score !== undefined && score !== "" && Number(score) >= 0
-                              }),
-                            )
+                    {/* Objective Weight Methods Group */}
+                    <div className="bg-[#FFE0B2] p-2 rounded-md mb-2">
+                      <div className="text-[10px] font-bold text-[#E65100] mb-1 px-2 uppercase tracking-wide">Objective Weight Methods</div>
+                      {WEIGHT_METHODS.filter(w => ["equal", "entropy", "critic", "merec", "wenslo", "lopcow", "dematel"].includes(w.value)).map((w) => (
+                        <SidebarMenuItem key={w.value}>
+                          <SidebarMenuButton
+                            onClick={async () => {
+                              const allScoresFilled = alternatives.every((alt) =>
+                                criteria.every((crit) => {
+                                  const score = alt.scores[crit.id]
+                                  return score !== undefined && score !== "" && Number(score) >= 0
+                                }),
+                              )
 
-                            if (!allScoresFilled) {
-                              alert("Please fill in all score values with numbers greater than or equal to 0")
-                              setWeightMethod(w.value)
-                              return
-                            }
+                              if (!allScoresFilled) {
+                                alert("Please fill in all score values with numbers greater than or equal to 0")
+                                setWeightMethod(w.value)
+                                return
+                              }
 
-                            await calculateWeights(w.value)
-                            setCurrentStep("matrix")
-                          }}
-                          isActive={weightMethod === w.value}
-                          className={`text-xs ${weightMethod === w.value
-                            ? "bg-black text-white"
-                            : "text-black hover:bg-gray-100"
-                            }`}
-                        >
-                          <span>{w.label}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
+                              await calculateWeights(w.value)
+                              setCurrentStep("matrix")
+                            }}
+                            isActive={weightMethod === w.value}
+                            className={`text-xs ${weightMethod === w.value
+                              ? "bg-black text-white"
+                              : "text-black hover:bg-white/50"
+                              }`}
+                          >
+                            <span>{w.label}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </div>
+
+                    {/* Subjective Weight Methods Group */}
+                    <div className="bg-[#FFF9C4] p-2 rounded-md">
+                      <div className="text-[10px] font-bold text-[#FBC02D] mb-1 px-2 uppercase tracking-wide">Subjective Weight Methods</div>
+                      {WEIGHT_METHODS.filter(w => ["ahp", "piprecia", "swara"].includes(w.value)).map((w) => (
+                        <SidebarMenuItem key={w.value}>
+                          <SidebarMenuButton
+                            onClick={async () => {
+                              const allScoresFilled = alternatives.every((alt) =>
+                                criteria.every((crit) => {
+                                  const score = alt.scores[crit.id]
+                                  return score !== undefined && score !== "" && Number(score) >= 0
+                                }),
+                              )
+
+                              if (!allScoresFilled) {
+                                alert("Please fill in all score values with numbers greater than or equal to 0")
+                                setWeightMethod(w.value)
+                                return
+                              }
+
+                              await calculateWeights(w.value)
+                              setCurrentStep("matrix")
+                            }}
+                            isActive={weightMethod === w.value}
+                            className={`text-xs ${weightMethod === w.value
+                              ? "bg-black text-white"
+                              : "text-black hover:bg-white/50"
+                              }`}
+                          >
+                            <span>{w.label}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </div>
                   </SidebarMenu>
                 )}
               </div>
@@ -6483,7 +6429,7 @@ export default function MCDMCalculator() {
   if (currentStep === "calculate") {
     return (
       <SidebarProvider>
-        <Sidebar>
+        <Sidebar side="left">
           <SidebarHeader>
             <div className="px-4 py-2 font-bold text-lg">MCDM Methods</div>
           </SidebarHeader>
@@ -6573,12 +6519,12 @@ export default function MCDMCalculator() {
                     <div className="inline-flex items-center gap-2 bg-teal-100 border border-teal-300 rounded-full px-3 py-1.5">
                       <span className="text-xs font-semibold text-teal-800">{methodInfo?.label}</span>
                     </div>
-                    
+
                     {/* Criteria Badge */}
                     <div className="inline-flex items-center gap-2 bg-blue-100 border border-blue-300 rounded-full px-3 py-1.5">
                       <span className="text-xs font-semibold text-blue-800">{String(criteria.length).padStart(2, '0')} Criteria</span>
                     </div>
-                    
+
                     {/* Alternatives Badge */}
                     <div className="inline-flex items-center gap-2 bg-gray-100 border border-gray-300 rounded-full px-3 py-1.5">
                       <span className="text-xs font-semibold text-gray-800">{String(alternatives.length).padStart(2, '0')} Alternatives</span>

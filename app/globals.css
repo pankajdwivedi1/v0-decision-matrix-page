@@ -143,6 +143,7 @@
   }
 }
 
+
 /* Mobile-Responsive Utilities */
 @layer utilities {
 
@@ -181,6 +182,9 @@
   .touch-target {
     min-height: 44px;
     min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   /* Responsive flex stacking */
@@ -207,7 +211,7 @@
 
   /* Mobile-friendly dialogs */
   .dialog-mobile {
-    @apply w-[95vw] max-w-[95vw] h-[90vh] max-h-[90vh];
+    @apply w-[95vw] max-w-[95vw] h-[85vh] max-h-[90vh] overflow-y-auto;
   }
 
   @media (min-width: 640px) {
@@ -216,44 +220,42 @@
     }
   }
 
-  /* Horizontal scroll indicator gradient */
-  .scroll-indicator {
-    position: relative;
+  /* MathJax Responsive Overrides */
+  mjx-container {
+    font-size: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    display: block !important;
+    margin: 0.5em 0 !important;
   }
 
-  .scroll-indicator::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 30px;
-    background: linear-gradient(to left, rgba(255, 255, 255, 0.9), transparent);
-    pointer-events: none;
-  }
-
-  @media (min-width: 768px) {
-    .scroll-indicator::after {
-      display: none;
+  /* Force equation scaling on very small screens */
+  @media (max-width: 480px) {
+    mjx-container {
+      font-size: 85% !important;
     }
   }
 
-  /* Responsive text sizing */
-  .text-responsive-xs {
-    @apply text-[10px] sm:text-xs;
+  /* Continuous Marquee Animation */
+  @keyframes marquee {
+    0% {
+      transform: translateX(0);
+    }
+
+    100% {
+      transform: translateX(-50%);
+    }
   }
 
-  .text-responsive-sm {
-    @apply text-xs sm:text-sm;
+  .animate-marquee {
+    display: flex;
+    gap: 1rem;
+    width: max-content;
+    animation: marquee 40s linear infinite;
   }
 
-  /* Responsive padding */
-  .p-responsive {
-    @apply p-2 sm:p-3 md:p-4;
-  }
-
-  /* Mobile-friendly button group */
-  .btn-group-responsive {
-    @apply flex flex-wrap gap-1.5 sm:gap-2;
+  .animate-marquee:hover {
+    animation-play-state: paused;
   }
 }
