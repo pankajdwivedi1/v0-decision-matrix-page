@@ -1,5 +1,15 @@
 import type { Alternative, Criterion } from "./types"
 
+export interface PROMETHEE1Result {
+  scores: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  aggregatedPreferenceMatrix: Record<string, Record<string, number>>
+  positiveFlow: Record<string, number>
+  negativeFlow: Record<string, number>
+  outrankingMatrix: Record<string, Record<string, boolean>>
+  ranking: string[]
+}
+
 /**
  * PROMETHEE I (Preference Ranking Organization Method for Enrichment Evaluations)
  *
@@ -29,17 +39,28 @@ import type { Alternative, Criterion } from "./types"
 export function calculatePROMETHEE1(
   alternatives: Alternative[],
   criteria: Criterion[]
-): Record<string, number> {
-  const scores: Record<string, number> = {}
+): PROMETHEE1Result {
   const epsilon = 1e-12
 
   const m = alternatives.length
   const n = criteria.length
 
-  if (m === 0 || n === 0) return scores
+  const emptyResult: PROMETHEE1Result = {
+    scores: {},
+    normalizedMatrix: {},
+    aggregatedPreferenceMatrix: {},
+    positiveFlow: {},
+    negativeFlow: {},
+    outrankingMatrix: {},
+    ranking: [],
+  }
+
+  if (m === 0 || n === 0) return emptyResult
   if (m === 1) {
-    scores[alternatives[0].id] = 0
-    return scores
+    const altId = alternatives[0].id
+    emptyResult.scores[altId] = 0
+    emptyResult.ranking = [altId]
+    return emptyResult
   }
 
   // Step 1: Build decision matrix
@@ -139,7 +160,7 @@ export function calculatePROMETHEE1(
   }
 
   // Step 8: Calculate scores based on outranking relations
-  // Score = number of alternatives outranked - number of alternatives that outrank this
+  const scores: Record<string, number> = {}
   for (let i = 0; i < m; i++) {
     let outrankedCount = 0
     let outrankedByCount = 0
@@ -159,6 +180,43 @@ export function calculatePROMETHEE1(
     scores[alternatives[i].id] = score
   }
 
-  return scores
+  // Format results for JSON response
+  const result: PROMETHEE1Result = {
+    scores,
+    normalizedMatrix: {},
+    aggregatedPreferenceMatrix: {},
+    positiveFlow: {},
+    negativeFlow: {},
+    outrankingMatrix: {},
+    ranking: [],
+  }
+
+  alternatives.forEach((alt, i) => {
+    result.normalizedMatrix[alt.id] = {}
+    criteria.forEach((crit, j) => {
+      result.normalizedMatrix[alt.id][crit.id] = normalizedMatrix[i][j]
+    })
+  })
+
+  alternatives.forEach((altI, i) => {
+    result.aggregatedPreferenceMatrix[altI.id] = {}
+    result.outrankingMatrix[altI.id] = {}
+    alternatives.forEach((altK, k) => {
+      result.aggregatedPreferenceMatrix[altI.id][altK.id] = pi[i][k]
+      result.outrankingMatrix[altI.id][altK.id] = outranks[i][k]
+    })
+  })
+
+  alternatives.forEach((alt, i) => {
+    result.positiveFlow[alt.id] = phiPlus[i]
+    result.negativeFlow[alt.id] = phiMinus[i]
+  })
+
+  // Rank alternatives by score
+  result.ranking = Object.entries(scores)
+    .sort(([, scoreA], [, scoreB]) => scoreB - scoreA)
+    .map(([altId]) => altId)
+
+  return result
 }
 

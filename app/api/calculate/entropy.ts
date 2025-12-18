@@ -6,6 +6,7 @@ export interface EntropyResult {
   normalizedMatrix: Record<string, Record<string, number>>
   entropyValues: Record<string, number>
   diversityValues: Record<string, number>
+  entropyMatrix: Record<string, Record<string, number>>
 }
 
 /**

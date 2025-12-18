@@ -1,5 +1,14 @@
 import type { Alternative, Criterion } from "./types"
 
+export interface PROMETHEE2Result {
+  scores: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  preferenceMatrix: Record<string, Record<string, Record<string, number>>>
+  aggregatedPreferenceMatrix: Record<string, Record<string, number>>
+  positiveFlow: Record<string, number>
+  negativeFlow: Record<string, number>
+}
+
 /**
  * PROMETHEE II (Preference Ranking Organization Method for Enrichment Evaluations)
  *
@@ -26,17 +35,27 @@ import type { Alternative, Criterion } from "./types"
 export function calculatePROMETHEE2(
   alternatives: Alternative[],
   criteria: Criterion[]
-): Record<string, number> {
+): PROMETHEE2Result {
   const scores: Record<string, number> = {}
   const epsilon = 1e-12
 
   const m = alternatives.length
   const n = criteria.length
 
-  if (m === 0 || n === 0) return scores
+  const emptyResult: PROMETHEE2Result = {
+    scores: {},
+    normalizedMatrix: {},
+    preferenceMatrix: {},
+    aggregatedPreferenceMatrix: {},
+    positiveFlow: {},
+    negativeFlow: {},
+  }
+
+  if (m === 0 || n === 0) return emptyResult
   if (m === 1) {
-    scores[alternatives[0].id] = 0
-    return scores
+    const altId = alternatives[0].id
+    emptyResult.scores[altId] = 0
+    return emptyResult
   }
 
   // Step 1: Build decision matrix
@@ -67,6 +86,9 @@ export function calculatePROMETHEE2(
   // Step 3 & 4: Calculate preference degrees and aggregated preferences
   // π[i][k] = aggregated preference of alternative i over alternative k
   const pi: number[][] = Array.from({ length: m }, () => Array(m).fill(0))
+  const preferenceMatrix: number[][][] = Array.from({ length: m }, () =>
+    Array.from({ length: m }, () => Array(n).fill(0))
+  )
 
   for (let i = 0; i < m; i++) {
     for (let k = 0; k < m; k++) {
@@ -94,6 +116,7 @@ export function calculatePROMETHEE2(
             preference = (valK - valI) / ranges[j]
           }
         }
+        preferenceMatrix[i][k][j] = preference
 
         aggregatedPreference += crit.weight * preference
       }
@@ -127,6 +150,45 @@ export function calculatePROMETHEE2(
     scores[alternatives[i].id] = netFlow
   }
 
-  return scores
+  // Format results for JSON response
+  const result: PROMETHEE2Result = {
+    scores,
+    normalizedMatrix: {},
+    preferenceMatrix: {},
+    aggregatedPreferenceMatrix: {},
+    positiveFlow: {},
+    negativeFlow: {},
+  }
+
+  alternatives.forEach((alt, i) => {
+    result.normalizedMatrix[alt.id] = {}
+    criteria.forEach((crit, j) => {
+      result.normalizedMatrix[alt.id][crit.id] = normalizedMatrix[i][j]
+    })
+  })
+
+  alternatives.forEach((altI, i) => {
+    result.preferenceMatrix[altI.id] = {}
+    alternatives.forEach((altK, k) => {
+      result.preferenceMatrix[altI.id][altK.id] = {}
+      criteria.forEach((crit, j) => {
+        result.preferenceMatrix[altI.id][altK.id][crit.id] = preferenceMatrix[i][k][j]
+      })
+    })
+  })
+
+  alternatives.forEach((altI, i) => {
+    result.aggregatedPreferenceMatrix[altI.id] = {}
+    alternatives.forEach((altK, k) => {
+      result.aggregatedPreferenceMatrix[altI.id][altK.id] = pi[i][k]
+    })
+  })
+
+  alternatives.forEach((alt, i) => {
+    result.positiveFlow[alt.id] = phiPlus[i]
+    result.negativeFlow[alt.id] = phiMinus[i]
+  })
+
+  return result
 }
 

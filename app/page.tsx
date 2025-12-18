@@ -111,6 +111,7 @@ interface EntropyResult {
   normalizedMatrix: Record<string, Record<string, number>>
   entropyValues: Record<string, number>
   diversityValues: Record<string, number>
+  entropyMatrix: Record<string, Record<string, number>>
 }
 
 interface SensitivityRankingItem {
@@ -433,6 +434,43 @@ export default function MCDMCalculator() {
   // Responsive items per page for carousels
   const [itemsPerPage, setItemsPerPage] = useState(6)
 
+  // Persistence for navigation state
+  useEffect(() => {
+    const savedStep = localStorage.getItem("currentStep") as PageStep
+    if (savedStep) {
+      // If the saved step is "calculate", revert to "matrix" because apiResults are lost on reload.
+      // This prevents the infinite "Loading results..." spinner and ensures the user explicitly triggers calculation.
+      if (savedStep === "calculate") {
+        setCurrentStep("matrix")
+      } else {
+        setCurrentStep(savedStep)
+      }
+    }
+    const savedTab = localStorage.getItem("homeTab") as any
+    if (savedTab) setHomeTab(savedTab)
+  }, [])
+
+  useEffect(() => {
+    if (currentStep) localStorage.setItem("currentStep", currentStep)
+  }, [currentStep])
+
+  useEffect(() => {
+    if (homeTab) localStorage.setItem("homeTab", homeTab)
+  }, [homeTab])
+
+  const handleResetAndHome = () => {
+    setCurrentStep("home")
+    // Optional: Reset other transient states if needed
+    setIsLoading(false)
+  }
+
+  // Prevent Enter key from triggering submit/reload
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+    }
+  }
+
   useEffect(() => {
     const handleResize = () => {
       setItemsPerPage(window.innerWidth < 768 ? 3 : 6)
@@ -448,6 +486,7 @@ export default function MCDMCalculator() {
   const [pipreciaResult, setPipreciaResult] = useState<PipreciaResult | null>(null)
   const [merecResult, setMerecResult] = useState<MERECResult | null>(null)
   const [swaraResult, setSwaraResult] = useState<SWARAResult | null>(null)
+  const [sidebarCategory, setSidebarCategory] = useState<"objective" | "subjective">("objective")
   const [wensloResult, setWensloResult] = useState<WensloResult | null>(null)
   const [lopcowResult, setLopcowResult] = useState<LopcowResult | null>(null)
   const [dematelResult, setDematelResult] = useState<DematelResult | null>(null)
@@ -899,7 +938,34 @@ export default function MCDMCalculator() {
   const downloadComparisonChartAsJpeg = () => {
     if (!comparisonChartRef.current) return
 
-    toJpeg(comparisonChartRef.current, { quality: 1.0, backgroundColor: "#ffffff", pixelRatio: 4 })
+    const element = comparisonChartRef.current
+    const originalStyle = {
+      overflow: element.style.overflow,
+      maxHeight: element.style.maxHeight,
+      maxWidth: element.style.maxWidth,
+      width: element.style.width,
+      height: element.style.height
+    }
+
+    // Force full size for capture
+    // We explicitly set width/height to scroll dimensions to capture everything
+    const width = element.scrollWidth
+    const height = element.scrollHeight
+
+    toJpeg(element, {
+      quality: 1.0,
+      backgroundColor: "#ffffff",
+      pixelRatio: 4,
+      width: width,
+      height: height,
+      style: {
+        overflow: 'visible',
+        maxHeight: 'none',
+        maxWidth: 'none',
+        width: `${width}px`,
+        height: `${height}px`
+      }
+    })
       .then((dataUrl) => {
         const link = document.createElement("a")
         link.download = `ranking-comparison-${Date.now()}.jpg`
@@ -1734,6 +1800,7 @@ export default function MCDMCalculator() {
       })
 
       const data = await response.json()
+      console.log('API Response data:', data)
 
       if (!response.ok) {
         // Display the error message from the API
@@ -2124,7 +2191,7 @@ export default function MCDMCalculator() {
               <p className="text-[10px] sm:text-xs text-gray-700">Multicriteria Decision Making Calculator</p>
             </div>
             <div className="flex items-center gap-4">
-              <Button variant="outline" onClick={() => window.location.reload()}>
+              <Button variant="outline" onClick={handleResetAndHome}>
                 <Home className="mr-2 h-4 w-4" /> Home
               </Button>
               <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border border-gray-200 shrink-0">
@@ -2231,6 +2298,7 @@ export default function MCDMCalculator() {
                                   min="0"
                                   value={alt.scores[crit.id] ?? ""}
                                   onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                  onKeyDown={handleKeyDown}
                                   className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
                                 />
                               </TableCell>
@@ -2274,7 +2342,7 @@ export default function MCDMCalculator() {
                             setActiveFormulaType("method")
                             setIsDialogOpen(true)
                           }}
-                          className={`flex-shrink-0 w-[280px] text-left p-3 rounded-lg border-2 transition-all hover:shadow-md relative cursor-pointer h-[100px] flex flex-col justify-between overflow-hidden font-serif ${method === m.value
+                          className={`flex-shrink-0 w-[280px] text-left p-3 rounded-lg border-2 transition-all hover:shadow-md relative cursor-pointer h-[80px] flex flex-col justify-between overflow-hidden font-serif ${method === m.value
                             ? "border-[#1E88E5] bg-[#E3F2FD] text-black"
                             : "border-[#1E88E5]/40 bg-white text-black hover:border-[#1E88E5] hover:bg-[#E3F2FD]"
                             }`}
@@ -2360,6 +2428,7 @@ export default function MCDMCalculator() {
                                   min="0"
                                   value={alt.scores[crit.id] ?? ""}
                                   onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                  onKeyDown={handleKeyDown}
                                   className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
                                 />
                               </TableCell>
@@ -2405,7 +2474,7 @@ export default function MCDMCalculator() {
                             setActiveFormulaType("weight")
                             setIsDialogOpen(true)
                           }}
-                          className={`flex-shrink-0 w-[280px] text-left p-3 rounded-lg border-2 transition-all hover:shadow-md relative cursor-pointer h-[100px] flex flex-col justify-between overflow-hidden font-serif ${weightMethod === w.value
+                          className={`flex-shrink-0 w-[280px] text-left p-3 rounded-lg border-2 transition-all hover:shadow-md relative cursor-pointer h-[80px] flex flex-col justify-between overflow-hidden font-serif ${weightMethod === w.value
                             ? "border-[#00695C] bg-[#E0F2F1] text-black"
                             : "border-[#00695C]/40 bg-white text-black hover:border-[#00695C] hover:bg-[#E0F2F1]"
                             }`}
@@ -2953,7 +3022,7 @@ export default function MCDMCalculator() {
                               const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
                               const width = 800
                               const height = 420
-                              const padding = { left: 60, right: 20, top: 20, bottom: 60 }
+                              const padding = { left: 60, right: 160, top: 20, bottom: 60 }
                               const innerW = width - padding.left - padding.right
                               const innerH = height - padding.top - padding.bottom
 
@@ -2994,6 +3063,18 @@ export default function MCDMCalculator() {
                                         <path d={pathD} fill="#eef2ff" stroke="#4338ca" opacity={0.9} />
                                         <line x1={xCenter - maxWidth} x2={xCenter + maxWidth} y1={padding.top + innerH + 6} y2={padding.top + innerH + 6} stroke="#111827" />
                                         <text x={xCenter} y={padding.top + innerH + 22} fontSize={11} textAnchor="middle" fill="#111827">{cn}</text>
+                                        {weights.map((w, wi) => (
+                                          <circle
+                                            key={wi}
+                                            cx={xCenter + (Math.random() - 0.5) * 15}
+                                            cy={padding.top + (1 - w) * innerH}
+                                            r={3}
+                                            fill={CHART_COLORS[wi % CHART_COLORS.length]}
+                                            stroke="white"
+                                            strokeWidth={1}
+                                            opacity={0.8}
+                                          />
+                                        ))}
                                       </g>
                                     )
                                   })}
@@ -3248,6 +3329,8 @@ export default function MCDMCalculator() {
                                       min="0"
                                       value={alt.scores[crit.id] ?? ""}
                                       onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                      onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                      onKeyDown={handleKeyDown}
                                       className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
                                     />
                                   </TableCell>
@@ -3303,8 +3386,7 @@ export default function MCDMCalculator() {
                                 className="mt-0.5"
                               />
                               <span>
-                                <span className="font-semibold">{w.label}</span>{" "}
-                                <span className="text-gray-700">{w.description}</span>
+                                <span className="font-semibold">{w.label}</span>
                               </span>
                             </label>
                           ))}
@@ -3339,8 +3421,7 @@ export default function MCDMCalculator() {
                                 className="mt-0.5"
                               />
                               <span>
-                                <span className="font-semibold">{m.label}</span>{" "}
-                                <span className="text-gray-700">{m.description}</span>
+                                <span className="font-semibold">{m.label}</span>
                               </span>
                             </label>
                           ))}
@@ -3478,6 +3559,7 @@ export default function MCDMCalculator() {
                                       ...swaraCoefficients,
                                       [crit.id]: e.target.value,
                                     })}
+                                    onKeyDown={handleKeyDown}
                                     className="w-24 h-7 text-xs text-center"
                                     placeholder="0.00"
                                   />
@@ -3660,8 +3742,8 @@ export default function MCDMCalculator() {
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="h-[300px] sm:h-[400px] p-0 sm:p-6 mt-4">
-                    <ResponsiveContainer width="100%" height="100%" ref={comparisonChartRef}>
+                  <CardContent className={`${comparisonChartType === "heatmap" ? "h-auto min-h-[500px]" : "h-[500px] sm:h-[500px]"} p-0 sm:p-6 mt-4`}>
+                    <ResponsiveContainer width="100%" height={comparisonChartType === "heatmap" ? Math.max(500, (comparisonChartData.length * 60) + 100) : "100%"} ref={comparisonChartRef}>
                       {comparisonChartType === "radar" ? (
                         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
                           <PolarGrid />
@@ -3766,7 +3848,7 @@ export default function MCDMCalculator() {
                             return divergingData;
                           })}
                           layout="vertical"
-                          margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
+                          margin={{ top: 20, right: 0, left: 0, bottom: 20 }}
                         >
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis
@@ -3844,13 +3926,13 @@ export default function MCDMCalculator() {
                         </ScatterChart>
                       ) : comparisonChartType === "heatmap" ? (
                         // Heatmap - shows all rank values with color intensity
-                        <div className="w-full h-full flex flex-col">
-                          <div className="flex-1 flex flex-col overflow-auto">
+                        <div className="w-full h-full flex flex-col overflow-x-auto">
+                          <div className="flex-1 flex flex-col min-w-[max-content]">
                             <div className="flex text-xs font-semibold border-b">
-                              <div className="w-24 sm:w-32 p-2 border-r bg-gray-50">Method</div>
+                              <div className="w-24 sm:w-32 p-2 border-r bg-gray-50 flex-shrink-0">Method</div>
                               <div className="flex flex-1">
                                 {comparisonChartAlternatives.map((alt) => (
-                                  <div key={alt} className="flex-1 p-2 border-r text-center bg-gray-50 truncate">
+                                  <div key={alt} className="flex-1 min-w-[100px] p-2 border-r text-center bg-gray-50 truncate">
                                     {alt}
                                   </div>
                                 ))}
@@ -3858,7 +3940,7 @@ export default function MCDMCalculator() {
                             </div>
                             {comparisonChartData.map((row, idx) => (
                               <div key={idx} className="flex border-b">
-                                <div className="w-24 sm:w-32 p-2 border-r text-xs font-medium bg-gray-50 truncate">
+                                <div className="w-24 sm:w-32 p-2 border-r text-xs font-medium bg-gray-50 flex-shrink-0 truncate">
                                   {row.method}
                                 </div>
                                 <div className="flex flex-1">
@@ -3874,7 +3956,7 @@ export default function MCDMCalculator() {
                                     return (
                                       <div
                                         key={alt}
-                                        className="flex-1 p-3 border-r flex items-center justify-center text-xs font-medium text-white"
+                                        className="flex-1 min-w-[100px] p-3 border-r flex items-center justify-center text-xs font-medium text-white"
                                         style={{ backgroundColor: bgColor }}
                                       >
                                         {value}
@@ -4158,6 +4240,7 @@ export default function MCDMCalculator() {
                                       min="0"
                                       value={alt.scores[crit.id] ?? ""}
                                       onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                      onKeyDown={handleKeyDown}
                                       className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
                                     />
                                   </TableCell>
@@ -4391,6 +4474,7 @@ export default function MCDMCalculator() {
                                               ...swaraCoefficients,
                                               [crit.id]: e.target.value,
                                             })}
+                                            onKeyDown={handleKeyDown}
                                             className="w-24 h-7 text-xs text-center"
                                             placeholder="0.00"
                                           />
@@ -5114,45 +5198,34 @@ export default function MCDMCalculator() {
                 </button>
                 {weightOpen && (
                   <SidebarMenu>
-                    {/* Objective Weight Methods Group */}
-                    <div className="bg-[#FFE0B2] p-2 rounded-md mb-2">
-                      <div className="text-[10px] font-bold text-[#E65100] mb-1 px-2 uppercase tracking-wide">Objective Weight Methods</div>
-                      {WEIGHT_METHODS.filter(w => ["equal", "entropy", "critic", "merec", "wenslo", "lopcow", "dematel"].includes(w.value)).map((w) => (
-                        <SidebarMenuItem key={w.value}>
-                          <SidebarMenuButton
-                            onClick={async () => {
-                              const allScoresFilled = alternatives.every((alt) =>
-                                criteria.every((crit) => {
-                                  const score = alt.scores[crit.id]
-                                  return score !== undefined && score !== "" && Number(score) >= 0
-                                }),
-                              )
-
-                              if (!allScoresFilled) {
-                                alert("Please fill in all score values with numbers greater than or equal to 0")
-                                setWeightMethod(w.value)
-                                return
-                              }
-
-                              await calculateWeights(w.value)
-                              setCurrentStep("matrix")
-                            }}
-                            isActive={weightMethod === w.value}
-                            className={`text-xs ${weightMethod === w.value
-                              ? "bg-black text-white"
-                              : "text-black hover:bg-white/50"
-                              }`}
-                          >
-                            <span>{w.label}</span>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      ))}
+                    <div className="flex w-full gap-2 px-2 py-1 mb-1">
+                      <Button
+                        variant="ghost"
+                        onClick={() => setSidebarCategory("objective")}
+                        className={`flex-1 text-[10px] font-bold h-7 rounded-sm transition-colors uppercase tracking-wide ${sidebarCategory === "objective"
+                          ? "bg-[#FFE0B2] text-[#E65100]"
+                          : "bg-transparent text-gray-500 hover:bg-gray-100"
+                          }`}
+                      >
+                        Objective
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => setSidebarCategory("subjective")}
+                        className={`flex-1 text-[10px] font-bold h-7 rounded-sm transition-colors uppercase tracking-wide ${sidebarCategory === "subjective"
+                          ? "bg-[#FFF9C4] text-[#FBC02D]"
+                          : "bg-transparent text-gray-500 hover:bg-gray-100"
+                          }`}
+                      >
+                        Subjective
+                      </Button>
                     </div>
 
-                    {/* Subjective Weight Methods Group */}
-                    <div className="bg-[#FFF9C4] p-2 rounded-md">
-                      <div className="text-[10px] font-bold text-[#FBC02D] mb-1 px-2 uppercase tracking-wide">Subjective Weight Methods</div>
-                      {WEIGHT_METHODS.filter(w => ["ahp", "piprecia", "swara"].includes(w.value)).map((w) => (
+                    <div className={`p-2 rounded-md mb-2 ${sidebarCategory === "objective" ? "bg-[#FFE0B2]" : "bg-[#FFF9C4]"}`}>
+                      {WEIGHT_METHODS.filter(w => {
+                        const isSubjective = ["ahp", "piprecia", "swara"].includes(w.value)
+                        return sidebarCategory === "subjective" ? isSubjective : !isSubjective
+                      }).map((w) => (
                         <SidebarMenuItem key={w.value}>
                           <SidebarMenuButton
                             onClick={async () => {
@@ -5508,6 +5581,7 @@ export default function MCDMCalculator() {
                                 placeholder="Name"
                                 value={alt.name}
                                 onChange={(e) => updateAlternativeName(alt.id, e.target.value)}
+                                onKeyDown={handleKeyDown}
                                 className="text-xs font-medium h-8 border-gray-200 text-black shadow-none"
                               />
                             </TableCell>
@@ -5519,6 +5593,8 @@ export default function MCDMCalculator() {
                                   placeholder="Enter value"
                                   value={alt.scores[crit.id] ?? ""}
                                   onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                  onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                  onKeyDown={handleKeyDown}
                                   className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
                                 />
                               </TableCell>
@@ -5600,40 +5676,1541 @@ export default function MCDMCalculator() {
 
   if (currentStep === "matrix") {
     return (
-      <SidebarProvider>
-        <Sidebar>
-          <SidebarHeader>
-            <div className="px-4 py-2 font-bold text-lg">Weight Methods</div>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarMenu>
-              {WEIGHT_METHODS.map((w) => (
-                <SidebarMenuItem key={w.value}>
-                  <SidebarMenuButton
-                    isActive={weightMethod === w.value}
-                    onClick={() => {
-                      if (w.value === "piprecia") {
-                        setIsPipreciaDialogOpen(true)
-                      } else if (w.value === "ahp") {
-                        setIsAhpDialogOpen(true)
-                      } else if (w.value === "swara") {
-                        setIsSwaraDialogOpen(true)
-                      } else {
-                        calculateWeights(w.value)
-                      }
-                    }}
-                    className="cursor-pointer"
+      <>
+        <SidebarProvider>
+          <Sidebar side="left" className="border-r border-gray-200 bg-gray-50">
+            <SidebarHeader>
+              <div className="flex w-full gap-2 p-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setSidebarCategory("objective")}
+                  className={`flex-1 text-xs font-semibold h-8 rounded-md transition-colors ${sidebarCategory === "objective"
+                    ? "bg-[#FFCCBC] text-black hover:bg-[#FFAB91]"
+                    : "bg-transparent text-gray-600 hover:bg-gray-100"
+                    }`}
+                >
+                  Objective
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setSidebarCategory("subjective")}
+                  className={`flex-1 text-xs font-semibold h-8 rounded-md transition-colors ${sidebarCategory === "subjective"
+                    ? "bg-[#FFF9C4] text-black hover:bg-[#FFF59D]"
+                    : "bg-transparent text-gray-600 hover:bg-gray-100"
+                    }`}
+                >
+                  Subjective
+                </Button>
+              </div>
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarMenu>
+                {WEIGHT_METHODS.filter((w) => {
+                  const isSubjective = ["ahp", "piprecia", "swara"].includes(w.value)
+                  return sidebarCategory === "subjective" ? isSubjective : !isSubjective
+                }).map((w) => (
+                  <SidebarMenuItem key={w.value}>
+                    <SidebarMenuButton
+                      isActive={weightMethod === w.value}
+                      onClick={() => {
+                        if (w.value === "piprecia") {
+                          setIsPipreciaDialogOpen(true)
+                        } else if (w.value === "ahp") {
+                          setIsAhpDialogOpen(true)
+                        } else if (w.value === "swara") {
+                          setIsSwaraDialogOpen(true)
+                        } else {
+                          calculateWeights(w.value)
+                        }
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <span className="truncate">{w.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarContent>
+          </Sidebar>
+
+          <main className="flex-1 min-h-screen bg-white p-2 md:p-3 flex flex-col">
+            <div className="flex items-center gap-2 mb-2">
+              <SidebarTrigger className="md:hidden border-gray-200 text-black" />
+            </div>
+
+            <div className="max-w-7xl mx-auto w-full">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="bg-black/5 p-2 rounded-lg">
+                    <LayoutGrid className="h-5 w-5 md:h-6 md:w-6 text-black" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl md:text-2xl font-bold text-black tracking-tight">Decision Matrix</h1>
+                    <p className="text-xs md:text-sm text-gray-500 font-medium">Step 3: Results & Analysis</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
+                  <Button
+                    type="button"
+                    onClick={() => setCurrentStep("home")}
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
+                    title="Go to Home"
                   >
-                    <span className="truncate">{w.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarContent>
-        </Sidebar>
+                    <Home className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <Breadcrumb className="mb-6">
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink
+                      onClick={() => setCurrentStep("input")}
+                      className="text-xs text-black cursor-pointer hover:text-gray-700"
+                    >
+                      Input
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator className="text-gray-400" />
+                  <BreadcrumbItem>
+                    <BreadcrumbLink
+                      onClick={() => setCurrentStep("table")}
+                      className="text-xs text-black cursor-pointer hover:text-gray-700"
+                    >
+                      Table
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator className="text-gray-400" />
+                  <BreadcrumbItem>
+                    <span className="text-xs text-black">Matrix</span>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+
+              <div className="flex justify-end gap-2 mb-4">
+                <Button
+                  type="button"
+                  onClick={() => setCurrentStep("table")}
+                  variant="outline"
+                  className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
+                >
+                  Edit
+                </Button>
+
+              </div>
+
+              <Card className="border-gray-200 bg-white shadow-none mb-6">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-black">Evaluation Matrix</CardTitle>
+                  <CardDescription className="text-xs text-gray-700">
+                    Review your decision matrix before calculation
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-3">
+                  <div className="table-responsive border border-gray-200 rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                          {criteria.map((crit) => (
+                            <TableHead
+                              key={crit.id}
+                              className="text-xs font-semibold text-black text-center py-3 px-4"
+                            >
+                              <div className="flex flex-col items-center">
+                                <span>{crit.name}</span>
+                                <span className="text-[10px] text-gray-500 mt-1">{crit.type === "beneficial" ? "↑" : "↓"} ({crit.weight.toFixed(4)})</span>
+                              </div>
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {alternatives.map((alt) => (
+                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <TableCell className="py-3 px-4 font-medium text-black text-xs">
+                              {alt.name}
+                            </TableCell>
+                            {criteria.map((crit) => (
+                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                {alt.scores[crit.id] !== undefined && alt.scores[crit.id] !== ""
+                                  ? Number(alt.scores[crit.id]).toString()
+                                  : "-"}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {entropyResult && weightMethod === "entropy" && (
+                <>
+                  {/* Table 1: Decision Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Original Decision Matrix
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 2: Normalized Decision Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (p_ij)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalized values using sum normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {entropyResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 3: Entropy Values */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Entropy Values (p_ij * log2(p_ij))</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Intermediate entropy calculation values
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {entropyResult.entropyMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                            <TableRow className="bg-gray-50/50 border-b border-gray-200 border-t-2">
+                              <TableCell className="py-3 px-4 font-bold text-black text-xs">Entropy (Ej)</TableCell>
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                  {entropyResult.entropyValues[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 4: Diversity Degree */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Diversity Degree (dj)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Degree of divergence (1 - Ej)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {entropyResult.diversityValues[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 5: Final Weights */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 5: Final Weights (Wj)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalized weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="bg-yellow-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                  {entropyResult.weights[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {criticResult && weightMethod === "critic" && (
+                <>
+                  {/* Step 1: Decision Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Original Decision Matrix
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 2: Normalization */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalization (r_ij)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalized decision matrix
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {criticResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 3: Standard Deviation (Contrast) */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Standard Deviation (σ_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Contrast intensity of each criterion
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {criticResult.standardDeviations[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 4: Correlation Matrix (Conflict) */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Correlation Matrix (r_jk)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Conflict between criteria
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Criterion</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {criteria.map((critJ) => (
+                              <TableRow key={critJ.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{critJ.name}</TableCell>
+                                {criteria.map((critK) => (
+                                  <TableCell key={critK.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {criticResult.correlationMatrix[critJ.id]?.[critK.id]?.toFixed(4)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 5: Information Measure */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 5: Information Measure (Cj)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Amount of information contained in each criterion
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {criticResult.informationAmounts[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 6: Final Weights */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 6: Final Weights (Wj)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated CRITIC weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="bg-yellow-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                  {criticResult.weights[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {ahpResult && weightMethod === "ahp" && (
+                <Card className="border-gray-200 bg-white shadow-none mb-6">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm text-black">AHP Weight Calculation Results</CardTitle>
+                    <CardDescription className="text-xs text-gray-700">
+                      λmax = {ahpResult.lambdaMax.toFixed(4)} | CI = {ahpResult.consistencyIndex.toFixed(4)} | CR = {ahpResult.consistencyRatio.toFixed(4)}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-3">
+                    <div className="table-responsive border border-gray-200 rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50 border-b border-gray-200">
+                            <TableHead className="text-xs font-semibold text-black py-3 px-4">Criteria</TableHead>
+                            {criteria.map((crit) => (
+                              <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                {crit.name}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {criteria.map((rowCrit, i) => (
+                            <TableRow key={rowCrit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowCrit.name}</TableCell>
+                              {criteria.map((colCrit, j) => (
+                                <TableCell key={colCrit.id} className="text-center py-3 px-4 text-xs text-black">
+                                  {ahpResult.pairwiseMatrix[i]?.[j]?.toFixed(2)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                          <TableRow className="bg-yellow-50 border-b border-gray-200">
+                            <TableCell className="py-3 px-4 font-bold text-black text-xs">Weights (Wj)</TableCell>
+                            {criteria.map((crit) => (
+                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                {ahpResult.weights[crit.id]?.toFixed(4)}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {pipreciaResult && weightMethod === "piprecia" && (
+                <Card className="border-gray-200 bg-white shadow-none mb-6">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm text-black">PIPRECIA Weight Calculation Results</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-3">
+                    <div className="table-responsive border border-gray-200 rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50 border-b border-gray-200">
+                            <TableHead className="text-xs font-semibold text-black py-3 px-4 text-left">Criterion</TableHead>
+                            <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">s<sub>j</sub></TableHead>
+                            <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">k<sub>j</sub></TableHead>
+                            <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">q<sub>j</sub></TableHead>
+                            <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Weight (w<sub>j</sub>)</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {criteria.map((crit) => (
+                            <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                              <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                {pipreciaResult.s_values[crit.id]?.toFixed(4)}
+                              </TableCell>
+                              <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                {pipreciaResult.k_values[crit.id]?.toFixed(4)}
+                              </TableCell>
+                              <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                {pipreciaResult.q_values[crit.id]?.toFixed(4)}
+                              </TableCell>
+                              <TableCell className="text-center py-3 px-4 text-xs text-black font-bold">
+                                {pipreciaResult.weights[crit.id]?.toFixed(4)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {merecResult && weightMethod === "merec" && (
+                <>
+                  {/* Step 1: Decision Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Original Decision Matrix
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 2: Normalize the decision matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalize the decision matrix (r_ij)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalized values based on criteria type
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {merecResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 3: Calculate overall performance of alternatives */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Overall performance of alternatives (S_i)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Performance score with all criteria
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              <TableHead className="text-xs font-semibold text-black text-center py-3 px-4">Performance Score (Si)</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {merecResult.performanceScores[alt.id]?.toFixed(4)}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 4: Calculation of performance with removing each criterion */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Performance with removing each criterion (S_i<sup>(-k)</sup>)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Scores calculated by removing one criterion at a time
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  Remove {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {merecResult.removalScores[alt.id]?.[crit.id]?.toFixed(4)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 5: Calculation of the removal effect */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 5: Removal effect of each criterion (E_k)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Sum of absolute deviations
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {merecResult.removalEffects[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 6: Calculation of objective weights */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 6: Final Weights (w_k)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated MEREC Weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="bg-yellow-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                  {merecResult.weights[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {
+                swaraResult && weightMethod === "swara" && (
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">SWARA Weight Calculation Results</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg mb-4">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-left">Criterion</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">s<sub>j</sub> (Coefficient)</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">k<sub>j</sub> (Step Factor)</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">q<sub>j</sub> (Preliminary)</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Weight (w<sub>j</sub>)</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {criteria.map((crit) => (
+                              <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {swaraResult.coefficients[crit.id]?.toFixed(4)}
+                                </TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {swaraResult.stepFactors[crit.id]?.toFixed(4)}
+                                </TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {swaraResult.preliminaryWeights[crit.id]?.toFixed(4)}
+                                </TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black font-bold bg-yellow-50">
+                                  {swaraResult.weights[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              }
+
+              {wensloResult && weightMethod === "wenslo" && (
+                <>
+                  {/* Step 1: Decision Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Original Decision Matrix
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 2: Normalize the decision matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalize the decision matrix (r_ij)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalized values (Min-Max)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {wensloResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 3: Criterion Statistical Score */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Criterion Statistical Score (S_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Sum of normalized scores per criterion
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {wensloResult.wensloValues[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 4: Final Weights */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated WENSLO Weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="bg-yellow-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                  {wensloResult.weights[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {lopcowResult && weightMethod === "lopcow" && (
+                <>
+                  {/* Step 1: Decision Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Original Decision Matrix
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 2: Normalize the decision matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalize the decision matrix (r_ij)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Vector normalization results
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {lopcowResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 3: Geometric Mean */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Geometric Mean (GM_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Combined performance scores
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {lopcowResult.geometricMeans[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 4: Logarithmic Percentage Change */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Logarithmic Percentage Change (L_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Diversification intensity results
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {lopcowResult.logPercentages[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 5: Final Weights */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 5: Final Weights (w_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated LOPCOW Weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="bg-yellow-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                  {lopcowResult.weights[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {dematelResult && weightMethod === "dematel" && (
+                <>
+                  {/* Step 1: Decision Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Original Decision Matrix
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 2: Normalized Decision Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalized for relationship analysis
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {dematelResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 3: Direct Relation Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Direct Relation Matrix (A)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Absolute correlation intensities between criteria
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Criteria</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {criteria.map((rowCrit) => (
+                              <TableRow key={rowCrit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowCrit.name}</TableCell>
+                                {criteria.map((colCrit) => (
+                                  <TableCell key={colCrit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {dematelResult.directRelationMatrix[rowCrit.id]?.[colCrit.id]?.toFixed(4)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 4: Total Relation Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Total Relation Matrix (T)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Full impact propagation matrix
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Criteria</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {criteria.map((rowCrit) => (
+                              <TableRow key={rowCrit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowCrit.name}</TableCell>
+                                {criteria.map((colCrit) => (
+                                  <TableCell key={colCrit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {dematelResult.totalRelationMatrix[rowCrit.id]?.[colCrit.id]?.toFixed(4)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 5: Influence (D) and Dependence (R) */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 5: Influence (D) and Dependence (R)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Sum of influence/dependence per criterion
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Criterion</TableHead>
+                              <TableHead className="text-xs font-semibold text-black text-center py-3 px-4">Influence (D)</TableHead>
+                              <TableHead className="text-xs font-semibold text-black text-center py-3 px-4">Dependence (R)</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {criteria.map((crit) => (
+                              <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {dematelResult.dValues[crit.id]?.toFixed(4)}
+                                </TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {dematelResult.rValues[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 6: Prominence (P) and Relation (E) */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 6: Prominence (P) and Relation (E)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Causal analysis: P = D + R, E = D - R
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Criterion</TableHead>
+                              <TableHead className="text-xs font-semibold text-black text-center py-3 px-4">Prominence (P)</TableHead>
+                              <TableHead className="text-xs font-semibold text-black text-center py-3 px-4">Relation (E)</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {criteria.map((crit) => (
+                              <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {dematelResult.pValues[crit.id]?.toFixed(4)}
+                                </TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {dematelResult.eValues[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 7: Final Weights */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 7: Final Weights (w_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated DEMATEL Weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="bg-yellow-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                  {dematelResult.weights[crit.id]?.toFixed(4)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </div >
+          </main >
+        </SidebarProvider >
 
         {/* --- PIPRECIA Dialog (Matrix Step) --- */}
-        <Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen}>
+        < Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen} >
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
             <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
             <PIPRECIAFormula
@@ -5654,10 +7231,10 @@ export default function MCDMCalculator() {
               }}
             />
           </DialogContent>
-        </Dialog>
+        </Dialog >
 
         {/* --- AHP Dialog (Matrix Step) --- */}
-        <Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen}>
+        < Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen} >
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
             <DialogTitle>AHP Weight Calculator</DialogTitle>
             <AHPFormula
@@ -5678,10 +7255,10 @@ export default function MCDMCalculator() {
               }}
             />
           </DialogContent>
-        </Dialog>
+        </Dialog >
 
         {/* --- SWARA Dialog (Matrix Step) --- */}
-        <Dialog open={isSwaraDialogOpen} onOpenChange={setIsSwaraDialogOpen}>
+        < Dialog open={isSwaraDialogOpen} onOpenChange={setIsSwaraDialogOpen} >
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
             <DialogHeader>
               <DialogTitle>SWARA Weight Calculator</DialogTitle>
@@ -5724,6 +7301,7 @@ export default function MCDMCalculator() {
                                   [crit.id]: e.target.value,
                                 })
                               }
+                              onKeyDown={handleKeyDown}
                               className="w-24 h-7 text-xs text-center"
                               placeholder="0.00"
                             />
@@ -5799,629 +7377,7 @@ export default function MCDMCalculator() {
             </DialogFooter>
           </DialogContent>
         </Dialog >
-
-        <main className="flex-1 min-h-screen bg-white p-2 md:p-3 flex flex-col">
-          <div className="flex items-center gap-2 mb-2">
-            <SidebarTrigger />
-          </div>
-
-          <div className="max-w-7xl mx-auto w-full">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-              <div className="flex items-center gap-3">
-                <div className="bg-black/5 p-2 rounded-lg">
-                  <LayoutGrid className="h-5 w-5 md:h-6 md:w-6 text-black" />
-                </div>
-                <div>
-                  <h1 className="text-xl md:text-2xl font-bold text-black tracking-tight">Decision Matrix</h1>
-                  <p className="text-xs md:text-sm text-gray-500 font-medium">Step 3: Results & Analysis</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
-                <Button
-                  type="button"
-                  onClick={() => setCurrentStep("home")}
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
-                  title="Go to Home"
-                >
-                  <Home className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <Breadcrumb className="mb-6">
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink
-                    onClick={() => setCurrentStep("input")}
-                    className="text-xs text-black cursor-pointer hover:text-gray-700"
-                  >
-                    Input
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="text-gray-400" />
-                <BreadcrumbItem>
-                  <BreadcrumbLink
-                    onClick={() => setCurrentStep("table")}
-                    className="text-xs text-black cursor-pointer hover:text-gray-700"
-                  >
-                    Table
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="text-gray-400" />
-                <BreadcrumbItem>
-                  <span className="text-xs text-black">Matrix</span>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-
-            <div className="flex justify-end gap-2 mb-4">
-              <Button
-                type="button"
-                onClick={() => setCurrentStep("table")}
-                variant="outline"
-                className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
-              >
-                Edit
-              </Button>
-
-            </div>
-
-            <Card className="border-gray-200 bg-white shadow-none mb-6">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm text-black">Evaluation Matrix</CardTitle>
-                <CardDescription className="text-xs text-gray-700">
-                  Review your decision matrix before calculation
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-3">
-                <div className="table-responsive border border-gray-200 rounded-lg">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gray-50 border-b border-gray-200">
-                        <TableHead className="text-xs font-semibold text-black py-3 px-4 min-w-32">Alternative</TableHead>
-                        {criteria.map((crit) => (
-                          <TableHead
-                            key={crit.id}
-                            className="text-xs font-semibold text-black text-center py-3 px-4 min-w-40"
-                          >
-                            <div className="flex flex-col items-center">
-                              <span>{crit.name}</span>
-                              <span className="text-[10px] text-gray-500 mt-1">{crit.type === "beneficial" ? "↑" : "↓"} ({crit.weight.toFixed(4)})</span>
-                            </div>
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {alternatives.map((alt) => (
-                        <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
-                          <TableCell className="py-3 px-4 font-medium text-black text-xs">
-                            {alt.name}
-                          </TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                              {alt.scores[crit.id] !== undefined && alt.scores[crit.id] !== ""
-                                ? Number(alt.scores[crit.id]).toString()
-                                : "-"}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {entropyResult && weightMethod === "entropy" && (
-              <Card className="border-gray-200 bg-white shadow-none mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">Entropy Weight Calculation Results</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="table-responsive border border-gray-200 rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
-                          {criteria.map((crit) => (
-                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
-                              {crit.name}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {alternatives.map((alt) => (
-                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
-                            {criteria.map((crit) => (
-                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                {entropyResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Ej</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                              {entropyResult.entropyValues[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">dj = 1 - Ej</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                              {entropyResult.diversityValues[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-yellow-50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Wj</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
-                              {entropyResult.weights[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {criticResult && weightMethod === "critic" && (
-              <Card className="border-gray-200 bg-white shadow-none mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">CRITIC Weight Calculation Results</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="table-responsive border border-gray-200 rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
-                          {criteria.map((crit) => (
-                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
-                              {crit.name}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {alternatives.map((alt) => (
-                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
-                            {criteria.map((crit) => (
-                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                {criticResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Std. Dev (σ)</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                              {criticResult.standardDeviations[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Info Amount (Cj)</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                              {criticResult.informationAmounts[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-yellow-50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Wj</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
-                              {criticResult.weights[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {ahpResult && weightMethod === "ahp" && (
-              <Card className="border-gray-200 bg-white shadow-none mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">AHP Weight Calculation Results</CardTitle>
-                  <CardDescription className="text-xs text-gray-700">
-                    λmax = {ahpResult.lambdaMax.toFixed(4)} | CI = {ahpResult.consistencyIndex.toFixed(4)} | CR = {ahpResult.consistencyRatio.toFixed(4)}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="table-responsive border border-gray-200 rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Criteria</TableHead>
-                          {criteria.map((crit) => (
-                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
-                              {crit.name}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {criteria.map((rowCrit, i) => (
-                          <TableRow key={rowCrit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowCrit.name}</TableCell>
-                            {criteria.map((colCrit, j) => (
-                              <TableCell key={colCrit.id} className="text-center py-3 px-4 text-xs text-black">
-                                {ahpResult.pairwiseMatrix[i]?.[j]?.toFixed(2)}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                        <TableRow className="bg-yellow-50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Weights (Wj)</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
-                              {ahpResult.weights[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {pipreciaResult && weightMethod === "piprecia" && (
-              <Card className="border-gray-200 bg-white shadow-none mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">PIPRECIA Weight Calculation Results</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="table-responsive border border-gray-200 rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-left">Criterion</TableHead>
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">s<sub>j</sub></TableHead>
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">k<sub>j</sub></TableHead>
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">q<sub>j</sub></TableHead>
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Weight (w<sub>j</sub>)</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {criteria.map((crit) => (
-                          <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
-                            <TableCell className="text-center py-3 px-4 text-xs text-black">
-                              {pipreciaResult.s_values[crit.id]?.toFixed(4)}
-                            </TableCell>
-                            <TableCell className="text-center py-3 px-4 text-xs text-black">
-                              {pipreciaResult.k_values[crit.id]?.toFixed(4)}
-                            </TableCell>
-                            <TableCell className="text-center py-3 px-4 text-xs text-black">
-                              {pipreciaResult.q_values[crit.id]?.toFixed(4)}
-                            </TableCell>
-                            <TableCell className="text-center py-3 px-4 text-xs text-black font-bold">
-                              {pipreciaResult.weights[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {merecResult && weightMethod === "merec" && (
-              <Card className="border-gray-200 bg-white shadow-none mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">MEREC Weight Calculation Results</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="table-responsive border border-gray-200 rounded-lg mb-4">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
-                          {criteria.map((crit) => (
-                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
-                              {crit.name}
-                            </TableHead>
-                          ))}
-                          <TableHead className="text-xs font-semibold text-black text-center py-3 px-4">S<sub>i</sub></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {alternatives.map((alt) => (
-                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
-                            {criteria.map((crit) => (
-                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                {merecResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
-                              </TableCell>
-                            ))}
-                            <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
-                              {merecResult.performanceScores[alt.id]?.toFixed(4)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  <div className="table-responsive border border-gray-200 rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-left">Criterion</TableHead>
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">E<sub>k</sub> (Removal Effect)</TableHead>
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Weight (w<sub>k</sub>)</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {criteria.map((crit) => (
-                          <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
-                            <TableCell className="text-center py-3 px-4 text-xs text-black">
-                              {merecResult.removalEffects[crit.id]?.toFixed(4)}
-                            </TableCell>
-                            <TableCell className="text-center py-3 px-4 text-xs text-black font-bold bg-yellow-50">
-                              {merecResult.weights[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {swaraResult && weightMethod === "swara" && (
-              <Card className="border-gray-200 bg-white shadow-none mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">SWARA Weight Calculation Results</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="table-responsive border border-gray-200 rounded-lg mb-4">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-left">Criterion</TableHead>
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">s<sub>j</sub> (Coefficient)</TableHead>
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">k<sub>j</sub> (Step Factor)</TableHead>
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">q<sub>j</sub> (Preliminary)</TableHead>
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Weight (w<sub>j</sub>)</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {criteria.map((crit) => (
-                          <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
-                            <TableCell className="text-center py-3 px-4 text-xs text-black">
-                              {swaraResult.coefficients[crit.id]?.toFixed(4)}
-                            </TableCell>
-                            <TableCell className="text-center py-3 px-4 text-xs text-black">
-                              {swaraResult.stepFactors[crit.id]?.toFixed(4)}
-                            </TableCell>
-                            <TableCell className="text-center py-3 px-4 text-xs text-black">
-                              {swaraResult.preliminaryWeights[crit.id]?.toFixed(4)}
-                            </TableCell>
-                            <TableCell className="text-center py-3 px-4 text-xs text-black font-bold bg-yellow-50">
-                              {swaraResult.weights[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {wensloResult && weightMethod === "wenslo" && (
-              <Card className="border-gray-200 bg-white shadow-none mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">WENSLO Weight Calculation Results</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="table-responsive border border-gray-200 rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
-                          {criteria.map((crit) => (
-                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
-                              {crit.name}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {alternatives.map((alt) => (
-                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
-                            {criteria.map((crit) => (
-                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                {wensloResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Statistical Score (S<sub>j</sub>)</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                              {wensloResult.wensloValues[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-yellow-50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Weight (wj)</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
-                              {wensloResult.weights[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {lopcowResult && weightMethod === "lopcow" && (
-              <Card className="border-gray-200 bg-white shadow-none mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">LOPCOW Weight Calculation Results</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="table-responsive border border-gray-200 rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
-                          {criteria.map((crit) => (
-                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
-                              {crit.name}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {alternatives.map((alt) => (
-                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
-                            {criteria.map((crit) => (
-                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                {lopcowResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Geometric Mean (GM)</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                              {lopcowResult.geometricMeans[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Log Percentage (L)</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                              {lopcowResult.logPercentages[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-yellow-50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Weight (w)</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
-                              {lopcowResult.weights[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {dematelResult && weightMethod === "dematel" && (
-              <Card className="border-gray-200 bg-white shadow-none mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">DEMATEL Weight Calculation Results</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="table-responsive border border-gray-200 rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
-                          {criteria.map((crit) => (
-                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
-                              {crit.name}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {alternatives.map((alt) => (
-                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
-                            {criteria.map((crit) => (
-                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                {dematelResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Influence (D)</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                              {dematelResult.dValues[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Dependence (R)</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                              {dematelResult.rValues[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Prominence (P=D+R)</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                              {dematelResult.pValues[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Relation (E=D-R)</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                              {dematelResult.eValues[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-yellow-50 border-b border-gray-200">
-                          <TableCell className="py-3 px-4 font-bold text-black text-xs">Weight (w)</TableCell>
-                          {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
-                              {dematelResult.weights[crit.id]?.toFixed(4)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </main>
-      </SidebarProvider >
+      </>
     )
   }
 
@@ -6698,6 +7654,474 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
                                     {apiResults.metrics?.sweiWeightedExponentialMatrix?.[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {method === "cocoso" && apiResults?.metrics?.cocosoNormalizedMatrix && (
+                <>
+                  {/* Table 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Compromise Normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.cocosoNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 3: WSM and WPM */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: WSM and WPM Scores</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Weighted Sum (Si) and Weighted Power (Pi) Scores
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Si (WSM)</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Pi (WPM)</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {apiResults.metrics?.cocosoWeightedComparabilitySum[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {apiResults.metrics?.cocosoWeightedComparabilityPower[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 4: Appraisal Scores */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Compromise Appraisal Scores</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Relative appraisal scores: kia, kib, kic
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">kia</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">kib</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">kic</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {apiResults.metrics?.cocosoKia[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {apiResults.metrics?.cocosoKib[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {apiResults.metrics?.cocosoKic[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {method === "copras" && apiResults?.metrics?.coprasNormalizedMatrix && (
+                <>
+                  {/* Table 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalized by column sums
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.coprasNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 3: Weighted Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Weighted Normalized Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Weighted normalized values
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.coprasWeightedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 4: S+, S- and Qi values */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Significance and Priority</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Sum of beneficial (S+) and non-beneficial (S-) criteria values, and final priority score (Qi)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">S+</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">S-</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Qi (Score)</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {apiResults.metrics?.coprasSPlus[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {apiResults.metrics?.coprasSMinus[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {apiResults.metrics?.coprasQi[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {method === "promethee" && apiResults?.metrics?.prometheeNormalizedMatrix && (
+                <>
+                  {/* Table 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Vector Normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.prometheeNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 3: Preference Flows */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Preference Flows</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Positive (φ+), Negative (φ-), and Net (φ) flows for each alternative.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Positive Flow (φ+)</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Negative Flow (φ-)</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Net Flow (φ)</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {apiResults.metrics?.prometheePhiPlus[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {apiResults.metrics?.prometheePhiMinus[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {apiResults.metrics?.prometheeNetFlow[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {method === "promethee1" && apiResults?.metrics?.promethee1NormalizedMatrix && (
+                <>
+                  {/* Table 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Vector Normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.promethee1NormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 3: Aggregated Preference Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Aggregated Preference Matrix</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alt \ Alt</TableHead>
+                              {alternatives.map((alt) => (
+                                <TableHead key={alt.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {alt.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((rowAlt) => (
+                              <TableRow key={rowAlt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowAlt.name}</TableCell>
+                                {alternatives.map((colAlt) => (
+                                  <TableCell key={colAlt.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.promethee1AggregatedPreferenceMatrix[rowAlt.id]?.[colAlt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 4: Preference Flows */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Preference Flows</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Positive (φ+) and Negative (φ-) flows for each alternative.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Positive Flow (φ+)</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Negative Flow (φ-)</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {apiResults.metrics?.promethee1PositiveFlow[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {apiResults.metrics?.promethee1NegativeFlow[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 5: Outranking Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 5: Outranking Matrix</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alt \ Alt</TableHead>
+                              {alternatives.map((alt) => (
+                                <TableHead key={alt.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {alt.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((rowAlt) => (
+                              <TableRow key={rowAlt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowAlt.name}</TableCell>
+                                {alternatives.map((colAlt) => (
+                                  <TableCell key={colAlt.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.promethee1OutrankingMatrix[rowAlt.id]?.[colAlt.id] ? "Yes" : "No"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -7436,6 +8860,325 @@ export default function MCDMCalculator() {
                 </>
               )}
 
+
+              {method === "mabac" && apiResults?.metrics?.mabacNormalizedMatrix && (
+                <>
+                  {/* Table 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Linear Normalization (Min-Max)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.mabacNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 3: Weighted Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Weighted Matrix (V)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        V = (n_ij + 1) * w_j
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.mabacWeightedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 4: Border Approximation Area (BAA) */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Border Approximation Area (BAA)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Geometric mean of weighted matrix values for each criterion
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Metric</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableCell className="py-3 px-4 font-bold text-black text-xs">BAA (G)</TableCell>
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {apiResults.metrics?.mabacBorderApproximationArea[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 5: Distance Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 5: Distance Matrix (Q)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Distance from BAA (Q = V - G)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.mabacDistanceMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {method === "marcos" && apiResults?.metrics?.marcosNormalizedMatrix && (
+                <>
+                  {/* Table 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalization using Extended Matrix (with Ideal/Anti-Ideal)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.marcosNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 3: Weighted Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Weighted Normalized Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalized Value * Weight
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.marcosWeightedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 4: Ideal and Anti-Ideal Solutions */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Ideal and Anti-Ideal Solutions</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Ideal (AI) and Anti-Ideal (AAI) solutions
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Solution</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableCell className="py-3 px-4 font-bold text-green-700 text-xs">Ideal (AI)</TableCell>
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold text-green-700">
+                                  {apiResults.metrics?.marcosIdealSolution[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableCell className="py-3 px-4 font-bold text-red-700 text-xs">Anti-Ideal (AAI)</TableCell>
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold text-red-700">
+                                  {apiResults.metrics?.marcosAntiIdealSolution[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 5: Utility Degrees and Final Score */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 5: Utility Degrees</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Utility degrees relative to Ideal (K-) and Anti-Ideal (K+), and Final Utility Function (f(K))
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <table className="min-w-full text-xs">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-3 py-2 text-left border-b border-gray-200 text-black font-semibold">Alternative</th>
+                              <th className="px-3 py-2 text-center border-b border-gray-200 text-black font-semibold">K- (vs Ideal)</th>
+                              <th className="px-3 py-2 text-center border-b border-gray-200 text-black font-semibold">K+ (vs Anti-Ideal)</th>
+                              <th className="px-3 py-2 text-center border-b border-gray-200 text-black font-semibold">Utility Score (f(K))</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {alternatives.map((alt) => (
+                              <tr key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <td className="px-3 py-2 text-left text-black font-medium">{alt.name}</td>
+                                <td className="px-3 py-2 text-center text-black">
+                                  {apiResults.metrics?.marcosKMinus?.[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </td>
+                                <td className="px-3 py-2 text-center text-black">
+                                  {apiResults.metrics?.marcosKPlus?.[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </td>
+                                <td className="px-3 py-2 text-center text-black font-bold">
+                                  {apiResults.metrics?.marcosUtilityDegrees?.[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
               {method === "moora" && apiResults?.metrics?.mooraNormalizedMatrix && (
                 <>
                   {/* Table 2: Normalized Matrix */}
@@ -8044,6 +9787,200 @@ export default function MCDMCalculator() {
                   </Card>
                 </>
               )}
+
+              {method === "mairca" && apiResults?.metrics?.maircaNormalizedMatrix && (
+                <>
+                  {/* Table 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Linear Normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.maircaNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 3: Theoretical Ratings */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Theoretical Ratings (Tp)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Tp = Weight * Ideal Value
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.maircaTheoreticalRatings[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 4: Real Ratings */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Real Ratings (Tr)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Tr = Weight * Normalized Value
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.maircaRealRatings[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 5: Gap Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 5: Gap Matrix (G)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Gap = Tp - Tr
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.maircaGapMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 6: Total Gaps and Final Score */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 6: Total Gaps & Final Score</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Sum of Gaps (Lower is better)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <table className="min-w-full text-xs">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-3 py-2 text-left border-b border-gray-200 text-black font-semibold">Alternative</th>
+                              <th className="px-3 py-2 text-center border-b border-gray-200 text-black font-semibold">Total Gap</th>
+                              <th className="px-3 py-2 text-center border-b border-gray-200 text-black font-semibold">Rank</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {alternatives.map((alt) => (
+                              <tr key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <td className="px-3 py-2 text-left text-black font-medium">{alt.name}</td>
+                                <td className="px-3 py-2 text-center text-black">
+                                  {apiResults.metrics?.maircaTotalGaps[alt.id]?.toFixed(4) || "-"}
+                                </td>
+                                <td className="px-3 py-2 text-center text-black font-bold">
+                                  {apiResults.ranking.find((r: any) => r.alternativeId === alt.id)?.rank || "-"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+
 
 
             </div>

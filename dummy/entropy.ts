@@ -5,6 +5,7 @@ export interface EntropyResult {
   normalizedMatrix: Record<string, Record<string, number>>
   entropyValues: Record<string, number>
   diversityValues: Record<string, number>
+  entropyMatrix: Record<string, Record<string, number>>
 }
 
 /**
@@ -43,6 +44,7 @@ export function calculateEntropyWeights(
       normalizedMatrix: {},
       entropyValues: {},
       diversityValues: {},
+      entropyMatrix: {},
     }
   }
 
@@ -72,6 +74,8 @@ export function calculateEntropyWeights(
   // where k = 1/log₂(m) ensures E_j lies in the range [0,1]
   const k = 1 / Math.log2(m) // Normalization constant using base-2 logarithm
   const entropyValues: Record<string, number> = {}
+  const entropyMatrix: Record<string, Record<string, number>> = {}
+  alternatives.forEach((alt) => (entropyMatrix[alt.id] = {}))
 
   for (let j = 0; j < n; j++) {
     const crit = criteria[j]
@@ -79,9 +83,12 @@ export function calculateEntropyWeights(
 
     for (let i = 0; i < m; i++) {
       const p_ij = normalizedMatrix[alternatives[i].id][crit.id]
+      let val = 0
       if (p_ij > epsilon) {
-        entropy += p_ij * Math.log2(p_ij)
+        val = p_ij * Math.log2(p_ij)
+        entropy += val
       }
+      entropyMatrix[alternatives[i].id][crit.id] = val
     }
 
     entropyValues[crit.id] = -k * entropy
@@ -111,6 +118,7 @@ export function calculateEntropyWeights(
     normalizedMatrix,
     entropyValues,
     diversityValues,
+    entropyMatrix,
   }
 }
 

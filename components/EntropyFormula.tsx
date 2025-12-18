@@ -11,7 +11,7 @@ export default function EntropyFormula() {
   const latex = {
     step1: "X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad i=1,\\dots,m, \\quad j=1,\\dots,n \\tag{1}",
     step2_formula: "p_{i,j} = \\frac{x_{i,j}}{\\sum_{i=1}^{m} x_{i,j}} \\tag{2}",
-    step3_formula: "E_j = -k \\sum_{i=1}^{m} p_{i,j} \\log_2 p_{i,j}, \\quad k = \\frac{1}{\\log_2 m} \\tag{3}",
+    step3_formula: "E_j = - \\frac{\\sum_{i=1}^{m} p_{i,j} \\log_2 p_{i,j}}{\\log_2 m} \\tag{3}",
     step4_formula: "d_j = 1 - E_j \\tag{4}",
     step5_formula: "w_j = \\frac{d_j}{\\sum_{j=1}^{n} d_j}, \\quad \\sum_{j=1}^{n} w_j = 1 \\tag{5}"
   }

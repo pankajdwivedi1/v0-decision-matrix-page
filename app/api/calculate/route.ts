@@ -247,31 +247,95 @@ export async function POST(request: NextRequest) {
         };
         break;
       }
-      case "mairca":
-        results = calculateMAIRCA(alternatives, criteria).scores;
+      case "mairca": {
+        const maircaData = calculateMAIRCA(alternatives, criteria);
+        results = maircaData.scores;
+        (request as any).extraMetrics = {
+          maircaNormalizedMatrix: maircaData.normalizedMatrix,
+          maircaTheoreticalRatings: maircaData.theoreticalRatings,
+          maircaRealRatings: maircaData.realRatings,
+          maircaGapMatrix: maircaData.gapMatrix,
+          maircaTotalGaps: maircaData.totalGaps
+        };
         break;
-      case "marcos":
-        results = calculateMARCOS(alternatives, criteria).scores;
+      }
+      case "marcos": {
+        const marcosData = calculateMARCOS(alternatives, criteria);
+        results = marcosData.scores;
+        (request as any).extraMetrics = {
+          marcosNormalizedMatrix: marcosData.normalizedMatrix,
+          marcosWeightedMatrix: marcosData.weightedMatrix,
+          marcosIdealSolution: marcosData.idealSolution,
+          marcosAntiIdealSolution: marcosData.antiIdealSolution,
+          marcosUtilityDegrees: marcosData.utilityDegrees,
+          marcosKMinus: marcosData.kMinus,
+          marcosKPlus: marcosData.kPlus
+        };
         break;
-      case "cocoso":
-        results = calculateCOCOSO(alternatives, criteria);
+      }
+      case "cocoso": {
+        const cocosoData = calculateCOCOSO(alternatives, criteria);
+        results = cocosoData.scores;
+        (request as any).extraMetrics = {
+          cocosoNormalizedMatrix: cocosoData.normalizedMatrix,
+          cocosoWeightedComparabilitySum: cocosoData.weightedComparabilitySum,
+          cocosoWeightedComparabilityPower: cocosoData.weightedComparabilityPower,
+          cocosoKia: cocosoData.kia,
+          cocosoKib: cocosoData.kib,
+          cocosoKic: cocosoData.kic
+        };
         break;
+      }
       case "test":
         console.log("Test method invoked");
         // results = calculateCOCOSO(alternatives, criteria);
         break;
-      case "copras":
-        results = calculateCOPRAS(alternatives, criteria);
+      case "copras": {
+        const coprasData = calculateCOPRAS(alternatives, criteria);
+        results = coprasData.scores;
+        (request as any).extraMetrics = {
+          coprasNormalizedMatrix: coprasData.normalizedMatrix,
+          coprasWeightedMatrix: coprasData.weightedMatrix,
+          coprasSPlus: coprasData.sPlus,
+          coprasSMinus: coprasData.sMinus,
+          coprasQi: coprasData.qi
+        };
         break;
-      case "promethee":
-        results = calculatePROMETHEE(alternatives, criteria);
+      }
+      case "promethee": {
+        const prometheeData = calculatePROMETHEE(alternatives, criteria);
+        results = prometheeData.scores;
+        (request as any).extraMetrics = {
+          prometheeNormalizedMatrix: prometheeData.normalizedMatrix,
+          prometheePhiPlus: prometheeData.phiPlus,
+          prometheePhiMinus: prometheeData.phiMinus,
+          prometheeNetFlow: prometheeData.netFlow
+        };
         break;
-      case "promethee1":
-        results = calculatePROMETHEE1(alternatives, criteria);
+      }
+      case "promethee1": {
+        const promethee1Data = calculatePROMETHEE1(alternatives, criteria);
+        results = promethee1Data.scores;
+        (request as any).extraMetrics = {
+          promethee1NormalizedMatrix: promethee1Data.normalizedMatrix,
+          promethee1AggregatedPreferenceMatrix: promethee1Data.aggregatedPreferenceMatrix,
+          promethee1PositiveFlow: promethee1Data.positiveFlow,
+          promethee1NegativeFlow: promethee1Data.negativeFlow,
+          promethee1OutrankingMatrix: promethee1Data.outrankingMatrix
+        };
         break;
-      case "promethee2":
-        results = calculatePROMETHEE2(alternatives, criteria);
+      }
+      case "promethee2": {
+        const promethee2Data = calculatePROMETHEE2(alternatives, criteria);
+        results = promethee2Data.scores;
+        (request as any).extraMetrics = {
+          promethee2NormalizedMatrix: promethee2Data.normalizedMatrix,
+          promethee2AggregatedPreferenceMatrix: promethee2Data.aggregatedPreferenceMatrix,
+          promethee2PositiveFlow: promethee2Data.positiveFlow,
+          promethee2NegativeFlow: promethee2Data.negativeFlow
+        };
         break;
+      }
       case "electre":
         results = calculateELECTRE(alternatives, criteria);
         break;

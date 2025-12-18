@@ -7,6 +7,8 @@ interface MARCOSResult {
   utilityDegrees: Record<string, number>
   idealSolution: Record<string, number>
   antiIdealSolution: Record<string, number>
+  kMinus: Record<string, number>
+  kPlus: Record<string, number>
 }
 
 /**
@@ -41,6 +43,8 @@ export function calculateMARCOS(
       utilityDegrees: {},
       idealSolution: {},
       antiIdealSolution: {},
+      kMinus: {},
+      kPlus: {}
     }
   }
 
@@ -170,6 +174,8 @@ export function calculateMARCOS(
 
   const utilityDegrees: Record<string, number> = {}
   const scores: Record<string, number> = {}
+  const kMinus: Record<string, number> = {}
+  const kPlus: Record<string, number> = {}
 
   // Calculate S values for alternatives
   const sValues: number[] = []
@@ -214,6 +220,8 @@ export function calculateMARCOS(
       utility = 0
     }
 
+    kMinus[altId] = k_i_minus
+    kPlus[altId] = k_i_plus
     utilityDegrees[altId] = utility
     scores[altId] = utility
   }
@@ -225,6 +233,8 @@ export function calculateMARCOS(
     utilityDegrees,
     idealSolution,
     antiIdealSolution,
+    kMinus,
+    kPlus
   }
 }
 

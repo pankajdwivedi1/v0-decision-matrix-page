@@ -19,20 +19,35 @@ import type { Alternative, Criterion } from "./types"
  *
  * Higher net flow indicates a better alternative.
  */
+
+interface PROMETHEEResult {
+  scores: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  phiPlus: Record<string, number>
+  phiMinus: Record<string, number>
+  netFlow: Record<string, number>
+}
+
 export function calculatePROMETHEE(
   alternatives: Alternative[],
   criteria: Criterion[]
-): Record<string, number> {
+): PROMETHEEResult {
   const scores: Record<string, number> = {}
   const epsilon = 1e-12
 
   const m = alternatives.length
   const n = criteria.length
 
-  if (m === 0 || n === 0) return scores
+  if (m === 0 || n === 0) return { scores: {}, normalizedMatrix: {}, phiPlus: {}, phiMinus: {}, netFlow: {} }
   if (m === 1) {
     scores[alternatives[0].id] = 0
-    return scores
+    return {
+      scores,
+      normalizedMatrix: {},
+      phiPlus: { [alternatives[0].id]: 0 },
+      phiMinus: { [alternatives[0].id]: 0 },
+      netFlow: { [alternatives[0].id]: 0 }
+    }
   }
 
   // Step 1: Build decision matrix
@@ -41,20 +56,23 @@ export function calculatePROMETHEE(
   )
 
   // Step 2: Normalize using vector normalization
-  const normalizedMatrix: number[][] = Array.from({ length: m }, () => Array(n).fill(0))
+  const normalizedMatrixArray: number[][] = Array.from({ length: m }, () => Array(n).fill(0))
+  const normalizedMatrix: Record<string, Record<string, number>> = {}
+  alternatives.forEach(a => normalizedMatrix[a.id] = {})
 
   for (let j = 0; j < n; j++) {
     const colVals = matrix.map((row) => row[j])
     const denom = Math.sqrt(colVals.reduce((sum, v) => sum + v * v, 0)) || epsilon
     for (let i = 0; i < m; i++) {
-      normalizedMatrix[i][j] = matrix[i][j] / denom
+      normalizedMatrixArray[i][j] = matrix[i][j] / denom
+      normalizedMatrix[alternatives[i].id][criteria[j].id] = normalizedMatrixArray[i][j]
     }
   }
 
   // Calculate ranges for each criterion (for preference function)
   const ranges: number[] = []
   for (let j = 0; j < n; j++) {
-    const colVals = normalizedMatrix.map((row) => row[j])
+    const colVals = normalizedMatrixArray.map((row) => row[j])
     const maxVal = Math.max(...colVals)
     const minVal = Math.min(...colVals)
     ranges[j] = Math.max(maxVal - minVal, epsilon)
@@ -75,8 +93,8 @@ export function calculatePROMETHEE(
 
       for (let j = 0; j < n; j++) {
         const crit = criteria[j]
-        const valI = normalizedMatrix[i][j]
-        const valK = normalizedMatrix[k][j]
+        const valI = normalizedMatrixArray[i][j]
+        const valK = normalizedMatrixArray[k][j]
         let preference = 0
 
         if (crit.type === "beneficial") {
@@ -117,12 +135,26 @@ export function calculatePROMETHEE(
     phiMinus[i] = sumMinus / (m - 1)
   }
 
+  const phiPlusRecord: Record<string, number> = {}
+  const phiMinusRecord: Record<string, number> = {}
+  const netFlowRecord: Record<string, number> = {}
+
   // Step 7: Calculate net flow
   for (let i = 0; i < m; i++) {
     const netFlow = phiPlus[i] - phiMinus[i]
     scores[alternatives[i].id] = netFlow
+
+    phiPlusRecord[alternatives[i].id] = phiPlus[i]
+    phiMinusRecord[alternatives[i].id] = phiMinus[i]
+    netFlowRecord[alternatives[i].id] = netFlow
   }
 
-  return scores
+  return {
+    scores,
+    normalizedMatrix,
+    phiPlus: phiPlusRecord,
+    phiMinus: phiMinusRecord,
+    netFlow: netFlowRecord
+  }
 }
 

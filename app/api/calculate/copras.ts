@@ -18,17 +18,27 @@ import type { Alternative, Criterion } from "./types"
  *
  * Higher Q_i indicates a better alternative.
  */
+
+interface COPRASResult {
+  scores: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  weightedMatrix: Record<string, Record<string, number>>
+  sPlus: Record<string, number>
+  sMinus: Record<string, number>
+  qi: Record<string, number>
+}
+
 export function calculateCOPRAS(
   alternatives: Alternative[],
   criteria: Criterion[]
-): Record<string, number> {
+): COPRASResult {
   const scores: Record<string, number> = {}
   const epsilon = 1e-12
 
   const m = alternatives.length
   const n = criteria.length
 
-  if (m === 0 || n === 0) return scores
+  if (m === 0 || n === 0) return { scores: {}, normalizedMatrix: {}, weightedMatrix: {}, sPlus: {}, sMinus: {}, qi: {} }
 
   // Step 1: decision matrix x_ij
   const matrix: number[][] = alternatives.map((alt) =>
@@ -42,9 +52,16 @@ export function calculateCOPRAS(
     for (let i = 0; i < m; i++) {
       sum += matrix[i][j]
     }
-    if (sum === 0) sum = 1 // avoid division by zero (all zeros → keep r_ij = 0)
+    if (sum === 0) sum = 1 // avoid division by zero
     colSums[j] = sum
   }
+
+  const normalizedMatrix: Record<string, Record<string, number>> = {}
+  const weightedMatrix: Record<string, Record<string, number>> = {}
+  alternatives.forEach(a => {
+    normalizedMatrix[a.id] = {}
+    weightedMatrix[a.id] = {}
+  })
 
   const r: number[][] = Array.from({ length: m }, () => Array(n).fill(0))
   const q: number[][] = Array.from({ length: m }, () => Array(n).fill(0))
@@ -53,6 +70,9 @@ export function calculateCOPRAS(
     for (let j = 0; j < n; j++) {
       r[i][j] = matrix[i][j] / colSums[j]
       q[i][j] = r[i][j] * criteria[j].weight
+
+      normalizedMatrix[alternatives[i].id][criteria[j].id] = r[i][j]
+      weightedMatrix[alternatives[i].id][criteria[j].id] = q[i][j]
     }
   }
 
@@ -77,12 +97,26 @@ export function calculateCOPRAS(
     }
   }
 
+  const sPlusRecord: Record<string, number> = {}
+  const sMinusRecord: Record<string, number> = {}
+  const qiRecord: Record<string, number> = {}
+
   // If there are no cost (non-beneficial) criteria, COPRAS reduces to S⁺ ranking
   if (!hasNonBeneficial) {
     for (let i = 0; i < m; i++) {
       scores[alternatives[i].id] = Splus[i]
+      sPlusRecord[alternatives[i].id] = Splus[i]
+      sMinusRecord[alternatives[i].id] = 0
+      qiRecord[alternatives[i].id] = Splus[i]
     }
-    return scores
+    return {
+      scores,
+      normalizedMatrix,
+      weightedMatrix,
+      sPlus: sPlusRecord,
+      sMinus: sMinusRecord,
+      qi: qiRecord
+    }
   }
 
   // Guard against all-zero Sminus
@@ -104,9 +138,22 @@ export function calculateCOPRAS(
     const secondTerm = (SminusMin * totalSminus) / denom
     const Qi = Splus[i] + secondTerm
     scores[alternatives[i].id] = Qi
+
+    sPlusRecord[alternatives[i].id] = Splus[i]
+    sMinusRecord[alternatives[i].id] = Sminus[i] // Keep the possibly adjusted Sminus for display? Or original? 
+    // Usually original is 0 but we adjusted to epsilon. Displaying epsilon is fine or 0.
+    // Let's display the used values.
+    qiRecord[alternatives[i].id] = Qi
   }
 
-  return scores
+  return {
+    scores,
+    normalizedMatrix,
+    weightedMatrix,
+    sPlus: sPlusRecord,
+    sMinus: sMinusRecord,
+    qi: qiRecord
+  }
 }
 
 

@@ -89,8 +89,8 @@ export function calculateMERECWeights(
 
     // Step 4: Calculate performance with each criterion removed S_i^(-k)
     const removalScores: Record<string, Record<string, number>> = {}
-    criteria.forEach((crit) => {
-        removalScores[crit.id] = {}
+    alternatives.forEach((alt) => {
+        removalScores[alt.id] = {}
     })
 
     alternatives.forEach((alt) => {
@@ -101,7 +101,7 @@ export function calculateMERECWeights(
                     sum += normalizedMatrix[alt.id][crit.id]
                 }
             })
-            removalScores[removedCrit.id][alt.id] = sum
+            removalScores[alt.id][removedCrit.id] = sum
         })
     })
 
@@ -111,7 +111,7 @@ export function calculateMERECWeights(
         let effect = 0
         alternatives.forEach((alt) => {
             const diff = Math.abs(
-                performanceScores[alt.id] - removalScores[crit.id][alt.id]
+                performanceScores[alt.id] - removalScores[alt.id][crit.id]
             )
             effect += diff
         })
