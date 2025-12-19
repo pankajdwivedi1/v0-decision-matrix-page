@@ -86,7 +86,7 @@ export function calculateCODAS(
   for (let j = 0; j < n; j++) {
     const col = normalizedMatrixArray.map((row) => row[j])
     const crit = criteria[j]
-    
+
     if (crit.type === "beneficial") {
       // For beneficial criteria, NIS is the minimum (worst)
       negativeIdealSolution[crit.id] = Math.min(...col)
@@ -129,7 +129,7 @@ export function calculateCODAS(
   // Step 6: Calculate relative assessment score
   const relativeAssessmentScores: Record<string, number> = {}
   const scores: Record<string, number> = {}
-  
+
   for (let i = 0; i < m; i++) {
     const altId = alternatives[i].id
     const ra = euclideanDistances[altId] + tau * taxicabDistances[altId]

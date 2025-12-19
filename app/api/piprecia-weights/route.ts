@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server"
-import type { Criterion } from "../types"
-import { calculatePIPRECIA } from "../piprecia"
+import { NextRequest, NextResponse } from "next/server";
+import type { Alternative, Criterion } from "../calculate/types";
+import { calculatePIPRECIA } from "../calculate/piprecia";
 
 export interface PipreciaWeightsRequest {
     criteria: Criterion[]

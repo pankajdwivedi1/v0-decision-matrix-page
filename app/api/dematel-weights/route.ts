@@ -1,18 +1,15 @@
-
 import { NextRequest, NextResponse } from "next/server";
-import type { Alternative, Criterion } from "../types";
-import { calculateLopcow, LopcowResult } from "../lopcow";
+import type { Alternative, Criterion } from "../calculate/types";
+import { calculateDematel } from "../calculate/dematel";
 
-export interface LopcowWeightsRequest {
+export interface DematelWeightsRequest {
     alternatives: Alternative[];
     criteria: Criterion[];
 }
 
-export type { LopcowResult };
-
 export async function POST(request: NextRequest) {
     try {
-        const body: LopcowWeightsRequest = await request.json();
+        const body: DematelWeightsRequest = await request.json();
         const { alternatives, criteria } = body;
 
         if (!alternatives || !criteria) {
@@ -22,13 +19,15 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const result = calculateLopcow(alternatives, criteria);
+
+        console.log("Calculated DEMATEL weights...");
+        const result = calculateDematel(alternatives, criteria);
 
         return NextResponse.json(result, { status: 200 });
     } catch (err) {
-        console.error("LOPCOW calculation error:", err);
+        console.error("DEMATEL calculation error:", err);
         return NextResponse.json(
-            { error: "Internal server error during LOPCOW weight calculation" },
+            { error: "Internal server error during DEMATEL weight calculation" },
             { status: 500 }
         );
     }

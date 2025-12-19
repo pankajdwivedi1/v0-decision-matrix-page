@@ -10,7 +10,7 @@ interface VIKORResult {
   normalizedMatrix: Record<string, Record<string, number>>
 }
 
-export function calculateVIKOR(alternatives: Alternative[], criteria: Criterion[]): VIKORResult {
+export function calculateVIKOR(alternatives: Alternative[], criteria: Criterion[], v: number = 0.5): VIKORResult {
   const fBest: Record<string, number> = {}, fWorst: Record<string, number> = {}
   criteria.forEach(c => {
     const vals = alternatives.map(a => a.scores[c.id] || 0)
@@ -56,7 +56,6 @@ export function calculateVIKOR(alternatives: Alternative[], criteria: Criterion[
   const Svals = Object.values(S), Rvals = Object.values(R)
   const Smin = Math.min(...Svals), Smax = Math.max(...Svals)
   const Rmin = Math.min(...Rvals), Rmax = Math.max(...Rvals)
-  const v = 0.5
   const Q: Record<string, number> = {}
   for (const a of alternatives)
     Q[a.id] = v * (S[a.id] - Smin) / (Smax - Smin || 1) + (1 - v) * (R[a.id] - Rmin) / (Rmax - Rmin || 1)

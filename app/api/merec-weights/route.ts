@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Alternative, Criterion } from "../types";
-import { calculateMEREC } from "../merec";
+import type { Alternative, Criterion } from "../calculate/types";
+import { calculateMEREC } from "../calculate/merec";
 
 export interface MERECWeightsRequest {
     alternatives: Alternative[];

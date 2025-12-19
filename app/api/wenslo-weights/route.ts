@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Alternative, Criterion } from "../types";
-import { calculateWenslo } from "../wenslo";
+import type { Alternative, Criterion } from "../calculate/types";
+import { calculateWenslo } from "../calculate/wenslo";
 
 export interface WensloWeightsRequest {
     alternatives: Alternative[];

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Criterion } from "../types";
-import { calculateSWARA } from "../swara";
+import type { Alternative, Criterion } from "../calculate/types";
+import { calculateSWARA } from "../calculate/swara";
 
 export interface SWARAWeightsRequest {
     criteria: Criterion[];

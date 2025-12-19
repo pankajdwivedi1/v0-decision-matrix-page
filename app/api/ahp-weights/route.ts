@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server"
-import type { Criterion } from "../types"
-import { calculateAHP } from "../ahp"
+import { NextRequest, NextResponse } from "next/server";
+import type { Alternative, Criterion } from "../calculate/types";
+import { calculateAHP } from "../calculate/ahp";
 
 export interface AHPWeightsRequest {
   criteria: Criterion[]

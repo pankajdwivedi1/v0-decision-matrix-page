@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
         break;
       }
       case "vikor": {
-        const vikorData = calculateVIKOR(alternatives, criteria);
+        const vikorData = calculateVIKOR(alternatives, criteria, body.vikorVValue);
         results = vikorData.scores;
         (request as any).extraMetrics = {
           vikorNormalizedMatrix: vikorData.normalizedMatrix,
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
         break;
       }
       case "waspas": {
-        const waspasData = calculateWASPAS(alternatives, criteria);
+        const waspasData = calculateWASPAS(alternatives, criteria, body.waspasLambdaValue);
         results = waspasData.scores;
         (request as any).extraMetrics = {
           waspasNormalizedMatrix: waspasData.normalizedMatrix,
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
         break;
       }
       case "codas": {
-        const codasData = calculateCODAS(alternatives, criteria);
+        const codasData = calculateCODAS(alternatives, criteria, body.codasTauValue ? parseFloat(String(body.codasTauValue)) : 0.02);
         results = codasData.scores;
         (request as any).extraMetrics = {
           codasNormalizedMatrix: codasData.normalizedMatrix,

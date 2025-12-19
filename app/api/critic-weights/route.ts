@@ -1,22 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Alternative, Criterion } from "../types";
-import { calculateEntropy } from "../entropy";
+import type { Alternative, Criterion } from "../calculate/types";
+import { calculateCritic } from "../calculate/critic";
 
-export interface EntropyWeightsRequest {
+export interface CriticWeightsRequest {
   alternatives: Alternative[];
   criteria: Criterion[];
 }
 
-export interface EntropyWeightsResponse {
+export interface CriticWeightsResponse {
   weights: Record<string, number>;
   normalizedMatrix: Record<string, Record<string, number>>;
-  entropyValues: Record<string, number>;
-  diversityValues: Record<string, number>;
+  standardDeviations: Record<string, number>;
+  correlationMatrix: Record<string, Record<string, number>>;
+  informationAmounts: Record<string, number>;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body: EntropyWeightsRequest = await request.json();
+    const body: CriticWeightsRequest = await request.json();
     const { alternatives, criteria } = body;
 
     if (!alternatives || !criteria) {
@@ -26,13 +27,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = calculateEntropy(alternatives, criteria);
+    const result = calculateCritic(alternatives, criteria);
 
     return NextResponse.json(result, { status: 200 });
   } catch (err) {
-    console.error("Entropy calculation error:", err);
+    console.error("CRITIC calculation error:", err);
     return NextResponse.json(
-      { error: "Internal server error during entropy weight calculation" },
+      { error: "Internal server error during CRITIC weight calculation" },
       { status: 500 }
     );
   }

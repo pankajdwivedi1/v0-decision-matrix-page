@@ -72,7 +72,7 @@ export function calculateEntropyWeights(
   // Step 3: Calculate entropy for each criterion
   // Using base-2 logarithm: E_j = -k * Σ_{i=1}^{m} (p_ij * log₂(p_ij))
   // where k = 1/log₂(m) ensures E_j lies in the range [0,1]
-  const k = 1 / Math.log2(m) // Normalization constant using base-2 logarithm
+  const k = m > 1 ? 1 / Math.log2(m) : 1 // Normalization constant using base-2 logarithm
   const entropyValues: Record<string, number> = {}
   const entropyMatrix: Record<string, Record<string, number>> = {}
   alternatives.forEach((alt) => (entropyMatrix[alt.id] = {}))
