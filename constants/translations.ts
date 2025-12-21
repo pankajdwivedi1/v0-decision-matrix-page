@@ -46,7 +46,7 @@ export const translations = {
             capabilities: {
                 title: "System Capabilities",
                 items: [
-                    "Supports up to 50 alternatives and 100 criteria.",
+                    "Supports up to 100 alternatives and 100 criteria.",
                     "Excel import compatibility (.xlsx, .csv).",
                     "Interactive sensitivity analysis for weight testing.",
                 ]
@@ -173,7 +173,7 @@ export const translations = {
             capabilities: {
                 title: "सिस्टम क्षमताएं",
                 items: [
-                    "50 विकल्पों और 100 मानदंडों तक का समर्थन करता है।",
+                    "100 विकल्पों और 100 मानदंडों तक का समर्थन करता है।",
                     "एक्सेल आयात अनुकूलता (.xlsx, .csv)।",
                     "भार परीक्षण के लिए इंटरैक्टिव संवेदनशीलता विश्लेषण।",
                 ]
@@ -247,7 +247,7 @@ export const translations = {
             ctaTitle: "बेहतर निर्णय लेने के लिए तैयार हैं?",
             ctaDesc: "सटीक, डेटा-संचालित परिणामों के लिए हमारे MCDM ढांचे का उपयोग करने वाले दुनिया भर के शोधकर्ताओं और विश्लेषकों में शामिल हों।",
             ctaButton: "मुफ्त में शुरू करें",
-            developed: "डॉ. पंकज प्रसाद द्विवेदी और अन्य द्वारा विकसित। सर्वाधिकार सुरक्षित।",
+            developed: "डॉ. पंकज प्रसाद द्विवेदी द्वारा विकसित। सर्वाधिकार सुरक्षित।",
             docs: "दस्तावेज़ीकरण",
             api: "API संदर्भ",
             terms: "शर्तें"
@@ -300,7 +300,7 @@ export const translations = {
             capabilities: {
                 title: "Capacidades del Sistema",
                 items: [
-                    "Admite hasta 50 alternativas y 100 criterios.",
+                    "Admite hasta 100 alternativas y 100 criterios.",
                     "Compatibilidad con importación de Excel (.xlsx, .csv).",
                     "Análisis de sensibilidad interactivo para pruebas de peso.",
                 ]
@@ -374,7 +374,7 @@ export const translations = {
             ctaTitle: "¿Listo para tomar mejores decisiones?",
             ctaDesc: "Únase a investigadores y analistas de todo el mundo que utilizan nuestro marco MCDM para obtener resultados precisos basados en datos.",
             ctaButton: "Empezar Gratis",
-            developed: "Desarrollado por el Dr. Pankaj Prasad Dwivedi et al. Todos los derechos reservados.",
+            developed: "Desarrollado por el Dr. Pankaj Prasad Dwivedi. Todos los derechos reservados.",
             docs: "Documentación",
             api: "Referencia de API",
             terms: "Términos"

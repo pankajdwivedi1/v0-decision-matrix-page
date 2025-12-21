@@ -32,7 +32,7 @@ import {
   Line,
   Cell
 } from "recharts"
-import { useTheme } from "next-themes"
+
 import SWEIFormula from "@/components/SWEIFormula"
 import SWIFormula from "@/components/SWIFormula"
 import ContactForm from "@/components/ContactForm"
@@ -43,8 +43,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Moon, Sun, Languages } from "lucide-react"
+import { Languages } from "lucide-react"
 import { translations } from "@/constants/translations"
+import DynamicMatrixPreview from "@/components/DynamicMatrixPreview"
+import ColorSwitcher from "@/components/ColorSwitcher"
 
 // Sample Data for Showcase
 const sampleDecisionMatrix = [
@@ -72,7 +74,7 @@ const sensitivityData = [
 
 export default function LandingPage() {
   const [activeTab, setActiveTab] = useState("swei")
-  const { setTheme, theme } = useTheme()
+  const { setTheme, theme } = { setTheme: () => { }, theme: "light" } // Placeholder to avoid breaking references if any remain
   const [mounted, setMounted] = useState(false)
   const [language, setLanguage] = useState("EN")
 
@@ -105,7 +107,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-blue-500/30 transition-colors duration-300">
+    <div className="min-h-screen text-foreground font-sans selection:bg-blue-500/30 transition-colors duration-300 bg-transparent">
       <Toaster position="top-center" richColors />
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 border-b border-border bg-background/80 backdrop-blur-md">
@@ -114,7 +116,7 @@ export default function LandingPage() {
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-lg text-white">
               RS
             </div>
-            <span className="font-bold text-xl tracking-tight hidden sm:inline-block">RankSensilytics<span className="text-blue-500">Pro</span></span>
+            <span className="font-bold text-xl tracking-tight hidden sm:inline-block">RankSensilytics</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             {/* Language Switcher */}
@@ -138,18 +140,9 @@ export default function LandingPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Theme Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            >
-              <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-              <span className="sr-only">Toggle theme</span>
-            </Button>
 
+
+            <ColorSwitcher />
             <Button variant="ghost" className="text-sm hidden md:flex" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <Home className="mr-2 h-4 w-4" /> {t.navbar.home}
             </Button>
@@ -168,14 +161,14 @@ export default function LandingPage() {
             <span className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium mb-6 inline-block uppercase tracking-wider">
               {t.hero.badge}
             </span>
-            <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tight mb-6 bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-transparent">
+            <h1 className={`text-4xl sm:text-7xl font-extrabold mb-6 py-2 ${language === 'HI' ? 'tracking-normal text-foreground' : 'tracking-tight bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-transparent'}`}>
               {t.hero.title}
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
               {t.hero.subtitle}
             </p>
             <div className="flex flex-col sm:row items-center justify-center gap-4">
-              <Button size="lg" className="w-full sm:w-auto px-8 bg-blue-600 hover:bg-blue-700 h-12 text-base font-semibold transition-all hover:scale-105" onClick={() => window.location.href = '/application'}>
+              <Button size="lg" className="w-full sm:w-auto px-8 bg-blue-600 hover:bg-blue-700 text-white h-12 text-base font-semibold transition-all hover:scale-105" onClick={() => window.location.href = '/application'}>
                 {t.hero.ctaStart} <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
               <Button size="lg" variant="outline" className="w-full sm:w-auto px-8 border-border hover:bg-white/5 h-12 text-base" onClick={() => document.getElementById('why')?.scrollIntoView({ behavior: 'smooth' })}>
@@ -218,42 +211,7 @@ export default function LandingPage() {
               className="relative p-8 rounded-3xl border border-border bg-gradient-to-br from-white/5 to-transparent backdrop-blur-sm"
             >
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/20 blur-[60px] rounded-full" />
-              <div className="relative overflow-hidden rounded-xl border border-border bg-background">
-                <div className="p-4 border-b border-border flex items-center justify-between">
-                  <span className="text-xs font-mono text-muted-foreground/70">{t.why.preview}</span>
-                  <div className="flex gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/40" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/40" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-500/40" />
-                  </div>
-                </div>
-                <div className="p-0 overflow-x-auto scroller-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-border/50 hover:bg-transparent">
-                        <TableHead className="text-blue-400 text-xs py-4 px-4 font-bold border-r border-border/50">Criteria</TableHead>
-                        <TableHead className="text-xs text-center border-r border-border/50">Weight</TableHead>
-                        <TableHead className="text-xs text-center border-r border-border/50 text-emerald-400">Profit ▲</TableHead>
-                        <TableHead className="text-xs text-center text-red-400">Risk ▼</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {[
-                        { name: "Alternative A", weight: "0.25", c1: "8.5", c2: "2.1" },
-                        { name: "Alternative B", weight: "0.30", c1: "7.2", c2: "4.5" },
-                        { name: "Alternative C", weight: "0.45", c1: "9.1", c2: "1.8" },
-                      ].map((row, i) => (
-                        <TableRow key={i} className="border-border/50 hover:bg-white/5 transition-colors">
-                          <TableCell className="font-medium text-xs py-4 px-4 border-r border-border/50">{row.name}</TableCell>
-                          <TableCell className="text-xs text-center border-r border-border/50">{row.weight}</TableCell>
-                          <TableCell className="text-xs text-center border-r border-border/50 text-emerald-500/70">{row.c1}</TableCell>
-                          <TableCell className="text-xs text-center text-red-500/70">{row.c2}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
+              <DynamicMatrixPreview />
               <div className="mt-8 grid grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
                   <span className="block text-2xl font-bold text-emerald-400">92%</span>
@@ -333,7 +291,7 @@ export default function LandingPage() {
       <section className="py-24 px-4 bg-blue-600/5">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4 uppercase tracking-tighter">{t.merits.title}</h2>
+            <h2 className={`text-3xl font-bold mb-4 uppercase ${language === 'HI' ? 'tracking-normal' : 'tracking-tighter'}`}>{t.merits.title}</h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {t.merits.items.map((merit, i) => (
@@ -381,8 +339,8 @@ export default function LandingPage() {
                     </button>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6 md:p-10 bg-white shadow-[inset_0_0_100px_rgba(0,0,0,0.05)] rounded-b-xl overflow-x-auto min-h-[400px]">
-                  <div className="text-black transform transition-all duration-500">
+                <CardContent className="p-4 md:p-10 bg-muted/20 shadow-[inset_0_0_100px_rgba(0,0,0,0.02)] rounded-b-xl overflow-x-auto min-h-[400px]">
+                  <div className="transform transition-all duration-500">
                     {activeTab === 'swei' ? <SWEIFormula landingPage={true} language={language} /> : <SWIFormula landingPage={true} language={language} />}
                   </div>
                 </CardContent>
@@ -450,8 +408,8 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-2 gap-12">
             <div className="space-y-4">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/70">{t.tables.rankTitle}</h4>
-              <div className="rounded-xl overflow-hidden border border-border bg-background">
+              <h4 className={`text-sm font-bold uppercase text-muted-foreground/70 ${language === 'HI' ? 'tracking-normal' : 'tracking-widest'}`}>{t.tables.rankTitle}</h4>
+              <div className="rounded-xl overflow-x-auto border border-border bg-background">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/50 bg-white/5">
@@ -481,8 +439,8 @@ export default function LandingPage() {
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/70">{t.tables.matrixTitle}</h4>
-              <div className="rounded-xl overflow-hidden border border-border bg-background">
+              <h4 className={`text-sm font-bold uppercase text-muted-foreground/70 ${language === 'HI' ? 'tracking-normal' : 'tracking-widest'}`}>{t.tables.matrixTitle}</h4>
+              <div className="rounded-xl overflow-x-auto border border-border bg-background">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/50 bg-white/5">
@@ -559,13 +517,13 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl sm:text-5xl font-extrabold mb-6">{t.footer.ctaTitle}</h2>
           <p className="text-muted-foreground mb-10 max-w-lg mx-auto">{t.footer.ctaDesc}</p>
-          <Button size="lg" className="px-10 bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg font-bold transition-transform hover:scale-105" onClick={() => window.location.href = '/application'}>
+          <Button size="lg" className="px-10 bg-blue-600 hover:bg-blue-700 text-white h-14 text-lg font-bold transition-transform hover:scale-105" onClick={() => window.location.href = '/application'}>
             {t.footer.ctaButton} <ChevronRight className="ml-2 h-5 w-5" />
           </Button>
           <div className="mt-20 pt-10 border-t border-border/50 flex flex-col sm:row items-center justify-between gap-6">
             <div className="flex items-center gap-2 grayscale hover:grayscale-0 transition-all opacity-50 hover:opacity-100">
               <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center font-bold text-xs text-white">RS</div>
-              <span className="font-bold text-sm tracking-tight text-foreground">RankSensilytics<span className="text-blue-500">Pro</span></span>
+              <span className="font-bold text-sm tracking-tight text-foreground">RankSensilytics</span>
             </div>
             <p className="text-xs text-muted-foreground/70">© 2025 RankSensilytics. {t.footer.developed}</p>
             <div className="flex gap-6 text-xs text-muted-foreground">

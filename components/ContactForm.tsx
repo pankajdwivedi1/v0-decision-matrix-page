@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { toast } from "sonner"
-import { Send } from "lucide-react"
+import { Send, CheckCircle, Loader2 } from "lucide-react"
+import { collection, addDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
 import { translations } from "@/constants/translations"
 
@@ -26,6 +28,9 @@ interface ContactFormProps {
 
 export default function ContactForm({ language = "EN" }: ContactFormProps) {
     const t = translations[language as keyof typeof translations].contact.form
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isSuccess, setIsSuccess] = useState(false)
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -37,22 +42,43 @@ export default function ContactForm({ language = "EN" }: ContactFormProps) {
     })
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
+        setIsSubmitting(true)
         try {
-            const response = await fetch("/api/contact", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(values),
+            await addDoc(collection(db, "messages"), {
+                ...values,
+                timestamp: new Date(),
             })
 
-            if (response.ok) {
-                toast.success(t.success)
-                form.reset()
-            } else {
-                toast.error(t.error)
-            }
+            setIsSuccess(true)
+            toast.success(t.success)
+            form.reset()
         } catch (error) {
-            toast.error(t.errGeneral)
+            console.error("Error adding document: ", error)
+            toast.error(t.error)
+        } finally {
+            setIsSubmitting(false)
         }
+    }
+
+    if (isSuccess) {
+        return (
+            <div className="flex flex-col items-center justify-center p-8 text-center space-y-4 animate-in fade-in zoom-in duration-500">
+                <div className="rounded-full bg-green-100 p-3">
+                    <CheckCircle className="h-12 w-12 text-green-600" />
+                </div>
+                <h3 className="text-2xl font-bold">{t.success}</h3>
+                <p className="text-muted-foreground max-w-[600px]">
+                    Thank you for reaching out! We've received your message and will get back to you shortly.
+                </p>
+                <Button
+                    onClick={() => setIsSuccess(false)}
+                    variant="outline"
+                    className="mt-4"
+                >
+                    Send another message
+                </Button>
+            </div>
+        )
     }
 
     return (
@@ -64,9 +90,9 @@ export default function ContactForm({ language = "EN" }: ContactFormProps) {
                         name="name"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-foreground">{t.name}</FormLabel>
+                                <FormLabel className="text-black">{t.name}</FormLabel>
                                 <FormControl>
-                                    <Input placeholder={t.namePlaceholder} {...field} className="bg-background border-zinc-200 dark:border-zinc-800" />
+                                    <Input placeholder={t.namePlaceholder} {...field} className="bg-white border-zinc-200" />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -77,9 +103,9 @@ export default function ContactForm({ language = "EN" }: ContactFormProps) {
                         name="email"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-foreground">{t.email}</FormLabel>
+                                <FormLabel className="text-black">{t.email}</FormLabel>
                                 <FormControl>
-                                    <Input placeholder={t.emailPlaceholder} {...field} className="bg-background border-zinc-200 dark:border-zinc-800" />
+                                    <Input placeholder={t.emailPlaceholder} {...field} className="bg-white border-zinc-200" />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -91,9 +117,9 @@ export default function ContactForm({ language = "EN" }: ContactFormProps) {
                     name="nationality"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-foreground">{t.nationality}</FormLabel>
+                            <FormLabel className="text-black">{t.nationality}</FormLabel>
                             <FormControl>
-                                <Input placeholder={t.nationalityPlaceholder} {...field} className="bg-background border-zinc-200 dark:border-zinc-800" />
+                                <Input placeholder={t.nationalityPlaceholder} {...field} className="bg-white border-zinc-200" />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -104,21 +130,34 @@ export default function ContactForm({ language = "EN" }: ContactFormProps) {
                     name="message"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-foreground">{t.message}</FormLabel>
+                            <FormLabel className="text-black">{t.message}</FormLabel>
                             <FormControl>
                                 <Textarea
                                     placeholder={t.messagePlaceholder}
                                     {...field}
                                     rows={5}
-                                    className="bg-background border-zinc-200 dark:border-zinc-800 resize-none"
+                                    className="bg-white border-zinc-200 resize-none"
                                 />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
                 />
-                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-12">
-                    <Send className="mr-2 h-4 w-4" /> {t.send}
+                <Button
+                    type="submit"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-12"
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Sending...
+                        </>
+                    ) : (
+                        <>
+                            <Send className="mr-2 h-4 w-4" /> {t.send}
+                        </>
+                    )}
                 </Button>
             </form>
         </Form>

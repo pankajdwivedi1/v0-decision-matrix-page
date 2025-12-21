@@ -142,7 +142,8 @@ export async function POST(request: NextRequest) {
             addRowWithBorder([])
             addRowWithBorder(["Alternative", "Value"], true)
             Object.entries(valueAsObj).forEach(([k, v]) => {
-              const displayKey = alternatives.find(a => a.id === k)?.name || k
+              const displayKey = alternatives.find(a => a.id === k)?.name ||
+                criteria.find(c => c.id === k)?.name || k
               const displayValue = v !== null && v !== undefined
                 ? (typeof v === 'number' ? Number((v as number).toFixed(resultsDecimalPlaces)) : v)
                 : ""

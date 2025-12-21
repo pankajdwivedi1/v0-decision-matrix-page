@@ -68,6 +68,15 @@ import WENSLOFormula from "@/components/WENSLOFormula"
 import LOPCOWFormula from "@/components/LOPCOWFormula"
 import DEMATELFormula from "@/components/DEMATELFormula"
 import MABACFormula from "@/components/MABACFormula"
+import SDFormula from "@/components/SDFormula"
+import VarianceFormula from "@/components/VarianceFormula"
+import MADFormula from "@/components/MADFormula"
+
+import DBWFormula from "@/components/DBWFormula"
+import SVPFormula from "@/components/SVPFormula"
+import MDMFormula from "@/components/MDMFormula"
+import LSWFormula from "@/components/LSWFormula"
+import ColorSwitcher from "@/components/ColorSwitcher"
 
 declare global {
   interface Window {
@@ -92,6 +101,13 @@ type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moo
 type WeightMethod = "equal" | "entropy" | "critic" | "ahp" | "piprecia" | "merec" | "swara" | "wenslo"
   | "lopcow"
   | "dematel"
+  | "sd"
+  | "variance"
+  | "mad"
+  | "dbw"
+  | "svp"
+  | "mdm"
+  | "lsw"
 type PageStep = "home" | "input" | "table" | "matrix" | "calculate"
 type ComparisonResult = {
   method: MCDMMethod
@@ -181,6 +197,49 @@ interface DematelResult {
   rValues: Record<string, number>
   pValues: Record<string, number>
   eValues: Record<string, number>
+}
+
+interface SDResult {
+  weights: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  sigmaValues: Record<string, number>
+}
+
+interface VarianceResult {
+  weights: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  varianceValues: Record<string, number>
+}
+
+interface MADResult {
+  weights: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  madValues: Record<string, number>
+}
+
+interface DBWResult {
+  weights: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  distanceValues: Record<string, number>
+}
+
+interface SVPResult {
+  weights: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  varianceValues: Record<string, number>
+}
+
+interface MDMResult {
+  weights: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  deviationValues: Record<string, number>
+}
+
+interface LSWResult {
+  weights: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  leastSquaresValues: Record<string, number>
+  idealSolution: Record<string, number>
 }
 
 
@@ -370,7 +429,44 @@ const WEIGHT_METHODS: { value: WeightMethod; label: string; description: string 
     label: "DEMATEL Weight",
     description: "DEMATEL (Decision Making Trial and Evaluation Laboratory) visualizes the structure of complex causal relationships between criteria.",
   },
+  {
+    value: "sd",
+    label: "SD Weight",
+    description: "Standard Deviation (SD) method assigns weights based on the dispersion of criteria values in the normalized matrix.",
+  },
+  {
+    value: "variance",
+    label: "Variance Weight",
+    description: "Variance method determines weights based on the statistical variance of criteria values.",
+  },
+  {
+    value: "mad",
+    label: "MAD Weight",
+    description: "Mean Absolute Deviation (MAD) method calculates weights using the average absolute deviation from the mean.",
+  },
+
+  {
+    value: "dbw",
+    label: "Distance-based Weight",
+    description: "Distance-based Weighting (DBW) method calculates weights based on the pair-wise distances between alternatives for each criterion.",
+  },
+  {
+    value: "svp",
+    label: "SVP Weight",
+    description: "Statistical Variance Procedure (SVP) uses variance on Min-Max normalized data to determine objective weights.",
+  },
+  {
+    value: "mdm",
+    label: "MDM Weight",
+    description: "Maximizing Deviation Method (MDM) assigns higher weights to criteria with greater deviation between alternatives.",
+  },
+  {
+    value: "lsw",
+    label: "LSW Weight",
+    description: "Least Squares Weighting Method (LSW) determines weights based on squared deviations from the ideal solution.",
+  },
 ]
+
 
 const CHART_COLORS = [
   "#2563eb",
@@ -430,9 +526,19 @@ export default function MCDMCalculator() {
   const [apiResults, setApiResults] = useState<any>(null)
   const [entropyResult, setEntropyResult] = useState<EntropyResult | null>(null)
   const [criticResult, setCriticResult] = useState<CriticResult | null>(null)
+  const [sdResult, setSdResult] = useState<SDResult | null>(null)
+  const [varianceResult, setVarianceResult] = useState<VarianceResult | null>(null)
+  const [madResult, setMadResult] = useState<MADResult | null>(null)
+
+  const [dbwResult, setDbwResult] = useState<DBWResult | null>(null)
+  const [svpResult, setSvpResult] = useState<SVPResult | null>(null)
+  const [mdmResult, setMdmResult] = useState<MDMResult | null>(null)
+  const [lswResult, setLswResult] = useState<LSWResult | null>(null)
 
   // Responsive items per page for carousels
   const [itemsPerPage, setItemsPerPage] = useState(6)
+  const [showAllRankingMethods, setShowAllRankingMethods] = useState(false)
+  const [showAllWeightMethods, setShowAllWeightMethods] = useState(false)
 
   // Persistence for navigation state
   useEffect(() => {
@@ -473,7 +579,13 @@ export default function MCDMCalculator() {
 
   useEffect(() => {
     const handleResize = () => {
-      setItemsPerPage(window.innerWidth < 768 ? 3 : 6)
+      if (window.innerWidth < 768) {
+        setItemsPerPage(3)
+      } else if (window.innerWidth < 1024) {
+        setItemsPerPage(6)
+      } else {
+        setItemsPerPage(8)
+      }
     }
 
     // Set initial
@@ -534,6 +646,7 @@ export default function MCDMCalculator() {
 
   // Decimal precision for results display
   const [resultsDecimalPlaces, setResultsDecimalPlaces] = useState<number>(4)
+  const [weightsDecimalPlaces, setWeightsDecimalPlaces] = useState<number>(4)
   const [vikorVValue, setVikorVValue] = useState<string>("0.5")
   const [waspasLambdaValue, setWpasLambdaValue] = useState<string>("0.5")
   const [codasTauValue, setCodasTauValue] = useState<string>("0.02")
@@ -581,24 +694,7 @@ export default function MCDMCalculator() {
     }
   }, [alternatives, criteria, numAlternatives, numCriteria])
 
-  // Auto-play carousel for ranking methods (pauses when dialog is open)
-  useEffect(() => {
-    // Only set up interval if dialog is not open
-    if (isDialogOpen) {
-      return
-    }
-
-    const interval = setInterval(() => {
-      setRankingMethodsCarouselIndex(prev => {
-        const numPages = Math.ceil(MCDM_METHODS.length / 6)
-        const maxIndex = (numPages - 1) * 6
-        const nextIndex = prev + 6
-        return nextIndex > maxIndex ? 0 : nextIndex
-      })
-    }, 3000) // 3 seconds
-
-    return () => clearInterval(interval)
-  }, [isDialogOpen])
+  // Auto-play carousel for ranking methods removed in favor of grid view
 
   // Trigger MathJax typesetting when dialog opens
   useEffect(() => {
@@ -833,6 +929,90 @@ export default function MCDMCalculator() {
       return { criteria: updated, dematelResult: data }
     }
 
+    if (weight === "sd") {
+      const response = await fetch("/api/sd-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alternatives: alts, criteria: crits }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate SD weights")
+      const data: SDResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated }
+    }
+
+    if (weight === "variance") {
+      const response = await fetch("/api/variance-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alternatives: alts, criteria: crits }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate Variance weights")
+      const data: VarianceResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated }
+    }
+
+    if (weight === "mad") {
+      const response = await fetch("/api/mad-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alternatives: alts, criteria: crits }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate MAD weights")
+      const data: MADResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated }
+    }
+
+    if (weight === "dbw") {
+      const response = await fetch("/api/dbw-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alternatives: alts, criteria: crits }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate DBW weights")
+      const data: DBWResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated }
+    }
+
+    if (weight === "svp") {
+      const response = await fetch("/api/svp-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alternatives: alts, criteria: crits }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate SVP weights")
+      const data: SVPResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated }
+    }
+
+    if (weight === "mdm") {
+      const response = await fetch("/api/mdm-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alternatives: alts, criteria: crits }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate MDM weights")
+      const data: MDMResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated }
+    }
+
+    if (weight === "lsw") {
+      const response = await fetch("/api/lsw-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alternatives: alts, criteria: crits }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate LSW weights")
+      const data: LSWResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated }
+    }
+
     if (weight === "swara") {
       // Use stored SWARA weights if available
       const weightsToUse = swaraCalculatedWeights || {}
@@ -843,16 +1023,41 @@ export default function MCDMCalculator() {
       return { criteria: updated }
     }
 
-    // AHP
-    const response = await fetch("/api/ahp-weights", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ criteria: crits }),
-    })
-    if (!response.ok) throw new Error("Failed to calculate AHP weights")
-    const data: AHPResult = await response.json()
-    const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
-    return { criteria: updated }
+    if (weight === "ahp") {
+      // Return stored weights if they exist, otherwise fetch
+      if (ahpCalculatedWeights) {
+        const updated = crits.map((crit) => ({ ...crit, weight: ahpCalculatedWeights[crit.id] || crit.weight }))
+        return { criteria: updated }
+      }
+      const response = await fetch("/api/ahp-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ criteria: crits }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate AHP weights")
+      const data: AHPResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated }
+    }
+
+    if (weight === "piprecia") {
+      // Return stored weights if they exist, otherwise fetch
+      if (pipreciaCalculatedWeights) {
+        const updated = crits.map((crit) => ({ ...crit, weight: pipreciaCalculatedWeights[crit.id] || crit.weight }))
+        return { criteria: updated }
+      }
+      const response = await fetch("/api/piprecia-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ criteria: crits }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate PIPRECIA weights")
+      const data: PipreciaResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated }
+    }
+
+    return { criteria: crits }
   }
 
   const handleComparisonCalculate = async () => {
@@ -1424,6 +1629,76 @@ export default function MCDMCalculator() {
             weight: data.weights[crit.id] || crit.weight,
           })),
         )
+      } else if (methodToUse === "sd") {
+        const response = await fetch("/api/sd-weights", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alternatives, criteria }),
+        })
+        if (!response.ok) throw new Error("Failed to calculate SD weights")
+        const data: SDResult = await response.json()
+        setSdResult(data)
+        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+      } else if (methodToUse === "variance") {
+        const response = await fetch("/api/variance-weights", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alternatives, criteria }),
+        })
+        if (!response.ok) throw new Error("Failed to calculate Variance weights")
+        const data: VarianceResult = await response.json()
+        setVarianceResult(data)
+        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+      } else if (methodToUse === "mad") {
+        const response = await fetch("/api/mad-weights", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alternatives, criteria }),
+        })
+        if (!response.ok) throw new Error("Failed to calculate MAD weights")
+        const data: MADResult = await response.json()
+        setMadResult(data)
+        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+      } else if (methodToUse === "dbw") {
+        const response = await fetch("/api/dbw-weights", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alternatives, criteria }),
+        })
+        if (!response.ok) throw new Error("Failed to calculate DBW weights")
+        const data: DBWResult = await response.json()
+        setDbwResult(data)
+        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+      } else if (methodToUse === "svp") {
+        const response = await fetch("/api/svp-weights", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alternatives, criteria }),
+        })
+        if (!response.ok) throw new Error("Failed to calculate SVP weights")
+        const data: SVPResult = await response.json()
+        setSvpResult(data)
+        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+      } else if (methodToUse === "mdm") {
+        const response = await fetch("/api/mdm-weights", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alternatives, criteria }),
+        })
+        if (!response.ok) throw new Error("Failed to calculate MDM weights")
+        const data: MDMResult = await response.json()
+        setMdmResult(data)
+        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+      } else if (methodToUse === "lsw") {
+        const response = await fetch("/api/lsw-weights", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alternatives, criteria }),
+        })
+        if (!response.ok) throw new Error("Failed to calculate LSW weights")
+        const data: LSWResult = await response.json()
+        setLswResult(data)
+        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
       }
     } catch (error) {
       console.error("Error calculating weights:", error)
@@ -1454,6 +1729,14 @@ export default function MCDMCalculator() {
     setWensloResult(null)
     setLopcowResult(null)
     setDematelResult(null)
+    setSdResult(null)
+    setVarianceResult(null)
+    setMadResult(null)
+
+    setDbwResult(null)
+    setSvpResult(null)
+    setMdmResult(null)
+    setLswResult(null)
 
     // Calculate entropy weights if entropy method is selected
     if (weightMethod === "entropy") {
@@ -1713,6 +1996,146 @@ export default function MCDMCalculator() {
       }
     }
 
+    if (weightMethod === "sd") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/sd-weights", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alternatives, criteria }),
+        })
+        if (!response.ok) throw new Error("Failed to calculate SD weights")
+        const data: SDResult = await response.json()
+        setSdResult(data)
+        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+      } catch (error) {
+        console.error("Error calculating SD weights:", error)
+        alert("Error calculating SD weights. Using equal weight instead.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (weightMethod === "variance") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/variance-weights", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alternatives, criteria }),
+        })
+        if (!response.ok) throw new Error("Failed to calculate Variance weights")
+        const data: VarianceResult = await response.json()
+        setVarianceResult(data)
+        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+      } catch (error) {
+        console.error("Error calculating Variance weights:", error)
+        alert("Error calculating Variance weights. Using equal weight instead.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (weightMethod === "mad") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/mad-weights", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alternatives, criteria }),
+        })
+        if (!response.ok) throw new Error("Failed to calculate MAD weights")
+        const data: MADResult = await response.json()
+        setMadResult(data)
+        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+      } catch (error) {
+        console.error("Error calculating MAD weights:", error)
+        alert("Error calculating MAD weights. Using equal weight instead.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (weightMethod === "dbw") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/dbw-weights", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alternatives, criteria }),
+        })
+        if (!response.ok) throw new Error("Failed to calculate DBW weights")
+        const data: DBWResult = await response.json()
+        setDbwResult(data)
+        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+      } catch (error) {
+        console.error("Error calculating DBW weights:", error)
+        alert("Error calculating DBW weights. Using equal weight instead.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (weightMethod === "svp") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/svp-weights", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alternatives, criteria }),
+        })
+        if (!response.ok) throw new Error("Failed to calculate SVP weights")
+        const data: SVPResult = await response.json()
+        setSvpResult(data)
+        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+      } catch (error) {
+        console.error("Error calculating SVP weights:", error)
+        alert("Error calculating SVP weights. Using equal weight instead.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (weightMethod === "mdm") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/mdm-weights", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alternatives, criteria }),
+        })
+        if (!response.ok) throw new Error("Failed to calculate MDM weights")
+        const data: MDMResult = await response.json()
+        setMdmResult(data)
+        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+      } catch (error) {
+        console.error("Error calculating MDM weights:", error)
+        alert("Error calculating MDM weights. Using equal weight instead.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (weightMethod === "lsw") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/lsw-weights", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alternatives, criteria }),
+        })
+        if (!response.ok) throw new Error("Failed to calculate LSW weights")
+        const data: LSWResult = await response.json()
+        setLswResult(data)
+        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+      } catch (error) {
+        console.error("Error calculating LSW weights:", error)
+        alert("Error calculating LSW weights. Using equal weight instead.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
     // Check if we need to return to a specific tab after completing input
     if (shouldNavigate) {
       if (returnToTab === "rankingComparison") {
@@ -1770,6 +2193,76 @@ export default function MCDMCalculator() {
       const link = document.createElement("a")
       link.href = url
       link.download = `${methodLabel}_Results.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error("Export error:", error)
+      alert("Failed to export to Excel")
+    }
+  }
+
+  const exportWeightsToExcel = async () => {
+    // Determine which weight result is active
+    let activeResult: any = null
+    let methodLabel = weightMethod.toUpperCase()
+
+    if (weightMethod === "entropy") activeResult = entropyResult
+    else if (weightMethod === "critic") activeResult = criticResult
+    else if (weightMethod === "ahp") activeResult = ahpResult
+    else if (weightMethod === "piprecia") activeResult = pipreciaResult
+    else if (weightMethod === "merec") activeResult = merecResult
+    else if (weightMethod === "swara") activeResult = swaraResult
+    else if (weightMethod === "wenslo") activeResult = wensloResult
+    else if (weightMethod === "lopcow") activeResult = lopcowResult
+    else if (weightMethod === "dematel") activeResult = dematelResult
+    else if (weightMethod === "sd") activeResult = sdResult
+    else if (weightMethod === "variance") activeResult = varianceResult
+    else if (weightMethod === "mad") activeResult = madResult
+
+    else if (weightMethod === "dbw") activeResult = dbwResult
+    else if (weightMethod === "svp") activeResult = svpResult
+    else if (weightMethod === "mdm") activeResult = mdmResult
+    else if (weightMethod === "lsw") activeResult = lswResult
+
+    if (!activeResult && weightMethod !== "equal") {
+      alert("No weight results to export. Please calculate weights first.")
+      return
+    }
+
+    try {
+      const weightMethodLabel = WEIGHT_METHODS.find(w => w.value === weightMethod)?.label || weightMethod.toUpperCase()
+
+      // Prepare data for export
+      // We'll reuse the same export API, but structure the weights as the main result if possible
+      // or just put all metrics in.
+      const exportData = {
+        method: weightMethodLabel,
+        ranking: criteria.map((c, idx) => ({
+          rank: idx + 1,
+          alternativeName: c.name,
+          score: c.weight
+        })),
+        alternatives: alternatives,
+        criteria: criteria,
+        metrics: activeResult || undefined,
+        resultsDecimalPlaces: weightsDecimalPlaces
+      }
+
+      const response = await fetch("/api/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(exportData)
+      })
+
+      if (!response.ok) throw new Error("Failed to export to Excel")
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `${weightMethodLabel}_Weights.xlsx`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -2006,50 +2499,36 @@ export default function MCDMCalculator() {
           let weightedCriteria = [...criteria]
 
           // Apply weight method
+          const specialMethods = ["ahp", "piprecia", "swara"];
           if (wm === "equal") {
             weightedCriteria = criteria.map(c => ({ ...c, weight: 1 / criteria.length }))
-          } else if (wm === "entropy") {
-            // We can allow reusing cached results if available, but for safety call API
-            // Or better, extract the weight calculation logic to a reusable function "applyWeightMethod"
-            // reusing applyWeightMethodForComparison I previously defined for Ranking Comparison
-            const res = await applyWeightMethodForComparison("entropy", alternatives, criteria)
-            weightedCriteria = res.criteria
-          } else if (wm === "critic") {
-            const res = await applyWeightMethodForComparison("critic", alternatives, criteria)
-            weightedCriteria = res.criteria
-          } else if (wm === "merec") {
-            const res = await applyWeightMethodForComparison("merec", alternatives, criteria)
-            weightedCriteria = res.criteria
-          } else if (wm === "wenslo") {
-            const res = await applyWeightMethodForComparison("wenslo", alternatives, criteria)
-            weightedCriteria = res.criteria
           } else if (wm === "ahp") {
-            // Use stored or overridden weights for AHP
             const weightsToUse = ahpCalculatedWeights || {};
             weightedCriteria = criteria.map(c => ({
               ...c,
               weight: weightsToUse[c.id] !== undefined ? weightsToUse[c.id] : (1 / criteria.length)
             }))
           } else if (wm === "piprecia") {
-            // Use stored or overridden weights for PIPRECIA
             const weightsToUse = pipreciaWeightsOverride || pipreciaCalculatedWeights || {};
             weightedCriteria = criteria.map(c => ({
               ...c,
               weight: weightsToUse[c.id] !== undefined ? weightsToUse[c.id] : (1 / criteria.length)
             }))
           } else if (wm === "swara") {
-            // Use stored weights for SWARA
             const weightsToUse = swaraWeightsOverride || swaraCalculatedWeights || {};
             weightedCriteria = criteria.map(c => ({
               ...c,
               weight: weightsToUse[c.id] !== undefined ? weightsToUse[c.id] : (1 / criteria.length)
             }))
-          } else if (wm === "lopcow") {
-            const res = await applyWeightMethodForComparison("lopcow", alternatives, criteria)
-            weightedCriteria = res.criteria
-          } else if (wm === "dematel") {
-            const res = await applyWeightMethodForComparison("dematel", alternatives, criteria)
-            weightedCriteria = res.criteria
+          } else if (wm !== "custom") {
+            // Use general weight calculation for all other methods
+            try {
+              const res = await applyWeightMethodForComparison(wm as WeightMethod, alternatives, criteria)
+              weightedCriteria = res.criteria
+            } catch (err) {
+              console.error(`Error calculating weight for ${wm}:`, err)
+              // fallback to existing weights
+            }
           }
 
           // Special handling for "Custom" if I add "custom" to WeightMethod type or handle separately
@@ -2193,7 +2672,7 @@ export default function MCDMCalculator() {
 
   if (currentStep === "home") {
     return (
-      <main className="flex-1 min-h-screen bg-white p-0 sm:p-4">
+      <main className="flex-1 min-h-screen p-0 sm:p-4 bg-transparent">
         <div className="w-full max-w-7xl px-4 sm:px-6 md:px-8 mx-auto py-4 sm:py-6">
           <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
             {/* SidebarTrigger removed */}
@@ -2202,6 +2681,7 @@ export default function MCDMCalculator() {
               <p className="text-[10px] sm:text-xs text-gray-700">Multicriteria Decision Making Calculator</p>
             </div>
             <div className="flex items-center gap-4">
+              <ColorSwitcher />
               <Button variant="outline" onClick={() => window.location.href = '/'}>
                 <Home className="mr-2 h-4 w-4" /> Home
               </Button>
@@ -2336,54 +2816,56 @@ export default function MCDMCalculator() {
                 </div>
               )}
               <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">Ranking Methods</CardTitle>
-                  <CardDescription className="text-xs text-gray-700">
-                    Select a ranking method to use in your calculations, and view the Mathmatical formula
+                <CardHeader className="pb-3 text-center sm:text-left">
+                  <CardTitle className="text-[15px] text-gray-900 font-bold font-serif italic uppercase flex items-center gap-2">
+                    Ranking Methods
+                    <div className="h-1 w-1 rounded-full bg-blue-500"></div>
+                  </CardTitle>
+                  <CardDescription className="text-xs text-gray-500 font-medium">
+                    Select a ranking method to use in your calculations, and view the Mathematical formula
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="w-full overflow-hidden">
-                    <div className="animate-marquee hover:pause">
-                      {[...MCDM_METHODS, ...MCDM_METHODS].map((m, index) => (
-                        <div
-                          key={`${m.value}-${index}`}
-                          onClick={() => {
-                            setMethod(m.value)
-                            setActiveFormulaType("method")
-                            setIsDialogOpen(true)
-                          }}
-                          className={`flex-shrink-0 w-[280px] text-left p-3 rounded-lg border-2 transition-all hover:shadow-md relative cursor-pointer h-[80px] flex flex-col justify-between overflow-hidden font-serif ${method === m.value
-                            ? "border-[#1E88E5] bg-[#E3F2FD] text-black"
-                            : "border-[#1E88E5]/40 bg-white text-black hover:border-[#1E88E5] hover:bg-[#E3F2FD]"
-                            }`}
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 absolute top-2 right-2 text-gray-400 hover:text-black z-10"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setMethod(m.value);
-                              setActiveFormulaType("method");
-                              setIsDialogOpen(true);
-                            }}
-                          >
-                            <span className="sr-only">Info</span>
-                            <div className="border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic">i</div>
-                          </Button>
-                          <div>
-                            <div className="font-bold text-sm mb-1 pr-6">{m.label}</div>
-                            <div className="text-xs mb-2 text-black line-clamp-2">
-                              {m.description}
-                            </div>
-                          </div>
-                          <div className="text-[11px] font-mono text-black truncate mt-auto">
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {(showAllRankingMethods ? MCDM_METHODS : MCDM_METHODS.slice(0, itemsPerPage)).map((m) => (
+                      <div
+                        key={m.value}
+                        onClick={() => {
+                          setMethod(m.value)
+                          setActiveFormulaType("method")
+                          setIsDialogOpen(true)
+                        }}
+                        className={`group relative flex flex-col justify-between p-3 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden h-[100px] w-full ${method === m.value
+                          ? "border-blue-500 bg-blue-50 shadow-sm"
+                          : "border-blue-400/40 bg-white hover:border-blue-500 hover:bg-blue-50/30 hover:shadow-sm"
+                          }`}
+                      >
+                        <div className="absolute top-2 right-2 opacity-30 group-hover:opacity-100 transition-opacity">
+                          <div className="text-blue-500 border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic font-bold">i</div>
+                        </div>
+
+                        <div className="pr-4 flex-1 flex flex-col justify-center">
+                          <h4 className={`text-[13px] font-bold font-serif mb-1 transition-colors ${method === m.value ? 'text-blue-800' : 'text-gray-900 group-hover:text-blue-600'}`}>
+                            {m.label}
+                          </h4>
+                          <div className={`text-[10px] font-mono leading-relaxed line-clamp-3 ${method === m.value ? 'text-blue-700' : 'text-gray-500 font-medium'}`}>
                             {m.formula}
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-center pt-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAllRankingMethods(!showAllRankingMethods)}
+                      className="text-xs font-bold text-gray-800 hover:bg-white gap-1.5 transition-all h-8 px-4 rounded-full border border-blue-200 hover:border-blue-400"
+                    >
+                      {showAllRankingMethods ? "See less methods" : "See more methods"}
+                      <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${showAllRankingMethods ? "rotate-180" : ""}`} />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -2468,51 +2950,56 @@ export default function MCDMCalculator() {
                 </div>
               )}
               <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">Weight Methods Reference</CardTitle>
-                  <CardDescription className="text-xs text-gray-700">
+                <CardHeader className="pb-3 text-center sm:text-left">
+                  <CardTitle className="text-[15px] text-gray-900 font-bold font-serif italic uppercase flex items-center gap-2">
+                    Weight Methods Reference
+                    <div className="h-1 w-1 rounded-full bg-emerald-500"></div>
+                  </CardTitle>
+                  <CardDescription className="text-xs text-gray-500 font-medium">
                     Click on a method to view its formula and description
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="w-full overflow-hidden">
-                    <div className="animate-marquee hover:pause">
-                      {[...WEIGHT_METHODS, ...WEIGHT_METHODS].map((w, index) => (
-                        <div
-                          key={`${w.value}-${index}`}
-                          onClick={() => {
-                            setWeightMethod(w.value)
-                            setActiveFormulaType("weight")
-                            setIsDialogOpen(true)
-                          }}
-                          className={`flex-shrink-0 w-[280px] text-left p-3 rounded-lg border-2 transition-all hover:shadow-md relative cursor-pointer h-[80px] flex flex-col justify-between overflow-hidden font-serif ${weightMethod === w.value
-                            ? "border-[#00695C] bg-[#E0F2F1] text-black"
-                            : "border-[#00695C]/40 bg-white text-black hover:border-[#00695C] hover:bg-[#E0F2F1]"
-                            }`}
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 absolute top-2 right-2 text-gray-400 hover:text-black z-10"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setWeightMethod(w.value);
-                              setActiveFormulaType("weight");
-                              setIsDialogOpen(true);
-                            }}
-                          >
-                            <span className="sr-only">Info</span>
-                            <div className="border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic">i</div>
-                          </Button>
-                          <div>
-                            <div className="font-bold text-sm mb-1 pr-6">{w.label}</div>
-                            <div className="text-xs text-black line-clamp-2">
-                              {w.description}
-                            </div>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {(showAllWeightMethods ? WEIGHT_METHODS : WEIGHT_METHODS.slice(0, itemsPerPage)).map((w) => (
+                      <div
+                        key={w.value}
+                        onClick={() => {
+                          setWeightMethod(w.value)
+                          setActiveFormulaType("weight")
+                          setIsDialogOpen(true)
+                        }}
+                        className={`group relative flex flex-col justify-between p-3 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden h-[90px] w-full ${weightMethod === w.value
+                          ? "border-emerald-500 bg-emerald-50 shadow-sm"
+                          : "border-emerald-400/40 bg-white hover:border-emerald-500 hover:bg-emerald-50/30 hover:shadow-sm"
+                          }`}
+                      >
+                        <div className="absolute top-2 right-2 opacity-30 group-hover:opacity-100 transition-opacity">
+                          <div className="text-emerald-500 border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic font-bold">i</div>
+                        </div>
+
+                        <div className="pr-4 flex-1 flex flex-col justify-center">
+                          <h4 className={`text-[13px] font-bold font-serif mb-1 transition-colors ${weightMethod === w.value ? 'text-emerald-800' : 'text-gray-900 group-hover:text-emerald-600'}`}>
+                            {w.label}
+                          </h4>
+                          <div className={`text-[10px] leading-snug line-clamp-3 ${weightMethod === w.value ? 'text-emerald-700' : 'text-gray-500 font-medium'}`}>
+                            {w.description}
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-center pt-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAllWeightMethods(!showAllWeightMethods)}
+                      className="text-xs font-bold text-gray-800 hover:bg-white gap-1.5 transition-all h-8 px-4 rounded-full border border-emerald-200 hover:border-emerald-400"
+                    >
+                      {showAllWeightMethods ? "See less methods" : "See more methods"}
+                      <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${showAllWeightMethods ? "rotate-180" : ""}`} />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -2956,7 +3443,7 @@ export default function MCDMCalculator() {
                                             stroke="#fff"
                                             strokeWidth={0.5}
                                           >
-                                            <title>{`${d.name}: ${val.toFixed(4)}`}</title>
+                                            <title>{`${d.name}: ${val.toFixed(resultsDecimalPlaces)}`}</title>
                                           </circle>
                                         ))}
 
@@ -3248,7 +3735,7 @@ export default function MCDMCalculator() {
                               <td className="px-3 py-2 font-medium text-black border-r border-gray-200">{row.name}</td>
                               {sensitivityWeightComparisonResults.map((res, k) => (
                                 <td key={k} className="px-3 py-2 text-center text-black border-l border-gray-200">
-                                  {row[res.weightLabel] !== undefined ? Number(row[res.weightLabel]).toFixed(4) : "-"}
+                                  {row[res.weightLabel] !== undefined ? Number(row[res.weightLabel]).toFixed(resultsDecimalPlaces) : "-"}
                                 </td>
                               ))}
                             </tr>
@@ -3772,7 +4259,7 @@ export default function MCDMCalculator() {
                               return (
                                 <Fragment key={result.method}>
                                   <td key={`${result.method}-${item.alternativeName}-score`} className="px-2 py-2 text-center text-black">
-                                    {altRanking?.score !== undefined ? Number(altRanking.score).toFixed(4) : "-"}
+                                    {altRanking?.score !== undefined ? Number(altRanking.score).toFixed(resultsDecimalPlaces) : "-"}
                                   </td>
                                   <td key={`${result.method}-${item.alternativeName}-rank`} className="px-2 py-2 text-center font-semibold text-black border-r border-gray-200">
                                     {altRanking?.rank ?? "-"}
@@ -4710,7 +5197,7 @@ export default function MCDMCalculator() {
                                         return (
                                           <Fragment key={i}>
                                             <td className="px-2 py-2 text-center text-black border-l border-gray-200">
-                                              {item?.score !== undefined ? Number(item.score).toFixed(4) : "-"}
+                                              {item?.score !== undefined ? Number(item.score).toFixed(resultsDecimalPlaces) : "-"}
                                             </td>
                                             <td className="px-2 py-2 text-center text-black font-bold">
                                               {item?.rank}
@@ -5161,6 +5648,14 @@ export default function MCDMCalculator() {
                   {weightMethod === "wenslo" && <WENSLOFormula />}
                   {weightMethod === "lopcow" && <LOPCOWFormula />}
                   {weightMethod === "dematel" && <DEMATELFormula />}
+                  {weightMethod === "sd" && <SDFormula />}
+                  {weightMethod === "variance" && <VarianceFormula />}
+                  {weightMethod === "mad" && <MADFormula />}
+
+                  {weightMethod === "dbw" && <DBWFormula />}
+                  {weightMethod === "svp" && <SVPFormula />}
+                  {weightMethod === "mdm" && <MDMFormula />}
+                  {weightMethod === "lsw" && <LSWFormula />}
                 </>
               )}
             </div>
@@ -5760,7 +6255,7 @@ export default function MCDMCalculator() {
                   type="button"
                   onClick={async (e) => {
                     e.preventDefault()
-                    const isSpecialWeight = ["entropy", "critic", "ahp", "piprecia", "merec", "swara", "wenslo", "lopcow", "dematel"].includes(weightMethod)
+                    const isSpecialWeight = ["entropy", "critic", "ahp", "piprecia", "merec", "swara", "wenslo", "lopcow", "dematel", "sd", "variance", "mad", "dbw", "svp"].includes(weightMethod)
                     // Always pass false to handleSaveTable to prevent auto-navigation to dashboard
                     // We want to proceed to the matrix step or calculation results instead
                     const success = await handleSaveTable(false)
@@ -5775,23 +6270,9 @@ export default function MCDMCalculator() {
                   }}
                   className="bg-black text-white hover:bg-gray-800 text-xs h-8"
                 >
-                  {weightMethod === "entropy"
-                    ? "Calculate Entropy Weights"
-                    : weightMethod === "critic"
-                      ? "Calculate CRITIC Weight"
-                      : weightMethod === "ahp"
-                        ? "Calculate AHP Weights"
-                        : weightMethod === "merec"
-                          ? "Calculate MEREC Weight"
-                          : weightMethod === "swara"
-                            ? "Calculate SWARA Weight"
-                            : weightMethod === "wenslo"
-                              ? "Calculate WENSLO Weight"
-                              : weightMethod === "lopcow"
-                                ? "Calculate LOPCOW Weight"
-                                : weightMethod === "dematel"
-                                  ? "Calculate DEMATEL Weight"
-                                  : "Calculate Ranking"}
+                  {["entropy", "critic", "ahp", "piprecia", "merec", "swara", "wenslo", "lopcow", "dematel", "sd", "variance", "mad", "dbw", "svp"].includes(weightMethod)
+                    ? `Calculate ${WEIGHT_METHODS.find((w) => w.value === weightMethod)?.label || weightMethod.toUpperCase()}`
+                    : "Calculate Ranking"}
                 </Button>
               </div>
             </div>
@@ -5929,7 +6410,7 @@ export default function MCDMCalculator() {
 
               </div>
 
-              <Card className="border-gray-200 bg-white shadow-none mb-6">
+              <Card className="border-gray-200 bg-white shadow-none mb-3">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm text-black">Evaluation Matrix</CardTitle>
                   <CardDescription className="text-xs text-gray-700">
@@ -5949,7 +6430,7 @@ export default function MCDMCalculator() {
                             >
                               <div className="flex flex-col items-center">
                                 <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</span>
-                                <span className="text-[10px] text-gray-500 mt-1">{crit.type === "beneficial" ? "↑" : "↓"} ({crit.weight.toFixed(4)})</span>
+                                <span className="text-[10px] text-gray-500 mt-1">{crit.type === "beneficial" ? "↑" : "↓"} ({crit.weight.toFixed(weightsDecimalPlaces)})</span>
                               </div>
                             </TableHead>
                           ))}
@@ -5975,6 +6456,59 @@ export default function MCDMCalculator() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Weight Results Controls */}
+              {weightMethod && (
+                <div className="flex flex-wrap items-center gap-3 mb-6 p-2 bg-white border border-gray-200 rounded-lg">
+                  {/* Method Name Badge */}
+                  <div className="inline-flex items-center gap-2 bg-teal-100 border border-teal-300 rounded-full px-3 py-1">
+                    <span className="text-[10px] font-semibold text-teal-800 uppercase">
+                      {WEIGHT_METHODS.find((w) => w.value === weightMethod)?.label || weightMethod}
+                    </span>
+                  </div>
+
+                  {/* Criteria Badge */}
+                  <div className="inline-flex items-center gap-2 bg-blue-100 border border-blue-300 rounded-full px-3 py-1">
+                    <span className="text-[10px] font-semibold text-blue-800 uppercase">
+                      {String(criteria.length).padStart(2, "0")} Criteria
+                    </span>
+                  </div>
+
+                  {/* Alternatives Badge */}
+                  <div className="inline-flex items-center gap-2 bg-gray-100 border border-gray-300 rounded-full px-3 py-1">
+                    <span className="text-[10px] font-semibold text-gray-800 uppercase">
+                      {String(alternatives.length).padStart(2, "0")} Alternatives
+                    </span>
+                  </div>
+
+                  {/* Spacer */}
+                  <div className="flex-1"></div>
+
+                  {/* Decimal Places Control */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-semibold text-black">Decimal:</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="10"
+                      value={weightsDecimalPlaces}
+                      onChange={(e) => setWeightsDecimalPlaces(Math.max(0, Math.min(10, parseInt(e.target.value) || 4)))}
+                      className="w-12 h-8 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Export to Excel Button */}
+                  <Button
+                    onClick={exportWeightsToExcel}
+                    variant="outline"
+                    className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent flex items-center gap-1 shadow-none transition-colors"
+                    title="Export weight results to Excel"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span className="">Export</span>
+                  </Button>
+                </div>
+              )}
 
               {entropyResult && weightMethod === "entropy" && (
                 <>
@@ -6045,7 +6579,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {entropyResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                                    {entropyResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(weightsDecimalPlaces)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -6084,7 +6618,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {entropyResult.entropyMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                                    {entropyResult.entropyMatrix[alt.id]?.[crit.id]?.toFixed(weightsDecimalPlaces)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -6093,7 +6627,7 @@ export default function MCDMCalculator() {
                               <TableCell className="py-3 px-4 font-bold text-black text-xs">Entropy (Ej)</TableCell>
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
-                                  {entropyResult.entropyValues[crit.id]?.toFixed(4)}
+                                  {entropyResult.entropyValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -6128,7 +6662,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                                  {entropyResult.diversityValues[crit.id]?.toFixed(4)}
+                                  {entropyResult.diversityValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -6163,7 +6697,7 @@ export default function MCDMCalculator() {
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
-                                  {entropyResult.weights[crit.id]?.toFixed(4)}
+                                  {entropyResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -6244,7 +6778,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {criticResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                                    {criticResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(weightsDecimalPlaces)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -6280,7 +6814,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                                  {criticResult.standardDeviations[crit.id]?.toFixed(4)}
+                                  {criticResult.standardDeviations[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -6318,7 +6852,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{critJ.name}</TableCell>
                                 {criteria.map((critK) => (
                                   <TableCell key={critK.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {criticResult.correlationMatrix[critJ.id]?.[critK.id]?.toFixed(4)}
+                                    {criticResult.correlationMatrix[critJ.id]?.[critK.id]?.toFixed(weightsDecimalPlaces)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -6354,7 +6888,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                                  {criticResult.informationAmounts[crit.id]?.toFixed(4)}
+                                  {criticResult.informationAmounts[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -6389,7 +6923,7 @@ export default function MCDMCalculator() {
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
-                                  {criticResult.weights[crit.id]?.toFixed(4)}
+                                  {criticResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -6406,7 +6940,7 @@ export default function MCDMCalculator() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm text-black">AHP Weight Calculation Results</CardTitle>
                     <CardDescription className="text-xs text-gray-700">
-                      λmax = {ahpResult.lambdaMax.toFixed(4)} | CI = {ahpResult.consistencyIndex.toFixed(4)} | CR = {ahpResult.consistencyRatio.toFixed(4)}
+                      λmax = {ahpResult.lambdaMax.toFixed(weightsDecimalPlaces)} | CI = {ahpResult.consistencyIndex.toFixed(weightsDecimalPlaces)} | CR = {ahpResult.consistencyRatio.toFixed(weightsDecimalPlaces)}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pt-3">
@@ -6428,7 +6962,7 @@ export default function MCDMCalculator() {
                               <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowCrit.name}</TableCell>
                               {criteria.map((colCrit, j) => (
                                 <TableCell key={colCrit.id} className="text-center py-3 px-4 text-xs text-black">
-                                  {ahpResult.pairwiseMatrix[i]?.[j]?.toFixed(2)}
+                                  {ahpResult.pairwiseMatrix[i]?.[j]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -6437,7 +6971,7 @@ export default function MCDMCalculator() {
                             <TableCell className="py-3 px-4 font-bold text-black text-xs">Weights (Wj)</TableCell>
                             {criteria.map((crit) => (
                               <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
-                                {ahpResult.weights[crit.id]?.toFixed(4)}
+                                {ahpResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                               </TableCell>
                             ))}
                           </TableRow>
@@ -6470,16 +7004,16 @@ export default function MCDMCalculator() {
                             <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
                               <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
                               <TableCell className="text-center py-3 px-4 text-xs text-black">
-                                {pipreciaResult.s_values[crit.id]?.toFixed(4)}
+                                {pipreciaResult.s_values[crit.id]?.toFixed(weightsDecimalPlaces)}
                               </TableCell>
                               <TableCell className="text-center py-3 px-4 text-xs text-black">
-                                {pipreciaResult.k_values[crit.id]?.toFixed(4)}
+                                {pipreciaResult.k_values[crit.id]?.toFixed(weightsDecimalPlaces)}
                               </TableCell>
                               <TableCell className="text-center py-3 px-4 text-xs text-black">
-                                {pipreciaResult.q_values[crit.id]?.toFixed(4)}
+                                {pipreciaResult.q_values[crit.id]?.toFixed(weightsDecimalPlaces)}
                               </TableCell>
                               <TableCell className="text-center py-3 px-4 text-xs text-black font-bold">
-                                {pipreciaResult.weights[crit.id]?.toFixed(4)}
+                                {pipreciaResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -6559,7 +7093,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {merecResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                                    {merecResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(weightsDecimalPlaces)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -6592,7 +7126,7 @@ export default function MCDMCalculator() {
                               <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
-                                  {merecResult.performanceScores[alt.id]?.toFixed(4)}
+                                  {merecResult.performanceScores[alt.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -6630,7 +7164,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {merecResult.removalScores[alt.id]?.[crit.id]?.toFixed(4)}
+                                    {merecResult.removalScores[alt.id]?.[crit.id]?.toFixed(weightsDecimalPlaces)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -6666,7 +7200,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                                  {merecResult.removalEffects[crit.id]?.toFixed(4)}
+                                  {merecResult.removalEffects[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -6701,7 +7235,7 @@ export default function MCDMCalculator() {
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
-                                  {merecResult.weights[crit.id]?.toFixed(4)}
+                                  {merecResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -6736,16 +7270,16 @@ export default function MCDMCalculator() {
                               <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
                                 <TableCell className="text-center py-3 px-4 text-xs text-black">
-                                  {swaraResult.coefficients[crit.id]?.toFixed(4)}
+                                  {swaraResult.coefficients[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                                 <TableCell className="text-center py-3 px-4 text-xs text-black">
-                                  {swaraResult.stepFactors[crit.id]?.toFixed(4)}
+                                  {swaraResult.stepFactors[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                                 <TableCell className="text-center py-3 px-4 text-xs text-black">
-                                  {swaraResult.preliminaryWeights[crit.id]?.toFixed(4)}
+                                  {swaraResult.preliminaryWeights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                                 <TableCell className="text-center py-3 px-4 text-xs text-black font-bold bg-yellow-50">
-                                  {swaraResult.weights[crit.id]?.toFixed(4)}
+                                  {swaraResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -6826,7 +7360,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {wensloResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                                    {wensloResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(weightsDecimalPlaces)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -6862,7 +7396,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                                  {wensloResult.wensloValues[crit.id]?.toFixed(4)}
+                                  {wensloResult.wensloValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -6897,7 +7431,7 @@ export default function MCDMCalculator() {
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
-                                  {wensloResult.weights[crit.id]?.toFixed(4)}
+                                  {wensloResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -6978,7 +7512,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {lopcowResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                                    {lopcowResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(weightsDecimalPlaces)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -7014,7 +7548,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                                  {lopcowResult.geometricMeans[crit.id]?.toFixed(4)}
+                                  {lopcowResult.geometricMeans[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -7049,7 +7583,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
-                                  {lopcowResult.logPercentages[crit.id]?.toFixed(4)}
+                                  {lopcowResult.logPercentages[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -7084,7 +7618,7 @@ export default function MCDMCalculator() {
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
-                                  {lopcowResult.weights[crit.id]?.toFixed(4)}
+                                  {lopcowResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -7165,7 +7699,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {dematelResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(4)}
+                                    {dematelResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(weightsDecimalPlaces)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -7204,7 +7738,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowCrit.name}</TableCell>
                                 {criteria.map((colCrit) => (
                                   <TableCell key={colCrit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {dematelResult.directRelationMatrix[rowCrit.id]?.[colCrit.id]?.toFixed(4)}
+                                    {dematelResult.directRelationMatrix[rowCrit.id]?.[colCrit.id]?.toFixed(weightsDecimalPlaces)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -7243,7 +7777,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowCrit.name}</TableCell>
                                 {criteria.map((colCrit) => (
                                   <TableCell key={colCrit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {dematelResult.totalRelationMatrix[rowCrit.id]?.[colCrit.id]?.toFixed(4)}
+                                    {dematelResult.totalRelationMatrix[rowCrit.id]?.[colCrit.id]?.toFixed(weightsDecimalPlaces)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -7277,10 +7811,10 @@ export default function MCDMCalculator() {
                               <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
                                 <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
-                                  {dematelResult.dValues[crit.id]?.toFixed(4)}
+                                  {dematelResult.dValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                                 <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
-                                  {dematelResult.rValues[crit.id]?.toFixed(4)}
+                                  {dematelResult.rValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -7313,10 +7847,10 @@ export default function MCDMCalculator() {
                               <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
                                 <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
-                                  {dematelResult.pValues[crit.id]?.toFixed(4)}
+                                  {dematelResult.pValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                                 <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
-                                  {dematelResult.eValues[crit.id]?.toFixed(4)}
+                                  {dematelResult.eValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -7351,7 +7885,1078 @@ export default function MCDMCalculator() {
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
-                                  {dematelResult.weights[crit.id]?.toFixed(4)}
+                                  {dematelResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+              {sdResult && weightMethod === "sd" && (
+                <>
+                  {/* Step 1: Decision Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Original Decision Matrix
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (r_ij)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalized values using Min-Max normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {sdResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 3: Standard Deviations */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Standard Deviation per Criterion (σ_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated standard deviation of normalized scores
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {sdResult.sigmaValues[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 4: Final Weights */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated SD Weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="bg-yellow-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                  {sdResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+              {varianceResult && weightMethod === "variance" && (
+                <>
+                  {/* Step 1: Decision Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Original Decision Matrix
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (r_ij)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalized values using Min-Max normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {varianceResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 3: Variances */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Statistical Variance per Criterion (σ²_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated variance of normalized scores
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {varianceResult.varianceValues[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 4: Final Weights */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated Variance Weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="bg-yellow-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                  {varianceResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+              {madResult && weightMethod === "mad" && (
+                <>
+                  {/* Step 1: Decision Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Original Decision Matrix
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (r_ij)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalized values using Min-Max normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {madResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 3: Mean Absolute Deviations */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Mean Absolute Deviation per Criterion (MAD_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated average absolute deviation from the mean of normalized scores
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {madResult.madValues[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 4: Final Weights */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated MAD Weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="bg-yellow-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                  {madResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+
+              {dbwResult && weightMethod === "dbw" && (
+                <>
+                  {/* Step 1: Decision Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Original Decision Matrix
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (r_ij)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalized values using Sum normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {dbwResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 3: Distance Sums */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Distance Sum per Criterion (D_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Sum of pairwise differences between alternative scores
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {dbwResult.distanceValues[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 4: Final Weights */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated DBW Weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="bg-yellow-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                  {dbwResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+              {svpResult && weightMethod === "svp" && (
+                <>
+                  {/* Step 1: Decision Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Original Decision Matrix
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (r_ij)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalized values using Min-Max normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {svpResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 3: Statistical Variances */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Statistical Variance per Criterion (SVP_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated statistical variance on Min-Max normalized data
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {svpResult.varianceValues[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 4: Final Weights */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated SVP Weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="bg-yellow-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                  {svpResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {mdmResult && weightMethod === "mdm" && (
+                <>
+                  {/* Step 1: Decision Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Original Decision Matrix
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (n_ij)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalized values using Vector normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {mdmResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 3: Deviation Values */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Total Deviation per Criterion (D_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Combined absolute differences between all alternatives
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {mdmResult.deviationValues[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 4: Final Weights */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated MDM Weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="bg-yellow-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                  {mdmResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {lswResult && weightMethod === "lsw" && (
+                <>
+                  {/* Step 1: Decision Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Original Decision Matrix
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (n_ij)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Normalized values using Vector normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {lswResult.normalizedMatrix[alt.id]?.[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 3: Ideal Solution and Least Squares Values */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Ideal Solution (A*) and Least Squares Values (LS_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Ideal points and sum of squared deviations
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Metric</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableCell className="py-3 px-4 font-medium text-black text-xs">Ideal Solution (A*)</TableCell>
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {lswResult.idealSolution[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                            <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableCell className="py-3 px-4 font-medium text-black text-xs">Least Squares (LS_j)</TableCell>
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                  {lswResult.leastSquaresValues[crit.id]?.toFixed(weightsDecimalPlaces)}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 4: Final Weights */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Calculated LSW Weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-3">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="bg-yellow-50 border-b border-gray-200">
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                  {lswResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -7627,75 +9232,72 @@ export default function MCDMCalculator() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Method Info and Controls */}
-                  <div className="flex flex-wrap items-center gap-3 pb-3 border-b border-gray-200">
+                  <div className="flex flex-wrap items-center gap-3 mb-6 p-2 bg-white border border-gray-200 rounded-lg">
                     {/* Method Name Badge */}
-                    <div className="inline-flex items-center gap-2 bg-teal-100 border border-teal-300 rounded-full px-3 py-1.5">
-                      <span className="text-xs font-semibold text-teal-800">{methodInfo?.label}</span>
+                    <div className="inline-flex items-center gap-2 bg-teal-100 border border-teal-300 rounded-full px-3 py-1">
+                      <span className="text-[10px] font-semibold text-teal-800 uppercase">{methodInfo?.label}</span>
                     </div>
 
                     {/* Criteria Badge */}
-                    <div className="inline-flex items-center gap-2 bg-blue-100 border border-blue-300 rounded-full px-3 py-1.5">
-                      <span className="text-xs font-semibold text-blue-800">{String(criteria.length).padStart(2, '0')} Criteria</span>
+                    <div className="inline-flex items-center gap-2 bg-blue-100 border border-blue-300 rounded-full px-3 py-1">
+                      <span className="text-[10px] font-semibold text-blue-800 uppercase">{String(criteria.length).padStart(2, '0')} Criteria</span>
                     </div>
 
                     {/* Alternatives Badge */}
-                    <div className="inline-flex items-center gap-2 bg-gray-100 border border-gray-300 rounded-full px-3 py-1.5">
-                      <span className="text-xs font-semibold text-gray-800">{String(alternatives.length).padStart(2, '0')} Alternatives</span>
+                    <div className="inline-flex items-center gap-2 bg-gray-100 border border-gray-300 rounded-full px-3 py-1">
+                      <span className="text-[10px] font-semibold text-gray-800 uppercase">{String(alternatives.length).padStart(2, '0')} Alternatives</span>
                     </div>
 
-                    {/* VIKOR v-value Control */}
-                    {method === "vikor" && (
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs font-semibold text-black">v value:</label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="1"
-                          value={vikorVValue}
-                          onChange={(e) => setVikorVValue(e.target.value)}
-                          onBlur={() => handleCalculate()}
-                          placeholder="0.5"
-                          className="w-16 h-8 text-xs text-center border-gray-200 text-black"
-                        />
-                      </div>
-                    )}
+                    {/* Parametric Controls (VIKOR, WASPAS, CODAS) */}
+                    <div className="flex items-center gap-4">
+                      {method === "vikor" && (
+                        <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
+                          <label className="text-[10px] font-bold text-gray-600 uppercase">v-value:</label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="1"
+                            value={vikorVValue}
+                            onChange={(e) => setVikorVValue(e.target.value)}
+                            onBlur={() => handleCalculate()}
+                            className="w-16 h-7 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                      )}
 
-                    {/* WASPAS lambda Control */}
-                    {method === "waspas" && (
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs font-semibold text-black">lambda value:</label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="1"
-                          value={waspasLambdaValue}
-                          onChange={(e) => setWpasLambdaValue(e.target.value)}
-                          onBlur={() => handleCalculate()}
-                          placeholder="0.5"
-                          className="w-16 h-8 text-xs text-center border-gray-200 text-black"
-                        />
-                      </div>
-                    )}
+                      {method === "waspas" && (
+                        <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
+                          <label className="text-[10px] font-bold text-gray-600 uppercase">λ-value:</label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="1"
+                            value={waspasLambdaValue}
+                            onChange={(e) => setWpasLambdaValue(e.target.value)}
+                            onBlur={() => handleCalculate()}
+                            className="w-16 h-7 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                      )}
 
-                    {/* CODAS tau-value Control */}
-                    {method === "codas" && (
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs font-semibold text-black">tau value:</label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          max="1"
-                          value={codasTauValue}
-                          onChange={(e) => setCodasTauValue(e.target.value)}
-                          onBlur={() => handleCalculate()}
-                          placeholder="0.02"
-                          className="w-16 h-8 text-xs text-center border-gray-200 text-black"
-                        />
-                      </div>
-                    )}
+                      {method === "codas" && (
+                        <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
+                          <label className="text-[10px] font-bold text-gray-600 uppercase">τ-value:</label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="1"
+                            value={codasTauValue}
+                            onChange={(e) => setCodasTauValue(e.target.value)}
+                            onBlur={() => handleCalculate()}
+                            className="w-16 h-7 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                      )}
+                    </div>
 
                     {/* Spacer */}
                     <div className="flex-1"></div>
@@ -7709,7 +9311,7 @@ export default function MCDMCalculator() {
                         max="10"
                         value={resultsDecimalPlaces}
                         onChange={(e) => setResultsDecimalPlaces(Math.max(0, Math.min(10, parseInt(e.target.value) || 4)))}
-                        className="w-12 h-8 text-xs text-center border-gray-200 text-black"
+                        className="w-12 h-8 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
 
@@ -7717,11 +9319,11 @@ export default function MCDMCalculator() {
                     <Button
                       onClick={exportResultsToExcel}
                       variant="outline"
-                      className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent flex items-center gap-1"
+                      className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent flex items-center gap-1 shadow-none transition-colors"
                       title="Export results to Excel"
                     >
                       <Download className="w-3 h-3" />
-                      <span className="hidden sm:inline">Export</span>
+                      <span className="">Export</span>
                     </Button>
                   </div>
 
@@ -7789,7 +9391,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.sweiNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.sweiNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -7828,7 +9430,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.sweiInformationMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.sweiInformationMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -7867,7 +9469,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.sweiWeightedExponentialMatrix?.[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.sweiWeightedExponentialMatrix?.[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -8383,7 +9985,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.swiNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.swiNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -8422,7 +10024,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.swiInformationMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.swiInformationMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -8461,7 +10063,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.swiWeightedInformationMatrix?.[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.swiWeightedInformationMatrix?.[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -8504,7 +10106,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.topsisNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.topsisNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -8543,7 +10145,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.topsisWeightedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.topsisWeightedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -8581,7 +10183,7 @@ export default function MCDMCalculator() {
                               <TableCell className="py-3 px-4 font-bold text-green-700 text-xs">PIS (A+)</TableCell>
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold text-green-700">
-                                  {apiResults.metrics?.topsisIdealBest[crit.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.topsisIdealBest[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -8589,7 +10191,7 @@ export default function MCDMCalculator() {
                               <TableCell className="py-3 px-4 font-bold text-red-700 text-xs">NIS (A-)</TableCell>
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold text-red-700">
-                                  {apiResults.metrics?.topsisIdealWorst[crit.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.topsisIdealWorst[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -8622,10 +10224,10 @@ export default function MCDMCalculator() {
                               <tr key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <td className="px-3 py-2 text-left text-black font-medium">{alt.name}</td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.topsisDistances[alt.id]?.positive?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.topsisDistances[alt.id]?.positive?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.topsisDistances[alt.id]?.negative?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.topsisDistances[alt.id]?.negative?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                               </tr>
                             ))}
@@ -8667,7 +10269,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.vikorNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.vikorNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -8705,7 +10307,7 @@ export default function MCDMCalculator() {
                               <TableCell className="py-3 px-4 font-bold text-green-700 text-xs">f* (Best)</TableCell>
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold text-green-700">
-                                  {apiResults.metrics?.vikorFBest[crit.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.vikorFBest[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -8713,7 +10315,7 @@ export default function MCDMCalculator() {
                               <TableCell className="py-3 px-4 font-bold text-red-700 text-xs">f- (Worst)</TableCell>
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold text-red-700">
-                                  {apiResults.metrics?.vikorFWorst[crit.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.vikorFWorst[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -8747,13 +10349,13 @@ export default function MCDMCalculator() {
                               <tr key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <td className="px-3 py-2 text-left text-black font-medium">{alt.name}</td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.vikorSValues[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.vikorSValues[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.vikorRValues[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.vikorRValues[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.vikorQValues[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.vikorQValues[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                               </tr>
                             ))}
@@ -8795,7 +10397,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.waspasNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.waspasNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -8834,7 +10436,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.waspasWsmMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.waspasWsmMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -8873,7 +10475,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.waspasWpmMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.waspasWpmMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -8908,15 +10510,15 @@ export default function MCDMCalculator() {
                               <tr key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <td className="px-3 py-2 text-left text-black font-medium">{alt.name}</td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.waspasWsmScores[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.waspasWsmScores[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.waspasWpmScores[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.waspasWpmScores[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
                                   {typeof apiResults.ranking.find((r: any) => r.alternativeId === alt.id)?.score === 'number'
-                                    ? apiResults.ranking.find((r: any) => r.alternativeId === alt.id)?.score.toFixed(4)
-                                    : apiResults.metrics?.waspasScores?.[alt.id]?.toFixed(4) || "-"}
+                                    ? apiResults.ranking.find((r: any) => r.alternativeId === alt.id)?.score.toFixed(resultsDecimalPlaces)
+                                    : apiResults.metrics?.waspasScores?.[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                               </tr>
                             ))}
@@ -8955,7 +10557,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                  {apiResults.metrics?.edasAvVector[crit.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.edasAvVector[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -8993,7 +10595,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.edasPdaMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.edasPdaMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -9032,7 +10634,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.edasNdaMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.edasNdaMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -9069,19 +10671,19 @@ export default function MCDMCalculator() {
                               <tr key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <td className="px-3 py-2 text-left text-black font-medium">{alt.name}</td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.edasSpValues[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.edasSpValues[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.edasSnValues[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.edasSnValues[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.edasNspValues[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.edasNspValues[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.edasNsnValues[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.edasNsnValues[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.edasAsValues[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.edasAsValues[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                               </tr>
                             ))}
@@ -9449,7 +11051,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.mooraNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.mooraNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -9488,7 +11090,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.mooraWeightedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.mooraWeightedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -9523,13 +11125,13 @@ export default function MCDMCalculator() {
                               <tr key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <td className="px-3 py-2 text-left text-black font-medium">{alt.name}</td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.mooraBeneficialSum[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.mooraBeneficialSum[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.mooraNonBeneficialSum[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.mooraNonBeneficialSum[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.ranking.find((r: any) => r.alternativeId === alt.id)?.score?.toFixed(4) || "-"}
+                                  {apiResults.ranking.find((r: any) => r.alternativeId === alt.id)?.score?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                               </tr>
                             ))}
@@ -9571,7 +11173,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.multimooraNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.multimooraNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -9610,7 +11212,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.multimooraWeightedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.multimooraWeightedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -9653,19 +11255,19 @@ export default function MCDMCalculator() {
                               <tr key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <td className="px-3 py-2 text-left text-black font-medium">{alt.name}</td>
                                 <td className="px-3 py-2 text-center text-black border-l">
-                                  {apiResults.metrics?.multimooraRatioSystemScores[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.multimooraRatioSystemScores[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black font-bold">
                                   {apiResults.metrics?.multimooraRatioSystemRanking[alt.id] || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black border-l">
-                                  {apiResults.metrics?.multimooraReferencePointScores[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.multimooraReferencePointScores[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black font-bold">
                                   {apiResults.metrics?.multimooraReferencePointRanking[alt.id] || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black border-l">
-                                  {apiResults.metrics?.multimooraFullMultiplicativeScores[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.multimooraFullMultiplicativeScores[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black font-bold">
                                   {apiResults.metrics?.multimooraFullMultiplicativeRanking[alt.id] || "-"}
@@ -9710,7 +11312,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.todimNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.todimNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -9746,7 +11348,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                  {apiResults.metrics?.todimRelativeWeights[crit.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.todimRelativeWeights[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -9785,7 +11387,7 @@ export default function MCDMCalculator() {
                                   <TableCell key={colAlt.id} className="text-center py-3 px-4 text-xs text-black">
                                     {rowAlt.id === colAlt.id
                                       ? "0.0000"
-                                      : apiResults.metrics?.todimDominanceMatrix[rowAlt.id]?.[colAlt.id]?.toFixed(4) || "-"}
+                                      : apiResults.metrics?.todimDominanceMatrix[rowAlt.id]?.[colAlt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -9828,7 +11430,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.codasNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.codasNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -9864,7 +11466,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold text-red-700">
-                                  {apiResults.metrics?.codasNegativeIdealSolution[crit.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.codasNegativeIdealSolution[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </TableCell>
                               ))}
                             </TableRow>
@@ -9898,13 +11500,13 @@ export default function MCDMCalculator() {
                               <tr key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <td className="px-3 py-2 text-left text-black font-medium">{alt.name}</td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.codasEuclideanDistances[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.codasEuclideanDistances[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.codasTaxicabDistances[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.codasTaxicabDistances[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.codasRelativeAssessmentScores[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.codasRelativeAssessmentScores[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                               </tr>
                             ))}
@@ -9946,7 +11548,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.moosraNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.moosraNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -9985,7 +11587,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.moosraWeightedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.moosraWeightedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -10020,13 +11622,13 @@ export default function MCDMCalculator() {
                               <tr key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <td className="px-3 py-2 text-left text-black font-medium">{alt.name}</td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.moosraBeneficialSum[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.moosraBeneficialSum[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.moosraNonBeneficialSum[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.moosraNonBeneficialSum[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.ranking.find((r: any) => r.alternativeId === alt.id)?.score?.toFixed(4) || "-"}
+                                  {apiResults.ranking.find((r: any) => r.alternativeId === alt.id)?.score?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                               </tr>
                             ))}
@@ -10068,7 +11670,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.maircaNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.maircaNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -10107,7 +11709,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.maircaTheoreticalRatings[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.maircaTheoreticalRatings[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -10146,7 +11748,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.maircaRealRatings[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.maircaRealRatings[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -10185,7 +11787,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {apiResults.metrics?.maircaGapMatrix[alt.id]?.[crit.id]?.toFixed(4) || "-"}
+                                    {apiResults.metrics?.maircaGapMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -10219,7 +11821,7 @@ export default function MCDMCalculator() {
                               <tr key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <td className="px-3 py-2 text-left text-black font-medium">{alt.name}</td>
                                 <td className="px-3 py-2 text-center text-black">
-                                  {apiResults.metrics?.maircaTotalGaps[alt.id]?.toFixed(4) || "-"}
+                                  {apiResults.metrics?.maircaTotalGaps[alt.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </td>
                                 <td className="px-3 py-2 text-center text-black font-bold">
                                   {apiResults.ranking.find((r: any) => r.alternativeId === alt.id)?.rank || "-"}
