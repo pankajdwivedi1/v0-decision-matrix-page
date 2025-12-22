@@ -25,6 +25,8 @@ import { calculateELECTRE1 } from "./electre1";
 import { calculateELECTRE2 } from "./electre2";
 import { calculateMABAC } from "./mabac";
 import { calculateEntropy } from "./entropy";
+import { calculateGRA } from "./gra";
+import { calculateARAS } from "./aras";
 
 // Helper: build ranking and response
 function buildResponse(
@@ -353,6 +355,27 @@ export async function POST(request: NextRequest) {
           mabacWeightedMatrix: mabacData.weightedMatrix,
           mabacBorderApproximationArea: mabacData.borderApproximationArea,
           mabacDistanceMatrix: mabacData.distanceMatrix
+        };
+        break;
+      }
+      case "gra": {
+        const graData = calculateGRA(alternatives, criteria);
+        results = graData.scores;
+        (request as any).extraMetrics = {
+          graNormalizedMatrix: graData.normalizedMatrix,
+          graDeviationSequence: graData.deviationSequence,
+          graGreyRelationalCoefficients: graData.greyRelationalCoefficients
+        };
+        break;
+      }
+      case "aras": {
+        const arasData = calculateARAS(alternatives, criteria);
+        results = arasData.scores;
+        (request as any).extraMetrics = {
+          arasNormalizedMatrix: arasData.normalizedMatrix,
+          arasWeightedMatrix: arasData.weightedMatrix,
+          arasOptimalityFunctionValues: arasData.optimalityFunctionValues,
+          arasOptimalAlternativeValues: arasData.optimalAlternativeValues
         };
         break;
       }

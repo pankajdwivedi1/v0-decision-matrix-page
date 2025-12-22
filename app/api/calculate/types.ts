@@ -36,9 +36,14 @@ export interface CalculationRequest {
   | "electre1"
   | "electre2"
   | "entropy"
+  | "mabac"
+  | "gra"
+  | "aras"
   alternatives: Alternative[]
   criteria: Criterion[]
   vikorVValue?: number
+  waspasLambdaValue?: number
+  codasTauValue?: number
 }
 
 export interface CalculationResponse {
@@ -58,3 +63,11 @@ export interface CalculationResponse {
   }
   metrics?: Record<string, any>
 }
+
+export interface RankingWeightResult {
+  weights: Record<string, number>
+  ranks: Record<string, number>
+}
+
+export interface ROCResult extends RankingWeightResult { }
+export interface RRResult extends RankingWeightResult { }
