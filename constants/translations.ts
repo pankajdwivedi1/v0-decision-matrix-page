@@ -12,7 +12,7 @@ export const translations = {
             ctaFeatures: "Explore Features",
         },
         why: {
-            title: "Why RankSensilytics?",
+            title: "Why decisionalgo?",
             desc: "In a world of information overload, subjective choices lead to suboptimal outcomes. We built this application to provide a mathematically rigorous framework for objective evaluation, ensuring every decision is backed by solid data and proven algorithms.",
             features: [
                 { title: "Objective Evaluation", desc: "Eliminate bias using normalized decision matrices." },
@@ -139,7 +139,7 @@ export const translations = {
             ctaFeatures: "विशेषताओं का अन्वेषण करें",
         },
         why: {
-            title: "RankSensilytics क्यों?",
+            title: "decisionalgo क्यों?",
             desc: "सूचना के अतिभार वाली दुनिया में, व्यक्तिपरक विकल्प इष्टतम परिणामों की ओर ले जाते हैं। हमने उद्देश्य मूल्यांकन के लिए गणितीय रूप से कठोर ढांचा प्रदान करने के लिए इस एप्लिकेशन को बनाया है, जिससे यह सुनिश्चित होता है कि प्रत्येक निर्णय ठोस डेटा और सिद्ध एल्गोरिदम द्वारा समर्थित है।",
             features: [
                 { title: "उद्देश्य मूल्यांकन", desc: "सामान्यीकृत निर्णय मैट्रिक्स का उपयोग करके पूर्वाग्रह को समाप्त करें।" },
@@ -266,7 +266,7 @@ export const translations = {
             ctaFeatures: "Explorar Funciones",
         },
         why: {
-            title: "¿Por qué RankSensilytics?",
+            title: "¿Por qué decisionalgo?",
             desc: "En un mundo con sobrecarga de información, las elecciones subjetivas conducen a resultados subóptimos. Creamos esta aplicación para proporcionar un marco matemáticamente riguroso para la evaluación objetiva, asegurando que cada decisión esté respaldada por datos sólidos y algoritmos probados.",
             features: [
                 { title: "Evaluación Objetiva", desc: "Elimine sesgos utilizando matrices de decisión normalizadas." },

@@ -114,9 +114,9 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-lg text-white">
-              RS
+              DA
             </div>
-            <span className="font-bold text-xl tracking-tight hidden sm:inline-block">RankSensilytics</span>
+            <span className="font-bold text-xl tracking-tight hidden sm:inline-block">decisionalgo</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             {/* Language Switcher */}
@@ -522,10 +522,10 @@ export default function LandingPage() {
           </Button>
           <div className="mt-20 pt-10 border-t border-border/50 flex flex-col sm:row items-center justify-between gap-6">
             <div className="flex items-center gap-2 grayscale hover:grayscale-0 transition-all opacity-50 hover:opacity-100">
-              <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center font-bold text-xs text-white">RS</div>
-              <span className="font-bold text-sm tracking-tight text-foreground">RankSensilytics</span>
+              <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center font-bold text-xs text-white">DA</div>
+              <span className="font-bold text-sm tracking-tight text-foreground">decisionalgo</span>
             </div>
-            <p className="text-xs text-muted-foreground/70">© 2025 RankSensilytics. {t.footer.developed}</p>
+            <p className="text-xs text-muted-foreground/70">© 2025 decisionalgo. {t.footer.developed}</p>
             <div className="flex gap-6 text-xs text-muted-foreground">
               <a href="#" className="hover:text-blue-400 transition-colors">{t.footer.docs}</a>
               <a href="#" className="hover:text-blue-400 transition-colors">{t.footer.api}</a>
