@@ -4239,7 +4239,7 @@ export default function MCDMCalculator() {
                         )}
                       </button>
                       {comparisonWeightOpen && (
-                        <div className="grid grid-cols-2 gap-2 mt-2 max-h-64 overflow-y-auto">
+                        <div className="grid grid-cols-2 gap-2 mt-2 max-h-[200px] overflow-y-auto">
                           {WEIGHT_METHODS.map((w) => (
                             <label key={w.value} className="flex items-start gap-2 text-[11px] text-black cursor-pointer hover:bg-gray-50 p-1 rounded">
                               <input
@@ -4288,7 +4288,7 @@ export default function MCDMCalculator() {
                         )}
                       </button>
                       {comparisonRankingOpen && (
-                        <div className="grid grid-cols-2 gap-2 mt-2 max-h-64 overflow-y-auto">
+                        <div className="grid grid-cols-2 gap-2 mt-2 max-h-[200px] overflow-y-auto">
                           {MCDM_METHODS.map((m) => (
                             <label key={m.value} className="flex items-start gap-2 text-[11px] text-black cursor-pointer hover:bg-gray-50 p-1 rounded">
                               <input
@@ -4716,424 +4716,245 @@ export default function MCDMCalculator() {
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className={`${comparisonChartType === "heatmap" ? "h-auto min-h-[500px]" : "h-[500px] sm:h-[500px]"} p-0 sm:p-6 mt-4`}>
-                    <ResponsiveContainer width="100%" height={comparisonChartType === "heatmap" ? Math.max(500, (comparisonChartData.length * 60) + 100) : "100%"} ref={comparisonChartRef}>
-                      {comparisonChartType === "radar" ? (
-                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
-                          <PolarGrid />
-                          <PolarAngleAxis dataKey="method" tick={{ fontSize: 10 }} />
-                          <PolarRadiusAxis />
-                          <Legend wrapperStyle={{ fontSize: "10px" }} />
-                          <Tooltip />
-                          {comparisonChartAlternatives.map((alt, idx) => (
-                            <Radar
-                              key={alt}
-                              name={alt}
-                              dataKey={alt}
-                              stroke={CHART_COLORS[idx % CHART_COLORS.length]}
-                              fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                              fillOpacity={0.1}
-                            />
-                          ))}
-                        </RadarChart>
-                      ) : comparisonChartType === "bar" ? (
-                        <BarChart data={comparisonChartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                          <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
-                          <Tooltip />
-                          <Legend wrapperStyle={{ fontSize: "10px" }} />
-                          {comparisonChartAlternatives.map((alt, idx) => (
-                            <Bar
-                              key={alt}
-                              dataKey={alt}
-                              fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                              name={alt}
-                            />
-                          ))}
-                        </BarChart>
-                      ) : comparisonChartType === "stackedBar" ? (
-                        <BarChart data={comparisonChartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                          <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
-                          <Tooltip />
-                          <Legend wrapperStyle={{ fontSize: "10px" }} />
-                          {comparisonChartAlternatives.map((alt, idx) => (
-                            <Bar
-                              key={alt}
-                              stackId="a"
-                              dataKey={alt}
-                              fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                              name={alt}
-                            />
-                          ))}
-                        </BarChart>
-                      ) : comparisonChartType === "area" ? (
-                        <AreaChart data={comparisonChartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend wrapperStyle={{ fontSize: "10px" }} />
-                          {comparisonChartAlternatives.map((alt, idx) => (
-                            <Area
-                              type="monotone"
-                              key={alt}
-                              dataKey={alt}
-                              stroke={CHART_COLORS[idx % CHART_COLORS.length]}
-                              fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                              fillOpacity={0.3}
-                              name={alt}
-                            />
-                          ))}
-                        </AreaChart>
-                      ) : comparisonChartType === "stackedArea" ? (
-                        <AreaChart data={comparisonChartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend wrapperStyle={{ fontSize: "10px" }} />
-                          {comparisonChartAlternatives.map((alt, idx) => (
-                            <Area
-                              type="monotone"
-                              stackId="1"
-                              key={alt}
-                              dataKey={alt}
-                              stroke={CHART_COLORS[idx % CHART_COLORS.length]}
-                              fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                              fillOpacity={0.3}
-                              name={alt}
-                            />
-                          ))}
-                        </AreaChart>
-                      ) : comparisonChartType === "composed" ? (
-                        <BarChart
-                          data={comparisonChartData.map(d => {
-                            // Calculate average rank for each alternative across all methods
-                            const avgRank = comparisonChartAlternatives.reduce((sum, alt) => sum + (d[alt] || 0), 0) / comparisonChartAlternatives.length;
-                            // Create diverging data (deviation from average)
-                            const divergingData: any = { method: d.method };
-                            comparisonChartAlternatives.forEach(alt => {
-                              const rank = d[alt] || 0;
-                              divergingData[alt] = rank - avgRank; // Positive = worse than avg, Negative = better than avg
-                            });
-                            return divergingData;
-                          })}
-                          layout="vertical"
-                          margin={{ top: 20, right: 0, left: 0, bottom: 20 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis
-                            type="number"
-                            label={{ value: "Deviation from Average Rank", position: "insideBottom", offset: -10 }}
-                            tick={{ fontSize: 10 }}
-                          />
-                          <YAxis
-                            type="category"
-                            dataKey="method"
-                            tick={{ fontSize: 10 }}
-                            width={90}
-                          />
-                          <Tooltip
-                            formatter={(value: any, name: string) => {
-                              const deviation = parseFloat(value);
-                              return [
-                                `${deviation > 0 ? '+' : ''}${deviation.toFixed(2)} (${deviation < 0 ? 'Better' : 'Worse'} than avg)`,
-                                name
-                              ];
-                            }}
-                          />
-                          <Legend wrapperStyle={{ fontSize: "10px" }} />
-                          <ReferenceLine x={0} stroke="#666" strokeWidth={2} />
-                          {comparisonChartAlternatives.map((alt, idx) => (
-                            <Bar
-                              key={alt}
-                              dataKey={alt}
-                              fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                              name={alt}
-                              stackId="stack"
-                            >
-                              {comparisonChartData.map((entry, index) => (
-                                <Cell
-                                  key={`cell-${index}`}
-                                  fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                                  opacity={0.8}
-                                />
-                              ))}
-                            </Bar>
-                          ))}
-                        </BarChart>
-                      ) : comparisonChartType === "scatter" ? (
-                        <ScatterChart>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis
-                            dataKey="x"
-                            type="category"
-                            allowDuplicatedCategory={false}
-                            tick={{ fontSize: 10 }}
-                            name="Method"
-                          />
-                          <YAxis
-                            dataKey="y"
-                            type="number"
-                            name="Rank"
-                            label={{ value: "Rank", angle: -90, position: "insideLeft" }}
-                          />
-                          <Tooltip cursor={{ strokeDasharray: "3 3" }} />
-                          <Legend wrapperStyle={{ fontSize: "10px" }} />
-                          {comparisonChartAlternatives.map((alt, idx) => (
-                            <Scatter
-                              key={alt}
-                              name={alt}
-                              data={comparisonChartData.map((d) => ({ x: d.method, y: d[alt] }))}
-                              fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                              shape={["circle", "cross", "diamond", "square", "star", "triangle", "wye"][idx % 7] as any}
-                              line
-                            >
-                              {comparisonChartData.map((entry, i) => (
-                                <Cell key={`cell-${i}`} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
-                              ))}
-                            </Scatter>
-                          ))}
-                        </ScatterChart>
-                      ) : comparisonChartType === "heatmap" ? (
-                        // Heatmap - shows all rank values with color intensity
-                        <div className="w-full h-full flex flex-col overflow-x-auto">
-                          <div className="flex-1 flex flex-col min-w-[max-content]">
-                            <div className="flex text-xs font-semibold border-b">
-                              <div className="w-24 sm:w-32 p-2 border-r bg-gray-50 flex-shrink-0">Method</div>
-                              <div className="flex flex-1">
-                                {comparisonChartAlternatives.map((alt) => (
-                                  <div key={alt} className="flex-1 min-w-[100px] p-2 border-r text-center bg-gray-50 truncate">
-                                    {alt}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                            {comparisonChartData.map((row, idx) => (
-                              <div key={idx} className="flex border-b">
-                                <div className="w-24 sm:w-32 p-2 border-r text-xs font-medium bg-gray-50 flex-shrink-0 truncate">
-                                  {row.method}
-                                </div>
+                  <CardContent className={`${comparisonChartType === "heatmap" ? "h-auto" : "h-[500px] sm:h-[500px]"} p-0 sm:p-6 mt-4`}>
+                    {(() => {
+                      if (comparisonChartType === "heatmap") {
+                        return (
+                          <div className="w-full h-full flex flex-col overflow-x-auto">
+                            <div className="flex-1 flex flex-col min-w-[max-content]">
+                              <div className="flex text-xs font-semibold border-b">
+                                <div className="w-24 sm:w-32 p-2 border-r bg-gray-50 flex-shrink-0">Method</div>
                                 <div className="flex flex-1">
-                                  {comparisonChartAlternatives.map((alt, altIdx) => {
-                                    const value = row[alt]
-                                    const minVal = 1
-                                    const maxVal = Math.max(...comparisonChartData.flatMap((r) => comparisonChartAlternatives.map((a) => r[a])).filter((v) => v != null))
-                                    const normalized = (value - minVal) / (maxVal - minVal)
-                                    // Red for high rank (worse), green for low rank (better)
-                                    const hue = (1 - normalized) * 120 // 120 = green, 0 = red
-                                    const bgColor = `hsl(${hue}, 70%, 60%)`
-
-                                    return (
-                                      <div
-                                        key={alt}
-                                        className="flex-1 min-w-[100px] p-3 border-r flex items-center justify-center text-xs font-medium text-white"
-                                        style={{ backgroundColor: bgColor }}
-                                      >
-                                        {value}
-                                      </div>
-                                    )
-                                  })}
+                                  {comparisonChartAlternatives.map((alt) => (
+                                    <div key={alt} className="flex-1 min-w-[100px] p-2 border-r text-center bg-gray-50 truncate">
+                                      {alt}
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
-                            ))}
-                          </div>
-                          <div className="mt-2 flex items-center gap-2 text-xs">
-                            <div className="flex items-center gap-1">
-                              <div className="w-4 h-4" style={{ backgroundColor: "hsl(120, 70%, 60%)" }}></div>
-                              <span>Better Alternative (Rank)</span>
+                              {comparisonChartData.map((row, idx) => (
+                                <div key={idx} className="flex border-b">
+                                  <div className="w-24 sm:w-32 p-2 border-r text-xs font-medium bg-gray-50 flex-shrink-0 truncate">
+                                    {row.method}
+                                  </div>
+                                  <div className="flex flex-1">
+                                    {comparisonChartAlternatives.map((alt, altIdx) => {
+                                      const value = row[alt]
+                                      const minVal = 1
+                                      const maxVal = Math.max(...comparisonChartData.flatMap((r) => comparisonChartAlternatives.map((a) => r[a])).filter((v) => v != null))
+                                      const normalized = (value - minVal || 1) / (maxVal - minVal || 1)
+                                      const hue = (1 - normalized) * 120
+                                      const bgColor = `hsl(${hue}, 70%, 60%)`
+                                      return (
+                                        <div
+                                          key={alt}
+                                          className="flex-1 min-w-[100px] p-3 border-r flex items-center justify-center text-xs font-medium text-white"
+                                          style={{ backgroundColor: bgColor }}
+                                        >
+                                          {value}
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                            <div className="flex items-center gap-1">
-                              <div className="w-4 h-4" style={{ backgroundColor: "hsl(0, 70%, 60%)" }}></div>
-                              <span>Worse Alternative (Rank)</span>
+                            <div className="flex items-center justify-center gap-4 text-xs" style={{ paddingTop: "8px" }}>
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(120, 70%, 60%)" }}></div>
+                                <span>Better Alternative (Rank)</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(0, 70%, 60%)" }}></div>
+                                <span>Worse Alternative (Rank)</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ) : comparisonChartType === "boxPlot" ? (
-                        // Box Plot - compact, dynamic version matching other chart sizes
-                        <ResponsiveContainer width="100%" height="100%">
-                          <svg viewBox="0 0 800 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-                            {(() => {
-                              // Calculate box plot data
-                              const boxData = comparisonChartAlternatives.map((alt) => {
-                                const values = comparisonChartData.map((r) => r[alt]).filter((v) => v != null).sort((a, b) => a - b)
-                                if (values.length === 0) return null
-                                const q1 = values[Math.floor(values.length * 0.25)]
-                                const median = values[Math.floor(values.length * 0.5)]
-                                const q3 = values[Math.floor(values.length * 0.75)]
-                                const min = Math.min(...values)
-                                const max = Math.max(...values)
-                                const iqr = q3 - q1
-                                const whiskerLow = Math.max(min, q1 - 1.5 * iqr)
-                                const whiskerHigh = Math.min(max, q3 + 1.5 * iqr)
-                                return { alt, min, q1, median, q3, max, whiskerLow, whiskerHigh, n: values.length }
-                              }).filter((d): d is typeof d & {} => d !== null)
+                        )
+                      }
 
-                              // Calculate scales
-                              const allValues = boxData.flatMap(d => [d!.whiskerLow, d!.whiskerHigh])
-                              const minVal = Math.min(...allValues)
-                              const maxVal = Math.max(...allValues)
-                              const yRange = maxVal - minVal || 1
-                              const padding = { top: 30, right: 30, bottom: 50, left: 50 }
-                              const chartWidth = 800 - padding.left - padding.right
-                              const chartHeight = 400 - padding.top - padding.bottom
-                              const boxWidth = Math.max(15, (chartWidth / boxData.length) * 0.6)
-                              const spacing = chartWidth / boxData.length
+                      return (
+                        <ResponsiveContainer width="100%" height="100%" ref={comparisonChartRef}>
+                          {(() => {
+                            switch (comparisonChartType) {
+                              case "radar":
+                                return (
+                                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
+                                    <PolarGrid />
+                                    <PolarAngleAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                    <PolarRadiusAxis />
+                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                    <Tooltip />
+                                    {comparisonChartAlternatives.map((alt, idx) => (
+                                      <Radar key={alt} name={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.1} />
+                                    ))}
+                                  </RadarChart>
+                                );
+                              case "bar":
+                                return (
+                                  <BarChart data={comparisonChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                    <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
+                                    <Tooltip />
+                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                    {comparisonChartAlternatives.map((alt, idx) => (
+                                      <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
+                                    ))}
+                                  </BarChart>
+                                );
+                              case "stackedBar":
+                                return (
+                                  <BarChart data={comparisonChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                    <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
+                                    <Tooltip />
+                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                    {comparisonChartAlternatives.map((alt, idx) => (
+                                      <Bar key={alt} stackId="a" dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
+                                    ))}
+                                  </BarChart>
+                                );
+                              case "area":
+                                return (
+                                  <AreaChart data={comparisonChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                    {comparisonChartAlternatives.map((alt, idx) => (
+                                      <Area type="monotone" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
+                                    ))}
+                                  </AreaChart>
+                                );
+                              case "stackedArea":
+                                return (
+                                  <AreaChart data={comparisonChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                    {comparisonChartAlternatives.map((alt, idx) => (
+                                      <Area type="monotone" stackId="1" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
+                                    ))}
+                                  </AreaChart>
+                                );
+                              case "composed":
+                                const composedData = comparisonChartData.map(d => {
+                                  const avgRank = comparisonChartAlternatives.reduce((sum, alt) => sum + (d[alt] || 0), 0) / comparisonChartAlternatives.length;
+                                  const divergingData: any = { method: d.method };
+                                  comparisonChartAlternatives.forEach(alt => {
+                                    const rank = d[alt] || 0;
+                                    divergingData[alt] = rank - avgRank;
+                                  });
+                                  return divergingData;
+                                });
+                                return (
+                                  <BarChart data={composedData} layout="vertical" margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis type="number" label={{ value: "Deviation from Average Rank", position: "insideBottom", offset: -10 }} tick={{ fontSize: 10 }} />
+                                    <YAxis type="category" dataKey="method" tick={{ fontSize: 10 }} width={90} />
+                                    <Tooltip formatter={(value: any, name: string) => [`${parseFloat(value) > 0 ? '+' : ''}${parseFloat(value).toFixed(2)} (${parseFloat(value) < 0 ? 'Better' : 'Worse'} than avg)`, name]} />
+                                    <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "20px" }} layout="horizontal" align="center" verticalAlign="bottom" iconType="square" />
+                                    <ReferenceLine x={0} stroke="#666" strokeWidth={2} />
+                                    {comparisonChartAlternatives.map((alt, idx) => (
+                                      <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} stackId="stack" />
+                                    ))}
+                                  </BarChart>
+                                );
+                              case "scatter":
+                                return (
+                                  <ScatterChart>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="x" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} name="Method" />
+                                    <YAxis dataKey="y" type="number" name="Rank" label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
+                                    <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                    {comparisonChartAlternatives.map((alt, idx) => (
+                                      <Scatter key={alt} name={alt} data={comparisonChartData.map((d) => ({ x: d.method, y: d[alt] }))} fill={CHART_COLORS[idx % CHART_COLORS.length]} shape={["circle", "cross", "diamond", "square", "star", "triangle", "wye"][idx % 7] as any} line />
+                                    ))}
+                                  </ScatterChart>
+                                );
+                              case "boxPlot":
+                                const boxData = comparisonChartAlternatives.map((alt) => {
+                                  const values = comparisonChartData.map((r) => r[alt]).filter((v) => v != null).sort((a, b) => a - b)
+                                  if (values.length === 0) return null
+                                  const q1 = values[Math.floor(values.length * 0.25)]
+                                  const median = values[Math.floor(values.length * 0.5)]
+                                  const q3 = values[Math.floor(values.length * 0.75)]
+                                  const min = Math.min(...values)
+                                  const max = Math.max(...values)
+                                  const iqr = q3 - q1
+                                  const whiskerLow = Math.max(min, q1 - 1.5 * iqr)
+                                  const whiskerHigh = Math.min(max, q3 + 1.5 * iqr)
+                                  return { alt, min, q1, median, q3, max, whiskerLow, whiskerHigh, n: values.length }
+                                }).filter((d): d is any => d !== null)
 
-                              const getY = (v: number) => padding.top + chartHeight - ((v - minVal) / yRange) * chartHeight
-                              const getX = (idx: number) => padding.left + (idx + 0.5) * spacing
+                                if (boxData.length === 0) return null
+                                const allVals = boxData.flatMap(d => [d.whiskerLow, d.whiskerHigh])
+                                const minV = Math.min(...allVals)
+                                const maxV = Math.max(...allVals)
+                                const yR = maxV - minV || 1
+                                const pad = { top: 30, right: 30, bottom: 50, left: 50 }
+                                const cW = 800 - pad.left - pad.right
+                                const cH = 400 - pad.top - pad.bottom
+                                const bW = Math.max(15, (cW / boxData.length) * 0.6)
+                                const sp = cW / boxData.length
+                                const gY = (v: number) => pad.top + cH - ((v - minV) / yR) * cH
+                                const gX = (idx: number) => pad.left + (idx + 0.5) * sp
 
-                              return (
-                                <>
-                                  {/* Y-axis */}
-                                  <line x1={padding.left} y1={padding.top} x2={padding.left} y2={padding.top + chartHeight} stroke="#999" strokeWidth="2" />
-                                  {/* X-axis */}
-                                  <line x1={padding.left} y1={padding.top + chartHeight} x2={800 - padding.right} y2={padding.top + chartHeight} stroke="#999" strokeWidth="2" />
-
-                                  {/* Y-axis labels */}
-                                  {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
-                                    const yVal = minVal + pct * yRange
-                                    const y = getY(yVal)
-                                    return (
+                                return (
+                                  <svg viewBox="0 0 800 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+                                    <line x1={pad.left} y1={pad.top} x2={pad.left} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
+                                    <line x1={pad.left} y1={pad.top + cH} x2={800 - pad.right} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
+                                    {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
                                       <g key={`ylabel-${pct}`}>
-                                        <line x1={padding.left - 5} y1={y} x2={padding.left} y2={y} stroke="#999" strokeWidth="1" />
-                                        <text x={padding.left - 10} y={y + 4} fontSize="11" textAnchor="end" fill="#666">
-                                          {yVal.toFixed(1)}
-                                        </text>
+                                        <line x1={pad.left - 5} y1={gY(minV + pct * yR)} x2={pad.left} y2={gY(minV + pct * yR)} stroke="#999" strokeWidth="1" />
+                                        <text x={pad.left - 10} y={gY(minV + pct * yR) + 4} fontSize="11" textAnchor="end" fill="#666">{(minV + pct * yR).toFixed(1)}</text>
+                                        <line x1={pad.left} y1={gY(minV + pct * yR)} x2={800 - pad.right} y2={gY(minV + pct * yR)} stroke="#eee" strokeWidth="1" strokeDasharray="2,2" />
                                       </g>
-                                    )
-                                  })}
-
-                                  {/* Grid lines */}
-                                  {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
-                                    const y = getY(minVal + pct * yRange)
-                                    return (
-                                      <line
-                                        key={`grid-${pct}`}
-                                        x1={padding.left}
-                                        y1={y}
-                                        x2={800 - padding.right}
-                                        y2={y}
-                                        stroke="#eee"
-                                        strokeWidth="1"
-                                        strokeDasharray="2,2"
-                                      />
-                                    )
-                                  })}
-
-                                  {/* Box plots */}
-                                  {boxData.map((data, idx) => {
-                                    const x = getX(idx)
-                                    const color = CHART_COLORS[idx % CHART_COLORS.length]
-
-                                    return (
-                                      <g key={`box-${data.alt}`}>
-                                        {/* Whisker lines */}
-                                        <line x1={x} y1={getY(data.whiskerLow)} x2={x} y2={getY(data.whiskerHigh)} stroke={color} strokeWidth="2" opacity="0.8" />
-                                        {/* Whisker caps */}
-                                        <line x1={x - boxWidth / 3} y1={getY(data.whiskerLow)} x2={x + boxWidth / 3} y2={getY(data.whiskerLow)} stroke={color} strokeWidth="2.5" opacity="0.8" />
-                                        <line x1={x - boxWidth / 3} y1={getY(data.whiskerHigh)} x2={x + boxWidth / 3} y2={getY(data.whiskerHigh)} stroke={color} strokeWidth="2.5" opacity="0.8" />
-                                        {/* Box */}
-                                        <rect
-                                          x={x - boxWidth / 2}
-                                          y={getY(data.q3)}
-                                          width={boxWidth}
-                                          height={Math.max(1, getY(data.q1) - getY(data.q3))}
-                                          fill={color}
-                                          fillOpacity="0.4"
-                                          stroke={color}
-                                          strokeWidth="2"
-                                        />
-                                        {/* Median line */}
-                                        <line
-                                          x1={x - boxWidth / 2}
-                                          y1={getY(data.median)}
-                                          x2={x + boxWidth / 2}
-                                          y2={getY(data.median)}
-                                          stroke="#ff3333"
-                                          strokeWidth="3"
-                                        />
-                                        {/* Min/Max outlier markers */}
-                                        <circle cx={x} cy={getY(data.min)} r="3" fill={color} opacity="0.6" />
-                                        <circle cx={x} cy={getY(data.max)} r="3" fill={color} opacity="0.6" />
-                                      </g>
-                                    )
-                                  })}
-
-                                  {/* X-axis labels */}
-                                  {boxData.map((data, idx) => (
-                                    <text
-                                      key={`xlabel-${data.alt}`}
-                                      x={getX(idx)}
-                                      y={padding.top + chartHeight + 25}
-                                      fontSize="12"
-                                      textAnchor="middle"
-                                      fill="#333"
-                                      fontWeight="500"
-                                    >
-                                      {data.alt.substring(0, 8)}
-                                    </text>
-                                  ))}
-
-                                  {/* Axis labels */}
-                                  <text x={25} y={15} fontSize="12" fontWeight="600" fill="#333">
-                                    Rank
-                                  </text>
-                                  <text x={750} y={padding.top + chartHeight + 40} fontSize="12" fontWeight="600" fill="#333">
-                                    Alternatives
-                                  </text>
-
-                                  {/* Legend */}
-                                  <g>
-                                    <text x={padding.left} y={padding.top + chartHeight + 70} fontSize="11" fill="#666" fontWeight="500">
-                                      Legend:
-                                    </text>
-                                    {/* Median indicator */}
-                                    <line x1={padding.left} y1={padding.top + chartHeight + 82} x2={padding.left + 30} y2={padding.top + chartHeight + 82} stroke="#ff3333" strokeWidth="2.5" />
-                                    <text x={padding.left + 40} y={padding.top + chartHeight + 86} fontSize="10" fill="#666">
-                                      Median (red)
-                                    </text>
-                                    {/* Box indicator */}
-                                    <rect x={padding.left} y={padding.top + chartHeight + 95} width="15" height="12" fill={CHART_COLORS[0]} fillOpacity="0.4" stroke={CHART_COLORS[0]} strokeWidth="1.5" />
-                                    <text x={padding.left + 40} y={padding.top + chartHeight + 104} fontSize="10" fill="#666">
-                                      IQR (interquartile range)
-                                    </text>
-                                  </g>
-                                </>
-                              )
-                            })()}
-                          </svg>
+                                    ))}
+                                    {boxData.map((data, idx) => {
+                                      const x = gX(idx)
+                                      const color = CHART_COLORS[idx % CHART_COLORS.length]
+                                      return (
+                                        <g key={`box-${data.alt}`}>
+                                          <line x1={x} y1={gY(data.whiskerLow)} x2={x} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2" opacity="0.8" />
+                                          <line x1={x - bW / 3} y1={gY(data.whiskerLow)} x2={x + bW / 3} y2={gY(data.whiskerLow)} stroke={color} strokeWidth="2.5" opacity="0.8" />
+                                          <line x1={x - bW / 3} y1={gY(data.whiskerHigh)} x2={x + bW / 3} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2.5" opacity="0.8" />
+                                          <rect x={x - bW / 2} y={gY(data.q3)} width={bW} height={Math.max(1, gY(data.q1) - gY(data.q3))} fill={color} fillOpacity="0.4" stroke={color} strokeWidth="2" />
+                                          <line x1={x - bW / 2} y1={gY(data.median)} x2={x + bW / 2} y2={gY(data.median)} stroke="#ff3333" strokeWidth="3" />
+                                          <circle cx={x} cy={gY(data.min)} r="3" fill={color} opacity="0.6" />
+                                          <circle cx={x} cy={gY(data.max)} r="3" fill={color} opacity="0.6" />
+                                          <text x={x} y={pad.top + cH + 25} fontSize="12" textAnchor="middle" fill="#333" fontWeight="500">{data.alt.substring(0, 8)}</text>
+                                        </g>
+                                      )
+                                    })}
+                                    <text x={25} y={15} fontSize="12" fontWeight="600" fill="#333">Rank</text>
+                                    <text x={750} y={pad.top + cH + 40} fontSize="12" fontWeight="600" fill="#333">Alts</text>
+                                  </svg>
+                                );
+                              default:
+                                return (
+                                  <LineChart data={comparisonChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                    <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                                    <Tooltip />
+                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                    {comparisonChartAlternatives.map((alt, idx) => (
+                                      <Line key={alt} type={comparisonChartType === "step" ? "step" : "monotone"} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2} strokeDasharray={["0", "5 5", "3 3", "10 5", "2 2", "15 5"][idx % 6]} activeDot={{ r: 6 }} dot={{ r: 4, strokeWidth: 1, fill: "white", stroke: CHART_COLORS[idx % CHART_COLORS.length] }} />
+                                    ))}
+                                  </LineChart>
+                                );
+                            }
+                          })()}
                         </ResponsiveContainer>
-                      ) : (
-                        <LineChart data={comparisonChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                          <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                          <Tooltip />
-                          <Legend wrapperStyle={{ fontSize: "10px" }} />
-                          {comparisonChartAlternatives.map((alt, idx) => (
-                            <Line
-                              key={alt}
-                              type={comparisonChartType === "step" ? "step" : "monotone"}
-                              dataKey={alt}
-                              stroke={CHART_COLORS[idx % CHART_COLORS.length]}
-                              strokeWidth={2}
-                              strokeDasharray={["0", "5 5", "3 3", "10 5", "2 2", "15 5"][idx % 6]}
-                              activeDot={{ r: 6 }}
-                              dot={{
-                                r: 4,
-                                strokeWidth: 1,
-                                fill: "white",
-                                stroke: CHART_COLORS[idx % CHART_COLORS.length],
-                              }}
-                            />
-                          ))}
-                        </LineChart>
-                      )}
-                    </ResponsiveContainer>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               )}
@@ -5759,57 +5580,77 @@ export default function MCDMCalculator() {
                                         };
                                       })}
                                       layout="vertical"
-                                      margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+                                      margin={{ top: 20, right: 30, left: 10, bottom: 60 }}
                                     >
                                       <CartesianGrid strokeDasharray="3 3" />
                                       <XAxis
                                         type="number"
                                         domain={[0, 'dataMax']}
-                                        label={{ value: "Rank Range (Best to Worst)", position: "bottom", offset: 0 }}
+                                        label={{
+                                          value: "Rank Range (Best to Worst)",
+                                          position: "insideBottom",
+                                          offset: -45,
+                                          style: { fontSize: 11, fontWeight: 500 }
+                                        }}
                                         tick={{ fontSize: 10 }}
                                         interval={0}
                                         allowDecimals={false}
+                                        height={60}
                                       />
                                       <YAxis
                                         type="category"
                                         dataKey="method"
                                         tick={{ fontSize: 10 }}
-                                        width={110}
+                                        width={130}
                                       />
                                       <Tooltip
-                                        formatter={(value: any, name: string, props: any) => {
-                                          const data = props.payload;
-                                          if (name === 'range') {
-                                            return [`Best: ${data.min}, Worst: ${data.max}, Avg: ${data.avg.toFixed(2)}`, 'Rank Range'];
+                                        content={({ active, payload }) => {
+                                          if (active && payload && payload.length > 0) {
+                                            const data = payload[0].payload;
+                                            return (
+                                              <div className="bg-white border border-gray-300 rounded-lg p-3 shadow-lg text-xs">
+                                                <p className="font-semibold text-black mb-1">{data.method}</p>
+                                                <p className="text-gray-700">Best Rank: <span className="font-medium text-black">{data.min}</span></p>
+                                                <p className="text-gray-700">Worst Rank: <span className="font-medium text-black">{data.max}</span></p>
+                                                <p className="text-gray-700">Range: <span className="font-medium text-black">{data.range}</span></p>
+                                                <p className="text-gray-700">Avg Rank: <span className="font-medium text-black">{data.avg.toFixed(2)}</span></p>
+                                              </div>
+                                            );
                                           }
-                                          return [value, name];
+                                          return null;
                                         }}
                                       />
-                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      <Legend
+                                        wrapperStyle={{ fontSize: "10px", paddingTop: "10px" }}
+                                        iconType="rect"
+                                      />
                                       {/* Base bar showing starting position */}
                                       <Bar
                                         dataKey="start"
                                         stackId="a"
                                         fill="transparent"
+                                        name=""
+                                        legendType="none"
                                       />
                                       {/* Range bar showing the spread */}
                                       <Bar
                                         dataKey="range"
                                         stackId="a"
                                         name="Rank Range"
+                                        radius={[0, 4, 4, 0]}
                                       >
                                         {sensitivityWeightComparisonResults.map((res, index) => (
                                           <Cell
                                             key={`cell-${index}`}
                                             fill={CHART_COLORS[index % CHART_COLORS.length]}
-                                            opacity={0.7}
+                                            opacity={0.75}
                                           />
                                         ))}
                                       </Bar>
                                       {/* Markers for average */}
                                       <Scatter
                                         dataKey="avg"
-                                        fill="#000"
+                                        fill="#1a1a1a"
                                         shape="diamond"
                                         name="Average Rank"
                                       />
@@ -10455,7 +10296,7 @@ export default function MCDMCalculator() {
           {!apiResults ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <div className="animate-spin h-8 w-8 border-4 border-black border-t-transparent rounded-full mx-auto mb-4"></div>
+                <div className="animate-spin h-10 w-10 border-4 border-dotted border-blue-900 border-t-transparent rounded-full mx-auto mb-4"></div>
                 <p className="text-sm text-gray-700">Loading results...</p>
               </div>
             </div>

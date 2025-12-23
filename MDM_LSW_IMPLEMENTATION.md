@@ -1,7 +1,7 @@
 # Implementation Summary: MDM and LSW Weight Methods
 
 ## Overview
-Successfully added two new weight methods to the RankSensilytics application:
+Successfully added two new weight methods to the decisionalgo application:
 1. **Maximizing Deviation Method (MDM)**
 2. **Least Squares Weighting Method (LSW)**
 
