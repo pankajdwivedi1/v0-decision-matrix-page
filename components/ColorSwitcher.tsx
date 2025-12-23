@@ -5,12 +5,12 @@ import { cn } from "@/lib/utils"
 
 const themes = [
     { id: 'white', bg: '#ffffff', text: '#000000', label: 'Default' },
-    { id: 'gray', bg: '#a1a1aa', text: '#ffffff', label: 'Gray' },
-    { id: 'peach', bg: '#f9b17a', text: '#000000', label: 'Peach' },
-    { id: 'green', bg: '#10b981', text: '#ffffff', label: 'Green' },
-    { id: 'brown', bg: '#c2410c', text: '#ffffff', label: 'Brown' },
-    { id: 'darkblue', bg: '#1e3a8a', text: '#ffffff', label: 'Dark Blue' },
-    { id: 'lightblue', bg: '#93c5fd', text: '#000000', label: 'Light Blue' },
+    { id: 'charcoal', bg: '#1e293b', text: '#ffffff', label: 'Charcoal' },
+    { id: 'peach', bg: '#fff7ed', text: '#000000', label: 'Soft Peach' },
+    { id: 'green', bg: '#064e3b', text: '#ffffff', label: 'Deep Forest' },
+    { id: 'brown', bg: '#3b0a01', text: '#ffffff', label: 'Rich Espresso' },
+    { id: 'darkblue', bg: '#0f172a', text: '#ffffff', label: 'Midnight Blue' },
+    { id: 'lightblue', bg: '#f0f9ff', text: '#000000', label: 'Sky Mist' },
 ]
 
 export default function ColorSwitcher() {
@@ -47,14 +47,14 @@ export default function ColorSwitcher() {
     }
 
     return (
-        <div className="flex items-center gap-1.5 sm:gap-2 mr-2">
+        <div className="flex items-center gap-0.5">
             {themes.map((t) => (
                 <button
                     key={t.id}
                     onClick={() => applyTheme(t.id)}
                     className={cn(
-                        "w-4 h-4 sm:w-5 sm:h-5 rounded-full border border-gray-300 shadow-sm transition-transform hover:scale-125 focus:outline-none focus:ring-2 focus:ring-blue-500",
-                        activeTheme === t.id ? "ring-2 ring-black scale-110" : ""
+                        "w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-none border border-gray-300 shadow-xs transition-transform hover:scale-110 focus:outline-none focus:ring-1 focus:ring-blue-500",
+                        activeTheme === t.id ? "ring-1 ring-black scale-110" : ""
                     )}
                     style={{ backgroundColor: t.bg }}
                     title={t.label}

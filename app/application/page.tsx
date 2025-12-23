@@ -31,6 +31,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import * as XLSX from "xlsx"
 import { Upload, ChevronDown, ChevronRight, ChevronLeft, Home, Download, LayoutGrid } from "lucide-react"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar, PieChart, Pie, ReferenceLine } from "recharts"
@@ -621,6 +628,7 @@ export default function MCDMCalculator() {
   const [itemsPerPage, setItemsPerPage] = useState(6)
   const [showAllRankingMethods, setShowAllRankingMethods] = useState(false)
   const [showAllWeightMethods, setShowAllWeightMethods] = useState(false)
+  const [isMethodSelectionSheetOpen, setIsMethodSelectionSheetOpen] = useState(false)
 
   // Persistence for navigation state
   useEffect(() => {
@@ -2965,12 +2973,18 @@ export default function MCDMCalculator() {
               <h1 className="text-xl sm:text-2xl font-bold text-black truncate">Decision Matrix</h1>
               <p className="text-[10px] sm:text-xs text-gray-700">Multicriteria Decision Making Calculator</p>
             </div>
-            <div className="flex items-center gap-4">
-              <ColorSwitcher />
-              <Button variant="outline" onClick={() => window.location.href = '/'}>
-                <Home className="mr-2 h-4 w-4" /> Home
-              </Button>
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border border-gray-200 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="flex flex-col items-end sm:flex-row sm:items-center gap-1.5 sm:gap-4">
+                <ColorSwitcher />
+                <Button
+                  variant="outline"
+                  onClick={() => window.location.href = '/'}
+                  className="h-7 sm:h-9 text-[10px] sm:text-xs px-2 sm:px-3"
+                >
+                  <Home className="mr-1.5 h-3.5 w-3.5" /> Home
+                </Button>
+              </div>
+              <div className="w-10 h-10 sm:w-16 sm:h-16 rounded-full overflow-hidden border border-gray-200 shrink-0">
                 <img src="/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
               </div>
             </div>
@@ -6219,6 +6233,7 @@ export default function MCDMCalculator() {
                           onClick={() => {
                             setActiveFormulaType("method")
                             setMethod(m.value)
+                            setIsDialogOpen(true)
                           }}
                           isActive={method === m.value}
                           className={`text-xs ${method === m.value
@@ -10449,13 +10464,13 @@ export default function MCDMCalculator() {
               <div className="flex items-center gap-3 mb-4">
                 <Button
                   type="button"
-                  onClick={() => setCurrentStep("home")}
+                  onClick={() => setIsMethodSelectionSheetOpen(true)}
                   variant="outline"
                   size="icon"
                   className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
-                  title="Go to Home"
+                  title="Select Ranking Method"
                 >
-                  <Home className="h-4 w-4" />
+                  <LayoutGrid className="h-4 w-4" />
                 </Button>
                 <div>
                   <h1 className="text-xl md:text-2xl font-bold text-black">Results</h1>
@@ -10475,6 +10490,7 @@ export default function MCDMCalculator() {
                 >
                   Back
                 </Button>
+
                 <Button
                   type="button"
                   onClick={() => setCurrentStep("matrix")}
@@ -13349,6 +13365,42 @@ export default function MCDMCalculator() {
             </div>
           )}
         </main>
+
+        {/* Method Selection Sheet */}
+        <Sheet open={isMethodSelectionSheetOpen} onOpenChange={setIsMethodSelectionSheetOpen}>
+          <SheetContent side="left" className="w-[300px] sm:w-[400px] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Select Ranking Method</SheetTitle>
+              <SheetDescription>
+                Choose a method to recalculate the ranking
+              </SheetDescription>
+            </SheetHeader>
+
+            <div className="mt-6 space-y-2">
+              {MCDM_METHODS.map((m) => (
+                <Button
+                  key={m.value}
+                  variant={method === m.value ? "default" : "outline"}
+                  className={`w-full justify-start text-left h-auto py-3 px-4 ${method === m.value
+                    ? "bg-black text-white hover:bg-gray-800"
+                    : "bg-white text-black hover:bg-gray-50 border-gray-200"
+                    }`}
+                  onClick={async () => {
+                    setMethod(m.value)
+                    setIsMethodSelectionSheetOpen(false)
+                    // Recalculate with the new method
+                    await handleCalculate(m.value)
+                  }}
+                >
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-sm">{m.label}</span>
+                    <span className="text-xs opacity-70">{m.description}</span>
+                  </div>
+                </Button>
+              ))}
+            </div>
+          </SheetContent>
+        </Sheet>
       </SidebarProvider >
     )
   }
