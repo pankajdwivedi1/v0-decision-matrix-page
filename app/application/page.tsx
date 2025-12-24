@@ -2966,6 +2966,18 @@ export default function MCDMCalculator() {
   if (currentStep === "home") {
     return (
       <main className="flex-1 min-h-screen p-0 sm:p-4 bg-transparent">
+        {(sensitivityLoading || comparisonLoading || isLoading) && (
+          <div className="processing-ring-overlay">
+            <div className="processing-ring-container">
+              <div className="processing-ring"></div>
+            </div>
+            <p className="processing-text">
+              {sensitivityLoading ? "Analyzing Sensitivity..." :
+                comparisonLoading ? "Calculating Comparison..." :
+                  homeTab === "weightMethods" ? "Calculating Weights..." : "Calculating Ranking..."}
+            </p>
+          </div>
+        )}
         <div className="w-full max-w-7xl px-4 sm:px-6 md:px-8 mx-auto py-4 sm:py-6">
           <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
             {/* SidebarTrigger removed */}
@@ -3387,44 +3399,50 @@ export default function MCDMCalculator() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-black">Select Methods to Compare:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {WEIGHT_METHODS.map((w) => (
-                        <label key={w.value} className="flex items-center gap-2 text-xs p-2 rounded border border-gray-100 hover:bg-gray-50 cursor-pointer text-black">
+                    <div className="max-h-[130px] overflow-y-auto pr-2 custom-scrollbar">
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                        {WEIGHT_METHODS.map((w) => (
+                          <label key={w.value} className="flex items-center gap-3 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={sensitivityWeightMethods.includes(w.value)}
+                              onChange={() => {
+                                if (w.value === "piprecia" && !sensitivityWeightMethods.includes("piprecia")) {
+                                  setIsPipreciaDialogOpen(true)
+                                }
+                                if (w.value === "ahp" && !sensitivityWeightMethods.includes("ahp")) {
+                                  setIsAhpDialogOpen(true)
+                                }
+                                if (w.value === "swara" && !sensitivityWeightMethods.includes("swara")) {
+                                  setIsSwaraDialogOpen(true)
+                                }
+                                if (["roc", "rr"].includes(w.value) && !sensitivityWeightMethods.includes(w.value)) {
+                                  setIsSensitivityRanksDialogOpen(true)
+                                }
+                                toggleSensitivityWeightMethod(w.value)
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all"
+                            />
+                            <span className="text-xs font-semibold text-black group-hover:text-blue-600 transition-colors truncate">
+                              {w.label}
+                            </span>
+                          </label>
+                        ))}
+                        <label className="flex items-center gap-3 cursor-pointer group">
                           <input
                             type="checkbox"
-                            checked={sensitivityWeightMethods.includes(w.value)}
-                            onChange={() => {
-                              if (w.value === "piprecia" && !sensitivityWeightMethods.includes("piprecia")) {
-                                setIsPipreciaDialogOpen(true)
-                              }
-                              if (w.value === "ahp" && !sensitivityWeightMethods.includes("ahp")) {
-                                setIsAhpDialogOpen(true)
-                              }
-                              if (w.value === "swara" && !sensitivityWeightMethods.includes("swara")) {
-                                setIsSwaraDialogOpen(true)
-                              }
-                              if (["roc", "rr"].includes(w.value) && !sensitivityWeightMethods.includes(w.value)) {
-                                setIsSensitivityRanksDialogOpen(true)
-                              }
-                              toggleSensitivityWeightMethod(w.value)
+                            checked={sensitivityWeightMethods.includes("custom")}
+                            onChange={(e) => {
+                              toggleSensitivityWeightMethod("custom")
+                              if (e.target.checked) setIsCustomWeightsDialogOpen(true)
                             }}
-                            className="rounded border-gray-300"
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all"
                           />
-                          {w.label}
+                          <span className="text-xs font-semibold text-black group-hover:text-blue-600 transition-colors truncate">
+                            Enter own weight
+                          </span>
                         </label>
-                      ))}
-                      <label className="flex items-center gap-2 text-xs p-2 rounded border border-gray-100 hover:bg-gray-50 cursor-pointer text-black">
-                        <input
-                          type="checkbox"
-                          checked={sensitivityWeightMethods.includes("custom")}
-                          onChange={(e) => {
-                            toggleSensitivityWeightMethod("custom")
-                            if (e.target.checked) setIsCustomWeightsDialogOpen(true)
-                          }}
-                          className="rounded border-gray-300"
-                        />
-                        Enter own weight
-                      </label>
+                      </div>
                     </div>
 
                     <Dialog open={isCustomWeightsDialogOpen} onOpenChange={setIsCustomWeightsDialogOpen}>
@@ -4720,7 +4738,7 @@ export default function MCDMCalculator() {
                     {(() => {
                       if (comparisonChartType === "heatmap") {
                         return (
-                          <div className="w-full h-full flex flex-col overflow-x-auto">
+                          <div ref={comparisonChartRef} className="w-full h-full flex flex-col overflow-x-auto">
                             <div className="flex-1 flex flex-col min-w-[max-content]">
                               <div className="flex text-xs font-semibold border-b">
                                 <div className="w-24 sm:w-32 p-2 border-r bg-gray-50 flex-shrink-0">Method</div>
@@ -6047,6 +6065,16 @@ export default function MCDMCalculator() {
   if (currentStep === "table") {
     return (
       <SidebarProvider>
+        {isLoading && (
+          <div className="processing-ring-overlay">
+            <div className="processing-ring-container">
+              <div className="processing-ring"></div>
+            </div>
+            <p className="processing-text">
+              {weightMethod ? "Calculating Weights..." : "Calculating Ranking..."}
+            </p>
+          </div>
+        )}
         <Sidebar className="border-r border-gray-200 bg-gray-50">
           <SidebarHeader className="py-2 px-3">
             <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
@@ -6776,6 +6804,16 @@ export default function MCDMCalculator() {
     return (
       <>
         <SidebarProvider>
+          {isLoading && (
+            <div className="processing-ring-overlay">
+              <div className="processing-ring-container">
+                <div className="processing-ring"></div>
+              </div>
+              <p className="processing-text">
+                {weightMethod ? "Calculating Weights..." : "Calculating Ranking..."}
+              </p>
+            </div>
+          )}
           <Sidebar side="left" className="border-r border-gray-200 bg-gray-50">
             <SidebarHeader>
               <div className="flex w-full gap-2 p-2">
