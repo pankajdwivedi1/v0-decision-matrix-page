@@ -4,7 +4,7 @@ import { useState, useRef, useMemo, Fragment, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select"
 import {
   SidebarProvider,
   Sidebar,
@@ -1556,9 +1556,10 @@ export default function MCDMCalculator() {
     setCriteria(criteria.map((crit) => (crit.id === id ? { ...crit, ...updates } : crit)))
   }
 
-  const calculateWeights = async (methodToUse: WeightMethod) => {
+  const calculateWeights = async (methodToUse: WeightMethod): Promise<Criterion[]> => {
     setIsLoading(true)
     setWeightMethod(methodToUse)
+    let newCriteria = [...criteria]
 
     // Reset previous results
     setEntropyResult(null)
@@ -1572,9 +1573,10 @@ export default function MCDMCalculator() {
 
     if (methodToUse === "equal") {
       const weight = 1 / criteria.length
-      setCriteria(criteria.map((c) => ({ ...c, weight })))
+      newCriteria = criteria.map((c) => ({ ...c, weight }))
+      setCriteria(newCriteria)
       setIsLoading(false)
-      return
+      return newCriteria
     }
 
     try {
@@ -1783,7 +1785,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate SD weights")
         const data: SDResult = await response.json()
         setSdResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        newCriteria = criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(newCriteria)
       } else if (methodToUse === "variance") {
         const response = await fetch("/api/variance-weights", {
           method: "POST",
@@ -1793,7 +1796,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate Variance weights")
         const data: VarianceResult = await response.json()
         setVarianceResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        newCriteria = criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(newCriteria)
       } else if (methodToUse === "mad") {
         const response = await fetch("/api/mad-weights", {
           method: "POST",
@@ -1803,7 +1807,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate MAD weights")
         const data: MADResult = await response.json()
         setMadResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        newCriteria = criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(newCriteria)
       } else if (methodToUse === "dbw") {
         const response = await fetch("/api/dbw-weights", {
           method: "POST",
@@ -1813,7 +1818,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate DBW weights")
         const data: DBWResult = await response.json()
         setDbwResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        newCriteria = criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(newCriteria)
       } else if (methodToUse === "svp") {
         const response = await fetch("/api/svp-weights", {
           method: "POST",
@@ -1823,7 +1829,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate SVP weights")
         const data: SVPResult = await response.json()
         setSvpResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        newCriteria = criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(newCriteria)
       } else if (methodToUse === "mdm") {
         const response = await fetch("/api/mdm-weights", {
           method: "POST",
@@ -1833,7 +1840,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate MDM weights")
         const data: MDMResult = await response.json()
         setMdmResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        newCriteria = criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(newCriteria)
       } else if (methodToUse === "lsw") {
         const response = await fetch("/api/lsw-weights", {
           method: "POST",
@@ -1843,7 +1851,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate LSW weights")
         const data: LSWResult = await response.json()
         setLswResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        newCriteria = criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(newCriteria)
       } else if (methodToUse === "gpow") {
         const response = await fetch("/api/gpow-weights", {
           method: "POST",
@@ -1853,7 +1862,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate GPOW weights")
         const data: GPOWResult = await response.json()
         setGpowResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        newCriteria = criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(newCriteria)
       } else if (methodToUse === "lpwm") {
         const response = await fetch("/api/lpwm-weights", {
           method: "POST",
@@ -1863,7 +1873,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate LPWM weights")
         const data: LPWMResult = await response.json()
         setLpwmResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        newCriteria = criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(newCriteria)
       } else if (methodToUse === "pcwm") {
         const response = await fetch("/api/pcwm-weights", {
           method: "POST",
@@ -1873,8 +1884,9 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate PCWM weights")
         const data: PCWMResult = await response.json()
         setPcwmResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
-      } else if (methodToUse === "roc" || methodToUse === "rr") {
+        newCriteria = criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(newCriteria)
+      } else if (["roc", "rr"].includes(methodToUse)) {
         const response = await fetch(`/api/${methodToUse}-weights`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1887,17 +1899,23 @@ export default function MCDMCalculator() {
         const data = await response.json()
         if (methodToUse === "roc") setRocResult(data)
         else setRrResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+
+        let newCriteria = criteria.map((crit) => ({
+          ...crit,
+          weight: data.weights[crit.id] || crit.weight,
+        }))
+        setCriteria(newCriteria)
       }
     } catch (error) {
       console.error("Error calculating weights:", error)
-      alert(`Error calculating ${methodToUse} weights.`)
+      alert("Error calculating weights")
     } finally {
       setIsLoading(false)
     }
+    return newCriteria
   }
 
-  const handleSaveTable = async (shouldNavigate = true): Promise<boolean> => {
+  const handleSaveTable = async (shouldNavigate = true, weightMethodOverride?: WeightMethod): Promise<{ success: boolean; updatedCriteria: Criterion[] }> => {
     const allScoresFilled = alternatives.every((alt) =>
       criteria.every((crit) => {
         const score = alt.scores[crit.id]
@@ -1907,8 +1925,11 @@ export default function MCDMCalculator() {
 
     if (!allScoresFilled) {
       alert("Please fill in all score values with numbers greater than or equal to 0")
-      return false
+      return { success: false, updatedCriteria: criteria }
     }
+
+    const finalWeightMethod = weightMethodOverride || weightMethod
+    let currentCriteria = [...criteria]
 
     // Reset previous weight calculation results
     setEntropyResult(null)
@@ -1933,7 +1954,7 @@ export default function MCDMCalculator() {
     setRrResult(null)
 
     // Calculate entropy weights if entropy method is selected
-    if (weightMethod === "entropy") {
+    if (finalWeightMethod === "entropy") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/entropy-weights", {
@@ -1957,12 +1978,11 @@ export default function MCDMCalculator() {
         setEntropyResult(data)
 
         // Update criteria with calculated entropy weights
-        setCriteria(
-          criteria.map((crit) => ({
-            ...crit,
-            weight: data.weights[crit.id] || crit.weight,
-          })),
-        )
+        currentCriteria = currentCriteria.map((crit) => ({
+          ...crit,
+          weight: data.weights[crit.id] || crit.weight,
+        }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating entropy weights:", error)
         alert("Error calculating entropy weights. Using equal weight instead.")
@@ -1972,7 +1992,7 @@ export default function MCDMCalculator() {
     }
 
     // Calculate CRITIC weights if CRITIC weight is selected
-    if (weightMethod === "critic") {
+    if (finalWeightMethod === "critic") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/critic-weights", {
@@ -1996,12 +2016,11 @@ export default function MCDMCalculator() {
         setCriticResult(data)
 
         // Update criteria with calculated CRITIC weights
-        setCriteria(
-          criteria.map((crit) => ({
-            ...crit,
-            weight: data.weights[crit.id] || crit.weight,
-          })),
-        )
+        currentCriteria = currentCriteria.map((crit) => ({
+          ...crit,
+          weight: data.weights[crit.id] || crit.weight,
+        }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating CRITIC weights:", error)
         alert("Error calculating CRITIC weights. Using equal weight instead.")
@@ -2011,7 +2030,7 @@ export default function MCDMCalculator() {
     }
 
     // Calculate AHP weights if AHP method is selected
-    if (weightMethod === "ahp") {
+    if (finalWeightMethod === "ahp") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/ahp-weights", {
@@ -2031,12 +2050,11 @@ export default function MCDMCalculator() {
         const data: AHPResult = await response.json()
 
         setAhpResult(data)
-        setCriteria(
-          criteria.map((crit) => ({
-            ...crit,
-            weight: data.weights[crit.id] || crit.weight,
-          })),
-        )
+        currentCriteria = currentCriteria.map((crit) => ({
+          ...crit,
+          weight: data.weights[crit.id] || crit.weight,
+        }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating AHP weights:", error)
         alert("Error calculating AHP weights. Using equal weight instead.")
@@ -2046,7 +2064,7 @@ export default function MCDMCalculator() {
     }
 
     // Calculate PIPRECIA weights if PIPRECIA method is selected
-    if (weightMethod === "piprecia") {
+    if (finalWeightMethod === "piprecia") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/piprecia-weights", {
@@ -2066,12 +2084,11 @@ export default function MCDMCalculator() {
         const data: PipreciaResult = await response.json()
 
         setPipreciaResult(data)
-        setCriteria(
-          criteria.map((crit) => ({
-            ...crit,
-            weight: data.weights[crit.id] || crit.weight,
-          })),
-        )
+        currentCriteria = currentCriteria.map((crit) => ({
+          ...crit,
+          weight: data.weights[crit.id] || crit.weight,
+        }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating PIPRECIA weights:", error)
         alert("Error calculating PIPRECIA weights. Using equal weight instead.")
@@ -2081,7 +2098,7 @@ export default function MCDMCalculator() {
     }
 
     // Calculate WENSLO weights if WENSLO method is selected
-    if (weightMethod === "wenslo") {
+    if (finalWeightMethod === "wenslo") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/wenslo-weights", {
@@ -2102,12 +2119,11 @@ export default function MCDMCalculator() {
         const data: WensloResult = await response.json()
 
         setWensloResult(data)
-        setCriteria(
-          criteria.map((crit) => ({
-            ...crit,
-            weight: data.weights[crit.id] || crit.weight,
-          })),
-        )
+        currentCriteria = currentCriteria.map((crit) => ({
+          ...crit,
+          weight: data.weights[crit.id] || crit.weight,
+        }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating WENSLO weights:", error)
         alert("Error calculating WENSLO weights. Using equal weight instead.")
@@ -2117,7 +2133,7 @@ export default function MCDMCalculator() {
     }
 
     // Calculate LOPCOW weights if LOPCOW method is selected
-    if (weightMethod === "lopcow") {
+    if (finalWeightMethod === "lopcow") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/lopcow-weights", {
@@ -2138,12 +2154,11 @@ export default function MCDMCalculator() {
         const data: LopcowResult = await response.json()
 
         setLopcowResult(data)
-        setCriteria(
-          criteria.map((crit) => ({
-            ...crit,
-            weight: data.weights[crit.id] || crit.weight,
-          })),
-        )
+        currentCriteria = currentCriteria.map((crit) => ({
+          ...crit,
+          weight: data.weights[crit.id] || crit.weight,
+        }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating LOPCOW weights:", error)
         alert("Error calculating LOPCOW weights. Using equal weight instead.")
@@ -2155,7 +2170,7 @@ export default function MCDMCalculator() {
 
 
     // Calculate DEMATEL weights if DEMATEL method is selected
-    if (weightMethod === "dematel") {
+    if (finalWeightMethod === "dematel") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/dematel-weights", {
@@ -2176,12 +2191,11 @@ export default function MCDMCalculator() {
         const data: DematelResult = await response.json()
 
         setDematelResult(data)
-        setCriteria(
-          criteria.map((crit) => ({
-            ...crit,
-            weight: data.weights[crit.id] || crit.weight,
-          })),
-        )
+        currentCriteria = currentCriteria.map((crit) => ({
+          ...crit,
+          weight: data.weights[crit.id] || crit.weight,
+        }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating DEMATEL weights:", error)
         alert("Error calculating DEMATEL weights. Using equal weight instead.")
@@ -2190,7 +2204,7 @@ export default function MCDMCalculator() {
       }
     }
 
-    if (weightMethod === "sd") {
+    if (finalWeightMethod === "sd") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/sd-weights", {
@@ -2201,7 +2215,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate SD weights")
         const data: SDResult = await response.json()
         setSdResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating SD weights:", error)
         alert("Error calculating SD weights. Using equal weight instead.")
@@ -2210,7 +2225,7 @@ export default function MCDMCalculator() {
       }
     }
 
-    if (weightMethod === "variance") {
+    if (finalWeightMethod === "variance") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/variance-weights", {
@@ -2221,7 +2236,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate Variance weights")
         const data: VarianceResult = await response.json()
         setVarianceResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating Variance weights:", error)
         alert("Error calculating Variance weights. Using equal weight instead.")
@@ -2230,7 +2246,7 @@ export default function MCDMCalculator() {
       }
     }
 
-    if (weightMethod === "mad") {
+    if (finalWeightMethod === "mad") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/mad-weights", {
@@ -2241,7 +2257,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate MAD weights")
         const data: MADResult = await response.json()
         setMadResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating MAD weights:", error)
         alert("Error calculating MAD weights. Using equal weight instead.")
@@ -2250,7 +2267,7 @@ export default function MCDMCalculator() {
       }
     }
 
-    if (weightMethod === "dbw") {
+    if (finalWeightMethod === "dbw") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/dbw-weights", {
@@ -2261,7 +2278,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate DBW weights")
         const data: DBWResult = await response.json()
         setDbwResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating DBW weights:", error)
         alert("Error calculating DBW weights. Using equal weight instead.")
@@ -2270,7 +2288,7 @@ export default function MCDMCalculator() {
       }
     }
 
-    if (weightMethod === "svp") {
+    if (finalWeightMethod === "svp") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/svp-weights", {
@@ -2281,7 +2299,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate SVP weights")
         const data: SVPResult = await response.json()
         setSvpResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating SVP weights:", error)
         alert("Error calculating SVP weights. Using equal weight instead.")
@@ -2290,7 +2309,7 @@ export default function MCDMCalculator() {
       }
     }
 
-    if (weightMethod === "mdm") {
+    if (finalWeightMethod === "mdm") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/mdm-weights", {
@@ -2301,7 +2320,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate MDM weights")
         const data: MDMResult = await response.json()
         setMdmResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating MDM weights:", error)
         alert("Error calculating MDM weights. Using equal weight instead.")
@@ -2310,7 +2330,7 @@ export default function MCDMCalculator() {
       }
     }
 
-    if (weightMethod === "lsw") {
+    if (finalWeightMethod === "lsw") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/lsw-weights", {
@@ -2321,7 +2341,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate LSW weights")
         const data: LSWResult = await response.json()
         setLswResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating LSW weights:", error)
         alert("Error calculating LSW weights. Using equal weight instead.")
@@ -2330,7 +2351,7 @@ export default function MCDMCalculator() {
       }
     }
 
-    if (weightMethod === "gpow") {
+    if (finalWeightMethod === "gpow") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/gpow-weights", {
@@ -2341,7 +2362,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate GPOW weights")
         const data: GPOWResult = await response.json()
         setGpowResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating GPOW weights:", error)
         alert("Error calculating GPOW weights. Using equal weight instead.")
@@ -2350,7 +2372,7 @@ export default function MCDMCalculator() {
       }
     }
 
-    if (weightMethod === "lpwm") {
+    if (finalWeightMethod === "lpwm") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/lpwm-weights", {
@@ -2361,7 +2383,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate LPWM weights")
         const data: LPWMResult = await response.json()
         setLpwmResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating LPWM weights:", error)
         alert("Error calculating LPWM weights. Using equal weight instead.")
@@ -2370,10 +2393,10 @@ export default function MCDMCalculator() {
       }
     }
 
-    if (["roc", "rr"].includes(weightMethod)) {
+    if (["roc", "rr"].includes(finalWeightMethod)) {
       setIsLoading(true)
       try {
-        const response = await fetch(`/api/${weightMethod}-weights`, {
+        const response = await fetch(`/api/${finalWeightMethod}-weights`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -2381,26 +2404,25 @@ export default function MCDMCalculator() {
             ranks: Object.fromEntries(Object.entries(criteriaRanks).map(([id, r]) => [id, parseInt(r) || 0]))
           }),
         })
-        if (!response.ok) throw new Error(`Failed to calculate ${weightMethod.toUpperCase()} weights`)
+        if (!response.ok) throw new Error(`Failed to calculate ${finalWeightMethod.toUpperCase()} weights`)
         const data = await response.json()
-        if (weightMethod === "roc") setRocResult(data)
+        if (finalWeightMethod === "roc") setRocResult(data)
         else setRrResult(data)
 
-        setCriteria(
-          criteria.map((crit) => ({
-            ...crit,
-            weight: data.weights[crit.id] || crit.weight,
-          })),
-        )
+        currentCriteria = currentCriteria.map((crit) => ({
+          ...crit,
+          weight: data.weights[crit.id] || crit.weight,
+        }))
+        setCriteria(currentCriteria)
       } catch (error) {
-        console.error(`Error calculating ${weightMethod} weights:`, error)
-        alert(`Error calculating ${weightMethod} weights. Using equal weight instead.`)
+        console.error(`Error calculating ${finalWeightMethod} weights:`, error)
+        alert(`Error calculating ${finalWeightMethod} weights. Using equal weight instead.`)
       } finally {
         setIsLoading(false)
       }
     }
 
-    if (weightMethod === "pcwm") {
+    if (finalWeightMethod === "pcwm") {
       setIsLoading(true)
       try {
         const response = await fetch("/api/pcwm-weights", {
@@ -2411,7 +2433,8 @@ export default function MCDMCalculator() {
         if (!response.ok) throw new Error("Failed to calculate PCWM weights")
         const data: PCWMResult = await response.json()
         setPcwmResult(data)
-        setCriteria(criteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight })))
+        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+        setCriteria(currentCriteria)
       } catch (error) {
         console.error("Error calculating PCWM weights:", error)
         alert("Error calculating PCWM weights. Using equal weight instead.")
@@ -2436,7 +2459,7 @@ export default function MCDMCalculator() {
       // Always clear returnToTab after it has been used for navigation
       setReturnToTab(null)
     }
-    return true
+    return { success: true, updatedCriteria: currentCriteria }
   }
 
   const exportResultsToExcel = async () => {
@@ -2643,6 +2666,40 @@ export default function MCDMCalculator() {
               ? "Pearson Correlation Weight Method (PCWM) is an objective weighting approach that determines weights based on the degree of independence and conflict (correlation) between criteria. It utilizes the Pearson correlation coefficient, formalized by Karl Pearson."
               : weightMethodInfo?.description
     : methodInfo?.description
+
+  // Result page handlers
+  const handleRankingMethodChange = async (newMethod: MCDMMethod) => {
+    setMethod(newMethod)
+    await handleCalculate(newMethod)
+  }
+
+  const handleWeightMethodChange = async (newWeightMethod: WeightMethod) => {
+    setWeightMethod(newWeightMethod)
+
+    // Handle subjective methods by opening their respective dialogs
+    if (newWeightMethod === "ahp") {
+      setIsAhpDialogOpen(true)
+      return
+    }
+    if (newWeightMethod === "piprecia") {
+      setIsPipreciaDialogOpen(true)
+      return
+    }
+    if (newWeightMethod === "swara") {
+      setIsSwaraDialogOpen(true)
+      return
+    }
+    if (["roc", "rr"].includes(newWeightMethod)) {
+      setIsRanksDialogOpen(true)
+      return
+    }
+
+    // For objective methods, calculate immediately
+    const { success, updatedCriteria } = await handleSaveTable(false, newWeightMethod)
+    if (success) {
+      await handleCalculate(method, updatedCriteria)
+    }
+  }
 
   // Sensitivity Analysis calculation function
   const handleSensitivityAnalysis = async () => {
@@ -2969,7 +3026,11 @@ export default function MCDMCalculator() {
         {(sensitivityLoading || comparisonLoading || isLoading) && (
           <div className="processing-ring-overlay">
             <div className="processing-ring-container">
-              <div className="processing-ring"></div>
+              <div className="premium-spinner">
+                {[...Array(12)].map((_, i) => (
+                  <div key={i}></div>
+                ))}
+              </div>
             </div>
             <p className="processing-text">
               {sensitivityLoading ? "Analyzing Sensitivity..." :
@@ -4222,7 +4283,6 @@ export default function MCDMCalculator() {
                                       min="0"
                                       value={alt.scores[crit.id] ?? ""}
                                       onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
-                                      onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
                                       onKeyDown={handleKeyDown}
                                       className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
                                     />
@@ -4911,7 +4971,7 @@ export default function MCDMCalculator() {
                                   return { alt, min, q1, median, q3, max, whiskerLow, whiskerHigh, n: values.length }
                                 }).filter((d): d is any => d !== null)
 
-                                if (boxData.length === 0) return null
+                                if (boxData.length === 0) return <></>
                                 const allVals = boxData.flatMap(d => [d.whiskerLow, d.whiskerHigh])
                                 const minV = Math.min(...allVals)
                                 const maxV = Math.max(...allVals)
@@ -6068,7 +6128,11 @@ export default function MCDMCalculator() {
         {isLoading && (
           <div className="processing-ring-overlay">
             <div className="processing-ring-container">
-              <div className="processing-ring"></div>
+              <div className="premium-spinner">
+                {[...Array(12)].map((_, i) => (
+                  <div key={i}></div>
+                ))}
+              </div>
             </div>
             <p className="processing-text">
               {weightMethod ? "Calculating Weights..." : "Calculating Ranking..."}
@@ -6547,7 +6611,6 @@ export default function MCDMCalculator() {
                                   placeholder="Enter value"
                                   value={alt.scores[crit.id] ?? ""}
                                   onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
-                                  onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
                                   onKeyDown={handleKeyDown}
                                   className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
                                 />
@@ -6590,13 +6653,13 @@ export default function MCDMCalculator() {
                     const isSpecialWeight = ["entropy", "critic", "ahp", "piprecia", "merec", "swara", "wenslo", "lopcow", "dematel", "sd", "variance", "mad", "dbw", "svp"].includes(weightMethod)
                     // Always pass false to handleSaveTable to prevent auto-navigation to dashboard
                     // We want to proceed to the matrix step or calculation results instead
-                    const success = await handleSaveTable(false)
+                    const result = await handleSaveTable(false)
 
-                    if (success) {
+                    if (result.success) {
                       if (isSpecialWeight) {
                         setCurrentStep("matrix")
                       } else {
-                        handleCalculate()
+                        handleCalculate(method, result.updatedCriteria)
                       }
                     }
                   }}
@@ -6803,79 +6866,23 @@ export default function MCDMCalculator() {
   if (currentStep === "matrix") {
     return (
       <>
-        <SidebarProvider>
+        <div className="min-h-screen bg-gray-50/50 pb-20">
           {isLoading && (
             <div className="processing-ring-overlay">
               <div className="processing-ring-container">
-                <div className="processing-ring"></div>
+                <div className="premium-spinner">
+                  {[...Array(12)].map((_, i) => (
+                    <div key={i}></div>
+                  ))}
+                </div>
               </div>
               <p className="processing-text">
                 {weightMethod ? "Calculating Weights..." : "Calculating Ranking..."}
               </p>
             </div>
           )}
-          <Sidebar side="left" className="border-r border-gray-200 bg-gray-50">
-            <SidebarHeader>
-              <div className="flex w-full gap-2 p-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => setSidebarCategory("objective")}
-                  className={`flex-1 text-xs font-semibold h-8 rounded-md transition-colors ${sidebarCategory === "objective"
-                    ? "bg-[#FFCCBC] text-black hover:bg-[#FFAB91]"
-                    : "bg-transparent text-gray-600 hover:bg-gray-100"
-                    }`}
-                >
-                  Objective
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setSidebarCategory("subjective")}
-                  className={`flex-1 text-xs font-semibold h-8 rounded-md transition-colors ${sidebarCategory === "subjective"
-                    ? "bg-[#FFF9C4] text-black hover:bg-[#FFF59D]"
-                    : "bg-transparent text-gray-600 hover:bg-gray-100"
-                    }`}
-                >
-                  Subjective
-                </Button>
-              </div>
-            </SidebarHeader>
-            <SidebarContent>
-              <SidebarMenu>
-                {WEIGHT_METHODS.filter((w) => {
-                  const isSubjective = ["ahp", "piprecia", "swara", "roc", "rr"].includes(w.value)
-                  return sidebarCategory === "subjective" ? isSubjective : !isSubjective
-                }).map((w) => (
-                  <SidebarMenuItem key={w.value}>
-                    <SidebarMenuButton
-                      isActive={weightMethod === w.value}
-                      onClick={() => {
-                        if (w.value === "piprecia") {
-                          setIsPipreciaDialogOpen(true)
-                        } else if (w.value === "ahp") {
-                          setIsAhpDialogOpen(true)
-                        } else if (w.value === "swara") {
-                          setIsSwaraDialogOpen(true)
-                        } else if (["roc", "rr"].includes(w.value)) {
-                          setWeightMethod(w.value)
-                          setIsRanksDialogOpen(true)
-                        } else {
-                          calculateWeights(w.value)
-                        }
-                      }}
-                      className="cursor-pointer"
-                    >
-                      <span className="truncate">{w.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarContent>
-          </Sidebar>
 
           <main className="flex-1 min-h-screen bg-white p-2 md:p-3 flex flex-col">
-            <div className="flex items-center gap-2 mb-2">
-              <SidebarTrigger className="md:hidden border-gray-200 text-black" />
-            </div>
 
             <div className="max-w-7xl mx-auto w-full">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
@@ -6929,7 +6936,58 @@ export default function MCDMCalculator() {
                 </BreadcrumbList>
               </Breadcrumb>
 
-              <div className="flex justify-end gap-2 mb-4">
+              {/* Weight Method Selector */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Weight Method:</span>
+                  <Select value={weightMethod} onValueChange={(val: WeightMethod) => {
+                    if (val === "piprecia") {
+                      setIsPipreciaDialogOpen(true)
+                    } else if (val === "ahp") {
+                      setIsAhpDialogOpen(true)
+                    } else if (val === "swara") {
+                      setIsSwaraDialogOpen(true)
+                    } else if (["roc", "rr"].includes(val)) {
+                      setWeightMethod(val)
+                      setIsRanksDialogOpen(true)
+                    } else {
+                      calculateWeights(val)
+                    }
+                  }}>
+                    <SelectTrigger className="h-9 text-xs border-gray-200 text-black bg-white shadow-sm hover:border-gray-300 transition-colors min-w-[180px]">
+                      <SelectValue placeholder="Select Weight Method" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      <SelectGroup>
+                        <SelectLabel className="text-xs font-bold text-blue-600 px-2 py-1.5 bg-blue-50/50">Objective Weights</SelectLabel>
+                        {WEIGHT_METHODS.filter(m => !["ahp", "piprecia", "swara", "roc", "rr"].includes(m.value)).map((m) => (
+                          <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
+                            {m.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel className="text-xs font-bold text-purple-600 px-2 py-1.5 bg-purple-50/50 mt-1">Subjective Weights</SelectLabel>
+                        {WEIGHT_METHODS.filter(m => ["ahp", "piprecia", "swara", "roc", "rr"].includes(m.value)).map((m) => (
+                          <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
+                            {m.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => setCurrentStep("table")}
+                  variant="outline"
+                  className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
+                >
+                  Edit
+                </Button>
+              </div>
+
+              <div className="flex justify-end gap-2 mb-4" style={{ display: 'none' }}>
                 <Button
                   type="button"
                   onClick={() => setCurrentStep("table")}
@@ -10055,7 +10113,7 @@ export default function MCDMCalculator() {
               )}
             </div >
           </main >
-        </SidebarProvider >
+        </div>
 
         {/* --- ROC & RR Ranks Dialog (Matrix Step) --- */}
         <Dialog open={isRanksDialogOpen} onOpenChange={setIsRanksDialogOpen}>
@@ -10116,7 +10174,10 @@ export default function MCDMCalculator() {
                 type="button"
                 onClick={async () => {
                   setIsRanksDialogOpen(false)
-                  await calculateWeights(weightMethod)
+                  const updatedCriteria = await calculateWeights(weightMethod)
+                  if (currentStep === "calculate") {
+                    handleCalculate(method, updatedCriteria)
+                  }
                 }}
                 className="bg-black text-white hover:bg-gray-800 text-xs h-8"
               >
@@ -10145,6 +10206,10 @@ export default function MCDMCalculator() {
                 }))
                 setCriteria(updatedCriteria)
                 setWeightMethod("piprecia")
+
+                if (currentStep === "calculate") {
+                  handleCalculate(method, updatedCriteria)
+                }
               }}
             />
           </DialogContent>
@@ -10169,6 +10234,10 @@ export default function MCDMCalculator() {
                 }))
                 setCriteria(updatedCriteria)
                 setWeightMethod("ahp")
+
+                if (currentStep === "calculate") {
+                  handleCalculate(method, updatedCriteria)
+                }
               }}
             />
           </DialogContent>
@@ -10282,6 +10351,10 @@ export default function MCDMCalculator() {
                     }))
                     setCriteria(updatedCriteria)
                     setWeightMethod("swara")
+
+                    if (currentStep === "calculate") {
+                      handleCalculate(method, updatedCriteria)
+                    }
                   } catch (error) {
                     console.error("SWARA calculation error:", error)
                     alert("Error calculating SWARA weights")
@@ -10301,82 +10374,111 @@ export default function MCDMCalculator() {
   // Results view after calculation
   if (currentStep === "calculate") {
     return (
-      <SidebarProvider>
-        <Sidebar side="left">
-          <SidebarHeader>
-            <div className="px-4 py-2 font-bold text-lg">MCDM Methods</div>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarMenu>
-              {MCDM_METHODS.map((m) => (
-                <SidebarMenuItem key={m.value}>
-                  <SidebarMenuButton
-                    isActive={method === m.value}
-                    onClick={() => {
-                      setMethod(m.value)
-                      handleCalculate(m.value)
-                    }}
-                    className="cursor-pointer"
-                  >
-                    <span className="truncate">{m.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarContent>
-        </Sidebar>
+      <div className="min-h-screen bg-gray-50/50 pb-20">
 
         <main className="flex-1 min-h-screen bg-white p-2 md:p-3 flex flex-col">
-          <div className="flex items-center gap-2 mb-2">
-            <SidebarTrigger />
-          </div>
+
 
           {!apiResults ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <div className="animate-spin h-10 w-10 border-4 border-dotted border-blue-900 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <div className="flex justify-center mb-6">
+                  <div className="premium-spinner">
+                    {[...Array(12)].map((_, i) => (
+                      <div key={i}></div>
+                    ))}
+                  </div>
+                </div>
                 <p className="text-sm text-gray-700">Loading results...</p>
               </div>
             </div>
           ) : (
             <div className="max-w-7xl mx-auto w-full">
-              <div className="flex items-center gap-3 mb-4">
-                <Button
-                  type="button"
-                  onClick={() => setIsMethodSelectionSheetOpen(true)}
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
-                  title="Select Ranking Method"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-                <div>
-                  <h1 className="text-xl md:text-2xl font-bold text-black">Results</h1>
-                  <p className="text-xs text-gray-700">Calculation Results</p>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    onClick={() => setIsMethodSelectionSheetOpen(true)}
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent flex-shrink-0"
+                    title="Select Ranking Method"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                  <div className="flex-shrink-0">
+                    <h1 className="text-xl md:text-2xl font-bold text-black">Results</h1>
+                    <p className="text-xs text-gray-700">Calculation Results</p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex justify-end gap-2 mb-4">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setCurrentStep("matrix")
-                    setMethod(method)
-                  }}
-                  variant="outline"
-                  className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
-                >
-                  Back
-                </Button>
+                {/* Selectors in the middle */}
+                <div className="flex flex-wrap items-center gap-4 flex-1 justify-center">
+                  <div className="flex flex-col gap-1 min-w-[160px]">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase px-1 tracking-wider">Weight Method</span>
+                    <Select value={weightMethod} onValueChange={(val: WeightMethod) => handleWeightMethodChange(val)}>
+                      <SelectTrigger className="h-9 text-xs border-gray-200 text-black bg-white shadow-sm hover:border-gray-300 transition-colors">
+                        <SelectValue placeholder="Select Weight Method" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        <SelectGroup>
+                          <SelectLabel className="text-xs font-bold text-blue-600 px-2 py-1.5 bg-blue-50/50">Objective Weights</SelectLabel>
+                          {WEIGHT_METHODS.filter(m => !["ahp", "piprecia", "swara", "roc", "rr"].includes(m.value)).map((m) => (
+                            <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
+                              {m.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                        <SelectGroup>
+                          <SelectLabel className="text-xs font-bold text-purple-600 px-2 py-1.5 bg-purple-50/50 mt-1">Subjective Weights</SelectLabel>
+                          {WEIGHT_METHODS.filter(m => ["ahp", "piprecia", "swara", "roc", "rr"].includes(m.value)).map((m) => (
+                            <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
+                              {m.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <Button
-                  type="button"
-                  onClick={() => setCurrentStep("matrix")}
-                  className="bg-black text-white hover:bg-gray-800 text-xs h-8"
-                >
-                  New Calculation
-                </Button>
+                  <div className="flex flex-col gap-1 min-w-[160px]">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase px-1 tracking-wider">Ranking Method</span>
+                    <Select value={method} onValueChange={(val: MCDMMethod) => handleRankingMethodChange(val)}>
+                      <SelectTrigger className="h-9 text-xs border-gray-200 text-black bg-white shadow-sm hover:border-gray-300 transition-colors">
+                        <SelectValue placeholder="Select Ranking Method" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {MCDM_METHODS.map((m) => (
+                          <SelectItem key={m.value} value={m.value} className="text-xs">
+                            {m.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setCurrentStep("matrix")
+                      setMethod(method)
+                    }}
+                    variant="outline"
+                    className="text-xs h-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent px-4"
+                  >
+                    Back
+                  </Button>
+
+                  <Button
+                    type="button"
+                    onClick={() => setCurrentStep("matrix")}
+                    className="bg-black text-white hover:bg-gray-800 text-xs h-9 px-4"
+                  >
+                    New Calculation
+                  </Button>
+                </div>
               </div>
 
               <Card className="border-gray-200 bg-white shadow-none mb-6">
@@ -13245,6 +13347,187 @@ export default function MCDMCalculator() {
           )}
         </main>
 
+        {/* --- Dialogs for Calculate Step --- */}
+        {/* AHP Dialog */}
+        <Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
+            <DialogTitle>AHP Weight Calculator</DialogTitle>
+            <AHPFormula
+              criteria={criteria}
+              initialMatrix={ahpMatrix}
+              onMatrixChange={setAhpMatrix}
+              onWeightsCalculated={(weights) => {
+                setAhpCalculatedWeights(weights)
+                setIsAhpDialogOpen(false)
+                const updatedCriteria = criteria.map(c => ({ ...c, weight: weights[c.id] || 0 }))
+                setCriteria(updatedCriteria)
+                setWeightMethod("ahp")
+                handleCalculate(method, updatedCriteria)
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* PIPRECIA Dialog */}
+        <Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+            <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
+            <PIPRECIAFormula
+              criteria={criteria}
+              initialScores={pipreciaScores}
+              onScoresChange={setPipreciaScores}
+              onWeightsCalculated={(weights) => {
+                setPipreciaCalculatedWeights(weights)
+                setIsPipreciaDialogOpen(false)
+                const updatedCriteria = criteria.map(c => ({ ...c, weight: weights[c.id] || 0 }))
+                setCriteria(updatedCriteria)
+                setWeightMethod("piprecia")
+                handleCalculate(method, updatedCriteria)
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* SWARA Dialog */}
+        <Dialog open={isSwaraDialogOpen} onOpenChange={setIsSwaraDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+            <DialogHeader>
+              <DialogTitle>SWARA Weight Calculator</DialogTitle>
+              <DialogDescription className="text-xs">
+                Enter comparative importance coefficients (s<sub>j</sub>) for each criterion.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="text-xs font-semibold">Rank</TableHead>
+                      <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                      <TableHead className="text-xs font-semibold text-center">Coefficient (s<sub>j</sub>)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {criteria.map((crit, index) => (
+                      <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                        <TableCell className="py-3 px-4 font-medium text-black text-xs">{index + 1}</TableCell>
+                        <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                        <TableCell className="text-center py-3 px-4 text-xs text-black">
+                          {index === 0 ? (
+                            <span className="text-xs text-gray-500">0 (most important)</span>
+                          ) : (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={swaraCoefficients[crit.id] || ""}
+                              onChange={(e) => setSwaraCoefficients({ ...swaraCoefficients, [crit.id]: e.target.value })}
+                              onKeyDown={handleKeyDown}
+                              className="w-24 h-7 text-xs text-center mx-auto"
+                              placeholder="0.00"
+                            />
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setIsSwaraDialogOpen(false)} className="text-xs">Cancel</Button>
+              <Button
+                type="button"
+                className="bg-black text-white hover:bg-gray-800 text-xs"
+                onClick={async () => {
+                  try {
+                    const coeffs: Record<string, number> = {}
+                    criteria.forEach((crit, index) => {
+                      if (index === 0) coeffs[crit.id] = 0
+                      else coeffs[crit.id] = parseFloat(swaraCoefficients[crit.id]) || 0
+                    })
+                    const response = await fetch("/api/swara-weights", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ criteria, coefficients: coeffs }),
+                    })
+                    if (!response.ok) throw new Error("Failed to calculate SWARA weights")
+                    const data: SWARAResult = await response.json()
+                    setSwaraResult(data)
+                    setSwaraCalculatedWeights(data.weights)
+                    setIsSwaraDialogOpen(false)
+                    const updatedCriteria = criteria.map(c => ({ ...c, weight: data.weights[c.id] || 0 }))
+                    setCriteria(updatedCriteria)
+                    setWeightMethod("swara")
+                    handleCalculate(method, updatedCriteria)
+                  } catch (error) {
+                    console.error("SWARA calculation error:", error)
+                    alert("Error calculating SWARA weights")
+                  }
+                }}
+              >
+                Calculate Weights
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* ROC & RR Dialog */}
+        <Dialog open={isRanksDialogOpen} onOpenChange={setIsRanksDialogOpen}>
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto w-full">
+            <DialogHeader>
+              <DialogTitle>{weightMethod === "roc" ? "ROC" : "RR"} Weight Calculator</DialogTitle>
+              <DialogDescription className="text-xs">
+                Enter the rank order for each criterion (1 = most important).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                      <TableHead className="text-xs font-semibold text-center w-24">Rank</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {criteria.map((crit) => (
+                      <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                        <TableCell className="py-2 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                        <TableCell className="text-center py-2 px-4 text-xs text-black">
+                          <Input
+                            type="number"
+                            min="1"
+                            max={criteria.length}
+                            className="w-16 h-7 text-xs text-center mx-auto"
+                            value={criteriaRanks[crit.id] || ""}
+                            onChange={(e) => setCriteriaRanks(prev => ({ ...prev, [crit.id]: e.target.value }))}
+                            onKeyDown={handleKeyDown}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setIsRanksDialogOpen(false)} className="text-xs h-8">Cancel</Button>
+              <Button
+                type="button"
+                className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                onClick={async () => {
+                  setIsRanksDialogOpen(false)
+                  const updatedCriteria = await calculateWeights(weightMethod)
+                  handleCalculate(method, updatedCriteria)
+                }}
+              >
+                Calculate Weights
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Method Selection Sheet */}
         <Sheet open={isMethodSelectionSheetOpen} onOpenChange={setIsMethodSelectionSheetOpen}>
           <SheetContent side="left" className="w-[300px] sm:w-[400px] overflow-y-auto">
@@ -13280,7 +13563,7 @@ export default function MCDMCalculator() {
             </div>
           </SheetContent>
         </Sheet>
-      </SidebarProvider >
+      </div>
     )
   }
 }

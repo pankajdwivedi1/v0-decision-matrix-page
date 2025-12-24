@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 const themes = [
     { id: 'white', bg: '#ffffff', text: '#000000', label: 'Default' },
     { id: 'charcoal', bg: '#1e293b', text: '#ffffff', label: 'Charcoal' },
-    { id: 'darkgray', bg: '#f1f5f9', text: '#000000', label: 'Cool Gray' },
+    { id: 'gray', bg: '#475569', text: '#ffffff', label: 'Slate Gray' },
     { id: 'green', bg: '#064e3b', text: '#ffffff', label: 'Deep Forest' },
     { id: 'brown', bg: '#3b0a01', text: '#ffffff', label: 'Rich Espresso' },
     { id: 'darkblue', bg: '#0f172a', text: '#ffffff', label: 'Midnight Blue' },

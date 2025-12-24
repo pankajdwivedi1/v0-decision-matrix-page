@@ -106,6 +106,28 @@ body {
   color: #ffffff !important;
 }
 
+/* Fix for ranking method and weight method cards with bg-white */
+.theme-dark-text .border-blue-400\/40.bg-white,
+.theme-dark-text .border-emerald-400\/40.bg-white {
+  background-color: rgba(30, 41, 59, 0.6) !important;
+  /* Dark slate with transparency */
+  border-color: rgba(59, 130, 246, 0.4) !important;
+  color: #0c0b0b !important;
+}
+
+.theme-dark-text .border-blue-400\/40.bg-white h4,
+.theme-dark-text .border-emerald-400\/40.bg-white h4,
+.theme-dark-text .border-blue-400\/40.bg-white div,
+.theme-dark-text .border-emerald-400\/40.bg-white div {
+  color: #ffffff !important;
+}
+
+.theme-dark-text .border-blue-400\/40.bg-white:hover,
+.theme-dark-text .border-emerald-400\/40.bg-white:hover {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  border-color: rgba(59, 130, 246, 0.6) !important;
+}
+
 /* Status Badges / Alerts */
 .theme-dark-text .bg-teal-50,
 .theme-dark-text .bg-teal-100,
@@ -119,6 +141,19 @@ body {
 .theme-dark-text .bg-red-100 {
   background-color: rgba(255, 255, 255, 0.12) !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+/* Fix for gray-100 badges (like Alternatives badge) */
+.theme-dark-text .bg-gray-100 {
+  background-color: rgba(10, 12, 15, 0.4) !important;
+  /* Slate gray with transparency */
+  border-color: rgba(1, 5, 10, 0.5) !important;
+  color: #190505 !important;
+}
+
+.theme-dark-text .bg-gray-100 span,
+.theme-dark-text .bg-gray-100 .text-gray-800 {
   color: #ffffff !important;
 }
 
@@ -335,6 +370,26 @@ body {
 .theme-dark-text .bg-blue-100 {
   background-color: rgba(59, 130, 246, 0.2) !important;
   color: #93c5fd !important;
+}
+
+/* Yellow/Amber backgrounds for highlighted table rows - Using bright cyan for visibility */
+.theme-dark-text .bg-yellow-50,
+.theme-dark-text .bg-yellow-100 {
+  background-color: rgb(6, 182, 212) !important;
+  /* Bright Cyan - highly visible */
+  border-color: rgb(103, 232, 249) !important;
+  color: #000000 !important;
+  /* Black text on bright cyan */
+}
+
+.theme-dark-text .bg-yellow-50 td,
+.theme-dark-text .bg-yellow-50 th,
+.theme-dark-text .bg-yellow-100 td,
+.theme-dark-text .bg-yellow-100 th {
+  color: #000000 !important;
+  /* Black text for maximum contrast */
+  font-weight: 700 !important;
+  background-color: transparent !important;
 }
 
 /* Ensure white states only apply when NOT in a dark theme */
@@ -561,73 +616,98 @@ body {
     align-items: center;
   }
 
-  .processing-ring {
-    width: 56px;
-    height: 56px;
-    border: 4px dotted #1e3a8a;
-    border-top: 4px solid transparent;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+  .premium-spinner {
+    position: relative;
+    width: 64px;
+    height: 64px;
   }
 
-  .processing-ring-dots {
+  .premium-spinner div {
     position: absolute;
-    width: 100%;
-    height: 100%;
-    animation: spin 3s linear infinite;
+    width: 4px;
+    height: 14px;
+    background: #22d3ee;
+    /* Bright Cyan (Cyan 400) */
+    border-radius: 2px;
+    transform-origin: center 32px;
+    left: 30px;
+    top: 6px;
+    animation: premium-spinner-fade 1.2s linear infinite;
   }
 
-  .processing-dot {
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    background: #1e3a8a;
-    border-radius: 50%;
-    opacity: 0.6;
+  .premium-spinner div:nth-child(1) {
+    transform: rotate(0deg);
+    animation-delay: -1.1s;
   }
 
-  .processing-dot:nth-child(1) {
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
+  .premium-spinner div:nth-child(2) {
+    transform: rotate(30deg);
+    animation-delay: -1s;
   }
 
-  .processing-dot:nth-child(2) {
-    top: 14%;
-    right: 14%;
+  .premium-spinner div:nth-child(3) {
+    transform: rotate(60deg);
+    animation-delay: -0.9s;
   }
 
-  .processing-dot:nth-child(3) {
-    top: 50%;
-    right: 0;
-    transform: translateY(-50%);
+  .premium-spinner div:nth-child(4) {
+    transform: rotate(90deg);
+    animation-delay: -0.8s;
   }
 
-  .processing-dot:nth-child(4) {
-    bottom: 14%;
-    right: 14%;
+  .premium-spinner div:nth-child(5) {
+    transform: rotate(120deg);
+    animation-delay: -0.7s;
   }
 
-  .processing-dot:nth-child(5) {
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
+  .premium-spinner div:nth-child(6) {
+    transform: rotate(150deg);
+    animation-delay: -0.6s;
   }
 
-  .processing-dot:nth-child(6) {
-    bottom: 14%;
-    left: 14%;
+  .premium-spinner div:nth-child(7) {
+    transform: rotate(180deg);
+    animation-delay: -0.5s;
   }
 
-  .processing-dot:nth-child(7) {
-    top: 50%;
-    left: 0;
-    transform: translateY(-50%);
+  .premium-spinner div:nth-child(8) {
+    transform: rotate(210deg);
+    animation-delay: -0.4s;
   }
 
-  .processing-dot:nth-child(8) {
-    top: 14%;
-    left: 14%;
+  .premium-spinner div:nth-child(9) {
+    transform: rotate(240deg);
+    animation-delay: -0.3s;
+  }
+
+  .premium-spinner div:nth-child(10) {
+    transform: rotate(270deg);
+    animation-delay: -0.2s;
+  }
+
+  .premium-spinner div:nth-child(11) {
+    transform: rotate(300deg);
+    animation-delay: -0.1s;
+  }
+
+  .premium-spinner div:nth-child(12) {
+    transform: rotate(330deg);
+    animation-delay: 0s;
+  }
+
+  @keyframes premium-spinner-fade {
+    0% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0.15;
+    }
+  }
+
+  .theme-dark-text .premium-spinner div {
+    background: #67e8f9;
+    /* Extra bright cyan for dark mode */
   }
 
   .processing-text {
@@ -635,7 +715,8 @@ body {
     font-family: inherit;
     font-size: 14px;
     font-weight: 600;
-    color: #1e3a8a;
+    color: #22d3ee;
+    /* Bright cyan text */
     letter-spacing: 0.5px;
     text-transform: uppercase;
     animation: pulse 1.5s ease-in-out infinite;
