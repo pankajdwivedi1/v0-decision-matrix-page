@@ -91,14 +91,7 @@ export default function EqualWeightsFormula() {
             margin-bottom: 2rem !important;
             line-height: 1.8 !important;
           }
-          /* Add more space to gray boxes */
-          .bg-gray-50 {
-            padding: 1.5rem !important;
-            margin: 1rem 0 !important;
-            display: block !important;
-            width: 100% !important;
-            overflow-x: auto;
-          }
+          
           /* Card styling */
           .step-card {
             background: #fff;
@@ -143,10 +136,7 @@ export default function EqualWeightsFormula() {
 
           /* Mobile adjustments */
           @media (max-width: 640px) {
-            .bg-gray-50 {
-              padding: 0.75rem !important;
-              margin: 0.75rem 0 !important;
-            }
+            
             .latex {
               font-size: 0.75rem !important;
             }
@@ -212,7 +202,7 @@ export default function EqualWeightsFormula() {
           <h2>Step 5: Calculate Equal Weights for Each Criterion</h2>
           <p>The equal weight method assigns the same weight to every criterion:</p>
 
-          <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+          <div className="bg-gray-50 rounded-lg mb-4">
             <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.formula}\\]` }} />
           </div>
 
@@ -248,7 +238,7 @@ export default function EqualWeightsFormula() {
         {/* Constraint */}
         <div className="mt-4">
           <p className="mb-2 font-semibold">Constraint (weight sum):</p>
-          <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+          <div className="bg-gray-50 rounded-lg mb-4">
             <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.sum}\\]` }} />
           </div>
         </div>

@@ -66,21 +66,11 @@ export default function MULTIMOORAFormula() {
             margin-bottom: 2rem !important;
             line-height: 1.8 !important;
           }
-          /* Add more space to gray boxes */
-          .bg-gray-50 {
-            padding: 1.5rem !important;
-            margin: 1rem 0 !important;
-            display: block !important;
-            width: 100% !important;
-            overflow-x: auto;
-          }
+          
 
           /* Mobile adjustments */
           @media (max-width: 640px) {
-            .bg-gray-50 {
-              padding: 0.75rem !important;
-              margin: 0.75rem 0 !important;
-            }
+            
             .latex {
               font-size: 0.75rem !important;
             }
@@ -113,19 +103,19 @@ export default function MULTIMOORAFormula() {
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 1-3. Preparation</h2>
         <p className="mb-2">Construct matrix, normalize (Vector), and weight:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }} />
         </div>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_norm}\\]` }} />
         </div>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_weight}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 4a. Ratio System (RS)</h2>
         <p className="mb-2">Arithmetic weighted aggregation (like MOORA):</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_rs}\\]` }} />
         </div>
         <p className="text-sm text-gray-600 text-center mb-4">Rank Descending (Higher is better)</p>
@@ -134,25 +124,25 @@ export default function MULTIMOORAFormula() {
         <p className="mb-2">Maximal distance from reference point (Min-Max Metric):</p>
 
         <p className="mb-2 text-center">Reference Point:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_rp_ref}\\]` }} />
         </div>
         <p className="mt-4 mb-2 text-center">Distance:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_rp}\\]` }} />
         </div>
         <p className="text-sm text-gray-600 text-center mb-4">Rank Ascending (Lower distance is better)</p>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 4c. Full Multiplicative Form (FMF)</h2>
         <p className="mb-2">Geometric weighted aggregation:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_fmf}\\]` }} />
         </div>
         <p className="text-sm text-gray-600 text-center mb-4">Rank Descending (Higher is better)</p>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 5. Final Ranking</h2>
         <p className="mb-2">Aggregate the three rankings using Dominance Theory (e.g., Copeland's method or average rank):</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_combine}\\]` }} />
         </div>
 

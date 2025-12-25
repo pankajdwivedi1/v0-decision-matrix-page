@@ -84,21 +84,11 @@ export default function EDASFormula() {
             margin-bottom: 2rem !important;
             line-height: 1.8 !important;
           }
-          /* Add more space to gray boxes */
-          .bg-gray-50 {
-            padding: 1.5rem !important;
-            margin: 1rem 0 !important;
-            display: block !important;
-            width: 100% !important;
-            overflow-x: auto;
-          }
+          
 
           /* Mobile adjustments */
           @media (max-width: 640px) {
-            .bg-gray-50 {
-              padding: 0.75rem !important;
-              margin: 0.75rem 0 !important;
-            }
+            
             .latex {
               font-size: 0.75rem !important;
             }
@@ -131,13 +121,13 @@ export default function EDASFormula() {
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 1. Decision Matrix</h2>
         <p className="mb-2">Construct the decision matrix:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 2. Average Solution (AV)</h2>
         <p className="mb-2">Calculate the average value for each criterion:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_formula}\\]` }} />
         </div>
 
@@ -145,12 +135,12 @@ export default function EDASFormula() {
         <p className="mb-2">Calculate the positive distance from average:</p>
 
         <p className="font-semibold mb-2 text-center">Beneficial criteria (Desirable or Maximum)</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_benefit}\\]` }} />
         </div>
 
         <p className="font-semibold mb-2 text-center">Non-beneficial criteria (Undesirable or Minimum)</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_cost}\\]` }} />
         </div>
 
@@ -158,12 +148,12 @@ export default function EDASFormula() {
         <p className="mb-2">Calculate the negative distance from average:</p>
 
         <p className="font-semibold mb-2 text-center">Beneficial criteria (Desirable or Maximum)</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_benefit}\\]` }} />
         </div>
 
         <p className="font-semibold mb-2 text-center">Non-beneficial criteria (Undesirable or Minimum)</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_cost}\\]` }} />
         </div>
 
@@ -171,12 +161,12 @@ export default function EDASFormula() {
         <p className="mb-2">Calculate the weighted sums for PDA and NDA:</p>
 
         <p className="font-semibold mb-2 text-center">Weighted Sum PDA</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_pda}\\]` }} />
         </div>
 
         <p className="font-semibold mb-2 text-center">Weighted Sum NDA</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_nda}\\]` }} />
         </div>
 
@@ -184,24 +174,24 @@ export default function EDASFormula() {
         <p className="mb-2">Normalize the weighted sums:</p>
 
         <p className="font-semibold mb-2 text-center">Normalized SP (NSP)</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_sp}\\]` }} />
         </div>
 
         <p className="font-semibold mb-2 text-center">Normalized SN (NSN)</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_sn}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 7. Appraisal Score (AS)</h2>
         <p className="mb-2">Calculate the final appraisal score:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step7_formula}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 8. Ranking</h2>
         <p className="mb-2">Rank alternatives by AS (higher is better):</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.ranking}\\]` }} />
         </div>
 

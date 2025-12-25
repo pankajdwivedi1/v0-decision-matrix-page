@@ -57,9 +57,9 @@ export default function MABACFormula() {
           .latex mjx-container { font-size: 0.875rem !important; max-width: 100% !important; overflow-x: auto; overflow-y: hidden; margin: 0.75rem 0 !important; padding: 0.5rem 0 !important; text-align: center !important; }
           .latex mjx-math { font-size: 0.875rem !important; outline: none !important; }
           ol li { margin-bottom: 2rem !important; line-height: 1.8 !important; }
-          .bg-gray-50 { padding: 1.5rem !important; margin: 1rem 0 !important; display: block !important; width: 100% !important; overflow-x: auto; }
+          
           @media (max-width: 640px) {
-            .bg-gray-50 { padding: 0.75rem !important; margin: 0.75rem 0 !important; }
+            
             .latex { font-size: 0.75rem !important; }
             .latex mjx-container { margin: 0.5rem 0 !important; padding: 0.25rem 0 !important; }
             h1 { font-size: 1.25rem !important; margin-bottom: 1rem !important; }
@@ -78,42 +78,42 @@ export default function MABACFormula() {
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 1. Decision Matrix</h2>
         <p className="mb-2">The process begins with a decision matrix of alternatives vs. criteria:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
             <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 2. Normalization</h2>
         <p className="mb-2">Normalize the decision matrix (Min-Max):</p>
         <p className="font-semibold mb-2 text-center">Beneficial criteria</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_benefit}\\]` }} />
         </div>
         <p className="font-semibold mb-2 text-center">Non-beneficial criteria</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_cost}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 3. Weighted Matrix</h2>
         <p className="mb-2">Calculate the elements of the weighted matrix V:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 4. Border Approximation Area (G)</h2>
         <p className="mb-2">Determine the border approximation area for each criterion:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 5. Distance Matrix (Q)</h2>
         <p className="mb-2">Calculate the distance of alternatives from the border approximation area:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step5}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 6. Ranking</h2>
         <p className="mb-2">Calculate the final scores for each alternative by summing the distances:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step6}\\]` }} />
         </div>
 

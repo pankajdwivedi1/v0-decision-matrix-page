@@ -75,23 +75,11 @@ export default function GRAFormula() {
             margin-bottom: 2rem !important;
             line-height: 1.8 !important;
           }
-          /* Add more space to formula boxes */
-          .formula-box {
-            padding: 1.5rem !important;
-            margin: 1rem 0 !important;
-            display: block !important;
-            width: 100% !important;
-            overflow-x: auto;
-            background-color: #f9fafb; /* bg-gray-50 */
-            border-radius: 0.5rem;
-          }
+          
 
           /* Mobile adjustments */
           @media (max-width: 640px) {
-            .formula-box {
-              padding: 0.75rem !important;
-              margin: 0.75rem 0 !important;
-            }
+            
             .latex {
               font-size: 0.75rem !important;
             }
@@ -112,32 +100,32 @@ export default function GRAFormula() {
 
                 <h2 className="text-xl font-semibold mt-6 mb-2 text-black">Step 1. Decision Matrix</h2>
                 <p className="mb-2 text-black">Construct the decision matrix consisting of m alternatives and n criteria.</p>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step1_matrix}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2 text-black">Step 2. Normalization</h2>
                 <p className="mb-2 text-black">For beneficial criteria:</p>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_ben}\\]` }} />
                 </div>
                 <p className="mb-2 text-black">For non-beneficial criteria:</p>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_cost}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2 text-black">Step 3. Deviation Sequence</h2>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_delta}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2 text-black">Step 4. Grey Relational Coefficient (GRC)</h2>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_grc}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2 text-black">Step 5. Grey Relational Grade (GRG)</h2>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_grg}\\]` }} />
                 </div>
 

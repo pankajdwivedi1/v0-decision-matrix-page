@@ -117,21 +117,11 @@ export default function ELECTRE2Formula({ compact = false }: ELECTRE2FormulaProp
             margin-bottom: 2rem !important;
             line-height: 1.8 !important;
           }
-          /* Add more space to gray boxes */
-          .bg-gray-50 {
-            padding: 1.5rem !important;
-            margin: 1rem 0 !important;
-            display: block !important;
-            width: 100% !important;
-            overflow-x: auto;
-          }
+          
 
           /* Mobile adjustments */
           @media (max-width: 640px) {
-            .bg-gray-50 {
-              padding: 0.75rem !important;
-              margin: 0.75rem 0 !important;
-            }
+            
             .latex {
               font-size: 0.75rem !important;
             }
@@ -184,7 +174,7 @@ export default function ELECTRE2Formula({ compact = false }: ELECTRE2FormulaProp
             <div className="mb-2 font-semibold">
               Decision Matrix Construction: Construct the decision matrix with alternatives as rows and criteria as columns.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -197,7 +187,7 @@ export default function ELECTRE2Formula({ compact = false }: ELECTRE2FormulaProp
             <div className="mb-2 font-semibold">
               Normalization: Normalize the decision matrix using vector normalization.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -210,7 +200,7 @@ export default function ELECTRE2Formula({ compact = false }: ELECTRE2FormulaProp
             <div className="mb-2 font-semibold">
               Concordance Index: Calculate the concordance index for each pair of alternatives.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -223,7 +213,7 @@ export default function ELECTRE2Formula({ compact = false }: ELECTRE2FormulaProp
             <div className="mb-2 font-semibold">
               Discordance Index: Calculate the discordance index for each pair of alternatives.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -236,7 +226,7 @@ export default function ELECTRE2Formula({ compact = false }: ELECTRE2FormulaProp
             <div className="mb-2 font-semibold">
               Strong Outranking Relation: Build strong outranking relation using strict thresholds.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center mb-2"
                 style={{ fontSize: "0.875rem" }}
@@ -254,7 +244,7 @@ export default function ELECTRE2Formula({ compact = false }: ELECTRE2FormulaProp
             <div className="mb-2 font-semibold">
               Weak Outranking Relation: Build weak outranking relation using relaxed thresholds.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center mb-2"
                 style={{ fontSize: "0.875rem" }}
@@ -272,7 +262,7 @@ export default function ELECTRE2Formula({ compact = false }: ELECTRE2FormulaProp
             <div className="mb-2 font-semibold">
               Score Calculation: Calculate score based on strong outranking relations for complete ranking.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -285,7 +275,7 @@ export default function ELECTRE2Formula({ compact = false }: ELECTRE2FormulaProp
             <div className="mb-2 font-semibold">
               Ranking: Rank alternatives based on their scores.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}

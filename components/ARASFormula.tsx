@@ -82,23 +82,11 @@ export default function ARASFormula() {
             margin-bottom: 2rem !important;
             line-height: 1.8 !important;
           }
-          /* Add more space to formula boxes */
-          .formula-box {
-            padding: 1.5rem !important;
-            margin: 1rem 0 !important;
-            display: block !important;
-            width: 100% !important;
-            overflow-x: auto;
-            background-color: #f9fafb; /* bg-gray-50 */
-            border-radius: 0.5rem;
-          }
+          
 
           /* Mobile adjustments */
           @media (max-width: 640px) {
-            .formula-box {
-              padding: 0.75rem !important;
-              margin: 0.75rem 0 !important;
-            }
+            
             .latex {
               font-size: 0.75rem !important;
             }
@@ -120,7 +108,7 @@ export default function ARASFormula() {
                     <li>m be the number of alternatives</li>
                     <li>n be the number of criteria</li>
                 </ul>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step1_matrix}\\]` }} />
                 </div>
                 <p className="mb-4 text-black">where \(A_0\) denotes the optimal (ideal) alternative.</p>
@@ -129,67 +117,67 @@ export default function ARASFormula() {
                 <p className="mb-2 text-black">For each criterion \(C_j\):</p>
 
                 <p className="mb-2 font-semibold text-black">Benefit (MAX) criterion</p>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_ben}\\]` }} />
                 </div>
 
                 <p className="mb-2 font-semibold text-black">Cost (MIN) criterion</p>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_cost}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2 text-black">3. Normalization of the Decision Matrix</h2>
 
                 <h3 className="text-lg font-semibold mt-4 mb-2 text-black">3.1 Benefit (MAX) Criteria</h3>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_ben}\\]` }} />
                 </div>
 
                 <h3 className="text-lg font-semibold mt-4 mb-2 text-black">3.2 Cost (MIN) Criteria</h3>
                 <p className="mb-2 text-black">First, compute the reciprocal:</p>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_cost_recip}\\]` }} />
                 </div>
                 <p className="mb-2 text-black">Then normalize:</p>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_cost_norm}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2 text-black">4. Weighted Normalized Decision Matrix</h2>
                 <p className="mb-2 text-black">Let the weight vector be:</p>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_weight_vec}\\]` }} />
                 </div>
                 <p className="mb-2 text-black">The weighted normalized value is:</p>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_weighted}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2 text-black">5. Optimality Function</h2>
                 <p className="mb-2 text-black">The overall performance score of alternative \(A_i\) is calculated as:</p>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_S_i}\\]` }} />
                 </div>
                 <p className="mb-2 text-black">where:</p>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_S_0}\\]` }} />
                 </div>
                 <p className="mb-4 text-black">is the score of the optimal alternative.</p>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2 text-black">6. Utility Degree</h2>
                 <p className="mb-2 text-black">The utility degree of each alternative is defined as:</p>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_K_i}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2 text-black">7. Ranking of Alternatives</h2>
                 <p className="mb-2 text-black">Alternatives are ranked in descending order of the utility degree:</p>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.step7_ranking}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-8 mb-4 text-black">Compact Algorithm Representation</h2>
-                <div className="formula-box">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex" dangerouslySetInnerHTML={{ __html: `\\[${latex.compact}\\]` }} />
                 </div>
 

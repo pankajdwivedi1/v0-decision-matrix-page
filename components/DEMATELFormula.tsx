@@ -73,13 +73,7 @@ export default function DEMATELFormula() {
             font-size: 0.875rem !important;
             outline: none !important;
           }
-          .bg-gray-50 {
-            padding: 1.5rem !important;
-            margin: 1rem 0 !important;
-            display: block !important;
-            width: 100% !important;
-            overflow-x: auto;
-          }
+          
         `
             }} />
             <div ref={containerRef} className="prose max-w-none bg-white border border-gray-200 rounded-lg p-3 md:p-6 text-justify font-['Times_New_Roman',_Times,_serif] leading-relaxed">
@@ -88,34 +82,34 @@ export default function DEMATELFormula() {
                 </h1>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2">Step 1. Initial Direct-Relation Matrix</h2>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2">Step 2. Normalization</h2>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_1}\\]` }} />
                     <div className="latex text-sm text-center" dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_2}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2">Step 3. Total-Relation Matrix</h2>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" dangerouslySetInnerHTML={{ __html: `\\[${latex.step3}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2">Step 4. Influence and Dependence</h2>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" dangerouslySetInnerHTML={{ __html: `\\[${latex.step4}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2">Step 5. Prominence and Relation</h2>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_1}\\]` }} />
                     <div className="latex text-sm text-center" dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_2}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2">Step 6. DEMATEL Weights</h2>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" dangerouslySetInnerHTML={{ __html: `\\[${latex.step6}\\]` }} />
                 </div>
             </div>

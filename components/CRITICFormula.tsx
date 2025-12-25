@@ -79,21 +79,11 @@ export default function CRITICFormula() {
             margin-bottom: 2rem !important;
             line-height: 1.8 !important;
           }
-          /* Add more space to gray boxes */
-          .bg-gray-50 {
-            padding: 1.5rem !important;
-            margin: 1rem 0 !important;
-            display: block !important;
-            width: 100% !important;
-            overflow-x: auto;
-          }
+          
 
           /* Mobile adjustments */
           @media (max-width: 640px) {
-            .bg-gray-50 {
-              padding: 0.75rem !important;
-              margin: 0.75rem 0 !important;
-            }
+            
             .latex {
               font-size: 0.75rem !important;
             }
@@ -126,7 +116,7 @@ export default function CRITICFormula() {
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 1. Decision Matrix</h2>
         <p className="mb-2">The process begins with a decision matrix of alternatives vs. criteria:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
             <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }} />
         </div>
 
@@ -134,36 +124,36 @@ export default function CRITICFormula() {
         <p className="mb-2">Normalize the decision matrix (Min-Max):</p>
 
         <p className="font-semibold mb-2 text-center">Beneficial criteria (Desirable or Maximum)</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_benefit}\\]` }} />
         </div>
 
         <p className="font-semibold mb-2 text-center">Non-beneficial criteria (Undesirable or Minimum)</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_cost}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 3. Standard Deviation (Contrast)</h2>
         <p className="mb-2">Calculate the standard deviation of each normalized criterion:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_std}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 4. Correlation (Conflict)</h2>
         <p className="mb-2">Calculate the correlation coefficient between criteria pairs:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_corr}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 5. Information Measure</h2>
         <p className="mb-2">Calculate the total information contained in each criterion:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step5_info}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 6. Weights</h2>
         <p className="mb-2">Normalize the information measure to get final weights:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step6_weight}\\]` }} />
         </div>
 

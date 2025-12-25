@@ -3119,59 +3119,67 @@ export default function MCDMCalculator() {
           {homeTab === "rankingMethods" && (
             <>
               {alternatives.length > 0 && criteria.length > 0 && (
-                <div className="space-y-3 mb-6">
-                  <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
-                    <p className="font-semibold">✓ Data has uploaded</p>
-                    <p className="mt-1">
-                      {alternatives.length} alternatives × {criteria.length} criteria
-                    </p>
-                  </div>
+                <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm text-black">Ranking Methods / Calculator</CardTitle>
+                    <CardDescription className="text-xs text-gray-700">
+                      Review and edit the decision matrix before calculation
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
+                      <p className="font-semibold">✓ Data has uploaded</p>
+                      <p className="mt-1">
+                        {alternatives.length} alternatives × {criteria.length} criteria
+                      </p>
+                    </div>
 
-                  <div className="table-responsive border border-gray-200 rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50">
-                          <TableHead className="text-xs text-black font-semibold w-24">Alternative</TableHead>
-                          {criteria.map((crit) => (
-                            <TableHead key={crit.id} className="text-xs text-black font-semibold text-center min-w-20">
-                              <div className="flex flex-col items-center">
-                                <div className="flex items-center gap-1">
-                                  <div className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</div>
-                                  <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
-                                    {crit.type === "beneficial" ? "▲" : "▼"}
-                                  </span>
-                                </div>
-                                <div className="text-[10px] text-gray-500 font-normal">
-                                  {crit.type === "beneficial" ? "Max" : "Min"}
-                                </div>
-                              </div>
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {alternatives.map((alt) => (
-                          <TableRow key={alt.id}>
-                            <TableCell className="text-xs text-black font-medium">{alt.name}</TableCell>
+                    <div className="table-responsive border border-gray-200 rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50">
+                            <TableHead className="text-xs text-black font-semibold w-24">Alternative</TableHead>
                             {criteria.map((crit) => (
-                              <TableCell key={crit.id} className="p-1">
-                                <Input
-                                  type="number"
-                                  step="any"
-                                  min="0"
-                                  value={alt.scores[crit.id] ?? ""}
-                                  onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
-                                  onKeyDown={handleKeyDown}
-                                  className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
-                                />
-                              </TableCell>
+                              <TableHead key={crit.id} className="text-xs text-black font-semibold text-center min-w-20">
+                                <div className="flex flex-col items-center">
+                                  <div className="flex items-center gap-1">
+                                    <div className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</div>
+                                    <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
+                                      {crit.type === "beneficial" ? "▲" : "▼"}
+                                    </span>
+                                  </div>
+                                  <div className="text-[10px] text-gray-500 font-normal">
+                                    {crit.type === "beneficial" ? "Max" : "Min"}
+                                  </div>
+                                </div>
+                              </TableHead>
                             ))}
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
+                        </TableHeader>
+                        <TableBody>
+                          {alternatives.map((alt) => (
+                            <TableRow key={alt.id}>
+                              <TableCell className="text-xs text-black font-medium">{alt.name}</TableCell>
+                              {criteria.map((crit) => (
+                                <TableCell key={crit.id} className="p-1">
+                                  <Input
+                                    type="number"
+                                    step="any"
+                                    min="0"
+                                    value={alt.scores[crit.id] ?? ""}
+                                    onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
+                                  />
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
 
               {alternatives.length > 0 && criteria.length > 0 && (
@@ -3251,58 +3259,68 @@ export default function MCDMCalculator() {
           {homeTab === "weightMethods" && (
             <>
               {alternatives.length > 0 && criteria.length > 0 && (
-                <div className="space-y-3 mb-6">
-                  <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
-                    <p className="font-semibold">✓ Data has uploaded</p>
-                    <p className="mt-1">
-                      {alternatives.length} alternatives × {criteria.length} criteria
-                    </p>
-                  </div>
+                <>
+                  <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Weight Methods</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Review and edit the decision matrix before weight calculation
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
+                        <p className="font-semibold">✓ Data has uploaded</p>
+                        <p className="mt-1">
+                          {alternatives.length} alternatives × {criteria.length} criteria
+                        </p>
+                      </div>
 
-                  <div className="border border-gray-200 rounded-lg overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50">
-                          <TableHead className="text-xs text-black font-semibold w-24">Alternative</TableHead>
-                          {criteria.map((crit) => (
-                            <TableHead key={crit.id} className="text-xs text-black font-semibold text-center min-w-20">
-                              <div className="flex flex-col items-center">
-                                <div className="flex items-center gap-1">
-                                  <div className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</div>
-                                  <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
-                                    {crit.type === "beneficial" ? "▲" : "▼"}
-                                  </span>
-                                </div>
-                                <div className="text-[10px] text-gray-500 font-normal">
-                                  {crit.type === "beneficial" ? "Max" : "Min"}
-                                </div>
-                              </div>
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {alternatives.map((alt) => (
-                          <TableRow key={alt.id}>
-                            <TableCell className="text-xs text-black font-medium">{alt.name}</TableCell>
-                            {criteria.map((crit) => (
-                              <TableCell key={crit.id} className="p-1">
-                                <Input
-                                  type="number"
-                                  step="any"
-                                  min="0"
-                                  value={alt.scores[crit.id] ?? ""}
-                                  onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
-                                  onKeyDown={handleKeyDown}
-                                  className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
-                                />
-                              </TableCell>
+                      <div className="border border-gray-200 rounded-lg overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50">
+                              <TableHead className="text-xs text-black font-semibold w-24">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className="text-xs text-black font-semibold text-center min-w-20">
+                                  <div className="flex flex-col items-center">
+                                    <div className="flex items-center gap-1">
+                                      <div className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</div>
+                                      <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
+                                        {crit.type === "beneficial" ? "▲" : "▼"}
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] text-gray-500 font-normal">
+                                      {crit.type === "beneficial" ? "Max" : "Min"}
+                                    </div>
+                                  </div>
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id}>
+                                <TableCell className="text-xs text-black font-medium">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="p-1">
+                                    <Input
+                                      type="number"
+                                      step="any"
+                                      min="0"
+                                      value={alt.scores[crit.id] ?? ""}
+                                      onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                      onKeyDown={handleKeyDown}
+                                      className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
+                                    />
+                                  </TableCell>
+                                ))}
+                              </TableRow>
                             ))}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
 
                   <div className="mt-4 mb-2">
                     <Button
@@ -3393,7 +3411,7 @@ export default function MCDMCalculator() {
                       </DialogContent>
                     </Dialog>
                   </div>
-                </div>
+                </>
               )}
               <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
                 <CardHeader className="pb-3 text-center sm:text-left">
@@ -6135,157 +6153,17 @@ export default function MCDMCalculator() {
               </div>
             </div>
             <p className="processing-text">
-              {weightMethod ? "Calculating Weights..." : "Calculating Ranking..."}
+              {homeTab === "weightMethods" ? "Calculating Weights..." : "Calculating Ranking..."}
             </p>
           </div>
         )}
-        <Sidebar className="border-r border-gray-200 bg-gray-50">
-          <SidebarHeader className="py-2 px-3">
-            <h2 className="text-xs font-bold text-black">MCDM Methods</h2>
-          </SidebarHeader>
-          <SidebarContent className="px-2">
-            <div className="space-y-3">
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setRankingOpen((prev) => !prev)}
-                  className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
-                >
-                  <span>Ranking Methods</span>
-                  {rankingOpen ? (
-                    <ChevronDown className="w-3 h-3" />
-                  ) : (
-                    <ChevronRight className="w-3 h-3" />
-                  )}
-                </button>
-                {rankingOpen && (
-                  <SidebarMenu>
-                    {MCDM_METHODS.map((m) => (
-                      <SidebarMenuItem key={m.value}>
-                        <SidebarMenuButton
-                          onClick={() => {
-                            setActiveFormulaType("method")
-                            setMethod(m.value)
-                            setIsDialogOpen(true)
-                          }}
-                          isActive={method === m.value}
-                          className={`text-xs ${method === m.value
-                            ? "bg-black text-white"
-                            : "text-black hover:bg-gray-100"
-                            }`}
-                        >
-                          <span>{m.label}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                )}
-              </div>
 
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setWeightOpen((prev) => !prev)}
-                  className="flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold text-black hover:bg-gray-100 rounded"
-                >
-                  <span>Weight Methods</span>
-                  {weightOpen ? (
-                    <ChevronDown className="w-3 h-3" />
-                  ) : (
-                    <ChevronRight className="w-3 h-3" />
-                  )}
-                </button>
-                {weightOpen && (
-                  <SidebarMenu>
-                    <div className="flex w-full gap-2 px-2 py-1 mb-1">
-                      <Button
-                        variant="ghost"
-                        onClick={() => setSidebarCategory("objective")}
-                        className={`flex-1 text-[10px] font-bold h-7 rounded-sm transition-colors uppercase tracking-wide ${sidebarCategory === "objective"
-                          ? "bg-[#FFE0B2] text-[#E65100]"
-                          : "bg-transparent text-gray-500 hover:bg-gray-100"
-                          }`}
-                      >
-                        Objective
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={() => setSidebarCategory("subjective")}
-                        className={`flex-1 text-[10px] font-bold h-7 rounded-sm transition-colors uppercase tracking-wide ${sidebarCategory === "subjective"
-                          ? "bg-[#FFF9C4] text-[#FBC02D]"
-                          : "bg-transparent text-gray-500 hover:bg-gray-100"
-                          }`}
-                      >
-                        Subjective
-                      </Button>
-                    </div>
-
-                    <div className={`p-2 rounded-md mb-2 ${sidebarCategory === "objective" ? "bg-[#FFE0B2]" : "bg-[#FFF9C4]"}`}>
-                      {WEIGHT_METHODS.filter(w => {
-                        const isSubjective = ["ahp", "piprecia", "swara", "roc", "rr"].includes(w.value)
-                        return sidebarCategory === "subjective" ? isSubjective : !isSubjective
-                      }).map((w) => (
-                        <SidebarMenuItem key={w.value}>
-                          <SidebarMenuButton
-                            onClick={async () => {
-                              const allScoresFilled = alternatives.every((alt) =>
-                                criteria.every((crit) => {
-                                  const score = alt.scores[crit.id]
-                                  return score !== undefined && score !== "" && Number(score) >= 0
-                                }),
-                              )
-
-                              if (!allScoresFilled) {
-                                alert("Please fill in all score values with numbers greater than or equal to 0")
-                                setWeightMethod(w.value)
-                                return
-                              }
-
-                              if (w.value === "piprecia") {
-                                setIsPipreciaDialogOpen(true)
-                                return
-                              }
-                              if (w.value === "ahp") {
-                                setIsAhpDialogOpen(true)
-                                return
-                              }
-                              if (w.value === "swara") {
-                                setIsSwaraDialogOpen(true)
-                                return
-                              }
-
-                              if (["roc", "rr"].includes(w.value)) {
-                                setWeightMethod(w.value)
-                                setIsRanksDialogOpen(true)
-                                return
-                              }
-
-                              await calculateWeights(w.value)
-                              setCurrentStep("matrix")
-                            }}
-                            isActive={weightMethod === w.value}
-                            className={`text-xs ${weightMethod === w.value
-                              ? "bg-black text-white"
-                              : "text-black hover:bg-white/50"
-                              }`}
-                          >
-                            <span>{w.label}</span>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      ))}
-                    </div>
-                  </SidebarMenu>
-                )}
-              </div>
-            </div>
-          </SidebarContent >
-        </Sidebar >
 
         <main className="flex-1 h-screen bg-white flex flex-col">
           <div className="p-2 md:p-3 border-b border-gray-200 flex-shrink-0">
             <div className="max-w-7xl mx-auto">
               <div className="flex items-center gap-3 mb-4">
-                <SidebarTrigger className="md:hidden border-gray-200 text-black" />
+
                 <Button
                   onClick={() => setCurrentStep("home")}
                   variant="outline"
@@ -6501,7 +6379,12 @@ export default function MCDMCalculator() {
                     </Button>
                     <Button
                       type="button"
-                      onClick={handleImportSelectedData}
+                      onClick={async () => {
+                        await handleImportSelectedData()
+                        if (homeTab === "rankingComparison" || homeTab === "sensitivityAnalysis") {
+                          setCurrentStep("home")
+                        }
+                      }}
                       className="bg-black text-white hover:bg-gray-800 text-xs h-8"
                     >
                       Import Selected Data
@@ -6637,39 +6520,38 @@ export default function MCDMCalculator() {
                   </p>
                 </div>
               )}
-              <div className="flex gap-2 justify-end">
-                <Button
-                  type="button"
-                  onClick={() => setCurrentStep("input")}
-                  variant="outline"
-                  className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
-                >
-                  Back
-                </Button>
-                <Button
-                  type="button"
-                  onClick={async (e) => {
-                    e.preventDefault()
-                    const isSpecialWeight = ["entropy", "critic", "ahp", "piprecia", "merec", "swara", "wenslo", "lopcow", "dematel", "sd", "variance", "mad", "dbw", "svp"].includes(weightMethod)
-                    // Always pass false to handleSaveTable to prevent auto-navigation to dashboard
-                    // We want to proceed to the matrix step or calculation results instead
-                    const result = await handleSaveTable(false)
+              {(!homeTab || (homeTab !== "rankingComparison" && homeTab !== "sensitivityAnalysis")) && (
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    type="button"
+                    onClick={() => setCurrentStep("input")}
+                    variant="outline"
+                    className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={async (e) => {
+                      e.preventDefault()
+                      const result = await handleSaveTable(false)
 
-                    if (result.success) {
-                      if (isSpecialWeight) {
-                        setCurrentStep("matrix")
-                      } else {
-                        handleCalculate(method, result.updatedCriteria)
+                      if (result.success) {
+                        if (homeTab === "rankingComparison") {
+                          setCurrentStep("home")
+                        } else if (homeTab === "weightMethods") {
+                          setCurrentStep("matrix")
+                        } else {
+                          await handleCalculate(method, result.updatedCriteria)
+                        }
                       }
-                    }
-                  }}
-                  className="bg-black text-white hover:bg-gray-800 text-xs h-8"
-                >
-                  {["entropy", "critic", "ahp", "piprecia", "merec", "swara", "wenslo", "lopcow", "dematel", "sd", "variance", "mad", "dbw", "svp"].includes(weightMethod)
-                    ? `Calculate ${WEIGHT_METHODS.find((w) => w.value === weightMethod)?.label || weightMethod.toUpperCase()}`
-                    : "Calculate Ranking"}
-                </Button>
-              </div>
+                    }}
+                    className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </main>
@@ -6999,52 +6881,7 @@ export default function MCDMCalculator() {
 
               </div>
 
-              <Card className="border-gray-200 bg-white shadow-none mb-3">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">Evaluation Matrix</CardTitle>
-                  <CardDescription className="text-xs text-gray-700">
-                    Review your decision matrix before calculation
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="table-responsive border border-gray-200 rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
-                          {criteria.map((crit) => (
-                            <TableHead
-                              key={crit.id}
-                              className="text-xs font-semibold text-center py-3 px-4"
-                            >
-                              <div className="flex flex-col items-center">
-                                <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</span>
-                                <span className="text-[10px] text-gray-500 mt-1">{crit.type === "beneficial" ? "↑" : "↓"} ({crit.weight.toFixed(weightsDecimalPlaces)})</span>
-                              </div>
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {alternatives.map((alt) => (
-                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-3 px-4 font-medium text-black text-xs">
-                              {alt.name}
-                            </TableCell>
-                            {criteria.map((crit) => (
-                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                {alt.scores[crit.id] !== undefined && alt.scores[crit.id] !== ""
-                                  ? Number(alt.scores[crit.id]).toString()
-                                  : "-"}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
+
 
               {/* Weight Results Controls */}
               {weightMethod && (
@@ -7098,6 +6935,54 @@ export default function MCDMCalculator() {
                   </Button>
                 </div>
               )}
+              {/* Evaluation Matrix */}
+              <Card className="border-gray-200 bg-white shadow-none mb-3">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-black">Evaluation Matrix</CardTitle>
+                  <CardDescription className="text-xs text-gray-700">
+                    Review your decision matrix before calculation
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-3">
+                  <div className="table-responsive border border-gray-200 rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                          {criteria.map((crit) => (
+                            <TableHead
+                              key={crit.id}
+                              className="text-xs font-semibold text-center py-3 px-4"
+                            >
+                              <div className="flex flex-col items-center">
+                                <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</span>
+                                <span className="text-[10px] text-gray-500 mt-1">{crit.type === "beneficial" ? "↑" : "↓"} ({crit.weight.toFixed(weightsDecimalPlaces)})</span>
+                              </div>
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {alternatives.map((alt) => (
+                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <TableCell className="py-3 px-4 font-medium text-black text-xs">
+                              {alt.name}
+                            </TableCell>
+                            {criteria.map((crit) => (
+                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                {alt.scores[crit.id] !== undefined && alt.scores[crit.id] !== ""
+                                  ? Number(alt.scores[crit.id]).toString()
+                                  : "-"}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+
 
               {entropyResult && weightMethod === "entropy" && (
                 <>
@@ -10111,6 +9996,7 @@ export default function MCDMCalculator() {
                   </Card>
                 </>
               )}
+
             </div >
           </main >
         </div>
@@ -13529,40 +13415,7 @@ export default function MCDMCalculator() {
         </Dialog>
 
         {/* Method Selection Sheet */}
-        <Sheet open={isMethodSelectionSheetOpen} onOpenChange={setIsMethodSelectionSheetOpen}>
-          <SheetContent side="left" className="w-[300px] sm:w-[400px] overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>Select Ranking Method</SheetTitle>
-              <SheetDescription>
-                Choose a method to recalculate the ranking
-              </SheetDescription>
-            </SheetHeader>
-
-            <div className="mt-6 space-y-2">
-              {MCDM_METHODS.map((m) => (
-                <Button
-                  key={m.value}
-                  variant={method === m.value ? "default" : "outline"}
-                  className={`w-full justify-start text-left h-auto py-3 px-4 ${method === m.value
-                    ? "bg-black text-white hover:bg-gray-800"
-                    : "bg-white text-black hover:bg-gray-50 border-gray-200"
-                    }`}
-                  onClick={async () => {
-                    setMethod(m.value)
-                    setIsMethodSelectionSheetOpen(false)
-                    // Recalculate with the new method
-                    await handleCalculate(m.value)
-                  }}
-                >
-                  <div className="flex flex-col gap-1">
-                    <span className="font-semibold text-sm">{m.label}</span>
-                    <span className="text-xs opacity-70">{m.description}</span>
-                  </div>
-                </Button>
-              ))}
-            </div>
-          </SheetContent>
-        </Sheet>
+        {/* Method Selection Sheet removed */}
       </div>
     )
   }

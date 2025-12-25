@@ -70,21 +70,11 @@ export default function LOPCOWFormula() {
             margin-bottom: 2rem !important;
             line-height: 1.8 !important;
           }
-          /* Add more space to gray boxes */
-          .bg-gray-50 {
-            padding: 1.5rem !important;
-            margin: 1rem 0 !important;
-            display: block !important;
-            width: 100% !important;
-            overflow-x: auto;
-          }
+          
 
           /* Mobile adjustments */
           @media (max-width: 640px) {
-            .bg-gray-50 {
-              padding: 0.75rem !important;
-              margin: 0.75rem 0 !important;
-            }
+            
             .latex {
               font-size: 0.75rem !important;
             }
@@ -115,7 +105,7 @@ export default function LOPCOWFormula() {
 
                 <h3 className="text-lg font-semibold mt-6 mb-2">Step 1. Decision Matrix</h3>
                 <p className="mb-2">Construct the decision matrix:</p>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{
                         __html: `\\[
 X = [x_{i,j}]_{m \\times n}
@@ -125,7 +115,7 @@ X = [x_{i,j}]_{m \\times n}
                 <h3 className="text-lg font-semibold mt-6 mb-2">Step 2. Normalization</h3>
 
                 <p className="mb-2">Benefit criteria:</p>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{
                         __html: `\\[
 r_{i,j}=\\frac{x_{i,j}}{\\sqrt{\\sum_{i=1}^{m} x_{i,j}^2}}
@@ -133,7 +123,7 @@ r_{i,j}=\\frac{x_{i,j}}{\\sqrt{\\sum_{i=1}^{m} x_{i,j}^2}}
                 </div>
 
                 <p className="mb-2">Cost criteria:</p>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{
                         __html: `\\[
 r_{i,j}=\\frac{\\frac{1}{x_{i,j}}}{\\sqrt{\\sum_{i=1}^{m} \\left(\\frac{1}{x_{i,j}}\\right)^2}}
@@ -141,7 +131,7 @@ r_{i,j}=\\frac{\\frac{1}{x_{i,j}}}{\\sqrt{\\sum_{i=1}^{m} \\left(\\frac{1}{x_{i,
                 </div>
 
                 <h3 className="text-lg font-semibold mt-6 mb-2">Step 3. Geometric Mean</h3>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{
                         __html: `\\[
 GM_j = \\left( \\prod_{i=1}^{m} r_{i,j} \\right)^{1/m}
@@ -149,7 +139,7 @@ GM_j = \\left( \\prod_{i=1}^{m} r_{i,j} \\right)^{1/m}
                 </div>
 
                 <h3 className="text-lg font-semibold mt-6 mb-2">Step 4. Logarithmic Percentage Change</h3>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{
                         __html: `\\[
 L_j = -\\ln (GM_j)
@@ -157,7 +147,7 @@ L_j = -\\ln (GM_j)
                 </div>
 
                 <h3 className="text-lg font-semibold mt-6 mb-2">Step 5. LOPCOW Weights</h3>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{
                         __html: `\\[
 w_j = \\frac{L_j}{\\sum_{k=1}^{n} L_k}
@@ -165,7 +155,7 @@ w_j = \\frac{L_j}{\\sum_{k=1}^{n} L_k}
                 </div>
 
                 <p className="mt-4 mb-2">Final weight vector:</p>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{
                         __html: `\\[
 \\mathbf{w} = (w_1, w_2, \\ldots, w_n)

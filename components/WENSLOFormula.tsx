@@ -78,21 +78,11 @@ export default function WENSLOFormula() {
             margin-bottom: 2rem !important;
             line-height: 1.8 !important;
           }
-          /* Add more space to gray boxes */
-          .bg-gray-50 {
-            padding: 1.5rem !important;
-            margin: 1rem 0 !important;
-            display: block !important;
-            width: 100% !important;
-            overflow-x: auto;
-          }
+          
 
           /* Mobile adjustments */
           @media (max-width: 640px) {
-            .bg-gray-50 {
-              padding: 0.75rem !important;
-              margin: 0.75rem 0 !important;
-            }
+            
             .latex {
               font-size: 0.75rem !important;
             }
@@ -121,32 +111,32 @@ export default function WENSLOFormula() {
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 1. Decision Matrix</h2>
         <p className="mb-2">The decision matrix is defined as:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 2. Criterion Type</h2>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 3. Normalization</h2>
         <p className="mb-2">For benefit criteria:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_benefit}\\]` }} />
         </div>
         <p className="mb-2">For cost criteria:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_cost}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 4. Criterion Statistical Score</h2>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 5. WENSLO Weights</h2>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step5}\\]` }} />
         </div>
       </div>

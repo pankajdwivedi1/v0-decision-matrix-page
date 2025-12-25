@@ -72,20 +72,11 @@ export default function SWARAFormula() {
             font-size: 0.875rem !important;
             outline: none !important;
           }
-          .bg-gray-50 {
-            padding: 1.5rem !important;
-            margin: 1rem 0 !important;
-            display: block !important;
-            width: 100% !important;
-            overflow-x: auto;
-          }
+          
 
           /* Mobile adjustments */
           @media (max-width: 640px) {
-             .bg-gray-50 {
-              padding: 0.75rem !important;
-              margin: 0.75rem 0 !important;
-            }
+             
             .latex {
               font-size: 0.75rem !important;
             }
@@ -118,7 +109,7 @@ export default function SWARAFormula() {
 
                 <h2 className="text-xl font-semibold mt-6 mb-2">Step 1. Order the criteria</h2>
                 <p className="mb-2">Arrange criteria by decreasing importance:</p>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }} />
                 </div>
 
@@ -128,21 +119,21 @@ export default function SWARAFormula() {
 
                 <h2 className="text-xl font-semibold mt-6 mb-2">Step 3. Compute step factors and preliminary weights</h2>
                 <p className="mb-2">Define step factors:</p>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_k}\\]` }} />
                 </div>
 
                 <p className="mb-2">Compute preliminary weights recursively:</p>
-                <div className="bg-gray-50 rounded-lg p-4 mb-2 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-2">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_q1}\\]` }} />
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_qj}\\]` }} />
                 </div>
 
                 <h2 className="text-xl font-semibold mt-6 mb-2">Step 4. Normalize to obtain final weights</h2>
                 <p className="mb-2" dangerouslySetInnerHTML={{ __html: "Convert \\(q_j\\) to normalized weights that sum to 1:" }} />
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                     <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4}\\]` }} />
                 </div>
                 <p className="text-sm text-gray-600 text-center mb-4" dangerouslySetInnerHTML={{ __html: "The weight vector is \\(\\mathbf{w} = (w_1, w_2, \\dots, w_n)\\) with \\(\\sum_{j=1}^n w_j = 1\\)." }} />

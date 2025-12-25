@@ -79,15 +79,7 @@ export default function SWEIFormula({ compact = false, landingPage = false, lang
             padding: 0.5rem 0 !important;
             text-align: center !important; 
           }
-          .latex mjx-container {
-            font-size: 0.875rem !important;
-            max-width: 100% !important;
-            overflow-x: auto;
-            overflow-y: hidden;
-            margin: 0.75rem 0 !important;
-            padding: 0.5rem 0 !important;
-            text-align: center !important; 
-          }
+
           .latex mjx-math {
             font-size: 0.875rem !important;
             outline: none !important;
@@ -134,7 +126,7 @@ export default function SWEIFormula({ compact = false, landingPage = false, lang
           }
         `
             }} />
-            <div ref={containerRef} style={{ overflowWrap: "break-word", wordBreak: "break-word" }} className={`prose max-w-none text-justify font-['Times_New_Roman',_Times,_serif] leading-relaxed text-black ${landingPage ? '' : 'bg-white border border-gray-200 rounded-lg p-3 md:p-6'}`}>
+            <div ref={containerRef} style={{ overflowWrap: "break-word", wordBreak: "break-word" }} className={`prose max-w-none text-left font-['Times_New_Roman',_Times,_serif] leading-relaxed text-black ${landingPage ? '' : 'bg-white border border-gray-200 rounded-lg p-3 md:p-6'}`}>
                 {landingPage ? (
                     <div className="py-0">
                         <h1 className="text-xl md:text-2xl font-bold text-center mb-4 text-black">
@@ -153,7 +145,7 @@ export default function SWEIFormula({ compact = false, landingPage = false, lang
                     </div>
                 ) : (
                     <>
-                        <h1 className="text-2xl font-bold text-center mb-8 text-black">
+                        <h1 className="text-2xl font-bold mb-8 text-black">
                             SWEI (Sum Weighted Exponential Information) Method
                         </h1>
 
@@ -170,9 +162,8 @@ export default function SWEIFormula({ compact = false, landingPage = false, lang
                             <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }} />
                         </div>
                         <p className="mb-4">
-                            {`where \\( i = 1, 2, \\dots, m \\) represents the alternatives and \\( j = 1, 2, \\dots, n \\) represents the criteria.`}
+                            where <i>i</i> = 1, 2, ..., <i>m</i> represents the alternatives and <i>j</i> = 1, 2, ..., <i>n</i> represents the criteria.
                         </p>
-
                         <h2 className="text-xl font-semibold mt-6 mb-2">Step&nbsp;II. Normalization</h2>
                         <p className="mb-2">Normalized the IDM values:</p>
 
@@ -219,7 +210,7 @@ export default function SWEIFormula({ compact = false, landingPage = false, lang
                             Finally, the alternative that had the lowest information score got the highest rank, and the
                             alternative that had the highest information score got the lowest rank.
                         </p>
-                        <p className="text-center mb-4">
+                        <p className="mb-4">
                             {`$$ Rank(A_i) \\uparrow \\text{ as } SWEI''_i \\downarrow \\text{ (Ascending)} $$`}
                         </p>
 

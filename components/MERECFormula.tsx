@@ -79,21 +79,11 @@ export default function MERECFormula() {
             margin-bottom: 2rem !important;
             line-height: 1.8 !important;
           }
-           /* Add more space to gray boxes */
-          .bg-gray-50 {
-            padding: 1.5rem !important;
-            margin: 1rem 0 !important;
-            display: block !important;
-            width: 100% !important;
-            overflow-x: auto;
-          }
+           
 
           /* Mobile adjustments */
           @media (max-width: 640px) {
-             .bg-gray-50 {
-              padding: 0.75rem !important;
-              margin: 0.75rem 0 !important;
-            }
+             
             .latex {
               font-size: 0.75rem !important;
             }
@@ -130,44 +120,44 @@ export default function MERECFormula() {
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 1. Decision Matrix</h2>
         <p className="mb-2">Construct the decision matrix:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 2. Normalize the decision matrix</h2>
         <p className="mb-2">Calculate the normalized values. For <strong>benefit</strong> criteria:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_benefit}\\]` }} />
         </div>
         <p className="mb-2">For <strong>cost</strong> criteria:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_cost}\\]` }} />
         </div>
         <p className="mb-2" dangerouslySetInnerHTML={{ __html: "Collect normalized values into \\( R = [r_{ij}]_{m\\times n} \\)." }} />
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 3. Calculate overall performance of alternatives</h2>
         <p className="mb-2" dangerouslySetInnerHTML={{ __html: "Calculate the overall performance score \\(S_i\\) for each alternative:" }} />
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step3}\\]` }} />
         </div>
         <p className="text-sm text-gray-600 text-center mb-4" dangerouslySetInnerHTML={{ __html: "\\(S_i\\) is the baseline score for alternative \\(A_i\\) with all criteria included." }} />
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 4. Calculation of performance with removing each criterion</h2>
         <p className="mb-2" dangerouslySetInnerHTML={{ __html: "Calculate the performance of each alternative when criterion \\(C_k\\) is removed:" }} />
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step4}\\]` }} />
         </div>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 5. Calculation of the removal effect</h2>
         <p className="mb-2">Compute the absolute deviation sum for each criterion:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step5}\\]` }} />
         </div>
         <p className="text-sm text-gray-600 text-center mb-4" dangerouslySetInnerHTML={{ __html: "Large \\(E_k\\) indicates criterion \\(C_k\\) has a strong effect when removed." }} />
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Step 6. Calculation of objective weights</h2>
         <p className="mb-2">Normalize the removal effects to obtain the final weights:</p>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+        <div className="bg-gray-50 rounded-lg mb-4">
           <div className="latex text-sm text-center" style={{ fontSize: "0.875rem" }} dangerouslySetInnerHTML={{ __html: `\\[${latex.step6}\\]` }} />
         </div>
 

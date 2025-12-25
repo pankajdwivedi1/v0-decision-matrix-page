@@ -114,21 +114,11 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             margin-bottom: 2rem !important;
             line-height: 1.8 !important;
           }
-          /* Add more space to gray boxes */
-          .bg-gray-50 {
-            padding: 1.5rem !important;
-            margin: 1rem 0 !important;
-            display: block !important;
-            width: 100% !important;
-            overflow-x: hidden;
-          }
+          
 
           /* Mobile adjustments */
           @media (max-width: 640px) {
-            .bg-gray-50 {
-              padding: 0.75rem !important;
-              margin: 0.75rem 0 !important;
-            }
+            
             .latex {
               font-size: 0.75rem !important;
             }
@@ -181,7 +171,7 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             <div className="mb-2 font-semibold">
               Decision Matrix Construction: Construct the decision matrix with alternatives as rows and criteria as columns.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -194,7 +184,7 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             <div className="mb-2 font-semibold">
               Normalization: Normalize the decision matrix using vector normalization.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -207,7 +197,7 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             <div className="mb-2 font-semibold">
               Preference Degree: For each pair of alternatives and criterion, calculate the preference degree using linear preference function.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center mb-2"
                 style={{ fontSize: "0.875rem" }}
@@ -225,7 +215,7 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             <div className="mb-2 font-semibold">
               Aggregated Preference Degree: Calculate the aggregated preference degree by weighting preference degrees across all criteria.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -238,7 +228,7 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             <div className="mb-2 font-semibold">
               Positive Flow: Calculate the positive flow (outranking flow) for each alternative.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -251,7 +241,7 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             <div className="mb-2 font-semibold">
               Negative Flow: Calculate the negative flow (outranked flow) for each alternative.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -264,7 +254,7 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             <div className="mb-2 font-semibold">
               Net Flow: Calculate the net flow for each alternative.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
@@ -277,7 +267,7 @@ export default function PROMETHEEFormula({ compact = false }: PROMETHEEFormulaPr
             <div className="mb-2 font-semibold">
               Ranking: Rank alternatives based on their net flow values.
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="bg-gray-50 rounded-lg mb-4">
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}

@@ -190,13 +190,7 @@ export default function AHPFormula({
                 margin-bottom: 2rem !important;
                 line-height: 1.8 !important;
               }
-              .bg-gray-50 {
-                padding: 1.5rem !important;
-                margin: 1rem 0 !important;
-                display: block !important;
-                width: 100% !important;
-                overflow-x: auto;
-              }
+              
             `
           }} />
 
@@ -227,7 +221,7 @@ export default function AHPFormula({
                 <div className="mb-2 font-semibold">
                   Step 1. Pairwise Comparison Matrix: Construct the comparison matrix A (where a_ij represents relative importance).
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                   <div
                     className="latex text-sm text-center"
                     dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }}
@@ -239,7 +233,7 @@ export default function AHPFormula({
                 <div className="mb-2 font-semibold">
                   Step 2. Normalization: Normalize the matrix by dividing each value by its column sum.
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                   <div
                     className="latex text-sm text-center"
                     dangerouslySetInnerHTML={{ __html: `\\[${latex.step2_norm}\\]` }}
@@ -251,7 +245,7 @@ export default function AHPFormula({
                 <div className="mb-2 font-semibold">
                   Step 3. Priority Vector (Weights): Calculate the average of each row in the normalized matrix to get weights.
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                   <div
                     className="latex text-sm text-center"
                     dangerouslySetInnerHTML={{ __html: `\\[${latex.step3_weight}\\]` }}
@@ -263,19 +257,19 @@ export default function AHPFormula({
                 <div className="mb-2 font-semibold">
                   Step 4. Consistency Check: Calculate Consistency Index (CI) and Consistency Ratio (CR).
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 mb-2 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-2">
                   <div
                     className="latex text-sm text-center"
                     dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_ci}\\]` }}
                   />
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 mb-2 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-2">
                   <div
                     className="latex text-sm text-center"
                     dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_cr}\\]` }}
                   />
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 overflow-x-auto">
+                <div className="bg-gray-50 rounded-lg mb-4">
                   <div
                     className="latex text-sm text-center"
                     dangerouslySetInnerHTML={{ __html: `\\[${latex.info}\\]` }}
@@ -321,7 +315,7 @@ export default function AHPFormula({
                 <tbody>
                   {matrix.map((row, i) => (
                     <tr key={i} className="hover:bg-gray-50">
-                      <td className="p-2 border border-gray-200 font-semibold text-xs bg-gray-50">
+                      <td className="border border-gray-200 font-semibold text-xs bg-gray-50">
                         {externalCriteria ? externalCriteria[i].name : `C${i + 1}`}
                       </td>
                       {row.map((val, j) => (
