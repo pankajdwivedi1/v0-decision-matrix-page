@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useMemo, Fragment, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -127,6 +127,7 @@ type WeightMethod = "equal" | "entropy" | "critic" | "ahp" | "piprecia" | "merec
   | "pcwm"
   | "roc"
   | "rr"
+  | "custom"
 type PageStep = "home" | "input" | "table" | "matrix" | "calculate"
 type ComparisonResult = {
   method: MCDMMethod
@@ -549,6 +550,11 @@ const WEIGHT_METHODS: { value: WeightMethod; label: string; description: string 
     label: "RR Weight",
     description: "Rank Reciprocal (RR) method assigns weights based on the reciprocal of criteria ranks (Stillwell et al., 1981).",
   },
+  {
+    value: "custom",
+    label: "Enter Own Weight",
+    description: "Manually specify custom weights for each criterion based on your own judgment or external analysis.",
+  },
 ]
 
 
@@ -710,6 +716,12 @@ export default function MCDMCalculator() {
   const [sensitivityWeightMethods, setSensitivityWeightMethods] = useState<string[]>([])
   const [sensitivityCustomWeights, setSensitivityCustomWeights] = useState<Record<string, number>>({})
   const [isCustomWeightsDialogOpen, setIsCustomWeightsDialogOpen] = useState(false)
+
+  // Custom weights state for main flow and ranking comparison
+  const [customWeights, setCustomWeights] = useState<Record<string, string>>({})
+  const [isMainCustomWeightsDialogOpen, setIsMainCustomWeightsDialogOpen] = useState(false)
+  const [isComparisonCustomWeightsDialogOpen, setIsComparisonCustomWeightsDialogOpen] = useState(false)
+  const [customWeightsCalculated, setCustomWeightsCalculated] = useState<Record<string, number> | null>(null)
 
   // PIPRECIA State
   const [isPipreciaDialogOpen, setIsPipreciaDialogOpen] = useState(false)
@@ -1202,6 +1214,16 @@ export default function MCDMCalculator() {
       return { criteria: updated }
     }
 
+    if (weight === "custom") {
+      // Use stored custom weights if available
+      const weightsToUse = customWeightsCalculated || {}
+      const updated = crits.map((crit) => ({
+        ...crit,
+        weight: weightsToUse[crit.id] !== undefined ? weightsToUse[crit.id] : (1 / crits.length)
+      }))
+      return { criteria: updated }
+    }
+
     return { criteria: crits }
   }
 
@@ -1575,6 +1597,19 @@ export default function MCDMCalculator() {
       const weight = 1 / criteria.length
       newCriteria = criteria.map((c) => ({ ...c, weight }))
       setCriteria(newCriteria)
+      setIsLoading(false)
+      return newCriteria
+    }
+
+    if (methodToUse === "custom") {
+      // Use stored custom weights if available
+      if (customWeightsCalculated) {
+        newCriteria = criteria.map((crit) => ({
+          ...crit,
+          weight: customWeightsCalculated[crit.id] !== undefined ? customWeightsCalculated[crit.id] : (1 / criteria.length)
+        }))
+        setCriteria(newCriteria)
+      }
       setIsLoading(false)
       return newCriteria
     }
@@ -3118,6 +3153,14 @@ export default function MCDMCalculator() {
 
           {homeTab === "rankingMethods" && (
             <>
+              {alternatives.length === 0 && criteria.length === 0 && (
+                <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded mb-6">
+                  <p className="font-semibold">⚠️ No data available</p>
+                  <p className="mt-1">
+                    Please add alternatives and criteria using the "Get Started" section above.
+                  </p>
+                </div>
+              )}
               {alternatives.length > 0 && criteria.length > 0 && (
                 <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
                   <CardHeader className="pb-3">
@@ -3255,9 +3298,16 @@ export default function MCDMCalculator() {
 
             </>
           )}
-
           {homeTab === "weightMethods" && (
             <>
+              {alternatives.length === 0 && criteria.length === 0 && (
+                <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded mb-6">
+                  <p className="font-semibold">⚠️ No data available</p>
+                  <p className="mt-1">
+                    Please add alternatives and criteria using the "Get Started" section above.
+                  </p>
+                </div>
+              )}
               {alternatives.length > 0 && criteria.length > 0 && (
                 <>
                   <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
@@ -3331,6 +3381,10 @@ export default function MCDMCalculator() {
                           setIsRanksDialogOpen(true)
                           return
                         }
+                        if (methodToUse === "custom") {
+                          setIsMainCustomWeightsDialogOpen(true)
+                          return
+                        }
                         // Calculate weights and update state (entropyResult etc.)
                         await calculateWeights(methodToUse)
                         // Navigate to Matrix step where sidebar shows Weight Methods
@@ -3341,11 +3395,11 @@ export default function MCDMCalculator() {
                       Calculate weight
                     </Button>
 
-                    {/* --- ROC & RR Ranks Dialog (Weight Methods Tab) --- */}
+                    {/* --- Ranks Dialog (Weight Methods Tab) --- */}
                     <Dialog open={isRanksDialogOpen} onOpenChange={setIsRanksDialogOpen}>
                       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto w-full">
                         <DialogHeader>
-                          <DialogTitle>{weightMethod === "roc" ? "ROC" : "RR"} Weight Calculator</DialogTitle>
+                          <DialogTitle>Enter Criteria Ranks</DialogTitle>
                           <DialogDescription className="text-xs">
                             Enter the rank for each criterion. 1 is the most important, 2 is second, etc.
                           </DialogDescription>
@@ -3398,14 +3452,125 @@ export default function MCDMCalculator() {
                           </Button>
                           <Button
                             type="button"
-                            onClick={async () => {
+                            onClick={() => {
                               setIsRanksDialogOpen(false)
-                              await calculateWeights(weightMethod)
-                              setCurrentStep("matrix")
+                              // await calculateWeights(weightMethod) // This will be called by the main button
+                              // setCurrentStep("matrix") // This will be called by the main button
                             }}
                             className="bg-black text-white hover:bg-gray-800 text-xs h-8"
                           >
-                            Calculate Weights
+                            Save Ranks
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+
+                    {/* --- Custom Weights Dialog (Main Weight Methods Tab) --- */}
+                    <Dialog open={isMainCustomWeightsDialogOpen} onOpenChange={setIsMainCustomWeightsDialogOpen}>
+                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-full">
+                        <DialogHeader>
+                          <DialogTitle>Enter Custom Weights</DialogTitle>
+                          <DialogDescription className="text-xs">
+                            Enter a weight for each criterion. Weights will be automatically normalized to sum to 1.0.
+                          </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 mt-4">
+                          <div className="border border-gray-200 rounded-lg overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-gray-50">
+                                  <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                                  <TableHead className="text-xs font-semibold text-center">Weight</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {criteria.map((crit) => (
+                                  <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                    <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                                    <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={customWeights[crit.id] || ""}
+                                        onChange={(e) => setCustomWeights({
+                                          ...customWeights,
+                                          [crit.id]: e.target.value,
+                                        })}
+                                        onKeyDown={handleKeyDown}
+                                        className="w-24 h-7 text-xs text-center"
+                                        placeholder="0.00"
+                                      />
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p className="text-xs text-blue-900">
+                              <strong>Note:</strong> You can enter any positive numbers. The weights will be automatically normalized
+                              to sum to 1.0. For example, if you enter 3, 2, and 1, they will be normalized to 0.5, 0.33, and 0.17.
+                            </p>
+                          </div>
+                        </div>
+
+                        <DialogFooter className="mt-4">
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsMainCustomWeightsDialogOpen(false)}
+                            className="text-xs"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              try {
+                                const weights: Record<string, number> = {}
+                                let sum = 0
+
+                                // Parse and sum all weights
+                                criteria.forEach((crit) => {
+                                  const value = parseFloat(customWeights[crit.id]) || 0
+                                  if (value < 0) {
+                                    throw new Error("Weights must be non-negative")
+                                  }
+                                  weights[crit.id] = value
+                                  sum += value
+                                })
+
+                                if (sum === 0) {
+                                  throw new Error("At least one weight must be greater than zero")
+                                }
+
+                                // Normalize weights to sum to 1.0
+                                const normalizedWeights: Record<string, number> = {}
+                                criteria.forEach((crit) => {
+                                  normalizedWeights[crit.id] = weights[crit.id] / sum
+                                })
+
+                                setCustomWeightsCalculated(normalizedWeights)
+                                setIsMainCustomWeightsDialogOpen(false)
+
+                                // Update criteria with new weights
+                                const updatedCriteria = criteria.map(c => ({
+                                  ...c,
+                                  weight: normalizedWeights[c.id] || 0
+                                }))
+
+                                setCriteria(updatedCriteria)
+                                setWeightMethod("custom")
+                                setCurrentStep("matrix") // Navigate to Matrix step after applying custom weights
+                              } catch (error: any) {
+                                alert(error?.message || "Error calculating custom weights")
+                              }
+                            }}
+                            className="bg-black text-white hover:bg-gray-800 text-xs"
+                          >
+                            Apply Weights
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -3497,6 +3662,9 @@ export default function MCDMCalculator() {
                                 }
                                 if (["roc", "rr"].includes(w.value) && !sensitivityWeightMethods.includes(w.value)) {
                                   setIsSensitivityRanksDialogOpen(true)
+                                }
+                                if (w.value === "custom" && !sensitivityWeightMethods.includes("custom")) {
+                                  setIsCustomWeightsDialogOpen(true)
                                 }
                                 toggleSensitivityWeightMethod(w.value)
                               }}
@@ -4354,6 +4522,9 @@ export default function MCDMCalculator() {
                                   if (w.value === "roc" || w.value === "rr") {
                                     setIsComparisonRanksDialogOpen(true)
                                   }
+                                  if (w.value === "custom") {
+                                    setIsComparisonCustomWeightsDialogOpen(true)
+                                  }
                                   setComparisonWeightMethod(w.value)
                                 }}
                                 disabled={comparisonLoading}
@@ -4708,6 +4879,122 @@ export default function MCDMCalculator() {
                   </div>
                   <DialogFooter>
                     <Button onClick={() => setIsComparisonRanksDialogOpen(false)}>Save Ranks</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* --- Custom Weights Dialog (Ranking Comparison Tab) --- */}
+              <Dialog open={isComparisonCustomWeightsDialogOpen} onOpenChange={setIsComparisonCustomWeightsDialogOpen}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-full">
+                  <DialogHeader>
+                    <DialogTitle>Enter Custom Weights</DialogTitle>
+                    <DialogDescription className="text-xs">
+                      Enter a weight for each criterion. Weights will be automatically normalized to sum to 1.0.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4 mt-4">
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50">
+                            <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                            <TableHead className="text-xs font-semibold text-center">Weight</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(comparisonCriteria.length > 0 ? comparisonCriteria : criteria).map((crit) => (
+                            <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                              <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={customWeights[crit.id] || ""}
+                                  onChange={(e) => setCustomWeights({
+                                    ...customWeights,
+                                    [crit.id]: e.target.value,
+                                  })}
+                                  onKeyDown={handleKeyDown}
+                                  className="w-24 h-7 text-xs text-center"
+                                  placeholder="0.00"
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-xs text-blue-900">
+                        <strong>Note:</strong> You can enter any positive numbers. The weights will be automatically normalized
+                        to sum to 1.0. For example, if you enter 3, 2, and 1, they will be normalized to 0.5, 0.33, and 0.17.
+                      </p>
+                    </div>
+                  </div>
+
+                  <DialogFooter className="mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsComparisonCustomWeightsDialogOpen(false)}
+                      className="text-xs"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          const targetCriteria = comparisonCriteria.length > 0 ? comparisonCriteria : criteria
+                          const weights: Record<string, number> = {}
+                          let sum = 0
+
+                          // Parse and sum all weights
+                          targetCriteria.forEach((crit) => {
+                            const value = parseFloat(customWeights[crit.id]) || 0
+                            if (value < 0) {
+                              throw new Error("Weights must be non-negative")
+                            }
+                            weights[crit.id] = value
+                            sum += value
+                          })
+
+                          if (sum === 0) {
+                            throw new Error("At least one weight must be greater than zero")
+                          }
+
+                          // Normalize weights to sum to 1.0
+                          const normalizedWeights: Record<string, number> = {}
+                          targetCriteria.forEach((crit) => {
+                            normalizedWeights[crit.id] = weights[crit.id] / sum
+                          })
+
+                          setCustomWeightsCalculated(normalizedWeights)
+                          setIsComparisonCustomWeightsDialogOpen(false)
+
+                          // Update criteria with new weights
+                          const updatedCriteria = targetCriteria.map(c => ({
+                            ...c,
+                            weight: normalizedWeights[c.id] || 0
+                          }))
+
+                          if (comparisonCriteria.length > 0) {
+                            setComparisonCriteria(updatedCriteria)
+                          } else {
+                            setCriteria(updatedCriteria)
+                          }
+
+                          setComparisonWeightMethod("custom")
+                        } catch (error: any) {
+                          alert(error?.message || "Error calculating custom weights")
+                        }
+                      }}
+                      className="bg-black text-white hover:bg-gray-800 text-xs"
+                    >
+                      Apply Weights
+                    </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -5142,673 +5429,6 @@ export default function MCDMCalculator() {
                           </TableBody>
                         </Table>
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-xs font-semibold text-black">Select Criterion to Vary</label>
-                          <Select value={sensitivityCriterion} onValueChange={setSensitivityCriterion}>
-                            <SelectTrigger className="text-xs h-8 border-gray-200">
-                              <SelectValue placeholder="Choose a criterion..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {criteria.map((crit) => (
-                                <SelectItem key={crit.id} value={crit.id} className="text-xs">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <span>{crit.name}</span>
-                                      <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
-                                        {crit.type === "beneficial" ? "▲" : "▼"}
-                                      </span>
-                                    </div>
-                                    <span className="text-[10px] text-gray-500">{crit.type === "beneficial" ? "Max" : "Min"}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <p className="text-[10px] text-gray-500">
-                            The weight will vary from 0% to 100%, while others adjust proportionally
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-xs font-semibold text-black">Choose weight method</label>
-                          <div className="relative">
-                            <button
-                              type="button"
-                              onClick={() => setIsWeightSelectorOpen(!isWeightSelectorOpen)}
-                              className="w-full flex items-center justify-between text-xs h-8 border border-gray-200 rounded px-3 bg-white"
-                            >
-                              <span>{sensitivityWeightMethods.length > 0 ? `${sensitivityWeightMethods.length} selected` : "Select weight methods..."}</span>
-                              <ChevronDown className="w-4 h-4 text-gray-500" />
-                            </button>
-                            {isWeightSelectorOpen && (
-                              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-60 overflow-y-auto p-2">
-                                {WEIGHT_METHODS.map((w) => (
-                                  <label key={w.value} className="flex items-center gap-2 text-xs p-1 hover:bg-gray-50 cursor-pointer text-black">
-                                    <input
-                                      type="checkbox"
-                                      checked={sensitivityWeightMethods.includes(w.value)}
-                                      onChange={() => {
-                                        if (w.value === "piprecia" && !sensitivityWeightMethods.includes("piprecia")) {
-                                          setIsPipreciaDialogOpen(true)
-                                        }
-                                        if (w.value === "ahp" && !sensitivityWeightMethods.includes("ahp")) {
-                                          setIsAhpDialogOpen(true)
-                                        }
-                                        if (w.value === "swara" && !sensitivityWeightMethods.includes("swara")) {
-                                          setIsSensitivitySwaraDialogOpen(true)
-                                        }
-                                        if (["roc", "rs", "rr"].includes(w.value) && !sensitivityWeightMethods.includes(w.value)) {
-                                          setIsSensitivityRanksDialogOpen(true)
-                                        }
-                                        toggleSensitivityWeightMethod(w.value)
-                                      }}
-                                    />
-                                    {w.label}
-                                  </label>
-                                ))}
-                                <div className="border-t my-1"></div>
-                                <label className="flex items-center gap-2 text-xs p-1 hover:bg-gray-50 cursor-pointer text-black">
-                                  <input
-                                    type="checkbox"
-                                    checked={sensitivityWeightMethods.includes("custom")}
-                                    onChange={(e) => {
-                                      toggleSensitivityWeightMethod("custom")
-                                      if (e.target.checked) setIsCustomWeightsDialogOpen(true)
-                                    }}
-                                  />
-                                  Enter own weight
-                                </label>
-                              </div>
-                            )}
-                          </div>
-                          <p className="text-[10px] text-gray-500">
-                            Select methods to compare outcomes
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-xs font-semibold text-black">Select MCDM Method</label>
-                          <Select value={sensitivityMethod} onValueChange={(value) => setSensitivityMethod(value as MCDMMethod)}>
-                            <SelectTrigger className="text-xs h-8 border-gray-200">
-                              <SelectValue placeholder="Choose a method..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {MCDM_METHODS.map((m) => (
-                                <SelectItem key={m.value} value={m.value} className="text-xs">
-                                  {m.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <p className="text-[10px] text-gray-500">
-                            Method used to calculate rankings
-                          </p>
-                        </div>
-
-                        {waspasLambdaValue !== undefined && sensitivityMethod === "waspas" && (
-                          <div className="border border-teal-200 bg-teal-50 rounded-lg p-3 md:col-span-3">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <label className="text-xs font-semibold text-teal-900">WASPAS lambda:</label>
-                                <p className="text-[10px] text-teal-700">Weight of WSM (λ) vs WPM (1-λ)</p>
-                              </div>
-                              <Input
-                                type="number"
-                                step="0.1"
-                                min="0"
-                                max="1"
-                                value={waspasLambdaValue}
-                                onChange={(e) => setWpasLambdaValue(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                onBlur={handleSensitivityAnalysis}
-                                placeholder="0.5"
-                                className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {codasTauValue !== undefined && sensitivityMethod === "codas" && (
-                          <div className="border border-teal-200 bg-teal-50 rounded-lg p-3 md:col-span-3">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <label className="text-xs font-semibold text-teal-900">CODAS tau-value:</label>
-                                <p className="text-[10px] text-teal-700">Threshold parameter (typically 0.01-0.05)</p>
-                              </div>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max="1"
-                                value={codasTauValue}
-                                onChange={(e) => setCodasTauValue(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                onBlur={handleSensitivityAnalysis}
-                                placeholder="0.02"
-                                className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          type="button"
-                          onClick={() => handleWeightSensitivityAnalysis()}
-                          className="bg-black text-white hover:bg-gray-800 text-xs h-8"
-                          disabled={sensitivityLoading}
-                        >
-                          {sensitivityLoading ? "Calculating..." : "Calculate Sensitivity"}
-                        </Button>
-                      </div>
-
-                      <Dialog open={isCustomWeightsDialogOpen} onOpenChange={setIsCustomWeightsDialogOpen}>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Enter Custom Weights</DialogTitle>
-                            <DialogDescription>Sum must equal 1</DialogDescription>
-                          </DialogHeader>
-                          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
-                            {criteria.map((crit) => (
-                              <div key={crit.id} className="grid grid-cols-4 items-center gap-4">
-                                <label className="text-right text-xs col-span-2">{crit.name}</label>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  className="col-span-2 h-8 text-xs"
-                                  value={sensitivityCustomWeights[crit.id] || ""}
-                                  onChange={(e) => setSensitivityCustomWeights(prev => ({ ...prev, [crit.id]: parseFloat(e.target.value) }))}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                          <div className="flex justify-end gap-2">
-                            <div className="text-xs flex items-center mr-auto">
-                              Total: {Object.values(sensitivityCustomWeights).reduce((a, b) => a + (b || 0), 0).toFixed(2)}
-                            </div>
-                            <Button onClick={() => setIsCustomWeightsDialogOpen(false)} size="sm">Save</Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-
-
-
-                      {/* --- PIPRECIA Dialog --- */}
-                      <Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen}>
-                        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
-                          <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
-                          <PIPRECIAFormula
-                            criteria={criteria}
-                            initialScores={pipreciaScores}
-                            onScoresChange={setPipreciaScores}
-                            onWeightsCalculated={(weights) => {
-                              setPipreciaCalculatedWeights(weights)
-                              setIsPipreciaDialogOpen(false)
-                              // Automatically trigger analysis update with new weights
-                              handleWeightSensitivityAnalysis(weights)
-                            }}
-                          />
-                        </DialogContent>
-                      </Dialog>
-
-                      {/* --- AHP Dialog (Sensitivity Analysis Tab) --- */}
-                      <Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen}>
-                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
-                          <DialogTitle>AHP Weight Calculator</DialogTitle>
-                          <AHPFormula
-                            criteria={criteria}
-                            initialMatrix={ahpMatrix}
-                            onMatrixChange={setAhpMatrix}
-                            onWeightsCalculated={(weights) => {
-                              setAhpCalculatedWeights(weights)
-                              setIsAhpDialogOpen(false)
-                              // Automatically trigger analysis update with new weights
-                              handleWeightSensitivityAnalysis()
-                            }}
-                          />
-                        </DialogContent>
-                      </Dialog>
-
-                      {/* --- SWARA Dialog (Sensitivity Analysis Tab) --- */}
-                      <Dialog open={isSensitivitySwaraDialogOpen} onOpenChange={setIsSensitivitySwaraDialogOpen}>
-                        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
-                          <DialogHeader>
-                            <DialogTitle>SWARA Weight Calculator</DialogTitle>
-                            <DialogDescription className="text-xs">
-                              Enter comparative importance coefficients (s<sub>j</sub>) for each criterion.
-                              The first criterion is most important (s<sub>1</sub> = 0).
-                              Higher values indicate larger importance differences.
-                            </DialogDescription>
-                          </DialogHeader>
-
-                          <div className="space-y-4 mt-4">
-                            <div className="border border-gray-200 rounded-lg overflow-hidden">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow className="bg-gray-50">
-                                    <TableHead className="text-xs font-semibold">Rank</TableHead>
-                                    <TableHead className="text-xs font-semibold">Criterion</TableHead>
-                                    <TableHead className="text-xs font-semibold text-center">
-                                      Coefficient (s<sub>j</sub>)
-                                    </TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {criteria.map((crit, index) => (
-                                    <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                                      <TableCell className="py-3 px-4 font-medium text-black text-xs">{index + 1}</TableCell>
-                                      <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
-                                      <TableCell className="text-center py-3 px-4 text-xs text-black">
-                                        {index === 0 ? (
-                                          <span className="text-xs text-gray-500">0 (most important)</span>
-                                        ) : (
-                                          <Input
-                                            type="number"
-                                            step="0.01"
-                                            min="0"
-                                            value={swaraCoefficients[crit.id] || ""}
-                                            onChange={(e) => setSwaraCoefficients({
-                                              ...swaraCoefficients,
-                                              [crit.id]: e.target.value,
-                                            })}
-                                            onKeyDown={handleKeyDown}
-                                            className="w-24 h-7 text-xs text-center"
-                                            placeholder="0.00"
-                                          />
-                                        )}
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                              <p className="text-xs text-blue-900">
-                                <strong>Note:</strong> Criteria are ordered by importance (top = most important).
-                                For each criterion j, enter how much less important it is compared to the previous criterion (j-1).
-                              </p>
-                            </div>
-                          </div>
-
-                          <DialogFooter className="mt-4">
-                            <Button
-                              variant="outline"
-                              onClick={() => setIsSensitivitySwaraDialogOpen(false)}
-                              className="text-xs"
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              onClick={async () => {
-                                try {
-                                  const coeffs: Record<string, number> = {}
-                                  criteria.forEach((crit, index) => {
-                                    if (index === 0) {
-                                      coeffs[crit.id] = 0
-                                    } else {
-                                      coeffs[crit.id] = parseFloat(swaraCoefficients[crit.id]) || 0
-                                    }
-                                  })
-
-                                  const response = await fetch("/api/swara-weights", {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ criteria, coefficients: coeffs }),
-                                  })
-
-                                  if (!response.ok) throw new Error("Failed to calculate SWARA weights")
-
-                                  const data: SWARAResult = await response.json()
-                                  setSwaraResult(data)
-                                  setSwaraCalculatedWeights(data.weights)
-                                  setIsSensitivitySwaraDialogOpen(false)
-
-                                  // Trigger analysis update
-                                  handleWeightSensitivityAnalysis(undefined, data.weights)
-                                } catch (error) {
-                                  console.error("SWARA calculation error:", error)
-                                  alert("Error calculating SWARA weights")
-                                }
-                              }}
-                              className="bg-black text-white hover:bg-gray-800 text-xs"
-                            >
-                              Calculate Weights
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-
-                      {/* --- Ranks Dialog (Sensitivity Analysis Tab) --- */}
-                      <Dialog open={isSensitivityRanksDialogOpen} onOpenChange={setIsSensitivityRanksDialogOpen}>
-                        <DialogContent className="max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>Enter Criteria Ranks</DialogTitle>
-                            <DialogDescription>1 = Most Important, Higher numbers = Less Important</DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            {criteria.map((crit) => (
-                              <div key={crit.id} className="flex items-center justify-between">
-                                <label className="text-sm font-medium">{crit.name}</label>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  className="w-20 h-8 text-xs"
-                                  value={criteriaRanks[crit.id] || ""}
-                                  onChange={(e) => setCriteriaRanks(prev => ({ ...prev, [crit.id]: e.target.value }))}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                          <DialogFooter>
-                            <Button onClick={() => setIsSensitivityRanksDialogOpen(false)}>Save Ranks</Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-
-                      {sensitivityWeightComparisonResults.length > 0 && (
-                        <div className="space-y-6 animate-in fade-in duration-500">
-                          <Card className="border-gray-200 bg-white shadow-none w-full">
-                            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                              <div>
-                                <CardTitle className="text-sm text-black">Comparison Results</CardTitle>
-                                <CardDescription className="text-xs text-gray-700">Ranking variations across weight methods</CardDescription>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="table-responsive">
-                              <table className="min-w-full text-xs border border-gray-200 rounded-lg">
-                                <thead className="bg-gray-50">
-                                  <tr>
-                                    <th className="px-3 py-2 text-left border-b text-black font-semibold">Alternative</th>
-                                    {sensitivityWeightComparisonResults.map((res, i) => (
-                                      <Fragment key={i}>
-                                        <th className="px-3 py-2 text-center border-b text-black font-semibold border-l border-gray-200" colSpan={2}>
-                                          {res.weightLabel} ({res.method})
-                                        </th>
-                                      </Fragment>
-                                    ))}
-                                  </tr>
-                                  <tr>
-                                    <th className="border-b"></th>
-                                    {sensitivityWeightComparisonResults.map((res, i) => (
-                                      <Fragment key={i}>
-                                        <th className="px-2 py-1 text-center border-b text-gray-500 font-medium text-[10px] border-l border-gray-200">Score</th>
-                                        <th className="px-2 py-1 text-center border-b text-gray-500 font-medium text-[10px]">Rank</th>
-                                      </Fragment>
-                                    ))}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {alternatives.map((alt) => (
-                                    <tr key={alt.id} className="hover:bg-gray-50 border-b last:border-0 border-gray-100">
-                                      <td className="px-3 py-2 text-black font-medium">{alt.name}</td>
-                                      {sensitivityWeightComparisonResults.map((res, i) => {
-                                        const item = res.ranking.find((r: any) => r.alternativeName === alt.name)
-                                        return (
-                                          <Fragment key={i}>
-                                            <td className="px-2 py-2 text-center text-black border-l border-gray-200">
-                                              {item?.score !== undefined ? Number(item.score).toFixed(resultsDecimalPlaces) : "-"}
-                                            </td>
-                                            <td className="px-2 py-2 text-center text-black font-bold">
-                                              {item?.rank}
-                                            </td>
-                                          </Fragment>
-                                        )
-                                      })}
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </CardContent>
-                          </Card>
-
-                          <Card className="border-gray-200 bg-white shadow-none w-full">
-                            <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                              <div>
-                                <CardTitle className="text-sm text-black">Graphical Variation</CardTitle>
-                                <CardDescription className="text-xs text-gray-700">Visualizing the impact of weight methods</CardDescription>
-                              </div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <Select value={sensitivityChartType} onValueChange={setSensitivityChartType}>
-                                  <SelectTrigger className="w-28 sm:w-32 h-7 text-xs">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="line">Line Chart</SelectItem>
-                                    <SelectItem value="step">Step Line Chart</SelectItem>
-                                    <SelectItem value="bar">Bar Chart</SelectItem>
-                                    <SelectItem value="stackedBar">Stacked Bar Chart</SelectItem>
-                                    <SelectItem value="area">Area Chart</SelectItem>
-                                    <SelectItem value="stackedArea">Stacked Area Chart</SelectItem>
-                                    <SelectItem value="scatter">Scatter Plot</SelectItem>
-                                    <SelectItem value="composed">Gantt Chart (Range)</SelectItem>
-                                    <SelectItem value="radar">Radar Chart</SelectItem>
-                                    <SelectItem value="radial">Radial Bar Chart</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <Button onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation")} variant="outline" size="sm" className="h-7 text-xs"><Download className="w-3 h-3 mr-1" /> JPG</Button>
-                              </div>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="chart-container" ref={sensitivityGraphicalVariationRef}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                  {sensitivityChartType === 'radar' ? (
-                                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={sensitivityWeightChartData}>
-                                      <PolarGrid />
-                                      <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                      <PolarRadiusAxis />
-                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                      <Tooltip />
-                                      {sensitivityWeightComparisonResults.map((res, i) => (
-                                        <Radar
-                                          key={res.weightLabel}
-                                          name={`${res.weightLabel} Rank`}
-                                          dataKey={`${res.weightLabel} Rank`}
-                                          stroke={CHART_COLORS[i % CHART_COLORS.length]}
-                                          fill={CHART_COLORS[i % CHART_COLORS.length]}
-                                          fillOpacity={0.1}
-                                        />
-                                      ))}
-                                    </RadarChart>
-                                  ) : sensitivityChartType === "bar" ? (
-                                    <BarChart data={sensitivityWeightChartData}>
-                                      <CartesianGrid strokeDasharray="3 3" />
-                                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                      <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
-                                      <Tooltip />
-                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                      {sensitivityWeightComparisonResults.map((res, i) => (
-                                        <Bar key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} name={`${res.weightLabel} Rank`} />
-                                      ))}
-                                    </BarChart>
-                                  ) : sensitivityChartType === "stackedBar" ? (
-                                    <BarChart data={sensitivityWeightChartData}>
-                                      <CartesianGrid strokeDasharray="3 3" />
-                                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                      <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
-                                      <Tooltip />
-                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                      {sensitivityWeightComparisonResults.map((res, i) => (
-                                        <Bar key={res.weightLabel} stackId="a" dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} name={`${res.weightLabel} Rank`} />
-                                      ))}
-                                    </BarChart>
-                                  ) : sensitivityChartType === "area" ? (
-                                    <AreaChart data={sensitivityWeightChartData}>
-                                      <CartesianGrid strokeDasharray="3 3" />
-                                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                      <YAxis interval={0} domain={[0, 'dataMax']} />
-                                      <Tooltip />
-                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                      {sensitivityWeightComparisonResults.map((res, i) => (
-                                        <Area type="monotone" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={`${res.weightLabel} Rank`} />
-                                      ))}
-                                    </AreaChart>
-                                  ) : sensitivityChartType === "stackedArea" ? (
-                                    <AreaChart data={sensitivityWeightChartData}>
-                                      <CartesianGrid strokeDasharray="3 3" />
-                                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                      <YAxis interval={0} domain={[0, 'dataMax']} />
-                                      <Tooltip />
-                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                      {sensitivityWeightComparisonResults.map((res, i) => (
-                                        <Area type="monotone" stackId="1" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={`${res.weightLabel} Rank`} />
-                                      ))}
-                                    </AreaChart>
-                                  ) : sensitivityChartType === "composed" ? (
-                                    <BarChart
-                                      data={sensitivityWeightComparisonResults.map((res, idx) => {
-                                        // Get all ranks for this weight method across alternatives
-                                        const ranks = sensitivityWeightChartData.map(d => d[`${res.weightLabel} Rank`] || 0);
-                                        const minRank = Math.min(...ranks);
-                                        const maxRank = Math.max(...ranks);
-                                        const avgRank = ranks.reduce((a, b) => a + b, 0) / ranks.length;
-
-                                        return {
-                                          method: res.weightLabel,
-                                          start: minRank,
-                                          range: maxRank - minRank,
-                                          avg: avgRank,
-                                          min: minRank,
-                                          max: maxRank
-                                        };
-                                      })}
-                                      layout="vertical"
-                                      margin={{ top: 20, right: 30, left: 10, bottom: 60 }}
-                                    >
-                                      <CartesianGrid strokeDasharray="3 3" />
-                                      <XAxis
-                                        type="number"
-                                        domain={[0, 'dataMax']}
-                                        label={{
-                                          value: "Rank Range (Best to Worst)",
-                                          position: "insideBottom",
-                                          offset: -45,
-                                          style: { fontSize: 11, fontWeight: 500 }
-                                        }}
-                                        tick={{ fontSize: 10 }}
-                                        interval={0}
-                                        allowDecimals={false}
-                                        height={60}
-                                      />
-                                      <YAxis
-                                        type="category"
-                                        dataKey="method"
-                                        tick={{ fontSize: 10 }}
-                                        width={130}
-                                      />
-                                      <Tooltip
-                                        content={({ active, payload }) => {
-                                          if (active && payload && payload.length > 0) {
-                                            const data = payload[0].payload;
-                                            return (
-                                              <div className="bg-white border border-gray-300 rounded-lg p-3 shadow-lg text-xs">
-                                                <p className="font-semibold text-black mb-1">{data.method}</p>
-                                                <p className="text-gray-700">Best Rank: <span className="font-medium text-black">{data.min}</span></p>
-                                                <p className="text-gray-700">Worst Rank: <span className="font-medium text-black">{data.max}</span></p>
-                                                <p className="text-gray-700">Range: <span className="font-medium text-black">{data.range}</span></p>
-                                                <p className="text-gray-700">Avg Rank: <span className="font-medium text-black">{data.avg.toFixed(2)}</span></p>
-                                              </div>
-                                            );
-                                          }
-                                          return null;
-                                        }}
-                                      />
-                                      <Legend
-                                        wrapperStyle={{ fontSize: "10px", paddingTop: "10px" }}
-                                        iconType="rect"
-                                      />
-                                      {/* Base bar showing starting position */}
-                                      <Bar
-                                        dataKey="start"
-                                        stackId="a"
-                                        fill="transparent"
-                                        name=""
-                                        legendType="none"
-                                      />
-                                      {/* Range bar showing the spread */}
-                                      <Bar
-                                        dataKey="range"
-                                        stackId="a"
-                                        name="Rank Range"
-                                        radius={[0, 4, 4, 0]}
-                                      >
-                                        {sensitivityWeightComparisonResults.map((res, index) => (
-                                          <Cell
-                                            key={`cell-${index}`}
-                                            fill={CHART_COLORS[index % CHART_COLORS.length]}
-                                            opacity={0.75}
-                                          />
-                                        ))}
-                                      </Bar>
-                                      {/* Markers for average */}
-                                      <Scatter
-                                        dataKey="avg"
-                                        fill="#1a1a1a"
-                                        shape="diamond"
-                                        name="Average Rank"
-                                      />
-                                    </BarChart>
-                                  ) : sensitivityChartType === "scatter" ? (
-                                    <ScatterChart>
-                                      <CartesianGrid strokeDasharray="3 3" />
-                                      <XAxis dataKey="name" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} />
-                                      <YAxis type="number" dataKey="rank" name="Rank" label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
-                                      <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                      {sensitivityWeightComparisonResults.map((res, i) => (
-                                        <Scatter key={res.weightLabel} name={`${res.weightLabel} Rank`} data={sensitivityWeightChartData.map(d => ({ name: d.name, rank: d[`${res.weightLabel} Rank`] }))} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                                      ))}
-                                    </ScatterChart>
-                                  ) : sensitivityChartType === "radial" ? (
-                                    <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" barSize={10} data={sensitivityWeightChartData}>
-                                      <RadialBar
-                                        label={{ position: 'insideStart', fill: '#fff' }}
-                                        background
-                                        dataKey="Equal Weight Rank"
-                                      />
-                                      <Legend iconSize={10} wrapperStyle={{ fontSize: "10px" }} />
-                                      {sensitivityWeightComparisonResults.map((res, i) => (
-                                        <RadialBar key={res.weightLabel} name={`${res.weightLabel} Rank`} dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} background />
-                                      ))}
-                                      <Tooltip />
-                                    </RadialBarChart>
-                                  ) : (
-                                    <LineChart data={sensitivityWeightChartData}>
-                                      <CartesianGrid strokeDasharray="3 3" />
-                                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                      <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
-                                      <Tooltip />
-                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                      {sensitivityWeightComparisonResults.map((res, i) => (
-                                        <Line type={sensitivityChartType === "step" ? "step" : "monotone"} key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2} name={`${res.weightLabel} Rank`} />
-                                      ))}
-                                    </LineChart>
-                                  )}
-                                </ResponsiveContainer>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-                      )}
-
-                      {sensitivityError && (
-                        <div className="text-xs text-red-600 border border-red-200 bg-red-50 p-2 rounded">
-                          {sensitivityError}
-                        </div>
-                      )}
-
-                      <div className="flex justify-end">
-                        <Button
-                          onClick={handleSensitivityAnalysis}
-                          className="bg-black text-white hover:bg-gray-800 text-xs h-8"
-                          disabled={sensitivityLoading}
-                        >
-                          {sensitivityLoading ? "Calculating..." : "Run Sensitivity Analysis"}
-                        </Button>
-                      </div>
                     </>
                   ) : (
                     <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded">
@@ -5818,6 +5438,673 @@ export default function MCDMCalculator() {
                       </p>
                     </div>
                   )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-black">Select Criterion to Vary</label>
+                      <Select value={sensitivityCriterion} onValueChange={setSensitivityCriterion}>
+                        <SelectTrigger className="text-xs h-8 border-gray-200">
+                          <SelectValue placeholder="Choose a criterion..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {criteria.map((crit) => (
+                            <SelectItem key={crit.id} value={crit.id} className="text-xs">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span>{crit.name}</span>
+                                  <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
+                                    {crit.type === "beneficial" ? "▲" : "▼"}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-gray-500">{crit.type === "beneficial" ? "Max" : "Min"}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-gray-500">
+                        The weight will vary from 0% to 100%, while others adjust proportionally
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-black">Choose weight method</label>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setIsWeightSelectorOpen(!isWeightSelectorOpen)}
+                          className="w-full flex items-center justify-between text-xs h-8 border border-gray-200 rounded px-3 bg-white"
+                        >
+                          <span>{sensitivityWeightMethods.length > 0 ? `${sensitivityWeightMethods.length} selected` : "Select weight methods..."}</span>
+                          <ChevronDown className="w-4 h-4 text-gray-500" />
+                        </button>
+                        {isWeightSelectorOpen && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-60 overflow-y-auto p-2">
+                            {WEIGHT_METHODS.map((w) => (
+                              <label key={w.value} className="flex items-center gap-2 text-xs p-1 hover:bg-gray-50 cursor-pointer text-black">
+                                <input
+                                  type="checkbox"
+                                  checked={sensitivityWeightMethods.includes(w.value)}
+                                  onChange={() => {
+                                    if (w.value === "piprecia" && !sensitivityWeightMethods.includes("piprecia")) {
+                                      setIsPipreciaDialogOpen(true)
+                                    }
+                                    if (w.value === "ahp" && !sensitivityWeightMethods.includes("ahp")) {
+                                      setIsAhpDialogOpen(true)
+                                    }
+                                    if (w.value === "swara" && !sensitivityWeightMethods.includes("swara")) {
+                                      setIsSensitivitySwaraDialogOpen(true)
+                                    }
+                                    if (["roc", "rs", "rr"].includes(w.value) && !sensitivityWeightMethods.includes(w.value)) {
+                                      setIsSensitivityRanksDialogOpen(true)
+                                    }
+                                    toggleSensitivityWeightMethod(w.value)
+                                  }}
+                                />
+                                {w.label}
+                              </label>
+                            ))}
+                            <div className="border-t my-1"></div>
+                            <label className="flex items-center gap-2 text-xs p-1 hover:bg-gray-50 cursor-pointer text-black">
+                              <input
+                                type="checkbox"
+                                checked={sensitivityWeightMethods.includes("custom")}
+                                onChange={(e) => {
+                                  toggleSensitivityWeightMethod("custom")
+                                  if (e.target.checked) setIsCustomWeightsDialogOpen(true)
+                                }}
+                              />
+                              Enter own weight
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-gray-500">
+                        Select methods to compare outcomes
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-black">Select MCDM Method</label>
+                      <Select value={sensitivityMethod} onValueChange={(value) => setSensitivityMethod(value as MCDMMethod)}>
+                        <SelectTrigger className="text-xs h-8 border-gray-200">
+                          <SelectValue placeholder="Choose a method..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MCDM_METHODS.map((m) => (
+                            <SelectItem key={m.value} value={m.value} className="text-xs">
+                              {m.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-gray-500">
+                        Method used to calculate rankings
+                      </p>
+                    </div>
+
+                    {waspasLambdaValue !== undefined && sensitivityMethod === "waspas" && (
+                      <div className="border border-teal-200 bg-teal-50 rounded-lg p-3 md:col-span-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-xs font-semibold text-teal-900">WASPAS lambda:</label>
+                            <p className="text-[10px] text-teal-700">Weight of WSM (λ) vs WPM (1-λ)</p>
+                          </div>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="1"
+                            value={waspasLambdaValue}
+                            onChange={(e) => setWpasLambdaValue(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            onBlur={handleSensitivityAnalysis}
+                            placeholder="0.5"
+                            className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {codasTauValue !== undefined && sensitivityMethod === "codas" && (
+                      <div className="border border-teal-200 bg-teal-50 rounded-lg p-3 md:col-span-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-xs font-semibold text-teal-900">CODAS tau-value:</label>
+                            <p className="text-[10px] text-teal-700">Threshold parameter (typically 0.01-0.05)</p>
+                          </div>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="1"
+                            value={codasTauValue}
+                            onChange={(e) => setCodasTauValue(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            onBlur={handleSensitivityAnalysis}
+                            placeholder="0.02"
+                            className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      onClick={() => handleWeightSensitivityAnalysis()}
+                      className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                      disabled={sensitivityLoading}
+                    >
+                      {sensitivityLoading ? "Calculating..." : "Calculate Sensitivity"}
+                    </Button>
+                  </div>
+
+                  <Dialog open={isCustomWeightsDialogOpen} onOpenChange={setIsCustomWeightsDialogOpen}>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Enter Custom Weights</DialogTitle>
+                        <DialogDescription>Sum must equal 1</DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                        {criteria.map((crit) => (
+                          <div key={crit.id} className="grid grid-cols-4 items-center gap-4">
+                            <label className="text-right text-xs col-span-2">{crit.name}</label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              className="col-span-2 h-8 text-xs"
+                              value={sensitivityCustomWeights[crit.id] || ""}
+                              onChange={(e) => setSensitivityCustomWeights(prev => ({ ...prev, [crit.id]: parseFloat(e.target.value) }))}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <div className="text-xs flex items-center mr-auto">
+                          Total: {Object.values(sensitivityCustomWeights).reduce((a, b) => a + (b || 0), 0).toFixed(2)}
+                        </div>
+                        <Button onClick={() => setIsCustomWeightsDialogOpen(false)} size="sm">Save</Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+
+
+                  {/* --- PIPRECIA Dialog --- */}
+                  <Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen}>
+                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+                      <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
+                      <PIPRECIAFormula
+                        criteria={criteria}
+                        initialScores={pipreciaScores}
+                        onScoresChange={setPipreciaScores}
+                        onWeightsCalculated={(weights) => {
+                          setPipreciaCalculatedWeights(weights)
+                          setIsPipreciaDialogOpen(false)
+                          // Automatically trigger analysis update with new weights
+                          handleWeightSensitivityAnalysis(weights)
+                        }}
+                      />
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* --- AHP Dialog (Sensitivity Analysis Tab) --- */}
+                  <Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen}>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
+                      <DialogTitle>AHP Weight Calculator</DialogTitle>
+                      <AHPFormula
+                        criteria={criteria}
+                        initialMatrix={ahpMatrix}
+                        onMatrixChange={setAhpMatrix}
+                        onWeightsCalculated={(weights) => {
+                          setAhpCalculatedWeights(weights)
+                          setIsAhpDialogOpen(false)
+                          // Automatically trigger analysis update with new weights
+                          handleWeightSensitivityAnalysis()
+                        }}
+                      />
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* --- SWARA Dialog (Sensitivity Analysis Tab) --- */}
+                  <Dialog open={isSensitivitySwaraDialogOpen} onOpenChange={setIsSensitivitySwaraDialogOpen}>
+                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+                      <DialogHeader>
+                        <DialogTitle>SWARA Weight Calculator</DialogTitle>
+                        <DialogDescription className="text-xs">
+                          Enter comparative importance coefficients (s<sub>j</sub>) for each criterion.
+                          The first criterion is most important (s<sub>1</sub> = 0).
+                          Higher values indicate larger importance differences.
+                        </DialogDescription>
+                      </DialogHeader>
+
+                      <div className="space-y-4 mt-4">
+                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-gray-50">
+                                <TableHead className="text-xs font-semibold">Rank</TableHead>
+                                <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                                <TableHead className="text-xs font-semibold text-center">
+                                  Coefficient (s<sub>j</sub>)
+                                </TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {criteria.map((crit, index) => (
+                                <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                  <TableCell className="py-3 px-4 font-medium text-black text-xs">{index + 1}</TableCell>
+                                  <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                                  <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                    {index === 0 ? (
+                                      <span className="text-xs text-gray-500">0 (most important)</span>
+                                    ) : (
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={swaraCoefficients[crit.id] || ""}
+                                        onChange={(e) => setSwaraCoefficients({
+                                          ...swaraCoefficients,
+                                          [crit.id]: e.target.value,
+                                        })}
+                                        onKeyDown={handleKeyDown}
+                                        className="w-24 h-7 text-xs text-center"
+                                        placeholder="0.00"
+                                      />
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <p className="text-xs text-blue-900">
+                            <strong>Note:</strong> Criteria are ordered by importance (top = most important).
+                            For each criterion j, enter how much less important it is compared to the previous criterion (j-1).
+                          </p>
+                        </div>
+                      </div>
+
+                      <DialogFooter className="mt-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsSensitivitySwaraDialogOpen(false)}
+                          className="text-xs"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={async () => {
+                            try {
+                              const coeffs: Record<string, number> = {}
+                              criteria.forEach((crit, index) => {
+                                if (index === 0) {
+                                  coeffs[crit.id] = 0
+                                } else {
+                                  coeffs[crit.id] = parseFloat(swaraCoefficients[crit.id]) || 0
+                                }
+                              })
+
+                              const response = await fetch("/api/swara-weights", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ criteria, coefficients: coeffs }),
+                              })
+
+                              if (!response.ok) throw new Error("Failed to calculate SWARA weights")
+
+                              const data: SWARAResult = await response.json()
+                              setSwaraResult(data)
+                              setSwaraCalculatedWeights(data.weights)
+                              setIsSensitivitySwaraDialogOpen(false)
+
+                              // Trigger analysis update
+                              handleWeightSensitivityAnalysis(undefined, data.weights)
+                            } catch (error) {
+                              console.error("SWARA calculation error:", error)
+                              alert("Error calculating SWARA weights")
+                            }
+                          }}
+                          className="bg-black text-white hover:bg-gray-800 text-xs"
+                        >
+                          Calculate Weights
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* --- Ranks Dialog (Sensitivity Analysis Tab) --- */}
+                  <Dialog open={isSensitivityRanksDialogOpen} onOpenChange={setIsSensitivityRanksDialogOpen}>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Enter Criteria Ranks</DialogTitle>
+                        <DialogDescription>1 = Most Important, Higher numbers = Less Important</DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        {criteria.map((crit) => (
+                          <div key={crit.id} className="flex items-center justify-between">
+                            <label className="text-sm font-medium">{crit.name}</label>
+                            <Input
+                              type="number"
+                              min="1"
+                              className="w-20 h-8 text-xs"
+                              value={criteriaRanks[crit.id] || ""}
+                              onChange={(e) => setCriteriaRanks(prev => ({ ...prev, [crit.id]: e.target.value }))}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <DialogFooter>
+                        <Button onClick={() => setIsSensitivityRanksDialogOpen(false)}>Save Ranks</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
+                  {sensitivityWeightComparisonResults.length > 0 && (
+                    <div className="space-y-6 animate-in fade-in duration-500">
+                      <Card className="border-gray-200 bg-white shadow-none w-full">
+                        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                          <div>
+                            <CardTitle className="text-sm text-black">Comparison Results</CardTitle>
+                            <CardDescription className="text-xs text-gray-700">Ranking variations across weight methods</CardDescription>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="table-responsive">
+                          <table className="min-w-full text-xs border border-gray-200 rounded-lg">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-3 py-2 text-left border-b text-black font-semibold">Alternative</th>
+                                {sensitivityWeightComparisonResults.map((res, i) => (
+                                  <Fragment key={i}>
+                                    <th className="px-3 py-2 text-center border-b text-black font-semibold border-l border-gray-200" colSpan={2}>
+                                      {res.weightLabel} ({res.method})
+                                    </th>
+                                  </Fragment>
+                                ))}
+                              </tr>
+                              <tr>
+                                <th className="border-b"></th>
+                                {sensitivityWeightComparisonResults.map((res, i) => (
+                                  <Fragment key={i}>
+                                    <th className="px-2 py-1 text-center border-b text-gray-500 font-medium text-[10px] border-l border-gray-200">Score</th>
+                                    <th className="px-2 py-1 text-center border-b text-gray-500 font-medium text-[10px]">Rank</th>
+                                  </Fragment>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {alternatives.map((alt) => (
+                                <tr key={alt.id} className="hover:bg-gray-50 border-b last:border-0 border-gray-100">
+                                  <td className="px-3 py-2 text-black font-medium">{alt.name}</td>
+                                  {sensitivityWeightComparisonResults.map((res, i) => {
+                                    const item = res.ranking.find((r: any) => r.alternativeName === alt.name)
+                                    return (
+                                      <Fragment key={i}>
+                                        <td className="px-2 py-2 text-center text-black border-l border-gray-200">
+                                          {item?.score !== undefined ? Number(item.score).toFixed(resultsDecimalPlaces) : "-"}
+                                        </td>
+                                        <td className="px-2 py-2 text-center text-black font-bold">
+                                          {item?.rank}
+                                        </td>
+                                      </Fragment>
+                                    )
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border-gray-200 bg-white shadow-none w-full">
+                        <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div>
+                            <CardTitle className="text-sm text-black">Graphical Variation</CardTitle>
+                            <CardDescription className="text-xs text-gray-700">Visualizing the impact of weight methods</CardDescription>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Select value={sensitivityChartType} onValueChange={setSensitivityChartType}>
+                              <SelectTrigger className="w-28 sm:w-32 h-7 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="line">Line Chart</SelectItem>
+                                <SelectItem value="step">Step Line Chart</SelectItem>
+                                <SelectItem value="bar">Bar Chart</SelectItem>
+                                <SelectItem value="stackedBar">Stacked Bar Chart</SelectItem>
+                                <SelectItem value="area">Area Chart</SelectItem>
+                                <SelectItem value="stackedArea">Stacked Area Chart</SelectItem>
+                                <SelectItem value="scatter">Scatter Plot</SelectItem>
+                                <SelectItem value="composed">Gantt Chart (Range)</SelectItem>
+                                <SelectItem value="radar">Radar Chart</SelectItem>
+                                <SelectItem value="radial">Radial Bar Chart</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation")} variant="outline" size="sm" className="h-7 text-xs"><Download className="w-3 h-3 mr-1" /> JPG</Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="chart-container" ref={sensitivityGraphicalVariationRef}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              {sensitivityChartType === 'radar' ? (
+                                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={sensitivityWeightChartData}>
+                                  <PolarGrid />
+                                  <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                  <PolarRadiusAxis />
+                                  <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                  <Tooltip />
+                                  {sensitivityWeightComparisonResults.map((res, i) => (
+                                    <Radar
+                                      key={res.weightLabel}
+                                      name={`${res.weightLabel} Rank`}
+                                      dataKey={`${res.weightLabel} Rank`}
+                                      stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                                      fill={CHART_COLORS[i % CHART_COLORS.length]}
+                                      fillOpacity={0.1}
+                                    />
+                                  ))}
+                                </RadarChart>
+                              ) : sensitivityChartType === "bar" ? (
+                                <BarChart data={sensitivityWeightChartData}>
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                  <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
+                                  <Tooltip />
+                                  <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                  {sensitivityWeightComparisonResults.map((res, i) => (
+                                    <Bar key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} name={`${res.weightLabel} Rank`} />
+                                  ))}
+                                </BarChart>
+                              ) : sensitivityChartType === "stackedBar" ? (
+                                <BarChart data={sensitivityWeightChartData}>
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                  <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
+                                  <Tooltip />
+                                  <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                  {sensitivityWeightComparisonResults.map((res, i) => (
+                                    <Bar key={res.weightLabel} stackId="a" dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} name={`${res.weightLabel} Rank`} />
+                                  ))}
+                                </BarChart>
+                              ) : sensitivityChartType === "area" ? (
+                                <AreaChart data={sensitivityWeightChartData}>
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                  <YAxis interval={0} domain={[0, 'dataMax']} />
+                                  <Tooltip />
+                                  <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                  {sensitivityWeightComparisonResults.map((res, i) => (
+                                    <Area type="monotone" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={`${res.weightLabel} Rank`} />
+                                  ))}
+                                </AreaChart>
+                              ) : sensitivityChartType === "stackedArea" ? (
+                                <AreaChart data={sensitivityWeightChartData}>
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                  <YAxis interval={0} domain={[0, 'dataMax']} />
+                                  <Tooltip />
+                                  <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                  {sensitivityWeightComparisonResults.map((res, i) => (
+                                    <Area type="monotone" stackId="1" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={`${res.weightLabel} Rank`} />
+                                  ))}
+                                </AreaChart>
+                              ) : sensitivityChartType === "composed" ? (
+                                <BarChart
+                                  data={sensitivityWeightComparisonResults.map((res, idx) => {
+                                    // Get all ranks for this weight method across alternatives
+                                    const ranks = sensitivityWeightChartData.map(d => d[`${res.weightLabel} Rank`] || 0);
+                                    const minRank = Math.min(...ranks);
+                                    const maxRank = Math.max(...ranks);
+                                    const avgRank = ranks.reduce((a, b) => a + b, 0) / ranks.length;
+
+                                    return {
+                                      method: res.weightLabel,
+                                      start: minRank,
+                                      range: maxRank - minRank,
+                                      avg: avgRank,
+                                      min: minRank,
+                                      max: maxRank
+                                    };
+                                  })}
+                                  layout="vertical"
+                                  margin={{ top: 20, right: 30, left: 10, bottom: 60 }}
+                                >
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis
+                                    type="number"
+                                    domain={[0, 'dataMax']}
+                                    label={{
+                                      value: "Rank Range (Best to Worst)",
+                                      position: "insideBottom",
+                                      offset: -45,
+                                      style: { fontSize: 11, fontWeight: 500 }
+                                    }}
+                                    tick={{ fontSize: 10 }}
+                                    interval={0}
+                                    allowDecimals={false}
+                                    height={60}
+                                  />
+                                  <YAxis
+                                    type="category"
+                                    dataKey="method"
+                                    tick={{ fontSize: 10 }}
+                                    width={130}
+                                  />
+                                  <Tooltip
+                                    content={({ active, payload }) => {
+                                      if (active && payload && payload.length > 0) {
+                                        const data = payload[0].payload;
+                                        return (
+                                          <div className="bg-white border border-gray-300 rounded-lg p-3 shadow-lg text-xs">
+                                            <p className="font-semibold text-black mb-1">{data.method}</p>
+                                            <p className="text-gray-700">Best Rank: <span className="font-medium text-black">{data.min}</span></p>
+                                            <p className="text-gray-700">Worst Rank: <span className="font-medium text-black">{data.max}</span></p>
+                                            <p className="text-gray-700">Range: <span className="font-medium text-black">{data.range}</span></p>
+                                            <p className="text-gray-700">Avg Rank: <span className="font-medium text-black">{data.avg.toFixed(2)}</span></p>
+                                          </div>
+                                        );
+                                      }
+                                      return null;
+                                    }}
+                                  />
+                                  <Legend
+                                    wrapperStyle={{ fontSize: "10px", paddingTop: "10px" }}
+                                    iconType="rect"
+                                  />
+                                  {/* Base bar showing starting position */}
+                                  <Bar
+                                    dataKey="start"
+                                    stackId="a"
+                                    fill="transparent"
+                                    name=""
+                                    legendType="none"
+                                  />
+                                  {/* Range bar showing the spread */}
+                                  <Bar
+                                    dataKey="range"
+                                    stackId="a"
+                                    name="Rank Range"
+                                    radius={[0, 4, 4, 0]}
+                                  >
+                                    {sensitivityWeightComparisonResults.map((res, index) => (
+                                      <Cell
+                                        key={`cell-${index}`}
+                                        fill={CHART_COLORS[index % CHART_COLORS.length]}
+                                        opacity={0.75}
+                                      />
+                                    ))}
+                                  </Bar>
+                                  {/* Markers for average */}
+                                  <Scatter
+                                    dataKey="avg"
+                                    fill="#1a1a1a"
+                                    shape="diamond"
+                                    name="Average Rank"
+                                  />
+                                </BarChart>
+                              ) : sensitivityChartType === "scatter" ? (
+                                <ScatterChart>
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis dataKey="name" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} />
+                                  <YAxis type="number" dataKey="rank" name="Rank" label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
+                                  <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                                  <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                  {sensitivityWeightComparisonResults.map((res, i) => (
+                                    <Scatter key={res.weightLabel} name={`${res.weightLabel} Rank`} data={sensitivityWeightChartData.map(d => ({ name: d.name, rank: d[`${res.weightLabel} Rank`] }))} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                                  ))}
+                                </ScatterChart>
+                              ) : sensitivityChartType === "radial" ? (
+                                <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" barSize={10} data={sensitivityWeightChartData}>
+                                  <RadialBar
+                                    label={{ position: 'insideStart', fill: '#fff' }}
+                                    background
+                                    dataKey="Equal Weight Rank"
+                                  />
+                                  <Legend iconSize={10} wrapperStyle={{ fontSize: "10px" }} />
+                                  {sensitivityWeightComparisonResults.map((res, i) => (
+                                    <RadialBar key={res.weightLabel} name={`${res.weightLabel} Rank`} dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} background />
+                                  ))}
+                                  <Tooltip />
+                                </RadialBarChart>
+                              ) : (
+                                <LineChart data={sensitivityWeightChartData}>
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                  <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
+                                  <Tooltip />
+                                  <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                  {sensitivityWeightComparisonResults.map((res, i) => (
+                                    <Line type={sensitivityChartType === "step" ? "step" : "monotone"} key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2} name={`${res.weightLabel} Rank`} />
+                                  ))}
+                                </LineChart>
+                              )}
+                            </ResponsiveContainer>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+
+                  {sensitivityError && (
+                    <div className="text-xs text-red-600 border border-red-200 bg-red-50 p-2 rounded">
+                      {sensitivityError}
+                    </div>
+                  )}
+
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSensitivityAnalysis}
+                      className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                      disabled={sensitivityLoading}
+                    >
+                      {sensitivityLoading ? "Calculating..." : "Run Sensitivity Analysis"}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -10501,6 +10788,47 @@ export default function MCDMCalculator() {
                         )}
                       </tbody>
                     </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Criteria Weights Display */}
+              <Card className="border-gray-200 bg-white shadow-none mb-6">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm text-black">Criteria Weights</CardTitle>
+                  <CardDescription className="text-xs text-gray-700">
+                    Weight Method: {WEIGHT_METHODS.find(w => w.value === weightMethod)?.label}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="table-responsive border border-gray-200 rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 border-b border-gray-200">
+                          <TableHead className="text-xs font-semibold text-black py-3 px-4 w-24">Criterion</TableHead>
+                          {criteria.map((crit) => (
+                            <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
+                              {crit.name}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow className="border-b border-gray-200 hover:bg-gray-50">
+                          <TableCell className="py-3 px-4 font-semibold text-black text-xs">Weight</TableCell>
+                          {criteria.map((crit) => (
+                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                              <div className="flex flex-col items-center gap-1">
+                                <span className={`text-xs ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
+                                  {crit.type === "beneficial" ? "↑" : "↓"}
+                                </span>
+                                <span className="font-semibold">({(crit.weight ?? 0).toFixed(weightsDecimalPlaces)})</span>
+                              </div>
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableBody>
+                    </Table>
                   </div>
                 </CardContent>
               </Card>
