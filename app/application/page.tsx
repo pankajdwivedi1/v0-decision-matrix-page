@@ -39,7 +39,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import * as XLSX from "xlsx"
-import { Upload, ChevronDown, ChevronRight, ChevronLeft, Home, Download, LayoutGrid } from "lucide-react"
+import { Upload, ChevronDown, ChevronRight, ArrowLeft, Home, Download, LayoutGrid } from "lucide-react"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar, PieChart, Pie, ReferenceLine } from "recharts"
 import { toJpeg } from "html-to-image"
 import SWEIFormula from "@/components/SWEIFormula"
@@ -1228,8 +1228,8 @@ export default function MCDMCalculator() {
   }
 
   const handleComparisonCalculate = async () => {
-    if (alternatives.length === 0 || criteria.length === 0) {
-      setComparisonError("Please add alternatives and criteria first using the 'Get Started' section.")
+    if (!isFullyDataFilled) {
+      setComparisonError("Please fill in the decision matrix completely first using the 'Get Started' section.")
       return
     }
     if (selectedRankingMethods.length === 0) {
@@ -1429,6 +1429,17 @@ export default function MCDMCalculator() {
       invalidCells,
     }
   }, [method, alternatives, criteria])
+
+  const isFullyDataFilled = useMemo(() => {
+    if (alternatives.length === 0 || criteria.length === 0) return false
+    return alternatives.every((alt) =>
+      criteria.every((crit) => {
+        const score = alt.scores[crit.id]
+        return score !== undefined && score !== "" && !isNaN(Number(score))
+      }),
+    )
+  }, [alternatives, criteria])
+
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     console.log("=== handleFileUpload triggered ===")
@@ -1988,6 +1999,46 @@ export default function MCDMCalculator() {
     setRocResult(null)
     setRrResult(null)
 
+    // Calculate equal weights if equal method is selected
+    if (finalWeightMethod === "equal") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/equal-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate equal weights")
+        }
+
+        const data = await response.json()
+
+        // Update criteria with calculated equal weights
+        currentCriteria = currentCriteria.map((crit) => ({
+          ...crit,
+          weight: data.weights[crit.id] || (1 / criteria.length),
+        }))
+        setCriteria(currentCriteria)
+      } catch (error) {
+        console.error("Error calculating equal weights:", error)
+        // Fallback to client-side calculation if API fails
+        const equalWeight = 1 / criteria.length
+        currentCriteria = currentCriteria.map((crit) => ({
+          ...crit,
+          weight: equalWeight,
+        }))
+        setCriteria(currentCriteria)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
     // Calculate entropy weights if entropy method is selected
     if (finalWeightMethod === "entropy") {
       setIsLoading(true)
@@ -2127,6 +2178,44 @@ export default function MCDMCalculator() {
       } catch (error) {
         console.error("Error calculating PIPRECIA weights:", error)
         alert("Error calculating PIPRECIA weights. Using equal weight instead.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    // Calculate MEREC weights if MEREC method is selected
+    if (finalWeightMethod === "merec") {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/merec-weights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            alternatives,
+            criteria,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to calculate MEREC weights")
+        }
+
+        const data: MERECResult = await response.json()
+
+        // Save full MEREC result for display
+        setMerecResult(data)
+
+        // Update criteria with calculated MEREC weights
+        currentCriteria = currentCriteria.map((crit) => ({
+          ...crit,
+          weight: data.weights[crit.id] || crit.weight,
+        }))
+        setCriteria(currentCriteria)
+      } catch (error) {
+        console.error("Error calculating MEREC weights:", error)
+        alert("Error calculating MEREC weights. Using equal weight instead.")
       } finally {
         setIsLoading(false)
       }
@@ -2624,11 +2713,23 @@ export default function MCDMCalculator() {
     setIsLoading(true)
     setApiResults(null)
 
+    let currentCriteriaToUse = criteriaOverride;
+
+    // If no override provided, ensure criteria is updated based on current weight method
+    if (!currentCriteriaToUse) {
+      const result = await handleSaveTable(false);
+      if (!result.success) {
+        setIsLoading(false);
+        return;
+      }
+      currentCriteriaToUse = result.updatedCriteria;
+    }
+
     try {
       const payload = {
         method: methodOverride || method,
         alternatives,
-        criteria: criteriaOverride || criteria,
+        criteria: currentCriteriaToUse,
         vikorVValue: vikorVValue,
         waspasLambdaValue: waspasLambdaValue,
         codasTauValue: codasTauValue,
@@ -2742,8 +2843,8 @@ export default function MCDMCalculator() {
       setSensitivityError("Please select a criterion to analyze")
       return
     }
-    if (alternatives.length === 0 || criteria.length === 0) {
-      setSensitivityError("Please add alternatives and criteria first")
+    if (!isFullyDataFilled) {
+      setSensitivityError("Please fill in the decision matrix completely first")
       return
     }
 
@@ -3104,7 +3205,7 @@ export default function MCDMCalculator() {
               className={`text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 cursor-pointer ${homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("rankingMethods")}
             >
-              <span className="truncate">Ranking Methods / Calculator</span>
+              <span className="truncate">Ranking Methods</span>
             </Button>
             <Button
               variant="outline"
@@ -3153,7 +3254,7 @@ export default function MCDMCalculator() {
 
           {homeTab === "rankingMethods" && (
             <>
-              {alternatives.length === 0 && criteria.length === 0 && (
+              {!isFullyDataFilled && (
                 <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded mb-6">
                   <p className="font-semibold">⚠️ No data available</p>
                   <p className="mt-1">
@@ -3161,10 +3262,10 @@ export default function MCDMCalculator() {
                   </p>
                 </div>
               )}
-              {alternatives.length > 0 && criteria.length > 0 && (
+              {isFullyDataFilled && (
                 <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm text-black">Ranking Methods / Calculator</CardTitle>
+                    <CardTitle className="text-sm text-black">Ranking Methods</CardTitle>
                     <CardDescription className="text-xs text-gray-700">
                       Review and edit the decision matrix before calculation
                     </CardDescription>
@@ -3225,7 +3326,7 @@ export default function MCDMCalculator() {
                 </Card>
               )}
 
-              {alternatives.length > 0 && criteria.length > 0 && (
+              {isFullyDataFilled && (
                 <div className="mb-6">
                   <Button
                     type="button"
@@ -3300,7 +3401,7 @@ export default function MCDMCalculator() {
           )}
           {homeTab === "weightMethods" && (
             <>
-              {alternatives.length === 0 && criteria.length === 0 && (
+              {!isFullyDataFilled && (
                 <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded mb-6">
                   <p className="font-semibold">⚠️ No data available</p>
                   <p className="mt-1">
@@ -3308,7 +3409,7 @@ export default function MCDMCalculator() {
                   </p>
                 </div>
               )}
-              {alternatives.length > 0 && criteria.length > 0 && (
+              {isFullyDataFilled && (
                 <>
                   <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
                     <CardHeader className="pb-3">
@@ -4424,7 +4525,7 @@ export default function MCDMCalculator() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {alternatives.length > 0 && criteria.length > 0 ? (
+                  {isFullyDataFilled ? (
                     <div className="space-y-3">
                       <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
                         <p className="font-semibold">✓ Data has uploaded</p>
@@ -5374,7 +5475,7 @@ export default function MCDMCalculator() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {alternatives.length > 0 && criteria.length > 0 ? (
+                  {isFullyDataFilled ? (
                     <>
                       <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
                         <p className="font-semibold">✓ Data has uploaded</p>
@@ -6336,9 +6437,24 @@ export default function MCDMCalculator() {
     return (
       <main className="min-h-screen bg-white p-2 md:p-3">
         <div className="max-w-2xl mx-auto">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => setCurrentStep("home")}
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-black hover:bg-gray-100 bg-transparent"
+                title="Back"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h1 className="text-xl md:text-2xl font-bold text-black">Create Decision Matrix</h1>
+                <p className="text-xs text-gray-700">Step 1 of 3</p>
+              </div>
+            </div>
             <Button
-              onClick={() => setCurrentStep("home")}
+              onClick={() => window.location.href = '/'}
               variant="outline"
               size="icon"
               className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
@@ -6346,10 +6462,6 @@ export default function MCDMCalculator() {
             >
               <Home className="h-4 w-4" />
             </Button>
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold text-black">Create Decision Matrix</h1>
-              <p className="text-xs text-gray-700">Step 1 of 3</p>
-            </div>
           </div>
           {/* Progress Section */}
           <div className="mb-6 md:mb-8">
@@ -6411,13 +6523,6 @@ export default function MCDMCalculator() {
           </Card>
 
           <div className="flex gap-2 justify-end mt-4">
-            <Button
-              onClick={() => setCurrentStep("home")}
-              variant="outline"
-              className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
-            >
-              Back
-            </Button>
             <Button onClick={generateTable} className="bg-black text-white hover:bg-gray-800 text-xs h-8">
               Next
             </Button>
@@ -6449,8 +6554,22 @@ export default function MCDMCalculator() {
         <main className="flex-1 h-screen bg-white flex flex-col">
           <div className="p-2 md:p-3 border-b border-gray-200 flex-shrink-0">
             <div className="max-w-7xl mx-auto">
-              <div className="flex items-center gap-3 mb-4">
-
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={() => setCurrentStep("input")}
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-black hover:bg-gray-100 bg-transparent"
+                    title="Back"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <div>
+                    <h1 className="text-xl md:text-2xl font-bold text-black">Fill Decision Matrix</h1>
+                    <p className="text-xs text-gray-700">Step 2 of 3</p>
+                  </div>
+                </div>
                 <Button
                   onClick={() => setCurrentStep("home")}
                   variant="outline"
@@ -6460,10 +6579,6 @@ export default function MCDMCalculator() {
                 >
                   <Home className="h-4 w-4" />
                 </Button>
-                <div>
-                  <h1 className="text-xl md:text-2xl font-bold text-black">Fill Decision Matrix</h1>
-                  <p className="text-xs text-gray-700">Step 2 of 3</p>
-                </div>
               </div>
 
               <Breadcrumb className="mb-4">
@@ -6740,26 +6855,7 @@ export default function MCDMCalculator() {
                             </TableHead>
                           ))}
                         </TableRow>
-                        {weightMethod !== "entropy" && weightMethod !== "critic" && weightMethod !== "ahp" && (
-                          <TableRow className="bg-white border-b border-gray-200">
-                            <TableHead className="text-xs font-semibold text-black py-3 px-4">Weight</TableHead>
-                            {criteria.map((crit) => (
-                              <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  max="1"
-                                  step="0.1"
-                                  value={crit.weight}
-                                  onChange={(e) =>
-                                    updateCriterion(crit.id, { weight: Number.parseFloat(e.target.value) })
-                                  }
-                                  className="text-center text-xs h-8 border-gray-200 text-black shadow-none"
-                                />
-                              </TableHead>
-                            ))}
-                          </TableRow>
-                        )}
+
                       </TableHeader>
                       <TableBody>
                         {alternatives.map((alt) => (
@@ -6807,16 +6903,8 @@ export default function MCDMCalculator() {
                   </p>
                 </div>
               )}
-              {(!homeTab || (homeTab !== "rankingComparison" && homeTab !== "sensitivityAnalysis")) && (
+              {homeTab && (
                 <div className="flex gap-2 justify-end">
-                  <Button
-                    type="button"
-                    onClick={() => setCurrentStep("input")}
-                    variant="outline"
-                    className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
-                  >
-                    Back
-                  </Button>
                   <Button
                     type="button"
                     onClick={async (e) => {
@@ -6824,9 +6912,10 @@ export default function MCDMCalculator() {
                       const result = await handleSaveTable(false)
 
                       if (result.success) {
-                        if (homeTab === "rankingComparison") {
+                        const currentTab = homeTab as string;
+                        if (currentTab === "rankingComparison" || currentTab === "sensitivityAnalysis") {
                           setCurrentStep("home")
-                        } else if (homeTab === "weightMethods") {
+                        } else if (currentTab === "weightMethods") {
                           setCurrentStep("matrix")
                         } else {
                           await handleCalculate(method, result.updatedCriteria)
@@ -7056,6 +7145,15 @@ export default function MCDMCalculator() {
             <div className="max-w-7xl mx-auto w-full">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
                 <div className="flex items-center gap-3">
+                  <Button
+                    onClick={() => setCurrentStep("table")}
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-black hover:bg-gray-100 bg-transparent"
+                    title="Back"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
                   <div className="bg-black/5 p-2 rounded-lg">
                     <LayoutGrid className="h-5 w-5 md:h-6 md:w-6 text-black" />
                   </div>
@@ -7205,7 +7303,11 @@ export default function MCDMCalculator() {
                       min="0"
                       max="10"
                       value={weightsDecimalPlaces}
-                      onChange={(e) => setWeightsDecimalPlaces(Math.max(0, Math.min(10, parseInt(e.target.value) || 4)))}
+                      onChange={(e) => {
+                        const val = Math.max(0, Math.min(10, parseInt(e.target.value) || 4));
+                        setWeightsDecimalPlaces(val);
+                        setResultsDecimalPlaces(val);
+                      }}
                       className="w-12 h-8 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
@@ -10348,9 +10450,7 @@ export default function MCDMCalculator() {
                 onClick={async () => {
                   setIsRanksDialogOpen(false)
                   const updatedCriteria = await calculateWeights(weightMethod)
-                  if (currentStep === "calculate") {
-                    handleCalculate(method, updatedCriteria)
-                  }
+                  handleCalculate(method, updatedCriteria)
                 }}
                 className="bg-black text-white hover:bg-gray-800 text-xs h-8"
               >
@@ -10380,9 +10480,7 @@ export default function MCDMCalculator() {
                 setCriteria(updatedCriteria)
                 setWeightMethod("piprecia")
 
-                if (currentStep === "calculate") {
-                  handleCalculate(method, updatedCriteria)
-                }
+                handleCalculate(method, updatedCriteria)
               }}
             />
           </DialogContent>
@@ -10408,9 +10506,7 @@ export default function MCDMCalculator() {
                 setCriteria(updatedCriteria)
                 setWeightMethod("ahp")
 
-                if (currentStep === "calculate") {
-                  handleCalculate(method, updatedCriteria)
-                }
+                handleCalculate(method, updatedCriteria)
               }}
             />
           </DialogContent>
@@ -10525,9 +10621,7 @@ export default function MCDMCalculator() {
                     setCriteria(updatedCriteria)
                     setWeightMethod("swara")
 
-                    if (currentStep === "calculate") {
-                      handleCalculate(method, updatedCriteria)
-                    }
+                    handleCalculate(method, updatedCriteria)
                   } catch (error) {
                     console.error("SWARA calculation error:", error)
                     alert("Error calculating SWARA weights")
@@ -10571,13 +10665,13 @@ export default function MCDMCalculator() {
                 <div className="flex items-center gap-3">
                   <Button
                     type="button"
-                    onClick={() => setIsMethodSelectionSheetOpen(true)}
-                    variant="outline"
+                    onClick={() => setCurrentStep("table")}
+                    variant="ghost"
                     size="icon"
-                    className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent flex-shrink-0"
-                    title="Select Ranking Method"
+                    className="h-9 w-9 text-black hover:bg-gray-100 bg-transparent flex-shrink-0"
+                    title="Back"
                   >
-                    <LayoutGrid className="h-4 w-4" />
+                    <ArrowLeft className="h-4 w-4" />
                   </Button>
                   <div className="flex-shrink-0">
                     <h1 className="text-xl md:text-2xl font-bold text-black">Results</h1>
@@ -10633,23 +10727,13 @@ export default function MCDMCalculator() {
 
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Button
-                    type="button"
-                    onClick={() => {
-                      setCurrentStep("matrix")
-                      setMethod(method)
-                    }}
+                    onClick={() => setCurrentStep("home")}
                     variant="outline"
-                    className="text-xs h-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent px-4"
+                    size="icon"
+                    className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
+                    title="Go to Home"
                   >
-                    Back
-                  </Button>
-
-                  <Button
-                    type="button"
-                    onClick={() => setCurrentStep("matrix")}
-                    className="bg-black text-white hover:bg-gray-800 text-xs h-9 px-4"
-                  >
-                    New Calculation
+                    <Home className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -10741,7 +10825,11 @@ export default function MCDMCalculator() {
                         min="0"
                         max="10"
                         value={resultsDecimalPlaces}
-                        onChange={(e) => setResultsDecimalPlaces(Math.max(0, Math.min(10, parseInt(e.target.value) || 4)))}
+                        onChange={(e) => {
+                          const val = Math.max(0, Math.min(10, parseInt(e.target.value) || 4));
+                          setResultsDecimalPlaces(val);
+                          setWeightsDecimalPlaces(val);
+                        }}
                         className="w-12 h-8 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
@@ -10822,7 +10910,7 @@ export default function MCDMCalculator() {
                                 <span className={`text-xs ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
                                   {crit.type === "beneficial" ? "↑" : "↓"}
                                 </span>
-                                <span className="font-semibold">({(crit.weight ?? 0).toFixed(weightsDecimalPlaces)})</span>
+                                <span className="font-semibold">({(crit.weight ?? 0).toFixed(resultsDecimalPlaces)})</span>
                               </div>
                             </TableCell>
                           ))}
