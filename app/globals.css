@@ -471,37 +471,201 @@ body {
 }
 
 
-/* Mobile-Responsive Utilities */
+/* Mobile-Responsive Utilities - COMPACT TABLE DESIGN */
 @layer utilities {
 
-  /* Responsive Table Container */
-  .table-responsive {
-    @apply overflow-x-auto -mx-2 px-2;
-    -webkit-overflow-scrolling: touch;
+  /* ========================================
+     MOBILE-FIRST: COMPACT TABLE SYSTEM
+     ======================================== */
+
+  /* Prevent horizontal overflow globally on mobile */
+  @media (max-width: 768px) {
+    body {
+      overflow-x: hidden !important;
+      max-width: 100vw !important;
+    }
   }
 
+  /* Responsive Table Container - Compact on Mobile */
+  .table-responsive {
+    @apply w-full;
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+  }
+
+  /* Scrollbar styling */
   .table-responsive::-webkit-scrollbar {
-    height: 6px;
+    height: 4px;
   }
 
   .table-responsive::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 rounded-full;
+    @apply bg-gray-400 rounded-full;
   }
 
   .table-responsive::-webkit-scrollbar-track {
     @apply bg-gray-100;
   }
 
-  /* Responsive Chart Container */
+  /* Mobile: Compact table with smaller fonts */
+  @media (max-width: 768px) {
+    .table-responsive table {
+      font-size: 0.563rem !important;
+      /* 9px - reduced from 10px */
+      width: 100%;
+    }
+
+    .table-responsive th,
+    .table-responsive td {
+      padding: 0.25rem 0.15rem !important;
+      /* Minimal padding */
+      white-space: nowrap;
+      font-size: 0.563rem !important;
+      /* 9px */
+      line-height: 1.1 !important;
+    }
+
+    /* Force header cells to same size */
+    .table-responsive thead th,
+    .table-responsive thead td {
+      font-size: 0.563rem !important;
+      /* 9px */
+      font-weight: 600 !important;
+      padding: 0.35rem 0.15rem !important;
+    }
+
+    /* Force all text inside headers to same size */
+    .table-responsive thead th *,
+    .table-responsive thead td *,
+    .table-responsive thead th span,
+    .table-responsive thead td span,
+    .table-responsive thead th div,
+    .table-responsive thead td div {
+      font-size: 0.563rem !important;
+      /* 9px */
+    }
+
+    /* Force all text inside body cells to same size */
+    .table-responsive tbody th,
+    .table-responsive tbody td {
+      font-size: 0.563rem !important;
+      /* 9px */
+    }
+
+    .table-responsive tbody th *,
+    .table-responsive tbody td *,
+    .table-responsive tbody th span,
+    .table-responsive tbody td span,
+    .table-responsive tbody th div,
+    .table-responsive tbody td div {
+      font-size: 0.563rem !important;
+      /* 9px */
+    }
+
+    /* Compact input fields on mobile */
+    .table-responsive input,
+    .table-responsive input[type="number"],
+    .table-responsive input[type="text"] {
+      font-size: 0.563rem !important;
+      /* 9px */
+      height: 1.5rem !important;
+      /* 24px - reduced from 28px */
+      padding: 0.15rem 0.25rem !important;
+      min-height: 1.5rem !important;
+      line-height: 1.1 !important;
+      min-width: 2.5rem !important;
+      /* Narrow input fields */
+    }
+
+    /* Reduce table cell padding when there are inputs */
+    .table-responsive tbody td.p-1 {
+      padding: 0.15rem !important;
+    }
+
+    /* Reduce card content spacing on mobile */
+    .table-responsive~* .space-y-3 {
+      gap: 0.5rem !important;
+    }
+
+    /* Compact table headers with criteria info */
+    .table-responsive thead th .flex.flex-col {
+      gap: 0.1rem !important;
+    }
+
+    /* Narrow columns for criteria */
+    .table-responsive th.min-w-20,
+    .table-responsive td {
+      min-width: auto !important;
+      max-width: 4rem !important;
+    }
+
+    /* Narrow first column (Alternative) */
+    .table-responsive th.w-24,
+    .table-responsive thead th:first-child {
+      width: auto !important;
+      min-width: 3rem !important;
+      max-width: 4rem !important;
+    }
+
+    /* Make table text even smaller on very small screens */
+    @media (max-width: 480px) {
+      .table-responsive table {
+        font-size: 0.563rem !important;
+        /* 9px */
+      }
+
+      .table-responsive th,
+      .table-responsive td,
+      .table-responsive thead th,
+      .table-responsive thead td,
+      .table-responsive tbody th,
+      .table-responsive tbody td {
+        font-size: 0.563rem !important;
+        /* 9px */
+        padding: 0.25rem 0.15rem !important;
+      }
+
+      .table-responsive thead th *,
+      .table-responsive thead td *,
+      .table-responsive thead th span,
+      .table-responsive thead td span,
+      .table-responsive thead th div,
+      .table-responsive thead td div,
+      .table-responsive tbody th *,
+      .table-responsive tbody td *,
+      .table-responsive tbody th span,
+      .table-responsive tbody td span,
+      .table-responsive tbody th div,
+      .table-responsive tbody td div {
+        font-size: 0.563rem !important;
+        /* 9px */
+      }
+    }
+  }
+
+  /* Desktop: Normal table */
+  @media (min-width: 769px) {
+    .table-responsive {
+      overflow-x: auto;
+    }
+  }
+
+  /* Responsive Chart Container - Auto-fit */
   .chart-container {
     @apply w-full;
-    min-height: 250px;
-    height: clamp(250px, 50vw, 400px);
+    min-height: 200px;
+    height: 400px;
+    max-width: 100%;
   }
 
   @media (min-width: 640px) {
     .chart-container {
-      height: 400px;
+      min-height: 350px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .chart-container {
+      min-height: 400px;
     }
   }
 
@@ -547,20 +711,112 @@ body {
     }
   }
 
-  /* MathJax Responsive Overrides */
+  /* Mobile Results Page - Fixed Home Button */
+  @media (max-width: 768px) {
+    .mobile-home-button {
+      position: fixed !important;
+      top: 1rem !important;
+      right: 1rem !important;
+      z-index: 50 !important;
+      width: 2.75rem !important;
+      height: 2.75rem !important;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+    }
+
+    .mobile-results-content {
+      padding-top: 1rem !important;
+    }
+
+    /* Stack selectors vertically */
+    .results-selectors {
+      flex-direction: column !important;
+      gap: 0.75rem !important;
+    }
+
+    .results-selectors>div {
+      width: 100% !important;
+    }
+
+    /* Compact badges */
+    .results-badges {
+      flex-wrap: wrap !important;
+      gap: 0.5rem !important;
+    }
+
+    /* Smaller controls on mobile */
+    .results-controls {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 0.75rem !important;
+    }
+  }
+
+  /* MathJax Responsive Overrides - No Overflow */
   mjx-container {
     font-size: 100% !important;
     max-width: 100% !important;
-    overflow-x: auto !important;
+    overflow-x: visible !important;
     overflow-y: hidden !important;
     display: block !important;
     margin: 0.5em 0 !important;
+    transform-origin: left center !important;
   }
 
-  /* Force equation scaling on very small screens */
+  /* Scale math formulas on mobile */
+  @media (max-width: 768px) {
+    mjx-container {
+      font-size: 90% !important;
+      transform: scale(0.9);
+      transform-origin: left center;
+    }
+  }
+
   @media (max-width: 480px) {
     mjx-container {
-      font-size: 85% !important;
+      font-size: 80% !important;
+      transform: scale(0.75);
+      transform-origin: left center;
+    }
+  }
+
+  /* Auto-scaling typography for mobile */
+  @media (max-width: 768px) {
+    h1 {
+      font-size: clamp(1.25rem, 5vw, 1.875rem) !important;
+    }
+
+    h2 {
+      font-size: clamp(1.125rem, 4.5vw, 1.5rem) !important;
+    }
+
+    h3 {
+      font-size: clamp(1rem, 4vw, 1.25rem) !important;
+    }
+
+    p,
+    span,
+    div {
+      font-size: clamp(0.75rem, 3.5vw, 0.875rem);
+    }
+  }
+
+  /* Badge and metric cards - responsive */
+  @media (max-width: 768px) {
+    .metric-badge {
+      font-size: 0.625rem !important;
+      padding: 0.25rem 0.5rem !important;
+    }
+  }
+
+  /* Responsive button groups */
+  @media (max-width: 768px) {
+    .button-group {
+      flex-direction: column !important;
+      width: 100% !important;
+    }
+
+    .button-group>* {
+      width: 100% !important;
     }
   }
 

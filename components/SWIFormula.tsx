@@ -100,14 +100,14 @@ export default function SWIFormula({ landingPage = false, language = "EN" }: SWI
           /* Mobile adjustments */
           @media (max-width: 640px) {
             .formula-box {
-              padding: 0.75rem !important;
-              margin: 0.75rem 0 !important;
+              padding: 0.5rem !important;
+              margin: 0.5rem 0 !important;
             }
             .latex {
               font-size: 0.75rem !important;
             }
             .latex mjx-container {
-              margin: 0.5rem 0 !important;
+              margin: 0.25rem 0 !important;
               padding: 0.25rem 0 !important;
             }
             h1 {
@@ -130,10 +130,10 @@ export default function SWIFormula({ landingPage = false, language = "EN" }: SWI
             <h1 className="text-xl md:text-2xl font-bold text-center mb-4 text-black">
               {t.swiTitle}
             </h1>
-            <div className="bg-gray-50 rounded-lg p-3 md:p-6 mb-4 overflow-x-auto">
+            <div className="bg-gray-50 rounded-lg p-3 md:p-6 mb-2 md:mb-4 overflow-x-auto">
               <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[${latex.weightedInformationSum}\\]` }} />
             </div>
-            <div className="mt-6">
+            <div className="mt-2 md:mt-6">
               <h2 className="text-lg md:text-xl font-semibold text-center mb-4 text-black">{t.rankingCriteria}</h2>
               <p className="text-center text-base md:text-lg text-black overflow-x-auto">
                 {`\\[ ${t.rankAscending} \\]`}

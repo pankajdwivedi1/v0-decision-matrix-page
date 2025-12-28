@@ -79,19 +79,22 @@ export function calculateEntropyWeights(
 
   for (let j = 0; j < n; j++) {
     const crit = criteria[j]
-    let entropy = 0
+    let entropySum = 0
 
     for (let i = 0; i < m; i++) {
       const p_ij = normalizedMatrix[alternatives[i].id][crit.id]
       let val = 0
       if (p_ij > epsilon) {
         val = p_ij * Math.log2(p_ij)
-        entropy += val
       }
-      entropyMatrix[alternatives[i].id][crit.id] = val
+      // Calculate individual entropy attribute value: -k * (p_ij * log2(p_ij))
+      // This ensures all values are positive and sum up to Ej
+      const entropyAttribute = -k * val
+      entropyMatrix[alternatives[i].id][crit.id] = entropyAttribute
+      entropySum += entropyAttribute
     }
 
-    entropyValues[crit.id] = -k * entropy
+    entropyValues[crit.id] = entropySum
   }
 
   // Step 4: Calculate diversity degree

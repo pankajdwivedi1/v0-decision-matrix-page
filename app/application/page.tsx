@@ -590,6 +590,7 @@ export default function MCDMCalculator() {
   const [rankingOpen, setRankingOpen] = useState(true)
   const [weightOpen, setWeightOpen] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+
   const [comparisonChartType, setComparisonChartType] = useState<string>("composed")
   const comparisonChartRef = useRef<HTMLDivElement>(null)
   const sensitivityGraphicalVariationRef = useRef<HTMLDivElement>(null)
@@ -2595,9 +2596,12 @@ export default function MCDMCalculator() {
     try {
       const methodLabel = MCDM_METHODS.find(m => m.value === method)?.label || method.toUpperCase()
 
+      const weightMethodLabel = WEIGHT_METHODS.find(w => w.value === weightMethod)?.label || weightMethod.toUpperCase()
+
       // Prepare data for export
       const exportData = {
         method: methodLabel,
+        weightMethod: weightMethodLabel,
         ranking: apiResults.ranking,
         alternatives,
         criteria,
@@ -2675,11 +2679,9 @@ export default function MCDMCalculator() {
       // or just put all metrics in.
       const exportData = {
         method: weightMethodLabel,
-        ranking: criteria.map((c, idx) => ({
-          rank: idx + 1,
-          alternativeName: c.name,
-          score: c.weight
-        })),
+        weightMethod: weightMethodLabel,
+        isWeightExport: true,
+        ranking: [],
         alternatives: alternatives,
         criteria: criteria,
         metrics: activeResult || undefined,
@@ -2829,6 +2831,15 @@ export default function MCDMCalculator() {
       setIsRanksDialogOpen(true)
       return
     }
+    if (newWeightMethod === "custom") {
+      const initialWeights: Record<string, string> = {}
+      criteria.forEach(c => {
+        initialWeights[c.id] = c.weight?.toString() || ""
+      })
+      setCustomWeights(initialWeights)
+      setIsMainCustomWeightsDialogOpen(true)
+      return
+    }
 
     // For objective methods, calculate immediately
     const { success, updatedCriteria } = await handleSaveTable(false, newWeightMethod)
@@ -2918,9 +2929,9 @@ export default function MCDMCalculator() {
 
   // Download chart function (SVG)
   const downloadChart = () => {
-    if (!sensitivityChartRef.current) return
+    if (!sensitivityResultsRef.current) return
     // ... existing SVG export logic preserved for backward compatibility/preference
-    const svgElement = sensitivityChartRef.current.querySelector('svg')
+    const svgElement = sensitivityResultsRef.current.querySelector('svg')
     if (!svgElement) return
 
     const serializer = new XMLSerializer()
@@ -3199,34 +3210,34 @@ export default function MCDMCalculator() {
             </div>
           </div>
 
-          <div className="flex gap-1.5 sm:gap-2 mb-4 flex-wrap">
+          <div className="grid grid-cols-2 gap-2 mb-4 sm:flex sm:flex-wrap">
             <Button
               variant="outline"
-              className={`text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 cursor-pointer ${homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+              className={`w-full sm:w-auto text-[10px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("rankingMethods")}
             >
-              <span className="truncate">Ranking Methods</span>
+              Ranking Methods
             </Button>
             <Button
               variant="outline"
-              className={`text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 cursor-pointer ${homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+              className={`w-full sm:w-auto text-[10px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("weightMethods")}
             >
-              <span className="truncate">Weight Methods</span>
+              Weight Methods
             </Button>
             <Button
               variant="outline"
-              className={`text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 cursor-pointer ${homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+              className={`w-full sm:w-auto text-[10px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("rankingComparison")}
             >
-              <span className="truncate">Ranking comparison</span>
+              Ranking comparison
             </Button>
             <Button
               variant="outline"
-              className={`text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 cursor-pointer ${homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+              className={`w-full sm:w-auto text-[10px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("sensitivityAnalysis")}
             >
-              <span className="truncate">Sensitivity Analysis</span>
+              Sensitivity Analysis
             </Button>
           </div>
 
@@ -3282,9 +3293,9 @@ export default function MCDMCalculator() {
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-gray-50">
-                            <TableHead className="text-xs text-black font-semibold w-24">Alternative</TableHead>
+                            <TableHead className="text-black font-semibold w-24">Alternative</TableHead>
                             {criteria.map((crit) => (
-                              <TableHead key={crit.id} className="text-xs text-black font-semibold text-center min-w-20">
+                              <TableHead key={crit.id} className="text-black font-semibold text-center min-w-20">
                                 <div className="flex flex-col items-center">
                                   <div className="flex items-center gap-1">
                                     <div className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</div>
@@ -3292,7 +3303,7 @@ export default function MCDMCalculator() {
                                       {crit.type === "beneficial" ? "▲" : "▼"}
                                     </span>
                                   </div>
-                                  <div className="text-[10px] text-gray-500 font-normal">
+                                  <div className="text-gray-500 font-normal">
                                     {crit.type === "beneficial" ? "Max" : "Min"}
                                   </div>
                                 </div>
@@ -3303,7 +3314,7 @@ export default function MCDMCalculator() {
                         <TableBody>
                           {alternatives.map((alt) => (
                             <TableRow key={alt.id}>
-                              <TableCell className="text-xs text-black font-medium">{alt.name}</TableCell>
+                              <TableCell className="text-black font-medium">{alt.name}</TableCell>
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="p-1">
                                   <Input
@@ -3426,13 +3437,13 @@ export default function MCDMCalculator() {
                         </p>
                       </div>
 
-                      <div className="border border-gray-200 rounded-lg overflow-x-auto">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50">
-                              <TableHead className="text-xs text-black font-semibold w-24">Alternative</TableHead>
+                              <TableHead className="text-black font-semibold w-24">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className="text-xs text-black font-semibold text-center min-w-20">
+                                <TableHead key={crit.id} className="text-black font-semibold text-center min-w-20">
                                   <div className="flex flex-col items-center">
                                     <div className="flex items-center gap-1">
                                       <div className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</div>
@@ -3440,7 +3451,7 @@ export default function MCDMCalculator() {
                                         {crit.type === "beneficial" ? "▲" : "▼"}
                                       </span>
                                     </div>
-                                    <div className="text-[10px] text-gray-500 font-normal">
+                                    <div className="text-gray-500 font-normal">
                                       {crit.type === "beneficial" ? "Max" : "Min"}
                                     </div>
                                   </div>
@@ -3451,7 +3462,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             {alternatives.map((alt) => (
                               <TableRow key={alt.id}>
-                                <TableCell className="text-xs text-black font-medium">{alt.name}</TableCell>
+                                <TableCell className="text-black font-medium">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="p-1">
                                     <Input
@@ -4025,8 +4036,8 @@ export default function MCDMCalculator() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="h-[350px] sm:h-[500px] w-full mt-4">
-                        <ResponsiveContainer width="100%" height="100%" ref={weightChartRef}>
+                      <div ref={weightChartRef} className="h-[350px] sm:h-[500px] w-full mt-4">
+                        <ResponsiveContainer width="100%" height="100%">
                           {weightChartType === 'radar' ? (
                             <RadarChart cx="50%" cy="50%" outerRadius="80%" data={sensitivityCriteriaWeights}>
                               <PolarGrid />
@@ -4535,13 +4546,13 @@ export default function MCDMCalculator() {
                       </div>
 
                       {/* Editable Decision Matrix Table */}
-                      <div className="border border-gray-200 rounded-lg overflow-x-auto">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50">
-                              <TableHead className="text-xs text-black font-semibold w-24">Alternative</TableHead>
+                              <TableHead className="text-black font-semibold w-24">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center min-w-20 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`font-semibold text-center min-w-20 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
                                   <div className="flex flex-col items-center">
                                     <div className="flex items-center gap-1">
@@ -4550,7 +4561,7 @@ export default function MCDMCalculator() {
                                         {crit.type === "beneficial" ? "▲" : "▼"}
                                       </span>
                                     </div>
-                                    <div className="text-[10px] text-gray-500 font-normal">
+                                    <div className="text-gray-500 font-normal">
                                       {crit.type === "beneficial" ? "Max" : "Min"}
                                     </div>
                                   </div>
@@ -4561,7 +4572,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             {alternatives.map((alt) => (
                               <TableRow key={alt.id}>
-                                <TableCell className="text-xs text-black font-medium">{alt.name}</TableCell>
+                                <TableCell className="text-black font-medium">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="p-1">
                                     <Input
@@ -4647,7 +4658,7 @@ export default function MCDMCalculator() {
                         className="flex w-full items-center justify-between mb-2"
                       >
                         <p className="text-xs font-semibold text-black">
-                          Ranking methods ({selectedRankingMethods.length} selected)
+                          Ranking methods Reference ({selectedRankingMethods.length} selected)
                         </p>
                         {comparisonRankingOpen ? (
                           <ChevronDown className="w-4 h-4 text-black" />
@@ -5258,185 +5269,187 @@ export default function MCDMCalculator() {
                       }
 
                       return (
-                        <ResponsiveContainer width="100%" height="100%" ref={comparisonChartRef}>
-                          {(() => {
-                            switch (comparisonChartType) {
-                              case "radar":
-                                return (
-                                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
-                                    <PolarGrid />
-                                    <PolarAngleAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                    <PolarRadiusAxis />
-                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                    <Tooltip />
-                                    {comparisonChartAlternatives.map((alt, idx) => (
-                                      <Radar key={alt} name={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.1} />
-                                    ))}
-                                  </RadarChart>
-                                );
-                              case "bar":
-                                return (
-                                  <BarChart data={comparisonChartData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                    <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
-                                    <Tooltip />
-                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                    {comparisonChartAlternatives.map((alt, idx) => (
-                                      <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
-                                    ))}
-                                  </BarChart>
-                                );
-                              case "stackedBar":
-                                return (
-                                  <BarChart data={comparisonChartData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                    <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
-                                    <Tooltip />
-                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                    {comparisonChartAlternatives.map((alt, idx) => (
-                                      <Bar key={alt} stackId="a" dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
-                                    ))}
-                                  </BarChart>
-                                );
-                              case "area":
-                                return (
-                                  <AreaChart data={comparisonChartData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                    {comparisonChartAlternatives.map((alt, idx) => (
-                                      <Area type="monotone" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
-                                    ))}
-                                  </AreaChart>
-                                );
-                              case "stackedArea":
-                                return (
-                                  <AreaChart data={comparisonChartData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                    {comparisonChartAlternatives.map((alt, idx) => (
-                                      <Area type="monotone" stackId="1" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
-                                    ))}
-                                  </AreaChart>
-                                );
-                              case "composed":
-                                const composedData = comparisonChartData.map(d => {
-                                  const avgRank = comparisonChartAlternatives.reduce((sum, alt) => sum + (d[alt] || 0), 0) / comparisonChartAlternatives.length;
-                                  const divergingData: any = { method: d.method };
-                                  comparisonChartAlternatives.forEach(alt => {
-                                    const rank = d[alt] || 0;
-                                    divergingData[alt] = rank - avgRank;
+                        <div ref={comparisonChartRef} className="w-full h-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            {(() => {
+                              switch (comparisonChartType) {
+                                case "radar":
+                                  return (
+                                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
+                                      <PolarGrid />
+                                      <PolarAngleAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                      <PolarRadiusAxis />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      <Tooltip />
+                                      {comparisonChartAlternatives.map((alt, idx) => (
+                                        <Radar key={alt} name={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.1} />
+                                      ))}
+                                    </RadarChart>
+                                  );
+                                case "bar":
+                                  return (
+                                    <BarChart data={comparisonChartData}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                      <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
+                                      <Tooltip />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {comparisonChartAlternatives.map((alt, idx) => (
+                                        <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
+                                      ))}
+                                    </BarChart>
+                                  );
+                                case "stackedBar":
+                                  return (
+                                    <BarChart data={comparisonChartData}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                      <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
+                                      <Tooltip />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {comparisonChartAlternatives.map((alt, idx) => (
+                                        <Bar key={alt} stackId="a" dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
+                                      ))}
+                                    </BarChart>
+                                  );
+                                case "area":
+                                  return (
+                                    <AreaChart data={comparisonChartData}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                      <YAxis />
+                                      <Tooltip />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {comparisonChartAlternatives.map((alt, idx) => (
+                                        <Area type="monotone" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
+                                      ))}
+                                    </AreaChart>
+                                  );
+                                case "stackedArea":
+                                  return (
+                                    <AreaChart data={comparisonChartData}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                      <YAxis />
+                                      <Tooltip />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {comparisonChartAlternatives.map((alt, idx) => (
+                                        <Area type="monotone" stackId="1" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
+                                      ))}
+                                    </AreaChart>
+                                  );
+                                case "composed":
+                                  const composedData = comparisonChartData.map(d => {
+                                    const avgRank = comparisonChartAlternatives.reduce((sum, alt) => sum + (d[alt] || 0), 0) / comparisonChartAlternatives.length;
+                                    const divergingData: any = { method: d.method };
+                                    comparisonChartAlternatives.forEach(alt => {
+                                      const rank = d[alt] || 0;
+                                      divergingData[alt] = rank - avgRank;
+                                    });
+                                    return divergingData;
                                   });
-                                  return divergingData;
-                                });
-                                return (
-                                  <BarChart data={composedData} layout="vertical" margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis type="number" label={{ value: "Deviation from Average Rank", position: "insideBottom", offset: -10 }} tick={{ fontSize: 10 }} />
-                                    <YAxis type="category" dataKey="method" tick={{ fontSize: 10 }} width={90} />
-                                    <Tooltip formatter={(value: any, name: string) => [`${parseFloat(value) > 0 ? '+' : ''}${parseFloat(value).toFixed(2)} (${parseFloat(value) < 0 ? 'Better' : 'Worse'} than avg)`, name]} />
-                                    <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "20px" }} layout="horizontal" align="center" verticalAlign="bottom" iconType="square" />
-                                    <ReferenceLine x={0} stroke="#666" strokeWidth={2} />
-                                    {comparisonChartAlternatives.map((alt, idx) => (
-                                      <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} stackId="stack" />
-                                    ))}
-                                  </BarChart>
-                                );
-                              case "scatter":
-                                return (
-                                  <ScatterChart>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="x" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} name="Method" />
-                                    <YAxis dataKey="y" type="number" name="Rank" label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
-                                    <Tooltip cursor={{ strokeDasharray: "3 3" }} />
-                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                    {comparisonChartAlternatives.map((alt, idx) => (
-                                      <Scatter key={alt} name={alt} data={comparisonChartData.map((d) => ({ x: d.method, y: d[alt] }))} fill={CHART_COLORS[idx % CHART_COLORS.length]} shape={["circle", "cross", "diamond", "square", "star", "triangle", "wye"][idx % 7] as any} line />
-                                    ))}
-                                  </ScatterChart>
-                                );
-                              case "boxPlot":
-                                const boxData = comparisonChartAlternatives.map((alt) => {
-                                  const values = comparisonChartData.map((r) => r[alt]).filter((v) => v != null).sort((a, b) => a - b)
-                                  if (values.length === 0) return null
-                                  const q1 = values[Math.floor(values.length * 0.25)]
-                                  const median = values[Math.floor(values.length * 0.5)]
-                                  const q3 = values[Math.floor(values.length * 0.75)]
-                                  const min = Math.min(...values)
-                                  const max = Math.max(...values)
-                                  const iqr = q3 - q1
-                                  const whiskerLow = Math.max(min, q1 - 1.5 * iqr)
-                                  const whiskerHigh = Math.min(max, q3 + 1.5 * iqr)
-                                  return { alt, min, q1, median, q3, max, whiskerLow, whiskerHigh, n: values.length }
-                                }).filter((d): d is any => d !== null)
+                                  return (
+                                    <BarChart data={composedData} layout="vertical" margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis type="number" label={{ value: "Deviation from Average Rank", position: "insideBottom", offset: -10 }} tick={{ fontSize: 10 }} />
+                                      <YAxis type="category" dataKey="method" tick={{ fontSize: 10 }} width={90} />
+                                      <Tooltip formatter={(value: any, name: string) => [`${parseFloat(value) > 0 ? '+' : ''}${parseFloat(value).toFixed(2)} (${parseFloat(value) < 0 ? 'Better' : 'Worse'} than avg)`, name]} />
+                                      <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "20px" }} layout="horizontal" align="center" verticalAlign="bottom" iconType="square" />
+                                      <ReferenceLine x={0} stroke="#666" strokeWidth={2} />
+                                      {comparisonChartAlternatives.map((alt, idx) => (
+                                        <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} stackId="stack" />
+                                      ))}
+                                    </BarChart>
+                                  );
+                                case "scatter":
+                                  return (
+                                    <ScatterChart>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="x" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} name="Method" />
+                                      <YAxis dataKey="y" type="number" name="Rank" label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
+                                      <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {comparisonChartAlternatives.map((alt, idx) => (
+                                        <Scatter key={alt} name={alt} data={comparisonChartData.map((d) => ({ x: d.method, y: d[alt] }))} fill={CHART_COLORS[idx % CHART_COLORS.length]} shape={["circle", "cross", "diamond", "square", "star", "triangle", "wye"][idx % 7] as any} line />
+                                      ))}
+                                    </ScatterChart>
+                                  );
+                                case "boxPlot":
+                                  const boxData = comparisonChartAlternatives.map((alt) => {
+                                    const values = comparisonChartData.map((r) => r[alt]).filter((v) => v != null).sort((a, b) => a - b)
+                                    if (values.length === 0) return null
+                                    const q1 = values[Math.floor(values.length * 0.25)]
+                                    const median = values[Math.floor(values.length * 0.5)]
+                                    const q3 = values[Math.floor(values.length * 0.75)]
+                                    const min = Math.min(...values)
+                                    const max = Math.max(...values)
+                                    const iqr = q3 - q1
+                                    const whiskerLow = Math.max(min, q1 - 1.5 * iqr)
+                                    const whiskerHigh = Math.min(max, q3 + 1.5 * iqr)
+                                    return { alt, min, q1, median, q3, max, whiskerLow, whiskerHigh, n: values.length }
+                                  }).filter((d): d is any => d !== null)
 
-                                if (boxData.length === 0) return <></>
-                                const allVals = boxData.flatMap(d => [d.whiskerLow, d.whiskerHigh])
-                                const minV = Math.min(...allVals)
-                                const maxV = Math.max(...allVals)
-                                const yR = maxV - minV || 1
-                                const pad = { top: 30, right: 30, bottom: 50, left: 50 }
-                                const cW = 800 - pad.left - pad.right
-                                const cH = 400 - pad.top - pad.bottom
-                                const bW = Math.max(15, (cW / boxData.length) * 0.6)
-                                const sp = cW / boxData.length
-                                const gY = (v: number) => pad.top + cH - ((v - minV) / yR) * cH
-                                const gX = (idx: number) => pad.left + (idx + 0.5) * sp
+                                  if (boxData.length === 0) return <></>
+                                  const allVals = boxData.flatMap(d => [d.whiskerLow, d.whiskerHigh])
+                                  const minV = Math.min(...allVals)
+                                  const maxV = Math.max(...allVals)
+                                  const yR = maxV - minV || 1
+                                  const pad = { top: 30, right: 30, bottom: 50, left: 50 }
+                                  const cW = 800 - pad.left - pad.right
+                                  const cH = 400 - pad.top - pad.bottom
+                                  const bW = Math.max(15, (cW / boxData.length) * 0.6)
+                                  const sp = cW / boxData.length
+                                  const gY = (v: number) => pad.top + cH - ((v - minV) / yR) * cH
+                                  const gX = (idx: number) => pad.left + (idx + 0.5) * sp
 
-                                return (
-                                  <svg viewBox="0 0 800 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-                                    <line x1={pad.left} y1={pad.top} x2={pad.left} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
-                                    <line x1={pad.left} y1={pad.top + cH} x2={800 - pad.right} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
-                                    {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
-                                      <g key={`ylabel-${pct}`}>
-                                        <line x1={pad.left - 5} y1={gY(minV + pct * yR)} x2={pad.left} y2={gY(minV + pct * yR)} stroke="#999" strokeWidth="1" />
-                                        <text x={pad.left - 10} y={gY(minV + pct * yR) + 4} fontSize="11" textAnchor="end" fill="#666">{(minV + pct * yR).toFixed(1)}</text>
-                                        <line x1={pad.left} y1={gY(minV + pct * yR)} x2={800 - pad.right} y2={gY(minV + pct * yR)} stroke="#eee" strokeWidth="1" strokeDasharray="2,2" />
-                                      </g>
-                                    ))}
-                                    {boxData.map((data, idx) => {
-                                      const x = gX(idx)
-                                      const color = CHART_COLORS[idx % CHART_COLORS.length]
-                                      return (
-                                        <g key={`box-${data.alt}`}>
-                                          <line x1={x} y1={gY(data.whiskerLow)} x2={x} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2" opacity="0.8" />
-                                          <line x1={x - bW / 3} y1={gY(data.whiskerLow)} x2={x + bW / 3} y2={gY(data.whiskerLow)} stroke={color} strokeWidth="2.5" opacity="0.8" />
-                                          <line x1={x - bW / 3} y1={gY(data.whiskerHigh)} x2={x + bW / 3} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2.5" opacity="0.8" />
-                                          <rect x={x - bW / 2} y={gY(data.q3)} width={bW} height={Math.max(1, gY(data.q1) - gY(data.q3))} fill={color} fillOpacity="0.4" stroke={color} strokeWidth="2" />
-                                          <line x1={x - bW / 2} y1={gY(data.median)} x2={x + bW / 2} y2={gY(data.median)} stroke="#ff3333" strokeWidth="3" />
-                                          <circle cx={x} cy={gY(data.min)} r="3" fill={color} opacity="0.6" />
-                                          <circle cx={x} cy={gY(data.max)} r="3" fill={color} opacity="0.6" />
-                                          <text x={x} y={pad.top + cH + 25} fontSize="12" textAnchor="middle" fill="#333" fontWeight="500">{data.alt.substring(0, 8)}</text>
+                                  return (
+                                    <svg viewBox="0 0 800 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+                                      <line x1={pad.left} y1={pad.top} x2={pad.left} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
+                                      <line x1={pad.left} y1={pad.top + cH} x2={800 - pad.right} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
+                                      {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
+                                        <g key={`ylabel-${pct}`}>
+                                          <line x1={pad.left - 5} y1={gY(minV + pct * yR)} x2={pad.left} y2={gY(minV + pct * yR)} stroke="#999" strokeWidth="1" />
+                                          <text x={pad.left - 10} y={gY(minV + pct * yR) + 4} fontSize="11" textAnchor="end" fill="#666">{(minV + pct * yR).toFixed(1)}</text>
+                                          <line x1={pad.left} y1={gY(minV + pct * yR)} x2={800 - pad.right} y2={gY(minV + pct * yR)} stroke="#eee" strokeWidth="1" strokeDasharray="2,2" />
                                         </g>
-                                      )
-                                    })}
-                                    <text x={25} y={15} fontSize="12" fontWeight="600" fill="#333">Rank</text>
-                                    <text x={750} y={pad.top + cH + 40} fontSize="12" fontWeight="600" fill="#333">Alts</text>
-                                  </svg>
-                                );
-                              default:
-                                return (
-                                  <LineChart data={comparisonChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                    <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                                    <Tooltip />
-                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                    {comparisonChartAlternatives.map((alt, idx) => (
-                                      <Line key={alt} type={comparisonChartType === "step" ? "step" : "monotone"} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2} strokeDasharray={["0", "5 5", "3 3", "10 5", "2 2", "15 5"][idx % 6]} activeDot={{ r: 6 }} dot={{ r: 4, strokeWidth: 1, fill: "white", stroke: CHART_COLORS[idx % CHART_COLORS.length] }} />
-                                    ))}
-                                  </LineChart>
-                                );
-                            }
-                          })()}
-                        </ResponsiveContainer>
+                                      ))}
+                                      {boxData.map((data, idx) => {
+                                        const x = gX(idx)
+                                        const color = CHART_COLORS[idx % CHART_COLORS.length]
+                                        return (
+                                          <g key={`box-${data.alt}`}>
+                                            <line x1={x} y1={gY(data.whiskerLow)} x2={x} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2" opacity="0.8" />
+                                            <line x1={x - bW / 3} y1={gY(data.whiskerLow)} x2={x + bW / 3} y2={gY(data.whiskerLow)} stroke={color} strokeWidth="2.5" opacity="0.8" />
+                                            <line x1={x - bW / 3} y1={gY(data.whiskerHigh)} x2={x + bW / 3} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2.5" opacity="0.8" />
+                                            <rect x={x - bW / 2} y={gY(data.q3)} width={bW} height={Math.max(1, gY(data.q1) - gY(data.q3))} fill={color} fillOpacity="0.4" stroke={color} strokeWidth="2" />
+                                            <line x1={x - bW / 2} y1={gY(data.median)} x2={x + bW / 2} y2={gY(data.median)} stroke="#ff3333" strokeWidth="3" />
+                                            <circle cx={x} cy={gY(data.min)} r="3" fill={color} opacity="0.6" />
+                                            <circle cx={x} cy={gY(data.max)} r="3" fill={color} opacity="0.6" />
+                                            <text x={x} y={pad.top + cH + 25} fontSize="12" textAnchor="middle" fill="#333" fontWeight="500">{data.alt.substring(0, 8)}</text>
+                                          </g>
+                                        )
+                                      })}
+                                      <text x={25} y={15} fontSize="12" fontWeight="600" fill="#333">Rank</text>
+                                      <text x={750} y={pad.top + cH + 40} fontSize="12" fontWeight="600" fill="#333">Alts</text>
+                                    </svg>
+                                  );
+                                default:
+                                  return (
+                                    <LineChart data={comparisonChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                      <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                                      <Tooltip />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {comparisonChartAlternatives.map((alt, idx) => (
+                                        <Line key={alt} type={comparisonChartType === "step" ? "step" : "monotone"} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2} strokeDasharray={["0", "5 5", "3 3", "10 5", "2 2", "15 5"][idx % 6]} activeDot={{ r: 6 }} dot={{ r: 4, strokeWidth: 1, fill: "white", stroke: CHART_COLORS[idx % CHART_COLORS.length] }} />
+                                      ))}
+                                    </LineChart>
+                                  );
+                              }
+                            })()}
+                          </ResponsiveContainer>
+                        </div>
                       );
                     })()}
                   </CardContent>
@@ -5485,13 +5498,13 @@ export default function MCDMCalculator() {
                       </div>
 
                       {/* Editable Decision Matrix Table */}
-                      <div className="border border-gray-200 rounded-lg overflow-x-auto">
+                      <div className="table-responsive border border-gray-200 rounded-lg">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50">
-                              <TableHead className="text-xs text-black font-semibold w-24">Alternative</TableHead>
+                              <TableHead className="text-black font-semibold w-24">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center min-w-20 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`font-semibold text-center min-w-20 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
                                   <div className="flex flex-col items-center">
                                     <div className="flex items-center gap-1">
@@ -5500,7 +5513,7 @@ export default function MCDMCalculator() {
                                         {crit.type === "beneficial" ? "▲" : "▼"}
                                       </span>
                                     </div>
-                                    <div className="text-[10px] text-gray-500 font-normal">
+                                    <div className="text-gray-500 font-normal">
                                       {crit.type === "beneficial" ? "Max" : "Min"}
                                     </div>
                                   </div>
@@ -5511,7 +5524,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             {alternatives.map((alt) => (
                               <TableRow key={alt.id}>
-                                <TableCell className="text-xs text-black font-medium">{alt.name}</TableCell>
+                                <TableCell className="text-black font-medium">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="p-1">
                                     <Input
@@ -7217,6 +7230,13 @@ export default function MCDMCalculator() {
                     } else if (["roc", "rr"].includes(val)) {
                       setWeightMethod(val)
                       setIsRanksDialogOpen(true)
+                    } else if (val === "custom") {
+                      const initialWeights: Record<string, string> = {}
+                      criteria.forEach(c => {
+                        initialWeights[c.id] = c.weight?.toString() || ""
+                      })
+                      setCustomWeights(initialWeights)
+                      setIsMainCustomWeightsDialogOpen(true)
                     } else {
                       calculateWeights(val)
                     }
@@ -7227,7 +7247,7 @@ export default function MCDMCalculator() {
                     <SelectContent className="max-h-[300px]">
                       <SelectGroup>
                         <SelectLabel className="text-xs font-bold text-blue-600 px-2 py-1.5 bg-blue-50/50">Objective Weights</SelectLabel>
-                        {WEIGHT_METHODS.filter(m => !["ahp", "piprecia", "swara", "roc", "rr"].includes(m.value)).map((m) => (
+                        {WEIGHT_METHODS.filter(m => !["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
                           <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
                             {m.label}
                           </SelectItem>
@@ -7235,7 +7255,7 @@ export default function MCDMCalculator() {
                       </SelectGroup>
                       <SelectGroup>
                         <SelectLabel className="text-xs font-bold text-purple-600 px-2 py-1.5 bg-purple-50/50 mt-1">Subjective Weights</SelectLabel>
-                        {WEIGHT_METHODS.filter(m => ["ahp", "piprecia", "swara", "roc", "rr"].includes(m.value)).map((m) => (
+                        {WEIGHT_METHODS.filter(m => ["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
                           <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
                             {m.label}
                           </SelectItem>
@@ -7304,9 +7324,17 @@ export default function MCDMCalculator() {
                       max="10"
                       value={weightsDecimalPlaces}
                       onChange={(e) => {
-                        const val = Math.max(0, Math.min(10, parseInt(e.target.value) || 4));
-                        setWeightsDecimalPlaces(val);
-                        setResultsDecimalPlaces(val);
+                        const rawValue = e.target.value;
+                        if (rawValue === "") {
+                          setWeightsDecimalPlaces(0);
+                          setResultsDecimalPlaces(0);
+                          return;
+                        }
+                        const val = Math.max(0, Math.min(10, parseInt(rawValue)));
+                        if (!isNaN(val)) {
+                          setWeightsDecimalPlaces(val);
+                          setResultsDecimalPlaces(val);
+                        }
                       }}
                       className="w-12 h-8 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
                     />
@@ -7337,15 +7365,15 @@ export default function MCDMCalculator() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                          <TableHead className="font-semibold text-black py-3 px-4">Alternative</TableHead>
                           {criteria.map((crit) => (
                             <TableHead
                               key={crit.id}
-                              className="text-xs font-semibold text-center py-3 px-4"
+                              className="font-semibold text-center py-3 px-4"
                             >
                               <div className="flex flex-col items-center">
                                 <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</span>
-                                <span className="text-[10px] text-gray-500 mt-1">{crit.type === "beneficial" ? "↑" : "↓"} ({crit.weight.toFixed(weightsDecimalPlaces)})</span>
+                                <span className="text-gray-500 mt-1">{crit.type === "beneficial" ? "↑" : "↓"} ({crit.weight.toFixed(weightsDecimalPlaces)})</span>
                               </div>
                             </TableHead>
                           ))}
@@ -7354,11 +7382,11 @@ export default function MCDMCalculator() {
                       <TableBody>
                         {alternatives.map((alt) => (
                           <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-3 px-4 font-medium text-black text-xs">
+                            <TableCell className="py-3 px-4 font-medium text-black">
                               {alt.name}
                             </TableCell>
                             {criteria.map((crit) => (
-                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                              <TableCell key={crit.id} className="text-center py-3 px-4 text-black">
                                 {alt.scores[crit.id] !== undefined && alt.scores[crit.id] !== ""
                                   ? Number(alt.scores[crit.id]).toString()
                                   : "-"}
@@ -7456,7 +7484,7 @@ export default function MCDMCalculator() {
                   {/* Table 3: Entropy Values */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Entropy Values (p_ij * log2(p_ij))</CardTitle>
+                      <CardTitle className="text-sm text-black">Table 3: Entropy for Attributes (- (p_ij * log2(p_ij)) / log2(m))</CardTitle>
                       <CardDescription className="text-xs text-gray-700">
                         Intermediate entropy calculation values
                       </CardDescription>
@@ -10660,15 +10688,28 @@ export default function MCDMCalculator() {
               </div>
             </div>
           ) : (
-            <div className="max-w-7xl mx-auto w-full">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
+            <div className="max-w-7xl mx-auto w-full mobile-results-content">
+              {/* Mobile-Only Fixed Home Button */}
+              <Button
+                onClick={() => setCurrentStep("home")}
+                variant="outline"
+                size="icon"
+                className="md:hidden mobile-home-button border-gray-300 bg-white"
+                title="Go to Home"
+              >
+                <Home className="h-4 w-4" />
+              </Button>
+
+              {/* Header Section */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-6">
+                {/* Left: Back Button + Title */}
                 <div className="flex items-center gap-3">
                   <Button
                     type="button"
                     onClick={() => setCurrentStep("table")}
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 text-black hover:bg-gray-100 bg-transparent flex-shrink-0"
+                    className="h-9 w-9 text-black hover:bg-gray-100 bg-transparent flex-shrink-0 touch-target"
                     title="Back"
                   >
                     <ArrowLeft className="h-4 w-4" />
@@ -10679,18 +10720,18 @@ export default function MCDMCalculator() {
                   </div>
                 </div>
 
-                {/* Selectors in the middle */}
-                <div className="flex flex-wrap items-center gap-4 flex-1 justify-center">
-                  <div className="flex flex-col gap-1 min-w-[160px]">
+                {/* Middle: Selectors */}
+                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 flex-1 md:justify-center results-selectors">
+                  <div className="flex flex-col gap-1 w-full md:min-w-[160px] md:w-auto">
                     <span className="text-[10px] font-bold text-gray-500 uppercase px-1 tracking-wider">Weight Method</span>
                     <Select value={weightMethod} onValueChange={(val: WeightMethod) => handleWeightMethodChange(val)}>
-                      <SelectTrigger className="h-9 text-xs border-gray-200 text-black bg-white shadow-sm hover:border-gray-300 transition-colors">
+                      <SelectTrigger className="h-10 md:h-9 text-xs border-gray-200 text-black bg-white shadow-sm hover:border-gray-300 transition-colors w-full">
                         <SelectValue placeholder="Select Weight Method" />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
                         <SelectGroup>
                           <SelectLabel className="text-xs font-bold text-blue-600 px-2 py-1.5 bg-blue-50/50">Objective Weights</SelectLabel>
-                          {WEIGHT_METHODS.filter(m => !["ahp", "piprecia", "swara", "roc", "rr"].includes(m.value)).map((m) => (
+                          {WEIGHT_METHODS.filter(m => !["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
                             <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
                               {m.label}
                             </SelectItem>
@@ -10698,7 +10739,7 @@ export default function MCDMCalculator() {
                         </SelectGroup>
                         <SelectGroup>
                           <SelectLabel className="text-xs font-bold text-purple-600 px-2 py-1.5 bg-purple-50/50 mt-1">Subjective Weights</SelectLabel>
-                          {WEIGHT_METHODS.filter(m => ["ahp", "piprecia", "swara", "roc", "rr"].includes(m.value)).map((m) => (
+                          {WEIGHT_METHODS.filter(m => ["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
                             <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
                               {m.label}
                             </SelectItem>
@@ -10708,10 +10749,10 @@ export default function MCDMCalculator() {
                     </Select>
                   </div>
 
-                  <div className="flex flex-col gap-1 min-w-[160px]">
+                  <div className="flex flex-col gap-1 w-full md:min-w-[160px] md:w-auto">
                     <span className="text-[10px] font-bold text-gray-500 uppercase px-1 tracking-wider">Ranking Method</span>
                     <Select value={method} onValueChange={(val: MCDMMethod) => handleRankingMethodChange(val)}>
-                      <SelectTrigger className="h-9 text-xs border-gray-200 text-black bg-white shadow-sm hover:border-gray-300 transition-colors">
+                      <SelectTrigger className="h-10 md:h-9 text-xs border-gray-200 text-black bg-white shadow-sm hover:border-gray-300 transition-colors w-full">
                         <SelectValue placeholder="Select Ranking Method" />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
@@ -10725,12 +10766,13 @@ export default function MCDMCalculator() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Right: Home Button (Desktop Only) */}
+                <div className="hidden md:flex items-center gap-2 flex-shrink-0">
                   <Button
                     onClick={() => setCurrentStep("home")}
                     variant="outline"
                     size="icon"
-                    className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
+                    className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-white shadow-sm"
                     title="Go to Home"
                   >
                     <Home className="h-4 w-4" />
@@ -10747,26 +10789,29 @@ export default function MCDMCalculator() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Method Info and Controls */}
-                  <div className="flex flex-wrap items-center gap-3 mb-6 p-2 bg-white border border-gray-200 rounded-lg">
-                    {/* Method Name Badge */}
-                    <div className="inline-flex items-center gap-2 bg-teal-100 border border-teal-300 rounded-full px-3 py-1">
-                      <span className="text-[10px] font-semibold text-teal-800 uppercase">{methodInfo?.label}</span>
-                    </div>
+                  <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-3 mb-6 p-3 md:p-2 bg-white border border-gray-200 rounded-lg">
+                    {/* Badges Section */}
+                    <div className="flex flex-wrap items-center gap-2 results-badges">
+                      {/* Method Name Badge */}
+                      <div className="inline-flex items-center gap-2 bg-teal-100 border border-teal-300 rounded-full px-3 py-1 metric-badge">
+                        <span className="text-[10px] font-semibold text-teal-800 uppercase">{methodInfo?.label}</span>
+                      </div>
 
-                    {/* Criteria Badge */}
-                    <div className="inline-flex items-center gap-2 bg-blue-100 border border-blue-300 rounded-full px-3 py-1">
-                      <span className="text-[10px] font-semibold text-blue-800 uppercase">{String(criteria.length).padStart(2, '0')} Criteria</span>
-                    </div>
+                      {/* Criteria Badge */}
+                      <div className="inline-flex items-center gap-2 bg-blue-100 border border-blue-300 rounded-full px-3 py-1 metric-badge">
+                        <span className="text-[10px] font-semibold text-blue-800 uppercase">{String(criteria.length).padStart(2, '0')} Criteria</span>
+                      </div>
 
-                    {/* Alternatives Badge */}
-                    <div className="inline-flex items-center gap-2 bg-gray-100 border border-gray-300 rounded-full px-3 py-1">
-                      <span className="text-[10px] font-semibold text-gray-800 uppercase">{String(alternatives.length).padStart(2, '0')} Alternatives</span>
+                      {/* Alternatives Badge */}
+                      <div className="inline-flex items-center gap-2 bg-gray-100 border border-gray-300 rounded-full px-3 py-1 metric-badge">
+                        <span className="text-[10px] font-semibold text-gray-800 uppercase">{String(alternatives.length).padStart(2, '0')} Alternatives</span>
+                      </div>
                     </div>
 
                     {/* Parametric Controls (VIKOR, WASPAS, CODAS) */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 w-full md:w-auto">
                       {method === "vikor" && (
-                        <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
+                        <div className="flex items-center gap-2 md:border-l md:border-gray-200 md:pl-4">
                           <label className="text-[10px] font-bold text-gray-600 uppercase">v-value:</label>
                           <Input
                             type="number"
@@ -10776,13 +10821,13 @@ export default function MCDMCalculator() {
                             value={vikorVValue}
                             onChange={(e) => setVikorVValue(e.target.value)}
                             onBlur={() => handleCalculate()}
-                            className="w-16 h-7 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
+                            className="w-20 md:w-16 h-9 md:h-7 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
                           />
                         </div>
                       )}
 
                       {method === "waspas" && (
-                        <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
+                        <div className="flex items-center gap-2 md:border-l md:border-gray-200 md:pl-4">
                           <label className="text-[10px] font-bold text-gray-600 uppercase">λ-value:</label>
                           <Input
                             type="number"
@@ -10792,13 +10837,13 @@ export default function MCDMCalculator() {
                             value={waspasLambdaValue}
                             onChange={(e) => setWpasLambdaValue(e.target.value)}
                             onBlur={() => handleCalculate()}
-                            className="w-16 h-7 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
+                            className="w-20 md:w-16 h-9 md:h-7 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
                           />
                         </div>
                       )}
 
                       {method === "codas" && (
-                        <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
+                        <div className="flex items-center gap-2 md:border-l md:border-gray-200 md:pl-4">
                           <label className="text-[10px] font-bold text-gray-600 uppercase">τ-value:</label>
                           <Input
                             type="number"
@@ -10808,42 +10853,53 @@ export default function MCDMCalculator() {
                             value={codasTauValue}
                             onChange={(e) => setCodasTauValue(e.target.value)}
                             onBlur={() => handleCalculate()}
-                            className="w-16 h-7 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
+                            className="w-20 md:w-16 h-9 md:h-7 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
                           />
                         </div>
                       )}
                     </div>
 
                     {/* Spacer */}
-                    <div className="flex-1"></div>
+                    <div className="hidden md:block flex-1"></div>
 
-                    {/* Decimal Places Control */}
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-semibold text-black">Decimal:</label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="10"
-                        value={resultsDecimalPlaces}
-                        onChange={(e) => {
-                          const val = Math.max(0, Math.min(10, parseInt(e.target.value) || 4));
-                          setResultsDecimalPlaces(val);
-                          setWeightsDecimalPlaces(val);
-                        }}
-                        className="w-12 h-8 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
-                      />
+                    {/* Bottom Row on Mobile: Decimal + Export */}
+                    <div className="flex items-center gap-3 w-full md:w-auto results-controls">
+                      {/* Decimal Places Control */}
+                      <div className="flex items-center gap-2 flex-1 md:flex-initial">
+                        <label className="text-xs font-semibold text-black whitespace-nowrap">Decimal:</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="10"
+                          value={resultsDecimalPlaces}
+                          onChange={(e) => {
+                            const rawValue = e.target.value;
+                            if (rawValue === "") {
+                              setResultsDecimalPlaces(0);
+                              setWeightsDecimalPlaces(0);
+                              return;
+                            }
+                            const val = Math.max(0, Math.min(10, parseInt(rawValue)));
+                            if (!isNaN(val)) {
+                              setResultsDecimalPlaces(val);
+                              setWeightsDecimalPlaces(val);
+                            }
+                          }}
+                          className="w-16 md:w-12 h-9 md:h-8 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      {/* Export to Excel Button */}
+                      <Button
+                        onClick={exportResultsToExcel}
+                        variant="outline"
+                        className="text-xs h-9 md:h-8 border-gray-200 text-black hover:bg-gray-100 bg-white flex items-center gap-1 shadow-sm transition-colors flex-1 md:flex-initial"
+                        title="Export results to Excel"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span className="">Export</span>
+                      </Button>
                     </div>
-
-                    {/* Export to Excel Button */}
-                    <Button
-                      onClick={exportResultsToExcel}
-                      variant="outline"
-                      className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent flex items-center gap-1 shadow-none transition-colors"
-                      title="Export results to Excel"
-                    >
-                      <Download className="w-3 h-3" />
-                      <span className="">Export</span>
-                    </Button>
                   </div>
 
                   {/* Results Table */}
@@ -10880,10 +10936,10 @@ export default function MCDMCalculator() {
                 </CardContent>
               </Card>
 
-              {/* Criteria Weights Display */}
+              {/* Criteria Weights Display - Styled per Screenshot 2 */}
               <Card className="border-gray-200 bg-white shadow-none mb-6">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">Criteria Weights</CardTitle>
+                  <CardTitle className="text-sm font-bold text-black">Criteria Weights</CardTitle>
                   <CardDescription className="text-xs text-gray-700">
                     Weight Method: {WEIGHT_METHODS.find(w => w.value === weightMethod)?.label}
                   </CardDescription>
@@ -10893,9 +10949,9 @@ export default function MCDMCalculator() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 w-24">Criterion</TableHead>
+                          <TableHead className="text-xs font-bold text-black py-2 px-4 w-24">Criterion</TableHead>
                           {criteria.map((crit) => (
-                            <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
+                            <TableHead key={crit.id} className="text-xs font-bold text-center py-2 px-4 text-green-600">
                               {crit.name}
                             </TableHead>
                           ))}
@@ -10903,14 +10959,14 @@ export default function MCDMCalculator() {
                       </TableHeader>
                       <TableBody>
                         <TableRow className="border-b border-gray-200 hover:bg-gray-50">
-                          <TableCell className="py-3 px-4 font-semibold text-black text-xs">Weight</TableCell>
+                          <TableCell className="py-3 px-4 text-xs font-bold text-black">Weight</TableCell>
                           {criteria.map((crit) => (
                             <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                              <div className="flex flex-col items-center gap-1">
-                                <span className={`text-xs ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
+                              <div className="flex items-center justify-center gap-1 font-medium whitespace-nowrap">
+                                <span className={`${crit.type === "beneficial" ? "text-green-600" : "text-red-600"} font-bold`}>
                                   {crit.type === "beneficial" ? "↑" : "↓"}
                                 </span>
-                                <span className="font-semibold">({(crit.weight ?? 0).toFixed(resultsDecimalPlaces)})</span>
+                                <span className="font-bold">({(crit.weight ?? 0).toFixed(resultsDecimalPlaces)})</span>
                               </div>
                             </TableCell>
                           ))}
@@ -13829,6 +13885,116 @@ export default function MCDMCalculator() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Custom Weights Dialog (Main Tab) */}
+        {homeTab === "rankingMethods" && (
+          <Dialog open={isMainCustomWeightsDialogOpen} onOpenChange={setIsMainCustomWeightsDialogOpen}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-full">
+              <DialogHeader>
+                <DialogTitle>Enter Custom Weights</DialogTitle>
+                <DialogDescription className="text-xs">
+                  Enter a weight for each criterion. Weights will be automatically normalized to sum to 1.0.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 mt-4">
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                        <TableHead className="text-xs font-semibold text-center">Weight</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {criteria.map((crit) => (
+                        <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                          <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                          <TableCell className="text-center py-3 px-4 text-xs text-black">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={customWeights[crit.id] || ""}
+                              onChange={(e) => setCustomWeights({
+                                ...customWeights,
+                                [crit.id]: e.target.value,
+                              })}
+                              onKeyDown={handleKeyDown}
+                              className="w-24 h-7 text-xs text-center mx-auto"
+                              placeholder="0.00"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-900">
+                    <strong>Note:</strong> You can enter any positive numbers. The weights will be automatically normalized
+                    to sum to 1.0. For example, if you enter 3, 2, and 1, they will be normalized to 0.5, 0.33, and 0.17.
+                  </p>
+                </div>
+              </div>
+
+              <DialogFooter className="mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsMainCustomWeightsDialogOpen(false)}
+                  className="text-xs h-8"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      const weights: Record<string, number> = {}
+                      let sum = 0
+
+                      criteria.forEach((crit) => {
+                        const value = parseFloat(customWeights[crit.id]) || 0
+                        if (value < 0) {
+                          throw new Error("Weights must be non-negative")
+                        }
+                        weights[crit.id] = value
+                        sum += value
+                      })
+
+                      if (sum === 0) {
+                        throw new Error("At least one weight must be greater than zero")
+                      }
+
+                      const normalizedWeights: Record<string, number> = {}
+                      criteria.forEach((crit) => {
+                        normalizedWeights[crit.id] = weights[crit.id] / sum
+                      })
+
+                      const updatedCriteria = criteria.map(c => ({
+                        ...c,
+                        weight: normalizedWeights[c.id] || 0
+                      }))
+                      setCriteria(updatedCriteria)
+                      setIsMainCustomWeightsDialogOpen(false)
+                      setWeightMethod("custom")
+
+                      // Trigger calculation
+                      handleCalculate(method, updatedCriteria)
+
+                    } catch (error: any) {
+                      alert(error?.message || "Error calculating custom weights")
+                    }
+                  }}
+                  className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                >
+                  Apply Weights
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
 
         {/* Method Selection Sheet */}
         {/* Method Selection Sheet removed */}

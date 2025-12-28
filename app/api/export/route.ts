@@ -9,20 +9,32 @@ interface ExportRequest {
   criteria: Criterion[]
   metrics?: Record<string, any>
   resultsDecimalPlaces: number
+  isWeightExport?: boolean
+  weightMethod?: string
+  projectName?: string
+  userId?: string
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body: ExportRequest = await request.json()
-    const { method, ranking, alternatives, criteria, metrics, resultsDecimalPlaces } = body
+    const body: any = await request.json()
+    const { method, ranking, alternatives, criteria, metrics, resultsDecimalPlaces, isWeightExport, weightMethod } = body
 
     const methodLabel = method.toUpperCase()
+    const now = new Date()
+    const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`
 
     // Create a new workbook
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet("Results")
 
-    let currentRow = 1
+    // Default Font: Cambria
+    const defaultFont = { name: "Cambria", size: 11 }
+    const boldFont = { name: "Cambria", size: 11, bold: true }
+
+    // Number format for uniform decimals
+    const numFmt = resultsDecimalPlaces > 0 ? "0." + "0".repeat(resultsDecimalPlaces) : "0"
+
     const borderStyle = {
       top: { style: "thin" as const, color: { argb: "FF000000" } },
       bottom: { style: "thin" as const, color: { argb: "FF000000" } },
@@ -30,217 +42,299 @@ export async function POST(request: NextRequest) {
       right: { style: "thin" as const, color: { argb: "FF000000" } }
     }
 
-    // Helper function to add data with borders
-    const addRowWithBorder = (data: any[], isBordered = true) => {
+    // Helper to get formatted criterion name with direction
+    const getCriterionHeader = (c: Criterion) => {
+      const arrow = c.type === "beneficial" ? "↑" : "↓"
+      const typeLabel = c.type === "beneficial" ? "Max" : "Min"
+      return `${c.name} ${arrow} (${typeLabel})`
+    }
+
+    // Helper function to add data with borders and centering
+    const addRowWithBorder = (data: any[], isBordered = true, options: { isBold?: boolean; alignment?: any; useNumFmt?: boolean } = {}) => {
       const row = worksheet.addRow(data)
-      if (isBordered) {
-        row.eachCell((cell) => {
+      row.eachCell((cell, colNumber) => {
+        cell.font = options.isBold ? boldFont : defaultFont
+
+        if (isBordered) {
           cell.border = borderStyle
-        })
-      }
-      currentRow++
+        }
+
+        // Alignment: Centered by default as requested
+        cell.alignment = options.alignment || { horizontal: "center", vertical: "middle" }
+
+        // Apply number format to numeric values (excluding the first column which is usually labels)
+        if (options.useNumFmt && colNumber > 1 && typeof cell.value === "number") {
+          cell.numFmt = numFmt
+        }
+      })
       return row
     }
 
-    // Header: Report Title
-    addRowWithBorder(["MCDM Analysis Report"], false)
+    // 1. Metadata Table (Header Section)
+    addRowWithBorder(["MCDM Analysis Report", `Date: ${dateStr}`], true, { isBold: true })
     addRowWithBorder(["Method", methodLabel], true)
     addRowWithBorder(["Number of Alternatives", alternatives.length], true)
     addRowWithBorder(["Number of Criteria", criteria.length], true)
-    addRowWithBorder([])
-    addRowWithBorder([])
+    addRowWithBorder(["Project", body.projectName || "Analysis 1"], true)
+    addRowWithBorder(["User Id:", body.userId || "User 1"], true)
 
-    // Table 1: Ranking Results
-    addRowWithBorder(["Table 1: Ranking Results"], false)
-    addRowWithBorder([])
-    addRowWithBorder(["Rank", "Alternative", "Score"], true)
-    ranking.forEach((item: any) => {
-      addRowWithBorder([
-        item.rank,
-        item.alternativeName,
-        typeof item.score === "number" ? Number(item.score.toFixed(resultsDecimalPlaces)) : item.score
-      ], true)
-    })
-    addRowWithBorder([])
-    addRowWithBorder([])
+    worksheet.addRow([]) // White space
 
-    // Table 2+: All Intermediate Matrices from Metrics
-    let tableIndex = 2
+    let tableIndex = 1
 
+    // Table 1: Decision Matrix is ALWAYS the first table for Weight Methods
+    if (isWeightExport) {
+      addRowWithBorder([`Table ${tableIndex}: Decision Matrix`], false, { isBold: true, alignment: { horizontal: "left" } })
+      addRowWithBorder(["Original Decision Matrix"], false, { alignment: { horizontal: "left" } })
+      worksheet.addRow([])
+
+      const decisionHeader = ["Alternative", ...criteria.map(getCriterionHeader)]
+      addRowWithBorder(decisionHeader, true, { isBold: true })
+
+      alternatives.forEach((alt: Alternative) => {
+        const row: (string | number)[] = [alt.name]
+        criteria.forEach((crit: Criterion) => {
+          const val = alt.scores[crit.id]
+          row.push(typeof val === 'number' ? val : (parseFloat(val as any) || 0))
+        })
+        addRowWithBorder(row, true, { useNumFmt: true })
+      })
+      worksheet.addRow([])
+      worksheet.addRow([])
+      tableIndex++
+    } else {
+      // Standard Ranking Results report
+      // Table 1: Criteria weight Matrix
+      addRowWithBorder([`Table ${tableIndex}: Criteria weight Matrix`], false, { isBold: true, alignment: { horizontal: "left" } })
+      worksheet.addRow([])
+
+      const weightHeaders = ["Criteria", ...criteria.map(getCriterionHeader)]
+      addRowWithBorder(weightHeaders, true, { isBold: true })
+
+      const weightsRow = [`Weight (${weightMethod || "Weights"})`, ...criteria.map((c: Criterion) => c.weight ?? 0)]
+      addRowWithBorder(weightsRow, true, { useNumFmt: true })
+
+      worksheet.addRow([])
+      worksheet.addRow([])
+      tableIndex++
+
+      // Table 2: Decision Matrix
+      addRowWithBorder([`Table ${tableIndex}: Decision Matrix`], false, { isBold: true, alignment: { horizontal: "left" } })
+      addRowWithBorder(["Original Decision Matrix"], false, { alignment: { horizontal: "left" } })
+      worksheet.addRow([])
+
+      const decisionHeader = ["Alternative", ...criteria.map(getCriterionHeader)]
+      addRowWithBorder(decisionHeader, true, { isBold: true })
+
+      alternatives.forEach((alt: Alternative) => {
+        const row: (string | number)[] = [alt.name]
+        criteria.forEach((crit: Criterion) => {
+          const val = alt.scores[crit.id]
+          row.push(typeof val === 'number' ? val : (parseFloat(val as any) || 0))
+        })
+        addRowWithBorder(row, true, { useNumFmt: true })
+      })
+      worksheet.addRow([])
+      worksheet.addRow([])
+      tableIndex++
+    }
+
+    // Process Metrics (Normalized Matrix, etc.)
     if (metrics) {
-      Object.entries(metrics).forEach(([metricKey, value]) => {
-        // Create readable name from camelCase
-        let tableName = metricKey
-          .replace(/([A-Z])/g, ' $1')
-          .trim()
-          .replace(/^[a-z]/, (char) => char.toUpperCase())
+      const preferredOrder = [
+        'normalizedMatrix',
+        'entropyMatrix',
+        'standardDeviations',
+        'correlationMatrix',
+        'informationAmounts',
+        'diversityValues',
+        'entropyValues',
+        'logarithmicMatrix',
+        'performanceMeasures',
+        'removedWeightPerformanceMatrices',
+        'absoluteDifferenceSums',
+        'pairwiseMatrix',
+        'consistencyRatio',
+        'weights',
+        'weightsWj'
+      ]
 
-        // Clean up the name
-        tableName = tableName
-          .replace(/swei /gi, 'SWEI ')
-          .replace(/swi /gi, 'SWI ')
-          .replace(/topsis /gi, 'TOPSIS ')
-          .replace(/vikor /gi, 'VIKOR ')
-          .replace(/moora /gi, 'MOORA ')
-          .replace(/moosra /gi, 'MOOSRA ')
-          .replace(/edas /gi, 'EDAS ')
-          .replace(/todim /gi, 'TODIM ')
-          .replace(/codas /gi, 'CODAS ')
-          .replace(/waspas /gi, 'WASPAS ')
-          .replace(/copras /gi, 'COPRAS ')
-          .replace(/promethee /gi, 'PROMETHEE ')
-          .replace(/electre /gi, 'ELECTRE ')
-          .replace(/cocoso /gi, 'COCOSO ')
-          .replace(/marcos /gi, 'MARCOS ')
-          .replace(/mairca /gi, 'MAIRCA ')
+      const metricKeys = Object.keys(metrics).filter(k =>
+        k.toLowerCase().includes('matrix') ||
+        k.toLowerCase().includes('normalized') ||
+        k.toLowerCase().includes('score') ||
+        k.toLowerCase().includes('flow') ||
+        k.toLowerCase().includes('weight') ||
+        k.toLowerCase().includes('value') ||
+        k.toLowerCase().includes('degree') ||
+        k.toLowerCase().includes('deviation') ||
+        k.toLowerCase().includes('amount') ||
+        k.toLowerCase().includes('measure') ||
+        k.toLowerCase().includes('entropy') ||
+        k.toLowerCase().includes('pairwise') ||
+        k.toLowerCase().includes('consistency')
+      ).sort((a, b) => {
+        const indexA = preferredOrder.indexOf(a)
+        const indexB = preferredOrder.indexOf(b)
 
-        // Check if it's a nested object structure (matrix with alt -> criteria mapping)
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB
+        if (indexA !== -1) return -1
+        if (indexB !== -1) return 1
+
+        return a.localeCompare(b)
+      })
+
+      const skippedKeys = new Set<string>()
+
+      metricKeys.forEach((key) => {
+        if (skippedKeys.has(key)) return
+
+        const value = metrics[key]
+
+        // Handle Scalars (like Consistency Ratio)
+        if (key === 'consistencyRatio' && typeof value === 'number') {
+          addRowWithBorder([`Consistency Ratio (CR): ${value.toFixed(resultsDecimalPlaces)}`], true, { isBold: true })
+          worksheet.addRow([])
+          return
+        }
+
         if (value && typeof value === 'object' && !Array.isArray(value)) {
-          const valueAsObj = value as Record<string, any>
-          const firstVal = Object.values(valueAsObj)[0]
+          let tableName = key.replace(/([A-Z])/g, ' $1').trim().replace(/^[a-z]/, (char) => char.toUpperCase())
+          let rowHeader = tableName
 
-          // If the first value is also an object (nested structure), it's a matrix
-          if (firstVal && typeof firstVal === 'object' && !Array.isArray(firstVal)) {
-            // Nested object matrix: { altId: { critId: value, ... }, ... }
-            addRowWithBorder([`Table ${tableIndex}: ${tableName}`], false)
-            addRowWithBorder([])
+          const methodLower = weightMethod?.toLowerCase() || ''
+          const isEntropy = methodLower.includes('entropy')
+          const isCritic = methodLower.includes('critic')
 
-            const altIds = Object.keys(valueAsObj)
-            const critIds = Object.keys(firstVal as Record<string, any>)
-
-            // Header row
-            const headerRow = ["Alternative", ...critIds.map(critId => {
-              const criterion = criteria.find(c => c.id === critId)
-              return criterion ? criterion.name : critId
-            })]
-            addRowWithBorder(headerRow, true)
-
-            // Data rows
-            altIds.forEach(altId => {
-              const alt = alternatives.find(a => a.id === altId)
-              const altName = alt ? alt.name : altId
-              const row = [altName]
-
-              const matrixRow = valueAsObj[altId] as Record<string, any>
-              critIds.forEach(critId => {
-                const v = matrixRow[critId]
-                const displayValue = v !== null && v !== undefined
-                  ? (typeof v === 'number' ? Number(v.toFixed(resultsDecimalPlaces)) : v)
-                  : ""
-                row.push(displayValue)
-              })
-
-              addRowWithBorder(row, true)
-            })
-
-            addRowWithBorder([])
-            addRowWithBorder([])
-            tableIndex++
-          } else if (typeof firstVal === 'number' || typeof firstVal === 'string') {
-            // Simple object mapping: { altId: score, ... }
-            addRowWithBorder([`Table ${tableIndex}: ${tableName}`], false)
-            addRowWithBorder([])
-            addRowWithBorder(["Alternative", "Value"], true)
-            Object.entries(valueAsObj).forEach(([k, v]) => {
-              const displayKey = alternatives.find(a => a.id === k)?.name ||
-                criteria.find(c => c.id === k)?.name || k
-              const displayValue = v !== null && v !== undefined
-                ? (typeof v === 'number' ? Number((v as number).toFixed(resultsDecimalPlaces)) : v)
-                : ""
-              addRowWithBorder([displayKey, displayValue], true)
-            })
-            addRowWithBorder([])
-            addRowWithBorder([])
-            tableIndex++
+          if (key === 'weights' || key === 'weightsWj') {
+            tableName = 'Final Weights'
+            rowHeader = 'Weights'
+          } else if (key === 'diversityValues') {
+            tableName = 'Diversity Degree'
+            rowHeader = 'Diversity Degree'
+          } else if (key === 'normalizedMatrix') {
+            tableName = isEntropy ? 'Normalized Decision Matrix' : (isCritic ? 'Normalization (r_ij)' : 'Normalized Decision Matrix')
+          } else if (key === 'entropyMatrix') {
+            tableName = 'Entropy for Attributes'
+          } else if (key === 'standardDeviations') {
+            tableName = 'Standard Deviation (σ_j)'
+            rowHeader = 'Standard Deviation'
+          } else if (key === 'correlationMatrix') {
+            tableName = 'Correlation Matrix (r_jk)'
+          } else if (key === 'informationAmounts') {
+            tableName = 'Information Measure (Cj)'
+            rowHeader = 'Information Measure'
+          } else if (key === 'pairwiseMatrix') {
+            tableName = 'AHP Pairwise Comparison Matrix'
           }
-        } else if (Array.isArray(value) && value.length > 0) {
-          if (Array.isArray(value[0])) {
-            // Matrix-like data (array of arrays)
-            addRowWithBorder([`Table ${tableIndex}: ${tableName}`], false)
-            addRowWithBorder([])
 
-            // Check if rows match alternatives count
-            if (value.length === alternatives.length) {
-              addRowWithBorder(["Alternative", ...criteria.map(c => c.name)], true)
-              value.forEach((row: any[], idx: number) => {
-                addRowWithBorder([
-                  alternatives[idx]?.name || `Alt ${idx + 1}`,
-                  ...row.map((v: any) => typeof v === 'number' ? Number(v.toFixed(resultsDecimalPlaces)) : v)
-                ], true)
+          const valueAsObj = value as Record<string, any>
+          const values = Object.values(valueAsObj)
+          const firstVal = values[0]
+
+          if (firstVal !== undefined && typeof firstVal === 'object' && !Array.isArray(firstVal)) {
+            // Matrix Processing
+            addRowWithBorder([`Table ${tableIndex}: ${tableName}`], false, { isBold: true, alignment: { horizontal: "left" } })
+            worksheet.addRow([])
+
+            const rowIds = Object.keys(valueAsObj)
+            const firstValObj = firstVal as Record<string, any>
+            const colIds = Object.keys(firstValObj)
+
+            const isCriterionMatrix = key === 'correlationMatrix' || key === 'pairwiseMatrix' || key === 'matrix'
+
+            const headerRow = [
+              isCriterionMatrix ? "Criterion" : "Alternative",
+              ...colIds.map((cid: string) => {
+                const crit = criteria.find(c => c.id === cid)
+                return crit ? getCriterionHeader(crit) : cid
               })
-            } else {
-              // Generic matrix without alternative alignment
-              value.forEach((row: any[]) => {
-                addRowWithBorder(row.map((v: any) => typeof v === 'number' ? Number(v.toFixed(resultsDecimalPlaces)) : v), true)
+            ]
+            addRowWithBorder(headerRow, true, { isBold: true })
+
+            rowIds.forEach((rid: string) => {
+              const row: (string | number)[] = [
+                isCriterionMatrix ? (criteria.find(c => c.id === rid)?.name || rid) : (alternatives.find(a => a.id === rid)?.name || rid)
+              ]
+              const matrixRow = valueAsObj[rid] as Record<string, any>
+              colIds.forEach((cid: string) => {
+                row.push(matrixRow[cid] ?? 0)
               })
+              addRowWithBorder(row, true, { useNumFmt: true })
+            })
+
+            // Special handling for Entropy (Ej) row at the bottom of Table 3
+            if (isEntropy && key === 'entropyMatrix' && metrics['entropyValues']) {
+              const ejValues = metrics['entropyValues'] as Record<string, number>
+              const ejRow = ["Entropy (Ej)", ...colIds.map(cid => ejValues[cid] ?? 0)]
+              addRowWithBorder(ejRow, true, { isBold: true, useNumFmt: true })
+              skippedKeys.add('entropyValues')
             }
 
-            addRowWithBorder([])
-            addRowWithBorder([])
+            worksheet.addRow([])
+            worksheet.addRow([])
             tableIndex++
-          } else if (typeof value[0] === 'object' && value[0] !== null && !Array.isArray(value[0])) {
-            // Array of objects
-            addRowWithBorder([`Table ${tableIndex}: ${tableName}`], false)
-            addRowWithBorder([])
-            const headers = Array.from(new Set(value.flatMap((o: any) => Object.keys(o))))
-            addRowWithBorder(headers, true)
-            value.forEach((obj: any) => {
-              addRowWithBorder(headers.map(h => {
-                const v = obj[h]
-                return typeof v === 'number' ? Number(v.toFixed(resultsDecimalPlaces)) : v
-              }), true)
-            })
-            addRowWithBorder([])
-            addRowWithBorder([])
-            tableIndex++
-          } else {
-            // Simple list/array of primitives or numeric values
-            addRowWithBorder([`Table ${tableIndex}: ${tableName}`], false)
-            addRowWithBorder([])
-            addRowWithBorder(["Alternative", "Value"], true)
-            value.forEach((v: any, idx: number) => {
-              const displayValue = v !== null && v !== undefined
-                ? (typeof v === 'number' ? Number(v.toFixed(resultsDecimalPlaces)) : v)
-                : ""
-              addRowWithBorder([
-                alternatives[idx]?.name || `Alt ${idx + 1}`,
-                displayValue
-              ], true)
-            })
-            addRowWithBorder([])
-            addRowWithBorder([])
-            tableIndex++
+          } else if (values.length > 0) {
+            // Vector Processing
+            addRowWithBorder([`Table ${tableIndex}: ${tableName}`], false, { isBold: true, alignment: { horizontal: "left" } })
+            worksheet.addRow([])
+
+            const keys = Object.keys(valueAsObj)
+            const isPerCriterion = keys.every(k => criteria.some((c: Criterion) => c.id === k))
+            const isPerAlternative = keys.every(k => alternatives.some((a: Alternative) => a.id === k))
+
+            if (isPerCriterion) {
+              const relevantCriteria = criteria.filter((c: Criterion) => keys.includes(c.id))
+              addRowWithBorder(["Criteria", ...relevantCriteria.map(getCriterionHeader)], true, { isBold: true })
+
+              const dataRow = [rowHeader, ...relevantCriteria.map((c: Criterion) => valueAsObj[c.id] ?? 0)]
+              addRowWithBorder(dataRow, true, { useNumFmt: true })
+
+              worksheet.addRow([])
+              worksheet.addRow([])
+              tableIndex++
+            } else if (isPerAlternative) {
+              addRowWithBorder(["Alternative", "Value"], true, { isBold: true })
+              keys.forEach(k => {
+                const altName = alternatives.find((a: Alternative) => a.id === k)?.name || k
+                addRowWithBorder([altName, valueAsObj[k]], true, { useNumFmt: true })
+              })
+
+              worksheet.addRow([])
+              worksheet.addRow([])
+              tableIndex++
+            }
           }
         }
       })
     }
 
-    // Final Table: Criteria Weights
-    addRowWithBorder([`Table ${tableIndex}: Criteria Weights`], false)
-    addRowWithBorder([])
-    addRowWithBorder(["Criterion", "Weight", "Type"], true)
-    criteria.forEach(c => {
-      addRowWithBorder([
-        c.name,
-        typeof c.weight === "number" ? Number(c.weight.toFixed(resultsDecimalPlaces)) : c.weight,
-        c.type === "beneficial" ? "Max" : "Min"
-      ], true)
-    })
+    // Ranking results at the end
+    if (!isWeightExport && ranking && ranking.length > 0) {
+      addRowWithBorder([`Table ${tableIndex}: Ranking Results`], false, { isBold: true, alignment: { horizontal: "left" } })
+      worksheet.addRow([])
+      addRowWithBorder(["Rank", "Alternative", "Score"], true, { isBold: true })
+      ranking.forEach((item: any) => {
+        addRowWithBorder([item.rank, item.alternativeName, item.score], true, { useNumFmt: true })
+      })
+    }
+
+    // Set orientation to landscape for wider tables
+    worksheet.pageSetup = {
+      orientation: 'landscape',
+      paperSize: 9, // A4
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0
+    }
 
     // Set column widths
     worksheet.columns = [
-      { width: 20 },
-      { width: 16 },
-      { width: 14 },
-      { width: 14 },
-      { width: 14 },
-      { width: 14 }
+      { width: 35 },
+      ...criteria.map(() => ({ width: 22 }))
     ]
 
-    // Write file to buffer
     const buffer = await workbook.xlsx.writeBuffer()
-
-    // Return as file download
     return new NextResponse(buffer, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -249,9 +343,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (err) {
     console.error("Export error:", err)
-    return NextResponse.json(
-      { error: "Failed to export to Excel" },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Failed to export to Excel" }, { status: 500 })
   }
 }

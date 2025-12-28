@@ -12,6 +12,7 @@ export interface EntropyWeightsResponse {
   normalizedMatrix: Record<string, Record<string, number>>;
   entropyValues: Record<string, number>;
   diversityValues: Record<string, number>;
+  entropyMatrix: Record<string, Record<string, number>>;
 }
 
 export async function POST(request: NextRequest) {
