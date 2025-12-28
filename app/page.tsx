@@ -30,7 +30,14 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
-  Cell
+  Cell,
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  AreaChart,
+  Area
 } from "recharts"
 
 import SWEIFormula from "@/components/SWEIFormula"
@@ -70,6 +77,15 @@ const sensitivityData = [
   { weight: "60%", rank1: 3, rank2: 1, rank3: 2, rank4: 4 },
   { weight: "80%", rank1: 2, rank2: 1, rank3: 4, rank4: 3 },
   { weight: "100%", rank1: 1, rank2: 2, rank3: 4, rank4: 3 },
+]
+
+const metricsData = [
+  { subject: 'Consistency', A: 120, B: 110, fullMark: 150 },
+  { subject: 'Efficiency', A: 98, B: 130, fullMark: 150 },
+  { subject: 'Robustness', A: 86, B: 130, fullMark: 150 },
+  { subject: 'Scalability', A: 99, B: 100, fullMark: 150 },
+  { subject: 'Accuracy', A: 85, B: 90, fullMark: 150 },
+  { subject: 'Speed', A: 65, B: 85, fullMark: 150 },
 ]
 
 export default function LandingPage() {
@@ -154,7 +170,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 relative overflow-hidden">
+      <section className="pt-24 pb-8 md:pt-32 md:pb-20 px-4 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[400px] bg-blue-500/10 dark:bg-blue-500/5 blur-[120px] rounded-full -z-10" />
         <div className="max-w-5xl mx-auto text-center">
           <motion.div {...fadeIn}>
@@ -180,9 +196,9 @@ export default function LandingPage() {
       </section>
 
       {/* Why We Make It Section */}
-      <section id="why" className="py-24 px-4 border-t border-border/50 bg-white/[0.01]">
+      <section id="why" className="py-8 md:py-24 px-4 border-t border-border/50 bg-white/[0.01]">
         <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <motion.div {...fadeIn}>
               <h2 className="text-3xl sm:text-4xl font-bold mb-6">{t.why.title}</h2>
               <p className="text-muted-foreground mb-8 max-w-lg">
@@ -228,7 +244,7 @@ export default function LandingPage() {
       </section>
 
       {/* How it Works Section */}
-      <section className="py-24 px-4 bg-background">
+      <section className="py-8 md:py-24 px-4 bg-background">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">{t.how.title}</h2>
@@ -253,7 +269,7 @@ export default function LandingPage() {
       </section>
 
       {/* Technical Requirements */}
-      <section className="py-24 px-4 border-t border-border/50">
+      <section className="py-8 md:py-24 px-4 border-t border-border/50">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold mb-12">{t.requirements.title}</h2>
           <div className="grid sm:grid-cols-2 gap-8 text-left">
@@ -288,7 +304,7 @@ export default function LandingPage() {
       </section>
 
       {/* Merits Section */}
-      <section className="py-24 px-4 bg-blue-600/5">
+      <section className="py-8 md:py-24 px-4 bg-blue-600/5">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className={`text-3xl font-bold mb-4 uppercase ${language === 'HI' ? 'tracking-normal' : 'tracking-tighter'}`}>{t.merits.title}</h2>
@@ -308,16 +324,16 @@ export default function LandingPage() {
       </section>
 
       {/* Technical Showcase: Formula & Graphs */}
-      <section className="py-24 px-4 bg-background">
+      <section className="py-4 md:py-24 px-4 bg-background">
         <div className="max-w-7xl mx-auto">
           <div className="mb-16">
             <h2 className="text-3xl font-bold mb-4">{t.showcase.title}</h2>
             <p className="text-muted-foreground">{t.showcase.desc}</p>
           </div>
 
-          <div className="grid lg:grid-cols-12 gap-12">
+          <div className="grid lg:grid-cols-12 gap-8 lg:gap-12">
             {/* Formulas Card */}
-            <div className="lg:col-span-12 xl:col-span-7">
+            <div className="lg:col-span-12 xl:col-span-5 xl:col-start-2 flex flex-col gap-6">
               <Card className="bg-card/40 border-border/50 text-white overflow-hidden backdrop-blur-md">
                 <CardHeader className="border-b border-border/50 flex flex-row items-center justify-between">
                   <div>
@@ -339,10 +355,40 @@ export default function LandingPage() {
                     </button>
                   </div>
                 </CardHeader>
-                <CardContent className="p-4 md:p-10 bg-muted/20 shadow-[inset_0_0_100px_rgba(0,0,0,0.02)] rounded-b-xl overflow-x-auto min-h-[400px]">
+                <CardContent className="p-4 bg-muted/20 shadow-[inset_0_0_100px_rgba(0,0,0,0.02)] rounded-b-xl min-h-[250px]">
                   <div className="transform transition-all duration-500">
                     {activeTab === 'swei' ? <SWEIFormula landingPage={true} language={language} /> : <SWIFormula landingPage={true} language={language} />}
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/40 border-border/50 text-white overflow-hidden backdrop-blur-md">
+                <CardHeader className="border-b border-border/50">
+                  <CardTitle className="text-lg">Methods Consolidated Analysis</CardTitle>
+                  <CardDescription>Performance across multiple metrics</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[250px] p-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={metricsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorA" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="colorB" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                      <XAxis dataKey="subject" stroke="#666" fontSize={10} tick={{ fill: '#9ca3af' }} />
+                      <YAxis stroke="#666" fontSize={10} tick={{ fill: '#9ca3af' }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#020817', border: '1px solid #ffffff10' }} />
+                      <Area type="monotone" dataKey="A" stroke="#2563eb" fillOpacity={1} fill="url(#colorA)" name="SWEI" />
+                      <Area type="monotone" dataKey="B" stroke="#10b981" fillOpacity={1} fill="url(#colorB)" name="SWI" />
+                      <Legend wrapperStyle={{ fontSize: '10px' }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
             </div>
@@ -395,18 +441,20 @@ export default function LandingPage() {
               </Card>
             </div>
           </div>
+
+
         </div>
       </section>
 
       {/* Calculated Tables Preview */}
-      <section className="py-24 px-4 bg-white/[0.01] border-t border-border/50">
+      <section className="py-4 md:py-24 px-4 bg-white/[0.01] border-t border-border/50">
         <div className="max-w-7xl mx-auto">
           <div className="mb-12 text-center sm:text-left">
             <h2 className="text-3xl font-bold mb-4 underline decoration-blue-500 underline-offset-8">{t.tables.title}</h2>
             <p className="text-muted-foreground">{t.tables.desc}</p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-12">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-12">
             <div className="space-y-4">
               <h4 className={`text-sm font-bold uppercase text-muted-foreground/70 ${language === 'HI' ? 'tracking-normal' : 'tracking-widest'}`}>{t.tables.rankTitle}</h4>
               <div className="rounded-xl overflow-x-auto border border-border bg-background">
@@ -473,9 +521,9 @@ export default function LandingPage() {
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="py-24 px-4 bg-muted/30 border-t border-border">
+      <section id="contact" className="py-8 md:py-24 px-4 bg-muted/30 border-t border-border">
         <div className="max-w-5xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
             <div>
               <h2 className="text-3xl sm:text-4xl font-bold mb-6">{t.contact.title}</h2>
               <p className="text-muted-foreground mb-8">
@@ -512,7 +560,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Footer */}
-      <footer className="py-20 px-4 border-t border-border/50 bg-background relative overflow-hidden">
+      <footer className="py-8 md:py-20 px-4 border-t border-border/50 bg-background relative overflow-hidden">
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[300px] bg-blue-500/10 blur-[100px] rounded-full -z-10" />
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl sm:text-5xl font-extrabold mb-6">{t.footer.ctaTitle}</h2>
@@ -520,7 +568,7 @@ export default function LandingPage() {
           <Button size="lg" className="px-10 bg-blue-600 hover:bg-blue-700 text-white h-14 text-lg font-bold transition-transform hover:scale-105" onClick={() => window.location.href = '/application'}>
             {t.footer.ctaButton} <ChevronRight className="ml-2 h-5 w-5" />
           </Button>
-          <div className="mt-20 pt-10 border-t border-border/50 flex flex-col sm:row items-center justify-between gap-6">
+          <div className="mt-8 md:mt-20 pt-10 border-t border-border/50 flex flex-col sm:row items-center justify-between gap-6">
             <div className="flex items-center gap-2 grayscale hover:grayscale-0 transition-all opacity-50 hover:opacity-100">
               <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center font-bold text-xs text-white">DA</div>
               <span className="font-bold text-sm tracking-tight text-foreground">decisionalgo</span>
