@@ -43,6 +43,8 @@ import { Upload, ChevronDown, ChevronRight, ArrowLeft, Home, Download, LayoutGri
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar, PieChart, Pie, ReferenceLine } from "recharts"
 import { toJpeg } from "html-to-image"
 import SWEIFormula from "@/components/SWEIFormula"
+import WSMFormula from "@/components/WSMFormula"
+import WPMFormula from "@/components/WPMFormula"
 import SWIFormula from "@/components/SWIFormula"
 import TOPSISFormula from "@/components/TOPSISFormula"
 import WASPASFormula from "@/components/WASPASFormula"
@@ -111,7 +113,7 @@ interface Alternative {
   scores: Record<string, number | "">
 }
 
-type MCDMMethod = "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "multimoora" | "todim" | "codas" | "moosra" | "mairca" | "marcos" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2" | "mabac" | "gra" | "aras"
+type MCDMMethod = "wsm" | "wpm" | "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "multimoora" | "todim" | "codas" | "moosra" | "mairca" | "marcos" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2" | "mabac" | "gra" | "aras"
 type WeightMethod = "equal" | "entropy" | "critic" | "ahp" | "piprecia" | "merec" | "swara" | "wenslo"
   | "lopcow"
   | "dematel"
@@ -435,6 +437,18 @@ const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; for
     label: "ARAS",
     description: "Additive Ratio Assessment",
     formula: "K_i = S_i / S_0"
+  },
+  {
+    value: "wsm",
+    label: "WSM",
+    description: "Weighted Sum Model",
+    formula: "Score = Σ(w_j × r_ij)"
+  },
+  {
+    value: "wpm",
+    label: "WPM",
+    description: "Weighted Product Model",
+    formula: "Score = Π(r_ij ^ w_j)"
   },
 ]
 
@@ -3213,28 +3227,28 @@ export default function MCDMCalculator() {
           <div className="grid grid-cols-2 gap-2 mb-4 sm:flex sm:flex-wrap">
             <Button
               variant="outline"
-              className={`w-full sm:w-auto text-[10px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+              className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("rankingMethods")}
             >
               Ranking Methods
             </Button>
             <Button
               variant="outline"
-              className={`w-full sm:w-auto text-[10px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+              className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("weightMethods")}
             >
               Weight Methods
             </Button>
             <Button
               variant="outline"
-              className={`w-full sm:w-auto text-[10px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+              className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("rankingComparison")}
             >
               Ranking comparison
             </Button>
             <Button
               variant="outline"
-              className={`w-full sm:w-auto text-[10px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+              className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
               onClick={() => setHomeTab("sensitivityAnalysis")}
             >
               Sensitivity Analysis
@@ -3293,9 +3307,9 @@ export default function MCDMCalculator() {
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-gray-50">
-                            <TableHead className="text-black font-semibold w-24">Alternative</TableHead>
+                            <TableHead className="text-black font-semibold w-24 text-xs">Alternative</TableHead>
                             {criteria.map((crit) => (
-                              <TableHead key={crit.id} className="text-black font-semibold text-center min-w-20">
+                              <TableHead key={crit.id} className="text-black font-semibold text-center min-w-20 text-xs">
                                 <div className="flex flex-col items-center">
                                   <div className="flex items-center gap-1">
                                     <div className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</div>
@@ -3303,7 +3317,7 @@ export default function MCDMCalculator() {
                                       {crit.type === "beneficial" ? "▲" : "▼"}
                                     </span>
                                   </div>
-                                  <div className="text-gray-500 font-normal">
+                                  <div className="text-gray-500 font-normal text-[10px]">
                                     {crit.type === "beneficial" ? "Max" : "Min"}
                                   </div>
                                 </div>
@@ -3314,7 +3328,7 @@ export default function MCDMCalculator() {
                         <TableBody>
                           {alternatives.map((alt) => (
                             <TableRow key={alt.id}>
-                              <TableCell className="text-black font-medium">{alt.name}</TableCell>
+                              <TableCell className="text-black font-medium text-xs">{alt.name}</TableCell>
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="p-1">
                                   <Input
@@ -3441,9 +3455,9 @@ export default function MCDMCalculator() {
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50">
-                              <TableHead className="text-black font-semibold w-24">Alternative</TableHead>
+                              <TableHead className="text-black font-semibold w-24 text-xs">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className="text-black font-semibold text-center min-w-20">
+                                <TableHead key={crit.id} className="text-black font-semibold text-center min-w-20 text-xs">
                                   <div className="flex flex-col items-center">
                                     <div className="flex items-center gap-1">
                                       <div className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</div>
@@ -3451,7 +3465,7 @@ export default function MCDMCalculator() {
                                         {crit.type === "beneficial" ? "▲" : "▼"}
                                       </span>
                                     </div>
-                                    <div className="text-gray-500 font-normal">
+                                    <div className="text-gray-500 font-normal text-[10px]">
                                       {crit.type === "beneficial" ? "Max" : "Min"}
                                     </div>
                                   </div>
@@ -3462,7 +3476,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             {alternatives.map((alt) => (
                               <TableRow key={alt.id}>
-                                <TableCell className="text-black font-medium">{alt.name}</TableCell>
+                                <TableCell className="text-black font-medium text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="p-1">
                                     <Input
@@ -4447,18 +4461,26 @@ export default function MCDMCalculator() {
                               )
                             })()
                           ) : (
-                            <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" barSize={10} data={sensitivityCriteriaWeights}>
-                              <RadialBar
-                                label={{ position: 'insideStart', fill: '#fff' }}
-                                background
-                                dataKey={sensitivityWeightComparisonResults[0]?.weightLabel}
-                              />
-                              <Legend iconSize={10} wrapperStyle={{ fontSize: "10px" }} />
-                              {sensitivityWeightComparisonResults.map((res, i) => (
-                                <RadialBar key={res.weightLabel} name={res.weightLabel} dataKey={res.weightLabel} fill={CHART_COLORS[i % CHART_COLORS.length]} background />
-                              ))}
-                              <Tooltip />
-                            </RadialBarChart>
+
+                            sensitivityWeightComparisonResults.length > 0 ? (
+                              <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" barSize={10} data={sensitivityCriteriaWeights}>
+                                <RadialBar
+                                  label={{ position: 'insideStart', fill: '#fff' }}
+                                  background
+                                  dataKey={sensitivityWeightComparisonResults[0]?.weightLabel}
+                                />
+                                <Legend iconSize={10} wrapperStyle={{ fontSize: "10px" }} />
+                                {sensitivityWeightComparisonResults.map((res, i) => (
+                                  <RadialBar key={res.weightLabel} name={res.weightLabel} dataKey={res.weightLabel} fill={CHART_COLORS[i % CHART_COLORS.length]} background />
+                                ))}
+                                <Tooltip />
+                              </RadialBarChart>
+                            ) : (
+                              <div className="flex items-center justify-center h-full text-xs text-gray-400 italic">
+                                Run analysis to view weight distribution
+                              </div>
+                            )
+
                           )}
                         </ResponsiveContainer>
                       </div>
@@ -4550,9 +4572,9 @@ export default function MCDMCalculator() {
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50">
-                              <TableHead className="text-black font-semibold w-24">Alternative</TableHead>
+                              <TableHead className="text-black font-semibold w-24 text-xs">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`font-semibold text-center min-w-20 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`font-semibold text-center min-w-20 text-xs ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
                                   <div className="flex flex-col items-center">
                                     <div className="flex items-center gap-1">
@@ -4561,7 +4583,7 @@ export default function MCDMCalculator() {
                                         {crit.type === "beneficial" ? "▲" : "▼"}
                                       </span>
                                     </div>
-                                    <div className="text-gray-500 font-normal">
+                                    <div className="text-gray-500 font-normal text-[10px]">
                                       {crit.type === "beneficial" ? "Max" : "Min"}
                                     </div>
                                   </div>
@@ -4572,7 +4594,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             {alternatives.map((alt) => (
                               <TableRow key={alt.id}>
-                                <TableCell className="text-black font-medium">{alt.name}</TableCell>
+                                <TableCell className="text-black font-medium text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="p-1">
                                     <Input
@@ -5502,9 +5524,9 @@ export default function MCDMCalculator() {
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50">
-                              <TableHead className="text-black font-semibold w-24">Alternative</TableHead>
+                              <TableHead className="text-black font-semibold w-24 text-xs">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`font-semibold text-center min-w-20 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`font-semibold text-center min-w-20 text-xs ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
                                   <div className="flex flex-col items-center">
                                     <div className="flex items-center gap-1">
@@ -5513,7 +5535,7 @@ export default function MCDMCalculator() {
                                         {crit.type === "beneficial" ? "▲" : "▼"}
                                       </span>
                                     </div>
-                                    <div className="text-gray-500 font-normal">
+                                    <div className="text-gray-500 font-normal text-[10px]">
                                       {crit.type === "beneficial" ? "Max" : "Min"}
                                     </div>
                                   </div>
@@ -5524,7 +5546,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             {alternatives.map((alt) => (
                               <TableRow key={alt.id}>
-                                <TableCell className="text-black font-medium">{alt.name}</TableCell>
+                                <TableCell className="text-black font-medium text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="p-1">
                                     <Input
@@ -6173,18 +6195,90 @@ export default function MCDMCalculator() {
                                   ))}
                                 </ScatterChart>
                               ) : sensitivityChartType === "radial" ? (
-                                <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" barSize={10} data={sensitivityWeightChartData}>
-                                  <RadialBar
-                                    label={{ position: 'insideStart', fill: '#fff' }}
-                                    background
-                                    dataKey="Equal Weight Rank"
-                                  />
-                                  <Legend iconSize={10} wrapperStyle={{ fontSize: "10px" }} />
-                                  {sensitivityWeightComparisonResults.map((res, i) => (
-                                    <RadialBar key={res.weightLabel} name={`${res.weightLabel} Rank`} dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} background />
-                                  ))}
-                                  <Tooltip />
-                                </RadialBarChart>
+                                (() => {
+                                  if (sensitivityWeightComparisonResults.length === 0) return null;
+
+                                  const firstMethod = sensitivityWeightComparisonResults[0];
+                                  const labelKey = firstMethod.weightLabel;
+                                  const rankKey = `${labelKey} Rank`;
+                                  const scoreKey = `${labelKey} Score`;
+
+                                  // Prepare data for the radial bar chart to match screenshot style
+                                  // We show each alternative as a bar
+                                  const maxRank = Math.max(...sensitivityWeightChartData.map(d => d[rankKey] || 0));
+
+                                  const transformedData = sensitivityWeightChartData.map((d, idx) => ({
+                                    name: d.name,
+                                    // Map rank to a value for bar length: maxRank - rank + 1
+                                    // This makes Rank 1 the longest bar
+                                    value: d[rankKey] ? (maxRank - d[rankKey] + 1) : 0,
+                                    actualRank: d[rankKey],
+                                    actualScore: d[scoreKey],
+                                    fill: CHART_COLORS[idx % CHART_COLORS.length]
+                                  })).sort((a, b) => b.value - a.value);
+
+                                  return (
+                                    <RadialBarChart
+                                      cx="50%"
+                                      cy="50%"
+                                      innerRadius="15%"
+                                      outerRadius="90%"
+                                      barSize={12}
+                                      data={transformedData}
+                                      startAngle={90}
+                                      endAngle={-270}
+                                    >
+                                      <RadialBar
+                                        label={{
+                                          position: 'insideStart',
+                                          fill: '#fff',
+                                          fontSize: 9,
+                                          fontWeight: 'bold',
+                                          formatter: (value: any, name: any, entry: any, index: number) => {
+                                            const item = entry?.payload || (transformedData && typeof index === 'number' ? transformedData[index] : null);
+                                            if (!item) return "";
+                                            return `${item.name || ""} (${item.actualRank || ""})`;
+                                          }
+                                        }}
+                                        background={{ fill: '#f3f4f6' }}
+                                        dataKey="value"
+                                      />
+                                      <Legend
+                                        iconSize={10}
+                                        layout="vertical"
+                                        verticalAlign="middle"
+                                        align="right"
+                                        wrapperStyle={{ fontSize: '10px', paddingLeft: '10px' }}
+                                      />
+                                      <Tooltip
+                                        content={({ active, payload }) => {
+                                          if (active && payload && payload.length) {
+                                            const data = payload[0].payload;
+                                            return (
+                                              <div className="bg-white border border-gray-200 p-2 rounded shadow-md text-[10px] text-black">
+                                                <p className="font-bold border-b pb-1 mb-1">{data.name}</p>
+                                                <p><span className="text-gray-500 font-medium">Rank:</span> <span className="font-bold">{data.actualRank}</span></p>
+                                                <p><span className="text-gray-500 font-medium">Score:</span> {typeof data.actualScore === 'number' ? data.actualScore.toFixed(4) : data.actualScore}</p>
+                                                <p className="mt-1 text-[8px] text-gray-400 capitalize">{labelKey} method</p>
+                                              </div>
+                                            );
+                                          }
+                                          return null;
+                                        }}
+                                      />
+                                      {/* Center "Total" text to match screenshot style */}
+                                      <text
+                                        x="50%"
+                                        y="50%"
+                                        textAnchor="middle"
+                                        dominantBaseline="middle"
+                                        className="fill-black font-bold text-[10px]"
+                                      >
+                                        Total ({transformedData.length})
+                                      </text>
+                                    </RadialBarChart>
+                                  );
+                                })()
                               ) : (
                                 <LineChart data={sensitivityWeightChartData}>
                                   <CartesianGrid strokeDasharray="3 3" />
@@ -6275,21 +6369,25 @@ export default function MCDMCalculator() {
                       <div ref={sensitivityResultsRef} className="chart-container">
                         <ResponsiveContainer width="100%" height="100%">
                           {sensitivityChartType === "line" ? (
-                            <LineChart data={sensitivityChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <LineChart data={sensitivityChartData} margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis
                                 dataKey="weightLabel"
                                 tick={{ fontSize: 10 }}
-                                label={{ value: 'Weight (%)', position: 'insideBottom', offset: -5, fontSize: 11 }}
                               />
                               <YAxis
-                                reversed
                                 allowDecimals={false}
                                 tick={{ fontSize: 10 }}
                                 label={{ value: 'Rank', angle: -90, position: 'insideLeft', fontSize: 11 }}
+                                interval={0}
+                                domain={[0, 'dataMax']}
                               />
                               <Tooltip />
-                              <Legend wrapperStyle={{ fontSize: "10px" }} />
+                              <Legend
+                                verticalAlign="bottom"
+                                height={36}
+                                wrapperStyle={{ fontSize: "10px", margin: "0 auto" }}
+                              />
                               {sensitivityAlternatives.map((alt, idx) => (
                                 <Line
                                   key={alt}
@@ -6302,21 +6400,25 @@ export default function MCDMCalculator() {
                               ))}
                             </LineChart>
                           ) : (
-                            <BarChart data={sensitivityChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <BarChart data={sensitivityChartData} margin={{ top: 10, right: 30, left: 10, bottom: 40 }}>
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis
                                 dataKey="weightLabel"
                                 tick={{ fontSize: 10 }}
-                                label={{ value: 'Weight (%)', position: 'insideBottom', offset: -5, fontSize: 11 }}
                               />
                               <YAxis
-                                reversed
                                 allowDecimals={false}
                                 tick={{ fontSize: 10 }}
                                 label={{ value: 'Rank', angle: -90, position: 'insideLeft', fontSize: 11 }}
+                                interval={0}
+                                domain={[0, 'dataMax']}
                               />
                               <Tooltip />
-                              <Legend wrapperStyle={{ fontSize: "10px" }} />
+                              <Legend
+                                verticalAlign="bottom"
+                                height={36}
+                                wrapperStyle={{ fontSize: "10px", margin: "0 auto" }}
+                              />
                               {sensitivityAlternatives.map((alt, idx) => (
                                 <Bar
                                   key={alt}
@@ -6387,6 +6489,8 @@ export default function MCDMCalculator() {
             <div className="space-y-4 pt-4 flex-1 overflow-y-auto" key={method + activeFormulaType}>
               {activeFormulaType === "method" ? (
                 <>
+                  {method === "wsm" && <WSMFormula />}
+                  {method === "wpm" && <WPMFormula />}
                   {method === "swei" && <SWEIFormula />}
                   {method === "swi" && <SWIFormula />}
                   {method === "topsis" && <TOPSISFormula />}
@@ -7365,15 +7469,15 @@ export default function MCDMCalculator() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="font-semibold text-black py-3 px-4">Alternative</TableHead>
+                          <TableHead className="font-semibold text-black py-3 px-4 text-xs">Alternative</TableHead>
                           {criteria.map((crit) => (
                             <TableHead
                               key={crit.id}
-                              className="font-semibold text-center py-3 px-4"
+                              className="font-semibold text-center py-3 px-4 text-xs"
                             >
                               <div className="flex flex-col items-center">
                                 <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</span>
-                                <span className="text-gray-500 mt-1">{crit.type === "beneficial" ? "↑" : "↓"} ({crit.weight.toFixed(weightsDecimalPlaces)})</span>
+                                <span className="text-gray-500 mt-1 text-[10px]">{crit.type === "beneficial" ? "↑" : "↓"} ({crit.weight.toFixed(weightsDecimalPlaces)})</span>
                               </div>
                             </TableHead>
                           ))}
@@ -7382,7 +7486,7 @@ export default function MCDMCalculator() {
                       <TableBody>
                         {alternatives.map((alt) => (
                           <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-3 px-4 font-medium text-black">
+                            <TableCell className="py-3 px-4 font-medium text-black text-xs">
                               {alt.name}
                             </TableCell>
                             {criteria.map((crit) => (
@@ -10976,6 +11080,170 @@ export default function MCDMCalculator() {
                   </div>
                 </CardContent>
               </Card>
+
+              {method === "wsm" && apiResults?.metrics?.wsmNormalizedMatrix && (
+                <>
+                  {/* Table 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Linear Normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.wsmNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 3: Weighted Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Weighted Normalized Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Values * Weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.wsmWeightedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {method === "wpm" && apiResults?.metrics?.wpmNormalizedMatrix && (
+                <>
+                  {/* Table 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Linear Normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.wpmNormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 3: Weighted Terms */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Weighted Terms</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Values ^ Weights
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                  {crit.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.wpmWeightedProductMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
 
               {method === "swei" && apiResults?.metrics?.sweiNormalizedMatrix && (
                 <>

@@ -27,6 +27,8 @@ import { calculateMABAC } from "./mabac";
 import { calculateEntropy } from "./entropy";
 import { calculateGRA } from "./gra";
 import { calculateARAS } from "./aras";
+import { calculateWSM } from "./wsm";
+import { calculateWPM } from "./wpm";
 
 // Helper: build ranking and response
 function buildResponse(
@@ -376,6 +378,24 @@ export async function POST(request: NextRequest) {
           arasWeightedMatrix: arasData.weightedMatrix,
           arasOptimalityFunctionValues: arasData.optimalityFunctionValues,
           arasOptimalAlternativeValues: arasData.optimalAlternativeValues
+        };
+        break;
+      }
+      case "wsm": {
+        const wsmData = calculateWSM(alternatives, criteria);
+        results = wsmData.scores;
+        (request as any).extraMetrics = {
+          wsmNormalizedMatrix: wsmData.normalizedMatrix,
+          wsmWeightedMatrix: wsmData.weightedMatrix,
+        };
+        break;
+      }
+      case "wpm": {
+        const wpmData = calculateWPM(alternatives, criteria);
+        results = wpmData.scores;
+        (request as any).extraMetrics = {
+          wpmNormalizedMatrix: wpmData.normalizedMatrix,
+          wpmWeightedProductMatrix: wpmData.weightedProductMatrix,
         };
         break;
       }
