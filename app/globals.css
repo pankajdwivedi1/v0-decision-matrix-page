@@ -727,14 +727,15 @@ body {
       padding-top: 1rem !important;
     }
 
-    /* Stack selectors vertically */
+    /* Display selectors horizontally side by side */
     .results-selectors {
-      flex-direction: column !important;
-      gap: 0.75rem !important;
+      flex-direction: row !important;
+      gap: 0.5rem !important;
     }
 
     .results-selectors>div {
-      width: 100% !important;
+      flex: 1 !important;
+      width: auto !important;
     }
 
     /* Compact badges */
@@ -778,6 +779,42 @@ body {
       transform-origin: left center;
     }
   }
+
+  /* LaTeX/MathJax Formula Styling */
+  .latex {
+    font-size: 0.875rem !important;
+    line-height: 2 !important;
+    margin: 0.75rem 0;
+    display: block;
+  }
+
+  .latex mjx-container {
+    font-size: 0.875rem !important;
+    max-width: 100% !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin: 0.75rem 0 !important;
+    padding: 0.5rem 0 !important;
+    text-align: center !important;
+  }
+
+  .latex mjx-math {
+    font-size: 0.875rem !important;
+    outline: none !important;
+  }
+
+  /* Mobile adjustments for .latex */
+  @media (max-width: 640px) {
+    .latex {
+      font-size: 0.75rem !important;
+    }
+
+    .latex mjx-container {
+      margin: 0.5rem 0 !important;
+      padding: 0.25rem 0 !important;
+    }
+  }
+
 
   /* Auto-scaling typography for mobile */
   @media (max-width: 768px) {

@@ -93,6 +93,7 @@ import RRFormula from "@/components/RRFormula"
 import GRAFormula from "@/components/GRAFormula"
 import ARASFormula from "@/components/ARASFormula"
 import ColorSwitcher from "@/components/ColorSwitcher"
+import KSensitivityCalculator from "@/components/KSensitivityCalculator"
 
 declare global {
   interface Window {
@@ -827,6 +828,23 @@ export default function MCDMCalculator() {
       }, 100)
     }
   }, [isDialogOpen])
+
+
+  // Trigger MathJax typesetting when Sensitivity Analysis tab opens
+  useEffect(() => {
+    if (homeTab === "sensitivityAnalysis") {
+      // Multiple attempts with increasing delays to ensure MathJax renders
+      const timeouts = [100, 300, 600, 1000];
+      timeouts.forEach(delay => {
+        setTimeout(() => {
+          if (window.MathJax) {
+            window.MathJax.typesetPromise?.().catch((err: any) => console.log('MathJax error:', err))
+          }
+        }, delay)
+      });
+    }
+  }, [homeTab])
+
 
 
 
@@ -3201,64 +3219,66 @@ export default function MCDMCalculator() {
           </div>
         )}
         <div className="w-full max-w-7xl px-4 sm:px-6 md:px-8 mx-auto py-4 sm:py-6">
-          <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
-            {/* SidebarTrigger removed */}
-            <div className="min-w-0 flex-1">
-              <h1 className="text-xl sm:text-2xl font-bold text-black truncate">Decision Matrix</h1>
-              <p className="text-[10px] sm:text-xs text-gray-700">Multicriteria Decision Making Calculator</p>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className="flex flex-col items-end sm:flex-row sm:items-center gap-1.5 sm:gap-4">
-                <ColorSwitcher />
-                <Button
-                  variant="outline"
-                  onClick={() => window.location.href = '/'}
-                  className="h-7 sm:h-9 text-[10px] sm:text-xs px-2 sm:px-3"
-                >
-                  <Home className="mr-1.5 h-3.5 w-3.5" /> Home
-                </Button>
+          <div className="sticky top-0 z-40 bg-[var(--page-bg-color,white)] -mx-4 px-4 pt-4 pb-1 sm:relative sm:top-auto sm:z-auto sm:bg-transparent sm:mx-0 sm:px-0 sm:pt-0 sm:pb-0 border-b border-gray-100 sm:border-0 shadow-sm sm:shadow-none">
+            <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
+              {/* SidebarTrigger removed */}
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-2xl font-bold text-black truncate">Decision Matrix</h1>
+                <p className="text-[10px] sm:text-xs text-gray-700">Multicriteria Decision Making Calculator</p>
               </div>
-              <div className="w-10 h-10 sm:w-16 sm:h-16 rounded-full overflow-hidden border border-gray-200 shrink-0">
-                <img src="/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
+              <div className="flex items-center gap-2 sm:gap-4">
+                <div className="flex flex-col items-end sm:flex-row sm:items-center gap-1.5 sm:gap-4">
+                  <ColorSwitcher />
+                  <Button
+                    variant="outline"
+                    onClick={() => window.location.href = '/'}
+                    className="h-7 sm:h-9 text-[10px] sm:text-xs px-2 sm:px-3"
+                  >
+                    <Home className="mr-1.5 h-3.5 w-3.5" /> Home
+                  </Button>
+                </div>
+                <div className="w-10 h-10 sm:w-16 sm:h-16 rounded-full overflow-hidden border border-gray-200 shrink-0">
+                  <img src="/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-2 mb-4 sm:flex sm:flex-wrap">
-            <Button
-              variant="outline"
-              className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
-              onClick={() => setHomeTab("rankingMethods")}
-            >
-              Ranking Methods
-            </Button>
-            <Button
-              variant="outline"
-              className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
-              onClick={() => setHomeTab("weightMethods")}
-            >
-              Weight Methods
-            </Button>
-            <Button
-              variant="outline"
-              className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
-              onClick={() => setHomeTab("rankingComparison")}
-            >
-              Ranking comparison
-            </Button>
-            <Button
-              variant="outline"
-              className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
-              onClick={() => setHomeTab("sensitivityAnalysis")}
-            >
-              Sensitivity Analysis
-            </Button>
+            <div className="grid grid-cols-2 gap-2 mb-2 sm:mb-4 sm:flex sm:flex-wrap">
+              <Button
+                variant="outline"
+                className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+                onClick={() => setHomeTab("rankingMethods")}
+              >
+                Ranking Methods
+              </Button>
+              <Button
+                variant="outline"
+                className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+                onClick={() => setHomeTab("weightMethods")}
+              >
+                Weight Methods
+              </Button>
+              <Button
+                variant="outline"
+                className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+                onClick={() => setHomeTab("rankingComparison")}
+              >
+                Ranking comparison
+              </Button>
+              <Button
+                variant="outline"
+                className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+                onClick={() => setHomeTab("sensitivityAnalysis")}
+              >
+                Sensitivity Analysis
+              </Button>
+            </div>
           </div>
 
           {(homeTab === "rankingMethods" || homeTab === "weightMethods") && (
             <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm text-black">Get Started</CardTitle>
+                <CardTitle className="text-sm text-black">Construct the Decision Matrix</CardTitle>
                 <CardDescription className="text-xs text-gray-700">
                   Create a decision matrix by adding alternatives and criteria
                 </CardDescription>
@@ -3418,8 +3438,6 @@ export default function MCDMCalculator() {
                   </div>
                 </CardContent>
               </Card>
-
-
 
 
             </>
@@ -4532,7 +4550,7 @@ export default function MCDMCalculator() {
             <>
               <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">Get Started</CardTitle>
+                  <CardTitle className="text-sm text-black">Construct the Decision Matrix</CardTitle>
                   <CardDescription className="text-xs text-gray-700">
                     Create a decision matrix by adding alternatives and criteria
                   </CardDescription>
@@ -5484,7 +5502,7 @@ export default function MCDMCalculator() {
             <>
               <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">Get Started</CardTitle>
+                  <CardTitle className="text-sm text-black">Construct the Decision Matrix</CardTitle>
                   <CardDescription className="text-xs text-gray-700">
                     Create a decision matrix by adding alternatives and criteria
                   </CardDescription>
@@ -5499,6 +5517,90 @@ export default function MCDMCalculator() {
                   >
                     + Add Alternative & Criteria
                   </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
+                <CardHeader className="pb-3 text-center sm:text-left">
+                  <CardTitle className="text-[15px] text-gray-900 font-bold font-serif italic uppercase flex items-center gap-2">
+                    K% Sensitivity Analysis
+                    <div className="h-1 w-1 rounded-full bg-green-500"></div>
+                  </CardTitle>
+                  <CardDescription className="text-xs text-gray-500 font-medium">
+                    General formula for ±k% sensitivity analysis methodology
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Formula Display */}
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="text-xs font-bold text-gray-900 mb-3">1. General Formula for ±k% Sensitivity Analysis</h4>
+
+                    <div className="space-y-3 text-xs text-gray-700">
+                      <div>
+                        <p className="font-semibold mb-2">Let:</p>
+                        <div className="ml-4 space-y-2">
+                          <div>
+                            <strong>Base weights:</strong>
+                            <div className="bg-gray-50 rounded-lg mt-1 p-2">
+                              <div className="latex text-sm" dangerouslySetInnerHTML={{ __html: `\\[w_j, \\quad j = 1, 2, \\ldots, n, \\quad \\sum_{j=1}^{n} w_j = 1\\]` }} />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="bg-gray-50 rounded-lg p-2">
+                              <strong>Suppose weight of criterion </strong>
+                              <span className="latex" dangerouslySetInnerHTML={{ __html: `\\(C_p\\)` }} />
+                              <strong> is varied by ±k%</strong>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-1: Modify selected criterion</h4>
+                    <div className="bg-white rounded p-4 border border-purple-100">
+                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[w_p^{(k)} = w_p \\times \\left(1 \\pm \\frac{k}{100}\\right)\\]` }} />
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-2: Compute remaining weight mass</h4>
+                    <div className="space-y-3">
+                      <div className="bg-white rounded p-4 border border-green-100">
+                        <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[R = 1 - w_p^{(k)}\\]` }} />
+                      </div>
+                      <p className="text-xs text-gray-600 italic text-center">Original remaining weights sum:</p>
+                      <div className="bg-white rounded p-4 border border-green-100">
+                        <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[S = \\sum_{j \\neq p} w_j\\]` }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-lg p-4">
+                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-3: Proportional re-scaling factor</h4>
+                    <div className="bg-white rounded p-4 border border-yellow-100">
+                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[\\lambda = \\frac{R}{S}\\]` }} />
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-red-50 to-orange-50 border border-red-200 rounded-lg p-4">
+                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-4: Adjust remaining weights</h4>
+                    <div className="bg-white rounded p-4 border border-red-100">
+                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[w_j^{(k)} = \\lambda \\times w_j, \\quad \\forall j \\neq p\\]` }} />
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-lg p-4">
+                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-5: Validity check</h4>
+                    <div className="bg-white rounded p-4 border border-teal-100">
+                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[\\sum_{j=1}^{n} w_j^{(k)} = 1\\]` }} />
+                    </div>
+                    <div className="mt-3 flex items-center gap-2 text-xs text-green-700 bg-green-100 border border-green-300 rounded p-2">
+                      <span className="text-lg">✓</span>
+                      <p className="font-semibold">This procedure is standard, reviewer-accepted, and avoids bias.</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -6196,7 +6298,7 @@ export default function MCDMCalculator() {
                                 </ScatterChart>
                               ) : sensitivityChartType === "radial" ? (
                                 (() => {
-                                  if (sensitivityWeightComparisonResults.length === 0) return null;
+                                  if (sensitivityWeightComparisonResults.length === 0) return <div />;
 
                                   const firstMethod = sensitivityWeightComparisonResults[0];
                                   const labelKey = firstMethod.weightLabel;
@@ -6476,6 +6578,13 @@ export default function MCDMCalculator() {
                   </Card>
                 </>
               )}
+
+              {/* K% Sensitivity Analysis Calculator */}
+              <KSensitivityCalculator
+                criteria={criteria}
+                alternatives={alternatives}
+                weightMethod={criteria.some(c => c.weight > 0) ? "Applied" : "Not Set"}
+              />
             </>
           )}
         </div >
@@ -7260,122 +7369,136 @@ export default function MCDMCalculator() {
           <main className="flex-1 min-h-screen bg-white p-2 md:p-3 flex flex-col">
 
             <div className="max-w-7xl mx-auto w-full">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-                <div className="flex items-center gap-3">
-                  <Button
-                    onClick={() => setCurrentStep("table")}
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 text-black hover:bg-gray-100 bg-transparent"
-                    title="Back"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                  <div className="bg-black/5 p-2 rounded-lg">
-                    <LayoutGrid className="h-5 w-5 md:h-6 md:w-6 text-black" />
-                  </div>
-                  <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-black tracking-tight">Decision Matrix</h1>
-                    <p className="text-xs md:text-sm text-gray-500 font-medium">Step 3: Results & Analysis</p>
-                  </div>
-                </div>
+              {/* Mobile-Only Fixed Home Button */}
+              <Button
+                onClick={() => setCurrentStep("home")}
+                variant="outline"
+                size="icon"
+                className="md:hidden mobile-home-button border-gray-300 bg-white"
+                title="Go to Home"
+              >
+                <Home className="h-4 w-4" />
+              </Button>
 
-                <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
-                  <Button
-                    type="button"
-                    onClick={() => setCurrentStep("home")}
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
-                    title="Go to Home"
-                  >
-                    <Home className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <Breadcrumb className="mb-6">
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink
-                      onClick={() => setCurrentStep("input")}
-                      className="text-xs text-black cursor-pointer hover:text-gray-700"
-                    >
-                      Input
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="text-gray-400" />
-                  <BreadcrumbItem>
-                    <BreadcrumbLink
+              <div className="sticky top-0 z-40 bg-[var(--page-bg-color,white)] -mx-2 px-2 pt-2 pb-1 md:relative md:top-auto md:z-auto md:bg-transparent md:mx-0 md:px-0 md:pt-0 md:pb-0 border-b border-gray-100 md:border-0 shadow-sm md:shadow-none mb-6">
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-3 mb-2">
+                  <div className="flex items-center gap-3">
+                    <Button
                       onClick={() => setCurrentStep("table")}
-                      className="text-xs text-black cursor-pointer hover:text-gray-700"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-black hover:bg-gray-100 bg-transparent"
+                      title="Back"
                     >
-                      Table
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="text-gray-400" />
-                  <BreadcrumbItem>
-                    <span className="text-xs text-black">Matrix</span>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="bg-black/5 p-2 rounded-lg">
+                      <LayoutGrid className="h-5 w-5 md:h-6 md:w-6 text-black" />
+                    </div>
+                    <div>
+                      <h1 className="text-xl md:text-2xl font-bold text-black tracking-tight">Decision Matrix</h1>
+                      <p className="text-xs md:text-sm text-gray-500 font-medium">Step 3: Results & Analysis</p>
+                    </div>
+                  </div>
 
-              {/* Weight Method Selector */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Weight Method:</span>
-                  <Select value={weightMethod} onValueChange={(val: WeightMethod) => {
-                    if (val === "piprecia") {
-                      setIsPipreciaDialogOpen(true)
-                    } else if (val === "ahp") {
-                      setIsAhpDialogOpen(true)
-                    } else if (val === "swara") {
-                      setIsSwaraDialogOpen(true)
-                    } else if (["roc", "rr"].includes(val)) {
-                      setWeightMethod(val)
-                      setIsRanksDialogOpen(true)
-                    } else if (val === "custom") {
-                      const initialWeights: Record<string, string> = {}
-                      criteria.forEach(c => {
-                        initialWeights[c.id] = c.weight?.toString() || ""
-                      })
-                      setCustomWeights(initialWeights)
-                      setIsMainCustomWeightsDialogOpen(true)
-                    } else {
-                      calculateWeights(val)
-                    }
-                  }}>
-                    <SelectTrigger className="h-9 text-xs border-gray-200 text-black bg-white shadow-sm hover:border-gray-300 transition-colors min-w-[180px]">
-                      <SelectValue placeholder="Select Weight Method" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      <SelectGroup>
-                        <SelectLabel className="text-xs font-bold text-blue-600 px-2 py-1.5 bg-blue-50/50">Objective Weights</SelectLabel>
-                        {WEIGHT_METHODS.filter(m => !["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
-                          <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
-                            {m.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                      <SelectGroup>
-                        <SelectLabel className="text-xs font-bold text-purple-600 px-2 py-1.5 bg-purple-50/50 mt-1">Subjective Weights</SelectLabel>
-                        {WEIGHT_METHODS.filter(m => ["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
-                          <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
-                            {m.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                  {/* Middle: Weight Method Selector Moved Here */}
+                  <div className="flex flex-row md:flex-row items-center md:items-center gap-2 md:gap-4 flex-1 md:justify-center">
+                    <div className="flex flex-col gap-1 flex-1 md:min-w-[160px] md:flex-none md:w-auto">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase px-1 tracking-wider">Weight Method</span>
+                      <Select value={weightMethod} onValueChange={(val: WeightMethod) => {
+                        if (val === "piprecia") {
+                          setIsPipreciaDialogOpen(true)
+                        } else if (val === "ahp") {
+                          setIsAhpDialogOpen(true)
+                        } else if (val === "swara") {
+                          setIsSwaraDialogOpen(true)
+                        } else if (["roc", "rr"].includes(val)) {
+                          setWeightMethod(val)
+                          setIsRanksDialogOpen(true)
+                        } else if (val === "custom") {
+                          const initialWeights: Record<string, string> = {}
+                          criteria.forEach(c => {
+                            initialWeights[c.id] = c.weight?.toString() || ""
+                          })
+                          setCustomWeights(initialWeights)
+                          setIsMainCustomWeightsDialogOpen(true)
+                        } else {
+                          calculateWeights(val)
+                        }
+                      }}>
+                        <SelectTrigger className="h-9 text-xs border-gray-200 text-black bg-white shadow-sm hover:border-gray-300 transition-colors w-full">
+                          <SelectValue placeholder="Select Weight Method" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px]">
+                          <SelectGroup>
+                            <SelectLabel className="text-xs font-bold text-blue-600 px-2 py-1.5 bg-blue-50/50">Objective Weights</SelectLabel>
+                            {WEIGHT_METHODS.filter(m => !["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
+                              <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
+                                {m.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                          <SelectGroup>
+                            <SelectLabel className="text-xs font-bold text-purple-600 px-2 py-1.5 bg-purple-50/50 mt-1">Subjective Weights</SelectLabel>
+                            {WEIGHT_METHODS.filter(m => ["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
+                              <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
+                                {m.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button
+                      type="button"
+                      onClick={() => setCurrentStep("table")}
+                      variant="outline"
+                      className="text-xs h-9 border-gray-200 text-black hover:bg-gray-100 bg-white flex-shrink-0 mt-auto px-3"
+                    >
+                      Edit Table
+                    </Button>
+                  </div>
+
+                  <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+                    <Button
+                      type="button"
+                      onClick={() => setCurrentStep("home")}
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-transparent shadow-sm"
+                      title="Go to Home"
+                    >
+                      <Home className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <Button
-                  type="button"
-                  onClick={() => setCurrentStep("table")}
-                  variant="outline"
-                  className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100 bg-transparent"
-                >
-                  Edit
-                </Button>
+
+                <Breadcrumb className="mb-2 md:mb-6">
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink
+                        onClick={() => setCurrentStep("input")}
+                        className="text-xs text-black cursor-pointer hover:text-gray-700"
+                      >
+                        Input
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator className="text-gray-400" />
+                    <BreadcrumbItem>
+                      <BreadcrumbLink
+                        onClick={() => setCurrentStep("table")}
+                        className="text-xs text-black cursor-pointer hover:text-gray-700"
+                      >
+                        Table
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator className="text-gray-400" />
+                    <BreadcrumbItem>
+                      <span className="text-xs text-black">Matrix</span>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
               </div>
 
               <div className="flex justify-end gap-2 mb-4" style={{ display: 'none' }}>
@@ -7477,7 +7600,12 @@ export default function MCDMCalculator() {
                             >
                               <div className="flex flex-col items-center">
                                 <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</span>
-                                <span className="text-gray-500 mt-1 text-[10px]">{crit.type === "beneficial" ? "↑" : "↓"} ({crit.weight.toFixed(weightsDecimalPlaces)})</span>
+                                <span className="text-gray-500 mt-1 text-[10px]">
+                                  <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>
+                                    {crit.type === "beneficial" ? "↑" : "↓"}
+                                  </span>{" "}
+                                  ({crit.weight.toFixed(weightsDecimalPlaces)})
+                                </span>
                               </div>
                             </TableHead>
                           ))}
@@ -10518,254 +10646,255 @@ export default function MCDMCalculator() {
                 </>
               )}
 
-            </div >
-          </main >
+
+
+              {/* --- ROC & RR Ranks Dialog (Matrix Step) --- */}
+              <Dialog open={isRanksDialogOpen} onOpenChange={setIsRanksDialogOpen}>
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto w-full">
+                  <DialogHeader>
+                    <DialogTitle>{weightMethod === "roc" ? "ROC" : "RR"} Weight Calculator</DialogTitle>
+                    <DialogDescription className="text-xs">
+                      Enter the rank order for each criterion (1 = most important).
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4 mt-4">
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50">
+                            <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                            <TableHead className="text-xs font-semibold text-center w-24">Rank</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {criteria.map((crit) => (
+                            <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableCell className="py-2 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                              <TableCell className="text-center py-2 px-4 text-xs text-black">
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  max={criteria.length}
+                                  className="w-16 h-7 text-xs text-center mx-auto"
+                                  value={criteriaRanks[crit.id] || ""}
+                                  onChange={(e) => setCriteriaRanks(prev => ({ ...prev, [crit.id]: e.target.value }))}
+                                  onKeyDown={handleKeyDown}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-xs text-blue-900 leading-tight">
+                        <strong>Note:</strong> Ranks should be between 1 and {criteria.length}. Different criteria can have the same rank if they are equally important.
+                      </p>
+                    </div>
+                  </div>
+
+                  <DialogFooter className="mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsRanksDialogOpen(false)}
+                      className="text-xs h-8"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={async () => {
+                        setIsRanksDialogOpen(false)
+                        const updatedCriteria = await calculateWeights(weightMethod)
+                        handleCalculate(method, updatedCriteria)
+                      }}
+                      className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                    >
+                      Calculate Weights
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* --- PIPRECIA Dialog (Matrix Step) --- */}
+              < Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen} >
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+                  <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
+                  <PIPRECIAFormula
+                    criteria={criteria}
+                    initialScores={pipreciaScores}
+                    onScoresChange={setPipreciaScores}
+                    onWeightsCalculated={(weights) => {
+                      setPipreciaCalculatedWeights(weights)
+                      setIsPipreciaDialogOpen(false)
+
+                      // Update criteria with new weights
+                      const updatedCriteria = criteria.map(c => ({
+                        ...c,
+                        weight: weights[c.id] || 0
+                      }))
+                      setCriteria(updatedCriteria)
+                      setWeightMethod("piprecia")
+
+                      handleCalculate(method, updatedCriteria)
+                    }}
+                  />
+                </DialogContent>
+              </Dialog >
+
+              {/* --- AHP Dialog (Matrix Step) --- */}
+              < Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen} >
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
+                  <DialogTitle>AHP Weight Calculator</DialogTitle>
+                  <AHPFormula
+                    criteria={criteria}
+                    initialMatrix={ahpMatrix}
+                    onMatrixChange={setAhpMatrix}
+                    onWeightsCalculated={(weights) => {
+                      setAhpCalculatedWeights(weights)
+                      setIsAhpDialogOpen(false)
+
+                      // Update criteria with new weights
+                      const updatedCriteria = criteria.map(c => ({
+                        ...c,
+                        weight: weights[c.id] || 0
+                      }))
+                      setCriteria(updatedCriteria)
+                      setWeightMethod("ahp")
+
+                      handleCalculate(method, updatedCriteria)
+                    }}
+                  />
+                </DialogContent>
+              </Dialog >
+
+              {/* --- SWARA Dialog (Matrix Step) --- */}
+              < Dialog open={isSwaraDialogOpen} onOpenChange={setIsSwaraDialogOpen} >
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+                  <DialogHeader>
+                    <DialogTitle>SWARA Weight Calculator</DialogTitle>
+                    <DialogDescription className="text-xs">
+                      Enter comparative importance coefficients (s<sub>j</sub>) for each criterion.
+                      The first criterion is most important (s<sub>1</sub> = 0).
+                      Higher values indicate larger importance differences.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4 mt-4">
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50">
+                            <TableHead className="text-xs font-semibold">Rank</TableHead>
+                            <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                            <TableHead className="text-xs font-semibold text-center">
+                              Coefficient (s<sub>j</sub>)
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {criteria.map((crit, index) => (
+                            <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableCell className="py-3 px-4 font-medium text-black text-xs">{index + 1}</TableCell>
+                              <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                              <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                {index === 0 ? (
+                                  <span className="text-xs text-gray-500">0 (most important)</span>
+                                ) : (
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={swaraCoefficients[crit.id] || ""}
+                                    onChange={(e) =>
+                                      setSwaraCoefficients({
+                                        ...swaraCoefficients,
+                                        [crit.id]: e.target.value,
+                                      })
+                                    }
+                                    onKeyDown={handleKeyDown}
+                                    className="w-24 h-7 text-xs text-center"
+                                    placeholder="0.00"
+                                  />
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+
+                      </Table>
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-xs text-blue-900">
+                        <strong>Note:</strong> Criteria are ordered by importance (top = most important).
+                        For each criterion j, enter how much less important it is compared to the previous criterion (j-1).
+                      </p>
+                    </div>
+                  </div>
+
+                  <DialogFooter className="mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsSwaraDialogOpen(false)}
+                      className="text-xs"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          // Convert string coefficients to numbers
+                          const coeffs: Record<string, number> = {}
+                          criteria.forEach((crit, index) => {
+                            if (index === 0) {
+                              coeffs[crit.id] = 0
+                            } else {
+                              coeffs[crit.id] = parseFloat(swaraCoefficients[crit.id]) || 0
+                            }
+                          })
+
+                          // Call SWARA API
+                          const response = await fetch("/api/swara-weights", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ criteria, coefficients: coeffs }),
+                          })
+
+                          if (!response.ok) throw new Error("Failed to calculate SWARA weights")
+
+                          const data: SWARAResult = await response.json()
+                          setSwaraResult(data)
+                          setSwaraCalculatedWeights(data.weights)
+                          setIsSwaraDialogOpen(false)
+
+                          // Update criteria with new weights
+                          const updatedCriteria = criteria.map(c => ({
+                            ...c,
+                            weight: data.weights[c.id] || 0
+                          }))
+                          setCriteria(updatedCriteria)
+                          setWeightMethod("swara")
+
+                          handleCalculate(method, updatedCriteria)
+                        } catch (error) {
+                          console.error("SWARA calculation error:", error)
+                          alert("Error calculating SWARA weights")
+                        }
+                      }}
+                      className="bg-black text-white hover:bg-gray-800 text-xs"
+                    >
+                      Calculate Weights
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </main>
         </div>
-
-        {/* --- ROC & RR Ranks Dialog (Matrix Step) --- */}
-        <Dialog open={isRanksDialogOpen} onOpenChange={setIsRanksDialogOpen}>
-          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto w-full">
-            <DialogHeader>
-              <DialogTitle>{weightMethod === "roc" ? "ROC" : "RR"} Weight Calculator</DialogTitle>
-              <DialogDescription className="text-xs">
-                Enter the rank order for each criterion (1 = most important).
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 mt-4">
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="text-xs font-semibold">Criterion</TableHead>
-                      <TableHead className="text-xs font-semibold text-center w-24">Rank</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {criteria.map((crit) => (
-                      <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                        <TableCell className="py-2 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
-                        <TableCell className="text-center py-2 px-4 text-xs text-black">
-                          <Input
-                            type="number"
-                            min="1"
-                            max={criteria.length}
-                            className="w-16 h-7 text-xs text-center mx-auto"
-                            value={criteriaRanks[crit.id] || ""}
-                            onChange={(e) => setCriteriaRanks(prev => ({ ...prev, [crit.id]: e.target.value }))}
-                            onKeyDown={handleKeyDown}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-xs text-blue-900 leading-tight">
-                  <strong>Note:</strong> Ranks should be between 1 and {criteria.length}. Different criteria can have the same rank if they are equally important.
-                </p>
-              </div>
-            </div>
-
-            <DialogFooter className="mt-4">
-              <Button
-                variant="outline"
-                onClick={() => setIsRanksDialogOpen(false)}
-                className="text-xs h-8"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                onClick={async () => {
-                  setIsRanksDialogOpen(false)
-                  const updatedCriteria = await calculateWeights(weightMethod)
-                  handleCalculate(method, updatedCriteria)
-                }}
-                className="bg-black text-white hover:bg-gray-800 text-xs h-8"
-              >
-                Calculate Weights
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* --- PIPRECIA Dialog (Matrix Step) --- */}
-        < Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen} >
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
-            <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
-            <PIPRECIAFormula
-              criteria={criteria}
-              initialScores={pipreciaScores}
-              onScoresChange={setPipreciaScores}
-              onWeightsCalculated={(weights) => {
-                setPipreciaCalculatedWeights(weights)
-                setIsPipreciaDialogOpen(false)
-
-                // Update criteria with new weights
-                const updatedCriteria = criteria.map(c => ({
-                  ...c,
-                  weight: weights[c.id] || 0
-                }))
-                setCriteria(updatedCriteria)
-                setWeightMethod("piprecia")
-
-                handleCalculate(method, updatedCriteria)
-              }}
-            />
-          </DialogContent>
-        </Dialog >
-
-        {/* --- AHP Dialog (Matrix Step) --- */}
-        < Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen} >
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
-            <DialogTitle>AHP Weight Calculator</DialogTitle>
-            <AHPFormula
-              criteria={criteria}
-              initialMatrix={ahpMatrix}
-              onMatrixChange={setAhpMatrix}
-              onWeightsCalculated={(weights) => {
-                setAhpCalculatedWeights(weights)
-                setIsAhpDialogOpen(false)
-
-                // Update criteria with new weights
-                const updatedCriteria = criteria.map(c => ({
-                  ...c,
-                  weight: weights[c.id] || 0
-                }))
-                setCriteria(updatedCriteria)
-                setWeightMethod("ahp")
-
-                handleCalculate(method, updatedCriteria)
-              }}
-            />
-          </DialogContent>
-        </Dialog >
-
-        {/* --- SWARA Dialog (Matrix Step) --- */}
-        < Dialog open={isSwaraDialogOpen} onOpenChange={setIsSwaraDialogOpen} >
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
-            <DialogHeader>
-              <DialogTitle>SWARA Weight Calculator</DialogTitle>
-              <DialogDescription className="text-xs">
-                Enter comparative importance coefficients (s<sub>j</sub>) for each criterion.
-                The first criterion is most important (s<sub>1</sub> = 0).
-                Higher values indicate larger importance differences.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 mt-4">
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="text-xs font-semibold">Rank</TableHead>
-                      <TableHead className="text-xs font-semibold">Criterion</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">
-                        Coefficient (s<sub>j</sub>)
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {criteria.map((crit, index) => (
-                      <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                        <TableCell className="py-3 px-4 font-medium text-black text-xs">{index + 1}</TableCell>
-                        <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
-                        <TableCell className="text-center py-3 px-4 text-xs text-black">
-                          {index === 0 ? (
-                            <span className="text-xs text-gray-500">0 (most important)</span>
-                          ) : (
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={swaraCoefficients[crit.id] || ""}
-                              onChange={(e) =>
-                                setSwaraCoefficients({
-                                  ...swaraCoefficients,
-                                  [crit.id]: e.target.value,
-                                })
-                              }
-                              onKeyDown={handleKeyDown}
-                              className="w-24 h-7 text-xs text-center"
-                              placeholder="0.00"
-                            />
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-
-                </Table>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-xs text-blue-900">
-                  <strong>Note:</strong> Criteria are ordered by importance (top = most important).
-                  For each criterion j, enter how much less important it is compared to the previous criterion (j-1).
-                </p>
-              </div>
-            </div>
-
-            <DialogFooter className="mt-4">
-              <Button
-                variant="outline"
-                onClick={() => setIsSwaraDialogOpen(false)}
-                className="text-xs"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                onClick={async () => {
-                  try {
-                    // Convert string coefficients to numbers
-                    const coeffs: Record<string, number> = {}
-                    criteria.forEach((crit, index) => {
-                      if (index === 0) {
-                        coeffs[crit.id] = 0
-                      } else {
-                        coeffs[crit.id] = parseFloat(swaraCoefficients[crit.id]) || 0
-                      }
-                    })
-
-                    // Call SWARA API
-                    const response = await fetch("/api/swara-weights", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ criteria, coefficients: coeffs }),
-                    })
-
-                    if (!response.ok) throw new Error("Failed to calculate SWARA weights")
-
-                    const data: SWARAResult = await response.json()
-                    setSwaraResult(data)
-                    setSwaraCalculatedWeights(data.weights)
-                    setIsSwaraDialogOpen(false)
-
-                    // Update criteria with new weights
-                    const updatedCriteria = criteria.map(c => ({
-                      ...c,
-                      weight: data.weights[c.id] || 0
-                    }))
-                    setCriteria(updatedCriteria)
-                    setWeightMethod("swara")
-
-                    handleCalculate(method, updatedCriteria)
-                  } catch (error) {
-                    console.error("SWARA calculation error:", error)
-                    alert("Error calculating SWARA weights")
-                  }
-                }}
-                className="bg-black text-white hover:bg-gray-800 text-xs"
-              >
-                Calculate Weights
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog >
       </>
     )
   }
@@ -10804,84 +10933,122 @@ export default function MCDMCalculator() {
                 <Home className="h-4 w-4" />
               </Button>
 
-              {/* Header Section */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-6">
-                {/* Left: Back Button + Title */}
-                <div className="flex items-center gap-3">
-                  <Button
-                    type="button"
-                    onClick={() => setCurrentStep("table")}
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 text-black hover:bg-gray-100 bg-transparent flex-shrink-0 touch-target"
-                    title="Back"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                  <div className="flex-shrink-0">
-                    <h1 className="text-xl md:text-2xl font-bold text-black">Results</h1>
-                    <p className="text-xs text-gray-700">Calculation Results</p>
+              <div className="sticky top-0 z-40 bg-[var(--page-bg-color,white)] -mx-2 px-2 pt-2 pb-1 md:relative md:top-auto md:z-auto md:bg-transparent md:mx-0 md:px-0 md:pt-0 md:pb-0 border-b border-gray-100 md:border-0 shadow-sm md:shadow-none mb-6">
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-2">
+                  {/* Left: Back Button + Title */}
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      onClick={() => setCurrentStep("table")}
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-black hover:bg-gray-100 bg-transparent flex-shrink-0 touch-target"
+                      title="Back"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="flex-shrink-0">
+                      <h1 className="text-xl md:text-2xl font-bold text-black">Results</h1>
+                      <p className="text-xs text-gray-700">Calculation Results</p>
+                    </div>
                   </div>
-                </div>
 
-                {/* Middle: Selectors */}
-                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 flex-1 md:justify-center results-selectors">
-                  <div className="flex flex-col gap-1 w-full md:min-w-[160px] md:w-auto">
-                    <span className="text-[10px] font-bold text-gray-500 uppercase px-1 tracking-wider">Weight Method</span>
-                    <Select value={weightMethod} onValueChange={(val: WeightMethod) => handleWeightMethodChange(val)}>
-                      <SelectTrigger className="h-10 md:h-9 text-xs border-gray-200 text-black bg-white shadow-sm hover:border-gray-300 transition-colors w-full">
-                        <SelectValue placeholder="Select Weight Method" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[300px]">
-                        <SelectGroup>
-                          <SelectLabel className="text-xs font-bold text-blue-600 px-2 py-1.5 bg-blue-50/50">Objective Weights</SelectLabel>
-                          {WEIGHT_METHODS.filter(m => !["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
-                            <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
+                  {/* Middle: Selectors */}
+                  <div className="flex flex-row md:flex-row items-end md:items-center gap-2 md:gap-4 flex-1 md:justify-center results-selectors">
+                    <div className="flex flex-col gap-1 flex-1 md:min-w-[160px] md:flex-none md:w-auto">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase px-1 tracking-wider">Weight Method</span>
+                      <Select value={weightMethod} onValueChange={(val: WeightMethod) => handleWeightMethodChange(val)}>
+                        <SelectTrigger className="h-9 text-xs border-gray-200 text-black bg-white shadow-sm hover:border-gray-300 transition-colors w-full">
+                          <SelectValue placeholder="Select Weight Method" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px]">
+                          <SelectGroup>
+                            <SelectLabel className="text-xs font-bold text-blue-600 px-2 py-1.5 bg-blue-50/50">Objective Weights</SelectLabel>
+                            {WEIGHT_METHODS.filter(m => !["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
+                              <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
+                                {m.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                          <SelectGroup>
+                            <SelectLabel className="text-xs font-bold text-purple-600 px-2 py-1.5 bg-purple-50/50 mt-1">Subjective Weights</SelectLabel>
+                            {WEIGHT_METHODS.filter(m => ["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
+                              <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
+                                {m.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex flex-col gap-1 flex-1 md:min-w-[160px] md:flex-none md:w-auto">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase px-1 tracking-wider">Ranking Method</span>
+                      <Select value={method} onValueChange={(val: MCDMMethod) => handleRankingMethodChange(val)}>
+                        <SelectTrigger className="h-9 text-xs border-gray-200 text-black bg-white shadow-sm hover:border-gray-300 transition-colors w-full">
+                          <SelectValue placeholder="Select Ranking Method" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px]">
+                          {MCDM_METHODS.map((m) => (
+                            <SelectItem key={m.value} value={m.value} className="text-xs">
                               {m.label}
                             </SelectItem>
                           ))}
-                        </SelectGroup>
-                        <SelectGroup>
-                          <SelectLabel className="text-xs font-bold text-purple-600 px-2 py-1.5 bg-purple-50/50 mt-1">Subjective Weights</SelectLabel>
-                          {WEIGHT_METHODS.filter(m => ["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
-                            <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
-                              {m.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
-                  <div className="flex flex-col gap-1 w-full md:min-w-[160px] md:w-auto">
-                    <span className="text-[10px] font-bold text-gray-500 uppercase px-1 tracking-wider">Ranking Method</span>
-                    <Select value={method} onValueChange={(val: MCDMMethod) => handleRankingMethodChange(val)}>
-                      <SelectTrigger className="h-10 md:h-9 text-xs border-gray-200 text-black bg-white shadow-sm hover:border-gray-300 transition-colors w-full">
-                        <SelectValue placeholder="Select Ranking Method" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[300px]">
-                        {MCDM_METHODS.map((m) => (
-                          <SelectItem key={m.value} value={m.value} className="text-xs">
-                            {m.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  {/* Right: Home Button (Desktop Only) */}
+                  <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+                    <Button
+                      onClick={() => setCurrentStep("home")}
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-white shadow-sm"
+                      title="Go to Home"
+                    >
+                      <Home className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
 
-                {/* Right: Home Button (Desktop Only) */}
-                <div className="hidden md:flex items-center gap-2 flex-shrink-0">
-                  <Button
-                    onClick={() => setCurrentStep("home")}
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 border-gray-200 text-black hover:bg-gray-100 bg-white shadow-sm"
-                    title="Go to Home"
-                  >
-                    <Home className="h-4 w-4" />
-                  </Button>
-                </div>
+                {/* Breadcrumbs Section */}
+                <Breadcrumb className="mb-2 md:mb-6">
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink
+                        onClick={() => setCurrentStep("input")}
+                        className="text-xs text-black cursor-pointer hover:text-gray-700"
+                      >
+                        Input
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator className="text-gray-400" />
+                    <BreadcrumbItem>
+                      <BreadcrumbLink
+                        onClick={() => setCurrentStep("table")}
+                        className="text-xs text-black cursor-pointer hover:text-gray-700"
+                      >
+                        Table
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator className="text-gray-400" />
+                    <BreadcrumbItem>
+                      <BreadcrumbLink
+                        onClick={() => setCurrentStep("matrix")}
+                        className="text-xs text-black cursor-pointer hover:text-gray-700"
+                      >
+                        Matrix
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator className="text-gray-400" />
+                    <BreadcrumbItem>
+                      <span className="text-xs text-black">Results</span>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
               </div>
 
               <Card className="border-gray-200 bg-white shadow-none mb-6">
@@ -11100,7 +11267,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -11139,7 +11306,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -11182,7 +11349,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -11221,7 +11388,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -11504,7 +11671,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -11543,7 +11710,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -11626,7 +11793,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -11709,7 +11876,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -11858,7 +12025,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -11897,7 +12064,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -11936,7 +12103,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -11979,7 +12146,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12018,7 +12185,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12057,7 +12224,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12138,7 +12305,7 @@ export default function MCDMCalculator() {
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12173,7 +12340,7 @@ export default function MCDMCalculator() {
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12208,7 +12375,7 @@ export default function MCDMCalculator() {
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12247,7 +12414,7 @@ export default function MCDMCalculator() {
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12308,7 +12475,7 @@ export default function MCDMCalculator() {
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12388,7 +12555,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12427,7 +12594,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12516,7 +12683,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12555,7 +12722,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12594,7 +12761,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12678,7 +12845,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-center py-3 px-4 font-semibold text-xs ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12714,7 +12881,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12753,7 +12920,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12845,7 +13012,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12884,7 +13051,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12923,7 +13090,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -12960,7 +13127,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13003,7 +13170,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13042,7 +13209,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13081,7 +13248,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13170,7 +13337,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13209,7 +13376,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13292,7 +13459,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13331,7 +13498,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13431,7 +13598,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13469,7 +13636,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-center py-3 px-4 font-semibold text-xs ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13549,7 +13716,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13587,7 +13754,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-center py-3 px-4 font-semibold text-xs ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13667,7 +13834,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13706,7 +13873,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13789,7 +13956,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13828,7 +13995,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13867,7 +14034,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -13906,7 +14073,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                   }`}>
-                                  {crit.name}
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
                               ))}
                             </TableRow>
@@ -14269,4 +14436,7 @@ export default function MCDMCalculator() {
       </div>
     )
   }
+
+  return null
 }
+

@@ -8,7 +8,7 @@ const themes = [
     { id: 'charcoal', bg: '#1e293b', text: '#ffffff', label: 'Charcoal' },
     { id: 'gray', bg: '#475569', text: '#ffffff', label: 'Slate Gray' },
     { id: 'green', bg: '#064e3b', text: '#ffffff', label: 'Deep Forest' },
-    { id: 'brown', bg: '#3b0a01', text: '#ffffff', label: 'Rich Espresso' },
+    { id: 'brown', bg: '#4a6d4a', text: '#ffffff', label: 'Sage Green' },
     { id: 'darkblue', bg: '#0f172a', text: '#ffffff', label: 'Midnight Blue' },
     { id: 'lightblue', bg: '#f0f9ff', text: '#000000', label: 'Sky Mist' },
 ]
