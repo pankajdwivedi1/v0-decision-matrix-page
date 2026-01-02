@@ -795,6 +795,9 @@ export default function MCDMCalculator() {
         if (parsed.criteria && parsed.criteria.length > 0) setCriteria(parsed.criteria)
         if (parsed.numAlternatives) setNumAlternatives(parsed.numAlternatives)
         if (parsed.numCriteria) setNumCriteria(parsed.numCriteria)
+        if (parsed.weightMethod) setWeightMethod(parsed.weightMethod)
+        if (parsed.weightsDecimalPlaces !== undefined) setWeightsDecimalPlaces(parsed.weightsDecimalPlaces)
+        if (parsed.resultsDecimalPlaces !== undefined) setResultsDecimalPlaces(parsed.resultsDecimalPlaces)
       }
     } catch (e) {
       console.error("Failed to load data from localStorage", e)
@@ -811,10 +814,13 @@ export default function MCDMCalculator() {
           criteria,
           numAlternatives,
           numCriteria,
+          weightMethod,
+          weightsDecimalPlaces,
+          resultsDecimalPlaces,
         })
       )
     }
-  }, [alternatives, criteria, numAlternatives, numCriteria])
+  }, [alternatives, criteria, numAlternatives, numCriteria, weightMethod, weightsDecimalPlaces, resultsDecimalPlaces])
 
   // Auto-play carousel for ranking methods removed in favor of grid view
 
@@ -2839,31 +2845,38 @@ export default function MCDMCalculator() {
 
   // Result page handlers
   const handleRankingMethodChange = async (newMethod: MCDMMethod) => {
+    setIsLoading(true); // Start loading immediately
     setMethod(newMethod)
     await handleCalculate(newMethod)
   }
 
   const handleWeightMethodChange = async (newWeightMethod: WeightMethod) => {
+    setIsLoading(true); // Start loading immediately
     setWeightMethod(newWeightMethod)
 
     // Handle subjective methods by opening their respective dialogs
     if (newWeightMethod === "ahp") {
+      setIsLoading(false); // Stop loading for dialog
       setIsAhpDialogOpen(true)
       return
     }
     if (newWeightMethod === "piprecia") {
+      setIsLoading(false); // Stop loading for dialog
       setIsPipreciaDialogOpen(true)
       return
     }
     if (newWeightMethod === "swara") {
+      setIsLoading(false); // Stop loading for dialog
       setIsSwaraDialogOpen(true)
       return
     }
     if (["roc", "rr"].includes(newWeightMethod)) {
+      setIsLoading(false); // Stop loading for dialog
       setIsRanksDialogOpen(true)
       return
     }
     if (newWeightMethod === "custom") {
+      setIsLoading(false); // Stop loading for dialog
       const initialWeights: Record<string, string> = {}
       criteria.forEach(c => {
         initialWeights[c.id] = c.weight?.toString() || ""
@@ -5520,89 +5533,6 @@ export default function MCDMCalculator() {
                 </CardContent>
               </Card>
 
-              <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                <CardHeader className="pb-3 text-center sm:text-left">
-                  <CardTitle className="text-[15px] text-gray-900 font-bold font-serif italic uppercase flex items-center gap-2">
-                    K% Sensitivity Analysis
-                    <div className="h-1 w-1 rounded-full bg-green-500"></div>
-                  </CardTitle>
-                  <CardDescription className="text-xs text-gray-500 font-medium">
-                    General formula for ±k% sensitivity analysis methodology
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Formula Display */}
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="text-xs font-bold text-gray-900 mb-3">1. General Formula for ±k% Sensitivity Analysis</h4>
-
-                    <div className="space-y-3 text-xs text-gray-700">
-                      <div>
-                        <p className="font-semibold mb-2">Let:</p>
-                        <div className="ml-4 space-y-2">
-                          <div>
-                            <strong>Base weights:</strong>
-                            <div className="bg-gray-50 rounded-lg mt-1 p-2">
-                              <div className="latex text-sm" dangerouslySetInnerHTML={{ __html: `\\[w_j, \\quad j = 1, 2, \\ldots, n, \\quad \\sum_{j=1}^{n} w_j = 1\\]` }} />
-                            </div>
-                          </div>
-                          <div>
-                            <div className="bg-gray-50 rounded-lg p-2">
-                              <strong>Suppose weight of criterion </strong>
-                              <span className="latex" dangerouslySetInnerHTML={{ __html: `\\(C_p\\)` }} />
-                              <strong> is varied by ±k%</strong>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
-                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-1: Modify selected criterion</h4>
-                    <div className="bg-white rounded p-4 border border-purple-100">
-                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[w_p^{(k)} = w_p \\times \\left(1 \\pm \\frac{k}{100}\\right)\\]` }} />
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
-                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-2: Compute remaining weight mass</h4>
-                    <div className="space-y-3">
-                      <div className="bg-white rounded p-4 border border-green-100">
-                        <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[R = 1 - w_p^{(k)}\\]` }} />
-                      </div>
-                      <p className="text-xs text-gray-600 italic text-center">Original remaining weights sum:</p>
-                      <div className="bg-white rounded p-4 border border-green-100">
-                        <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[S = \\sum_{j \\neq p} w_j\\]` }} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-lg p-4">
-                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-3: Proportional re-scaling factor</h4>
-                    <div className="bg-white rounded p-4 border border-yellow-100">
-                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[\\lambda = \\frac{R}{S}\\]` }} />
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-red-50 to-orange-50 border border-red-200 rounded-lg p-4">
-                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-4: Adjust remaining weights</h4>
-                    <div className="bg-white rounded p-4 border border-red-100">
-                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[w_j^{(k)} = \\lambda \\times w_j, \\quad \\forall j \\neq p\\]` }} />
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-lg p-4">
-                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-5: Validity check</h4>
-                    <div className="bg-white rounded p-4 border border-teal-100">
-                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[\\sum_{j=1}^{n} w_j^{(k)} = 1\\]` }} />
-                    </div>
-                    <div className="mt-3 flex items-center gap-2 text-xs text-green-700 bg-green-100 border border-green-300 rounded p-2">
-                      <span className="text-lg">✓</span>
-                      <p className="font-semibold">This procedure is standard, reviewer-accepted, and avoids bias.</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
 
               <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
                 <CardHeader className="pb-3">

@@ -3,7 +3,12 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import AHPFormula from "./AHPFormula";
+import PIPRECIAFormula from "./PIPRECIAFormula";
 import { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Check, ChevronRight } from 'lucide-react';
 
@@ -42,11 +47,57 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
   // Ranking method state
   const [selectedRankingMethod, setSelectedRankingMethod] = useState<string>('swei');
   const [showFormula, setShowFormula] = useState<boolean>(false);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
 
-  // Trigger MathJax rendering when formulas are shown
+  // Dialog states for subjective weight methods
+  const [isAhpDialogOpen, setIsAhpDialogOpen] = useState<boolean>(false);
+  const [isPipreciaDialogOpen, setIsPipreciaDialogOpen] = useState<boolean>(false);
+  const [isSwaraDialogOpen, setIsSwaraDialogOpen] = useState<boolean>(false);
+  const [isRocDialogOpen, setIsRocDialogOpen] = useState<boolean>(false);
+  const [isRrDialogOpen, setIsRrDialogOpen] = useState<boolean>(false);
+
+  // AHP state
+  const [ahpMatrix, setAhpMatrix] = useState<number[][]>([]);
+  const [ahpWeights, setAhpWeights] = useState<number[]>([]);
+
+  // PIPRECIA state
+  const [pipreciaScores, setPipreciaScores] = useState<Record<number, string>>({});
+
+  // SWARA state
+  const [swaraCoefficients, setSwaraCoefficients] = useState<{ [key: string]: number }>({});
+
+  // ROC/RR state
+  const [rankValues, setRankValues] = useState<{ [key: string]: number }>({});
+
+  // Robust MathJax loader
   useEffect(() => {
-    if (showFormula && typeof window !== 'undefined' && (window as any).MathJax) {
-      (window as any).MathJax.typesetPromise?.();
+    if (typeof window === "undefined") return;
+
+    const existing = document.querySelector('script[data-mathjax="loaded"]');
+    if (!existing) {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js";
+      script.async = true;
+      script.setAttribute("data-mathjax", "loaded");
+      document.head.appendChild(script);
+      script.onload = () => {
+        if ((window as any).MathJax) {
+          (window as any).MathJax.startup = {
+            ...(window as any).MathJax.startup,
+            typeset: false,
+          };
+        }
+        setTimeout(() => (window as any).MathJax?.typesetPromise?.(), 50);
+      };
+    } else {
+      setTimeout(() => (window as any).MathJax?.typesetPromise?.(), 50);
+    }
+  }, []);
+
+  // Re-run typeset on formula toggle
+  useEffect(() => {
+    if (showFormula) {
+      setTimeout(() => (window as any).MathJax?.typesetPromise?.(), 50);
     }
   }, [showFormula]);
 
@@ -64,19 +115,25 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
     if (method === 'equal') {
       newWeights = criteria.map(() => 1 / criteria.length);
     } else if (method === 'roc') {
-      // Rank Order Centroid
+      // Rank Order Centroid - use ranks from dialog
+      const ranks = criteria.map(c => rankValues[c.id] || 1);
       const n = criteria.length;
-      newWeights = criteria.map((_, idx) => {
+      newWeights = criteria.map((c, idx) => {
+        const rank = rankValues[c.id] || (idx + 1);
         let sum = 0;
-        for (let j = idx; j < n; j++) {
+        for (let j = rank - 1; j < n; j++) {
           sum += 1 / (j + 1);
         }
         return sum / n;
       });
     } else if (method === 'rr') {
-      // Rank Reciprocal
-      const sumReciprocals = criteria.reduce((sum, _, idx) => sum + (1 / (idx + 1)), 0);
-      newWeights = criteria.map((_, idx) => (1 / (idx + 1)) / sumReciprocals);
+      // Rank Reciprocal - use ranks from dialog
+      const ranks = criteria.map(c => rankValues[c.id] || 1);
+      const sumReciprocals = ranks.reduce((sum, rank) => sum + (1 / rank), 0);
+      newWeights = criteria.map(c => {
+        const rank = rankValues[c.id] || 1;
+        return (1 / rank) / sumReciprocals;
+      });
     } else if (method === 'custom') {
       newWeights = criteria.map(c => customWeights[c.id] || (1 / criteria.length));
     } else {
@@ -145,6 +202,45 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
 
   // Handle weight method change
   const handleWeightMethodChange = async (method: string) => {
+    // Open respective dialogs for subjective methods
+    if (method === 'ahp') {
+      setSelectedWeightMethod(method);
+      setIsAhpDialogOpen(true);
+      return;
+    }
+
+    if (method === 'piprecia') {
+      setSelectedWeightMethod(method);
+      setIsPipreciaDialogOpen(true);
+      return;
+    }
+
+    if (method === 'swara') {
+      setSelectedWeightMethod(method);
+      setIsSwaraDialogOpen(true);
+      return;
+    }
+
+    if (method === 'roc') {
+      setSelectedWeightMethod(method);
+      setIsRocDialogOpen(true);
+      return;
+    }
+
+    if (method === 'rr') {
+      setSelectedWeightMethod(method);
+      setIsRrDialogOpen(true);
+      return;
+    }
+
+    // For custom method, just switch without dialog
+    if (method === 'custom') {
+      setSelectedWeightMethod(method);
+      setKSensResults(null);
+      return;
+    }
+
+    // For objective methods, calculate automatically
     setSelectedWeightMethod(method);
     await calculateWeights(method);
     setKSensResults(null);
@@ -166,6 +262,56 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
     calculateWeights('custom');
   };
 
+  // Handle ROC weight calculation from dialog
+  const handleRocCalculation = async () => {
+    setIsRocDialogOpen(false);
+    await calculateWeights('roc');
+    setKSensResults(null);
+  };
+
+  // Handle RR weight calculation from dialog
+  const handleRrCalculation = async () => {
+    setIsRrDialogOpen(false);
+    await calculateWeights('rr');
+    setKSensResults(null);
+  };
+
+  // Handle SWARA weight calculation from dialog
+  const handleSwaraCalculation = async () => {
+    setIsCalculatingWeights(true);
+    try {
+      const coeffs: Record<string, number> = {};
+      criteria.forEach((crit, index) => {
+        coeffs[crit.id] = index === 0 ? 0 : parseFloat(swaraCoefficients[crit.id] as any) || 0;
+      });
+
+      const response = await fetch("/api/swara-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ criteria, coefficients: coeffs }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const newWeights = criteria.map(c => data.weights[c.id] || 0);
+        const updated = criteria.map((c, idx) => ({
+          ...c,
+          weight: newWeights[idx]
+        }));
+        setWorkingCriteria(updated);
+        setIsSwaraDialogOpen(false);
+        setKSensResults(null);
+      } else {
+        alert("Failed to calculate SWARA weights");
+      }
+    } catch (error) {
+      console.error("SWARA calculation error:", error);
+      alert("Error calculating SWARA weights");
+    } finally {
+      setIsCalculatingWeights(false);
+    }
+  };
+
   const kSensChartTypes = [
     { value: 'line', label: 'Line Chart', icon: '📈' },
     { value: 'bar', label: 'Bar Chart', icon: '📊' },
@@ -184,6 +330,7 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
   };
 
   const performKSensitivityAnalysis = async () => {
+    setIsAnalyzing(true);
     const analysisResults: any = {};
 
     for (const [critIdx, criterion] of workingCriteria.entries()) {
@@ -309,6 +456,7 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
     }
 
     setKSensResults(analysisResults);
+    setIsAnalyzing(false);
   };
 
   const generateKSensChartData = (criterionName: string) => {
@@ -525,491 +673,897 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
   };
 
   return (
-    <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm text-black">K% Sensitivity Analysis Calculator</CardTitle>
-        <CardDescription className="text-xs text-gray-700">
-          Step-by-step guided sensitivity analysis with customizable variation ranges
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          {/* Formula Section - Collapsible */}
-          <div className="border rounded-lg bg-gray-50">
-            <button
-              onClick={() => setShowFormula(!showFormula)}
-              className="w-full p-3 flex items-center justify-between hover:bg-gray-100 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-black">K% SENSITIVITY ANALYSIS</span>
-                <a
-                  href="#"
-                  className="text-xs text-blue-600 hover:underline"
-                  onClick={(e) => { e.stopPropagation(); setShowFormula(!showFormula); }}
-                >
-                  General formula for Sensitivity analysis methodology
-                </a>
-              </div>
-              <span className="text-gray-500">{showFormula ? '▼' : '▶'}</span>
-            </button>
+    <>
+      {(isAnalyzing || isCalculatingWeights) && (
+        <div className="processing-ring-overlay">
+          <div className="processing-ring-container">
+            <div className="premium-spinner">
+              {[...Array(12)].map((_, i) => (
+                <div key={i}></div>
+              ))}
+            </div>
+          </div>
+          <p className="processing-text">
+            {isAnalyzing ? "Running K% Sensitivity Analysis..." : "Calculating Weights..."}
+          </p>
+        </div>
+      )}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .latex {
+            font-size: 0.875rem !important;
+            line-height: 2 !important; 
+            margin: 1rem 0;
+            display: block;
+            color: currentColor;
+          }
+          .latex mjx-container {
+            font-size: 0.875rem !important;
+            max-width: 100% !important;
+            overflow-x: auto;
+            overflow-y: hidden;
+            
+            margin: 0.75rem 0 !important;
+            padding: 0.5rem 0 !important;
+            text-align: center !important; 
+          }
+          .latex mjx-math {
+            font-size: 0.875rem !important;
+            outline: none !important;
+          }
+          /* Formula box styling */
+          .formula-box {
+            padding: 1.5rem !important;
+            margin: 1rem 0 !important;
+            display: block !important;
+            width: 100% !important;
+            overflow-x: auto;
+            border-radius: 0.5rem;
+          }
 
-            {showFormula && (
-              <div className="p-4 space-y-4 border-t">
-                {/* Step 1: General Formula */}
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="text-sm font-semibold mb-3 text-blue-900">1. General Formula for sk% Sensitivity Analysis</div>
-                  <div className="space-y-2 text-xs">
-                    <div><strong>Let:</strong></div>
-                    <div className="ml-4"><strong>Base weights:</strong></div>
-                    <div className="ml-8 mathjax-formula">
-                      {"\\(\\{w_i\\}_{i=1}^{i_2} \\quad \\text{where} \\; w_i \\in [0,1] \\; \\text{and} \\; \\sum_{i=1}^{i_1} w_i = 1\\}\\)"}
+          /* Mobile adjustments */
+          @media (max-width: 640px) {
+            .formula-box {
+              padding: 0.5rem !important;
+              margin: 0.5rem 0 !important;
+            }
+            .latex {
+              font-size: 0.75rem !important;
+            }
+            .latex mjx-container {
+              margin: 0.25rem 0 !important;
+              padding: 0.25rem 0 !important;
+            }
+          }
+        `
+      }} />
+      <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm text-black">K% Sensitivity Analysis Calculator</CardTitle>
+          <CardDescription className="text-xs text-gray-700">
+            Step-by-step guided sensitivity analysis with customizable variation ranges
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Formula Section - Collapsible */}
+            <div className="border rounded-lg bg-gray-50">
+              <button
+                onClick={() => setShowFormula(!showFormula)}
+                className="w-full p-3 flex items-center justify-between hover:bg-gray-100 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-black">K% SENSITIVITY ANALYSIS</span>
+                  <a
+                    href="#"
+                    className="text-xs text-blue-600 hover:underline"
+                    onClick={(e) => { e.stopPropagation(); setShowFormula(!showFormula); }}
+                  >
+                    General formula for Sensitivity analysis methodology
+                  </a>
+                </div>
+                <span className="text-gray-500">{showFormula ? '▼' : '▶'}</span>
+              </button>
+
+              {showFormula && (
+                <div className="p-4 space-y-4 border-t">
+                  {/* Step 1: General Formula */}
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="text-xs font-bold text-gray-900 mb-3">1. General Formula for sk% Sensitivity Analysis</h4>
+                    <div className="space-y-3 text-xs text-gray-700">
+                      <div>
+                        <p className="font-semibold mb-2">Let:</p>
+                        <div className="ml-4 space-y-2">
+                          <div>
+                            <strong>Base weights:</strong>
+                            <div className="bg-gray-50 rounded-lg mt-1 p-2">
+                              <div className="latex text-sm" dangerouslySetInnerHTML={{ __html: `\\[w_j, \\quad j = 1, 2, \\ldots, n, \\quad \\sum_{j=1}^{n} w_j = 1\\]` }} />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="bg-gray-50 rounded-lg p-2">
+                              <strong>Suppose weight of criterion </strong>
+                              <span className="latex" dangerouslySetInnerHTML={{ __html: `\\(C_p\\)` }} />
+                              <strong> is varied by ±k%</strong>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4 mt-3"><strong>Suppose weight of criterion</strong></div>
-                    <div className="ml-8 mathjax-formula">{"\\((C_p\\,)\\)"}</div>
-                    <div className="ml-4 mt-2"><strong>is varied by sk%</strong></div>
+                  </div>
+
+                  {/* Step 2: Modify selected criterion */}
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-1: Modify selected criterion</h4>
+                    <div className="bg-white rounded p-4 border border-purple-100">
+                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[w_p^{(k)} = w_p \\times \\left(1 \\pm \\frac{k}{100}\\right)\\]` }} />
+                    </div>
+                  </div>
+
+                  {/* Step 3: Compute remaining weight mass */}
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-2: Compute remaining weight mass</h4>
+                    <div className="space-y-3">
+                      <div className="bg-white rounded p-4 border border-green-100">
+                        <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[R = 1 - w_p^{(k)}\\]` }} />
+                      </div>
+                      <p className="text-xs text-gray-600 italic text-center">Original remaining weights sum:</p>
+                      <div className="bg-white rounded p-4 border border-green-100">
+                        <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[S = \\sum_{j \\neq p} w_j\\]` }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 4: Proportional re-scaling factor */}
+                  <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-lg p-4">
+                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-3: Proportional re-scaling factor</h4>
+                    <div className="bg-white rounded p-4 border border-yellow-100">
+                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[\\lambda = \\frac{R}{S}\\]` }} />
+                    </div>
+                  </div>
+
+                  {/* Step 5: Adjust remaining weights */}
+                  <div className="bg-gradient-to-br from-red-50 to-orange-50 border border-red-200 rounded-lg p-4">
+                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-4: Adjust remaining weights</h4>
+                    <div className="bg-white rounded p-4 border border-red-100">
+                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[w_j^{(k)} = \\lambda \\times w_j, \\quad \\forall j \\neq p\\]` }} />
+                    </div>
+                  </div>
+
+                  {/* Step 6: Validity check */}
+                  <div className="bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-lg p-4">
+                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-5: Validity check</h4>
+                    <div className="bg-white rounded p-4 border border-teal-100">
+                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[\\sum_{j=1}^{n} w_j^{(k)} = 1\\]` }} />
+                    </div>
+                    <div className="mt-3 flex items-center gap-2 text-xs text-green-700 bg-green-100 border border-green-300 rounded p-2">
+                      <span className="text-lg">✓</span>
+                      <p className="font-semibold">This procedure is standard, reviewer-accepted, and avoids bias.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Progress Steps */}
+            <div className="flex items-center justify-between mb-6 px-4">
+              <div className="flex items-center gap-2">
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'} text-xs font-semibold`}>
+                  {currentStep > 1 ? <Check className="w-4 h-4" /> : '1'}
+                </div>
+                <span className={`text-xs font-medium ${currentStep >= 1 ? 'text-black' : 'text-gray-500'}`}>Verify Data</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+              <div className="flex items-center gap-2">
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'} text-xs font-semibold`}>
+                  {currentStep > 2 ? <Check className="w-4 h-4" /> : '2'}
+                </div>
+                <span className={`text-xs font-medium ${currentStep >= 2 ? 'text-black' : 'text-gray-500'}`}>Configure</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+              <div className="flex items-center gap-2">
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'} text-xs font-semibold`}>
+                  {currentStep > 3 ? <Check className="w-4 h-4" /> : '3'}
+                </div>
+                <span className={`text-xs font-medium ${currentStep >= 3 ? 'text-black' : 'text-gray-500'}`}>Results</span>
+              </div>
+            </div>
+
+            {/* Step 1: Verify Data & Weights */}
+            {currentStep === 1 && (
+              <div className="space-y-4">
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h3 className="text-sm font-semibold mb-2 text-black">Step 1: Verify Your Data & Weights</h3>
+                  <p className="text-xs text-gray-700 mb-2">
+                    The sensitivity analysis will use the data and weights shown below.
+                  </p>
+                </div>
+
+                {/* Weight & Ranking Method Selectors - Side by Side */}
+                <div className="border rounded-lg p-4 bg-white">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    {/* Weight Method Selector */}
+                    <div>
+                      <label className="block text-xs font-semibold mb-2 text-gray-700 uppercase tracking-wide">
+                        WEIGHT METHOD
+                      </label>
+                      <Select value={selectedWeightMethod} onValueChange={handleWeightMethodChange}>
+                        <SelectTrigger className="w-full h-10 text-sm border-gray-300">
+                          <SelectValue placeholder="Select weight method" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px]">
+                          <SelectGroup>
+                            <SelectLabel className="text-xs font-bold text-blue-600 px-2 py-1.5 bg-blue-50/50">Objective Weights</SelectLabel>
+                            <SelectItem value="equal" className="text-sm pl-6">Equal Weight</SelectItem>
+                            <SelectItem value="entropy" className="text-sm pl-6">Entropy Weight</SelectItem>
+                            <SelectItem value="critic" className="text-sm pl-6">CRITIC Weight</SelectItem>
+                            <SelectItem value="merec" className="text-sm pl-6">MEREC Weight</SelectItem>
+                            <SelectItem value="wenslo" className="text-sm pl-6">WENSLO Weight</SelectItem>
+                            <SelectItem value="lopcow" className="text-sm pl-6">LOPCOW Weight</SelectItem>
+                            <SelectItem value="dematel" className="text-sm pl-6">DEMATEL Weight</SelectItem>
+                            <SelectItem value="sd" className="text-sm pl-6">SD Weight</SelectItem>
+                            <SelectItem value="variance" className="text-sm pl-6">Variance Weight</SelectItem>
+                            <SelectItem value="mad" className="text-sm pl-6">MAD Weight</SelectItem>
+                            <SelectItem value="distance" className="text-sm pl-6">Distance-based Weight</SelectItem>
+                            <SelectItem value="svp" className="text-sm pl-6">SVP Weight</SelectItem>
+                            <SelectItem value="mdm" className="text-sm pl-6">MDM Weight</SelectItem>
+                            <SelectItem value="lsw" className="text-sm pl-6">LSW Weight</SelectItem>
+                            <SelectItem value="gpow" className="text-sm pl-6">GPOW Weight</SelectItem>
+                            <SelectItem value="lpwm" className="text-sm pl-6">LPWM Weight</SelectItem>
+                            <SelectItem value="pcwm" className="text-sm pl-6">PCWM Weight</SelectItem>
+                          </SelectGroup>
+                          <SelectGroup>
+                            <SelectLabel className="text-xs font-bold text-purple-600 px-2 py-1.5 bg-purple-50/50 mt-1">Subjective Weights</SelectLabel>
+                            <SelectItem value="ahp" className="text-sm pl-6">AHP Weight</SelectItem>
+                            <SelectItem value="piprecia" className="text-sm pl-6">PIPRECIA Weight</SelectItem>
+                            <SelectItem value="swara" className="text-sm pl-6">SWARA Weight</SelectItem>
+                            <SelectItem value="roc" className="text-sm pl-6">ROC Weight</SelectItem>
+                            <SelectItem value="rr" className="text-sm pl-6">RR Weight</SelectItem>
+                            <SelectItem value="custom" className="text-sm pl-6">Enter Own Weight</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Ranking Method Selector */}
+                    <div>
+                      <label className="block text-xs font-semibold mb-2 text-gray-700 uppercase tracking-wide">
+                        RANKING METHOD
+                      </label>
+                      <Select value={selectedRankingMethod} onValueChange={handleRankingMethodChange}>
+                        <SelectTrigger className="w-full h-10 text-sm border-gray-300">
+                          <SelectValue placeholder="Select ranking method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="swei" className="text-sm">SWEI</SelectItem>
+                          <SelectItem value="swi" className="text-sm">SWI</SelectItem>
+                          <SelectItem value="topsis" className="text-sm">TOPSIS</SelectItem>
+                          <SelectItem value="vikor" className="text-sm">VIKOR</SelectItem>
+                          <SelectItem value="waspas" className="text-sm">WASPAS</SelectItem>
+                          <SelectItem value="edas" className="text-sm">EDAS</SelectItem>
+                          <SelectItem value="moora" className="text-sm">MOORA</SelectItem>
+                          <SelectItem value="multimoora" className="text-sm">MULTIMOORA</SelectItem>
+                          <SelectItem value="todim" className="text-sm">TODIM</SelectItem>
+                          <SelectItem value="codas" className="text-sm">CODAS</SelectItem>
+                          <SelectItem value="moosra" className="text-sm">MOOSRA</SelectItem>
+                          <SelectItem value="mairca" className="text-sm">MAIRCA</SelectItem>
+                          <SelectItem value="mabac" className="text-sm">MABAC</SelectItem>
+                          <SelectItem value="marcos" className="text-sm">MARCOS</SelectItem>
+                          <SelectItem value="cocoso" className="text-sm">COCOSO</SelectItem>
+                          <SelectItem value="copras" className="text-sm">COPRAS</SelectItem>
+                          <SelectItem value="promethee" className="text-sm">PROMETHEE</SelectItem>
+                          <SelectItem value="promethee1" className="text-sm">PROMETHEE I</SelectItem>
+                          <SelectItem value="promethee2" className="text-sm">PROMETHEE II</SelectItem>
+                          <SelectItem value="electre" className="text-sm">ELECTRE</SelectItem>
+                          <SelectItem value="electre1" className="text-sm">ELECTRE I</SelectItem>
+                          <SelectItem value="electre2" className="text-sm">ELECTRE II</SelectItem>
+                          <SelectItem value="gra" className="text-sm">GRA</SelectItem>
+                          <SelectItem value="aras" className="text-sm">ARAS</SelectItem>
+                          <SelectItem value="wsm" className="text-sm">WSM</SelectItem>
+                          <SelectItem value="wpm" className="text-sm">WPM</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Objective Weights Label */}
+                  {selectedWeightMethod !== 'equal' && !['ahp', 'piprecia', 'swara', 'roc', 'rr', 'custom'].includes(selectedWeightMethod) && (
+                    <div className="mb-4">
+                      <div className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs font-semibold">
+                        Objective Weights
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Manual Weight Input for Subjective Methods */}
+                  {['ahp', 'piprecia', 'swara', 'roc', 'rr', 'custom'].includes(selectedWeightMethod) && (
+                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg mb-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded text-xs font-semibold">
+                          Subjective Weights - {selectedWeightMethod.toUpperCase()}
+                        </div>
+                      </div>
+                      <p className="text-xs font-semibold mb-3 text-black">Enter Weights Manually:</p>
+                      <p className="text-xs text-gray-600 mb-3 italic">
+                        Enter your preferred weights for each criterion below. The weights will be automatically normalized to sum to 1.
+                      </p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {criteria.map((crit) => (
+                          <div key={crit.id}>
+                            <label className="block text-xs font-medium mb-1 text-black">{crit.name}</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              placeholder="0.0"
+                              value={customWeights[crit.id] || ''}
+                              onChange={(e) => handleCustomWeightChange(crit.id, e.target.value)}
+                              className="w-full px-2 py-1 border rounded text-xs"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        onClick={applyCustomWeights}
+                        className="mt-3 bg-purple-600 text-white hover:bg-purple-700 text-xs h-7"
+                        size="sm"
+                      >
+                        Apply Weights
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Current Weights Display - Compact Card Style */}
+                  <div className="bg-gray-50 rounded-lg p-4 border">
+                    <h4 className="text-xs font-semibold mb-3 text-gray-700">Current Weights</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {workingCriteria.map((crit) => (
+                        <div key={crit.id} className="bg-white rounded p-3 border border-gray-200">
+                          <div className="text-xs font-medium text-gray-700 mb-1">{crit.name}</div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-bold text-blue-600">{(crit.weight * 100).toFixed(2)}%</span>
+                            <span className={`text-sm ${crit.type === 'beneficial' ? 'text-green-600' : 'text-red-600'}`}>
+                              {crit.type === 'beneficial' ? '↑' : '↓'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                {/* Step 2: Modify selected criterion */}
-                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                  <div className="text-sm font-semibold mb-3 text-purple-900">Step 1: Modify selected criterion</div>
-                  <div className="flex justify-center mathjax-formula text-base">
-                    {"\\[\\{w_p'(k\\%) = w_p \\times \\left(1 + \\frac{k}{100}\\right) \\; \\text{for(+k)} \\; \\text{or} \\; \\left(1 - \\frac{k}{100}\\right) \\; \\text{for(-k)}\\}\\]"}
+                {/* Alternatives Count */}
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <h4 className="text-xs font-semibold mb-2 text-black flex items-center gap-2">
+                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px]">✓</span>
+                    Alternatives to Analyze
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {alternatives.map((alt) => (
+                      <span key={alt.id} className="px-3 py-1 bg-white border rounded-full text-xs text-black">
+                        {alt.name}
+                      </span>
+                    ))}
                   </div>
+                  <p className="text-xs text-gray-600 mt-3">
+                    Total: <strong>{alternatives.length} alternatives</strong> will be analyzed across <strong>{criteria.length} criteria</strong>
+                  </p>
                 </div>
 
-                {/* Step 3: Compute remaining weight mass */}
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="text-sm font-semibold mb-3 text-green-900">Step 2: Compute remaining weight mass</div>
-                  <div className="flex justify-center mathjax-formula text-base mb-3">
-                    {"\\[\\{R = 1 - w_p'(k\\%)\\}\\]"}
-                  </div>
-                  <div className="text-xs text-center text-gray-600 mt-2"><em>Original remaining weights sum:</em></div>
-                  <div className="flex justify-center mathjax-formula text-base mt-1">
-                    {"\\[\\{S = \\sum_{i \\neq p} w_i\\}\\]"}
-                  </div>
-                </div>
-
-                {/* Step 4: Proportional re-scaling factor */}
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="text-sm font-semibold mb-3 text-yellow-900">Step 3: Proportional re-scaling factor</div>
-                  <div className="flex justify-center mathjax-formula text-base">
-                    {"\\[\\{\\lambda = \\frac{R}{S}\\}\\]"}
-                  </div>
-                </div>
-
-                {/* Step 5: Adjust remaining weights */}
-                <div className="p-4 bg-pink-50 border border-pink-200 rounded-lg">
-                  <div className="text-sm font-semibold mb-3 text-pink-900">Step 4: Adjust remaining weights</div>
-                  <div className="flex justify-center mathjax-formula text-base">
-                    {"\\[\\{w_i'(k\\%) = \\lambda \\times w_i \\quad \\forall i \\neq p\\}\\]"}
-                  </div>
-                </div>
-
-                {/* Step 6: Validity check */}
-                <div className="p-4 bg-teal-50 border border-teal-200 rounded-lg">
-                  <div className="text-sm font-semibold mb-3 text-teal-900">Step 5: Validity check</div>
-                  <div className="flex justify-center mathjax-formula text-base">
-                    {"\\[\\{\\sum_{i=1}^{i_1} w_i'(k\\%) = 1\\}\\]"}
-                  </div>
-                </div>
-
-                {/* Success message */}
-                <div className="p-3 bg-green-100 border border-green-300 rounded flex items-start gap-2">
-                  <span className="text-green-600 font-bold">✓</span>
-                  <span className="text-xs text-green-800">This procedure is standard, reviewer-accepted, and avoids bias.</span>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    onClick={() => setCurrentStep(2)}
+                    className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
+                  >
+                    Continue to Configuration →
+                  </Button>
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Progress Steps */}
-          <div className="flex items-center justify-between mb-6 px-4">
-            <div className="flex items-center gap-2">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'} text-xs font-semibold`}>
-                {currentStep > 1 ? <Check className="w-4 h-4" /> : '1'}
-              </div>
-              <span className={`text-xs font-medium ${currentStep >= 1 ? 'text-black' : 'text-gray-500'}`}>Verify Data</span>
-            </div>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-            <div className="flex items-center gap-2">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'} text-xs font-semibold`}>
-                {currentStep > 2 ? <Check className="w-4 h-4" /> : '2'}
-              </div>
-              <span className={`text-xs font-medium ${currentStep >= 2 ? 'text-black' : 'text-gray-500'}`}>Configure</span>
-            </div>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-            <div className="flex items-center gap-2">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'} text-xs font-semibold`}>
-                {currentStep > 3 ? <Check className="w-4 h-4" /> : '3'}
-              </div>
-              <span className={`text-xs font-medium ${currentStep >= 3 ? 'text-black' : 'text-gray-500'}`}>Results</span>
-            </div>
-          </div>
+            {/* Step 2: Configure Analysis */}
+            {currentStep === 2 && (
+              <div className="space-y-4">
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h3 className="text-sm font-semibold mb-2 text-black">Step 2: Configure Sensitivity Analysis</h3>
+                  <p className="text-xs text-gray-700">
+                    Choose how much variation (%) to apply to each criterion's weight.
+                  </p>
+                </div>
 
-          {/* Step 1: Verify Data & Weights */}
-          {currentStep === 1 && (
-            <div className="space-y-4">
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h3 className="text-sm font-semibold mb-2 text-black">Step 1: Verify Your Data & Weights</h3>
-                <p className="text-xs text-gray-700 mb-2">
-                  The sensitivity analysis will use the data and weights shown below.
-                </p>
-              </div>
-
-              {/* Weight & Ranking Method Selectors - Side by Side */}
-              <div className="border rounded-lg p-4 bg-white">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  {/* Weight Method Selector */}
-                  <div>
-                    <label className="block text-xs font-semibold mb-2 text-gray-700 uppercase tracking-wide">
-                      WEIGHT METHOD
-                    </label>
-                    <Select value={selectedWeightMethod} onValueChange={handleWeightMethodChange}>
-                      <SelectTrigger className="w-full h-10 text-sm border-gray-300">
-                        <SelectValue placeholder="Select weight method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="equal" className="text-sm">Equal Weight</SelectItem>
-                        <SelectItem value="entropy" className="text-sm">Entropy Weight</SelectItem>
-                        <SelectItem value="critic" className="text-sm">CRITIC Weight</SelectItem>
-                        <SelectItem value="ahp" className="text-sm">AHP Weight</SelectItem>
-                        <SelectItem value="piprecia" className="text-sm">PIPRECIA Weight</SelectItem>
-                        <SelectItem value="merec" className="text-sm">MEREC Weight</SelectItem>
-                        <SelectItem value="swara" className="text-sm">SWARA Weight</SelectItem>
-                        <SelectItem value="wenslo" className="text-sm">WENSLO Weight</SelectItem>
-                        <SelectItem value="lopcow" className="text-sm">LOPCOW Weight</SelectItem>
-                        <SelectItem value="dematel" className="text-sm">DEMATEL Weight</SelectItem>
-                        <SelectItem value="sd" className="text-sm">SD Weight</SelectItem>
-                        <SelectItem value="variance" className="text-sm">Variance Weight</SelectItem>
-                        <SelectItem value="mad" className="text-sm">MAD Weight</SelectItem>
-                        <SelectItem value="distance" className="text-sm">Distance-based Weight</SelectItem>
-                        <SelectItem value="svp" className="text-sm">SVP Weight</SelectItem>
-                        <SelectItem value="mdm" className="text-sm">MDM Weight</SelectItem>
-                        <SelectItem value="lsw" className="text-sm">LSW Weight</SelectItem>
-                        <SelectItem value="gpow" className="text-sm">GPOW Weight</SelectItem>
-                        <SelectItem value="lpwm" className="text-sm">LPWM Weight</SelectItem>
-                        <SelectItem value="pcwm" className="text-sm">PCWM Weight</SelectItem>
-                        <SelectItem value="roc" className="text-sm">ROC Weight</SelectItem>
-                        <SelectItem value="rr" className="text-sm">RR Weight</SelectItem>
-                        <SelectItem value="custom" className="text-sm">Enter Own Weight</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Ranking Method Selector */}
-                  <div>
-                    <label className="block text-xs font-semibold mb-2 text-gray-700 uppercase tracking-wide">
-                      RANKING METHOD
-                    </label>
-                    <Select value={selectedRankingMethod} onValueChange={handleRankingMethodChange}>
-                      <SelectTrigger className="w-full h-10 text-sm border-gray-300">
-                        <SelectValue placeholder="Select ranking method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="swei" className="text-sm">SWEI</SelectItem>
-                        <SelectItem value="swi" className="text-sm">SWI</SelectItem>
-                        <SelectItem value="topsis" className="text-sm">TOPSIS</SelectItem>
-                        <SelectItem value="vikor" className="text-sm">VIKOR</SelectItem>
-                        <SelectItem value="waspas" className="text-sm">WASPAS</SelectItem>
-                        <SelectItem value="edas" className="text-sm">EDAS</SelectItem>
-                        <SelectItem value="moora" className="text-sm">MOORA</SelectItem>
-                        <SelectItem value="multimoora" className="text-sm">MULTIMOORA</SelectItem>
-                        <SelectItem value="todim" className="text-sm">TODIM</SelectItem>
-                        <SelectItem value="codas" className="text-sm">CODAS</SelectItem>
-                        <SelectItem value="moosra" className="text-sm">MOOSRA</SelectItem>
-                        <SelectItem value="mairca" className="text-sm">MAIRCA</SelectItem>
-                        <SelectItem value="mabac" className="text-sm">MABAC</SelectItem>
-                        <SelectItem value="marcos" className="text-sm">MARCOS</SelectItem>
-                        <SelectItem value="cocoso" className="text-sm">COCOSO</SelectItem>
-                        <SelectItem value="copras" className="text-sm">COPRAS</SelectItem>
-                        <SelectItem value="promethee" className="text-sm">PROMETHEE</SelectItem>
-                        <SelectItem value="promethee1" className="text-sm">PROMETHEE I</SelectItem>
-                        <SelectItem value="promethee2" className="text-sm">PROMETHEE II</SelectItem>
-                        <SelectItem value="electre" className="text-sm">ELECTRE</SelectItem>
-                        <SelectItem value="electre1" className="text-sm">ELECTRE I</SelectItem>
-                        <SelectItem value="electre2" className="text-sm">ELECTRE II</SelectItem>
-                        <SelectItem value="gra" className="text-sm">GRA</SelectItem>
-                        <SelectItem value="aras" className="text-sm">ARAS</SelectItem>
-                        <SelectItem value="wsm" className="text-sm">WSM</SelectItem>
-                        <SelectItem value="wpm" className="text-sm">WPM</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <div>
+                  <h4 className="text-sm font-semibold mb-3 text-black">Quick Presets</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    <button
+                      onClick={() => setKSensVariationRange([-10, -5, 0, 5, 10])}
+                      className="p-3 border-2 rounded-lg hover:border-blue -500 hover:bg-blue-50 transition-colors text-left"
+                    >
+                      <div className="text-sm font-semibold text-black">±10%</div>
+                      <div className="text-xs text-gray-600">Fine (5 points)</div>
+                    </button>
+                    <button
+                      onClick={() => setKSensVariationRange([-30, -20, -10, 0, 10, 20, 30])}
+                      className="p-3 border-2 border-blue-500 bg-blue-50 rounded-lg hover:border-blue-600 transition-colors text-left"
+                    >
+                      <div className="text-sm font-semibold text-blue-600">±30%</div>
+                      <div className="text-xs text-gray-600">Standard (7)</div>
+                      <div className="text-[10px] text-blue-600 font-medium mt-1">Recommended</div>
+                    </button>
+                    <button
+                      onClick={() => setKSensVariationRange([-50, -30, -10, 0, 10, 30, 50])}
+                      className="p-3 border-2 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
+                    >
+                      <div className="text-sm font-semibold text-black">±50%</div>
+                      <div className="text-xs text-gray-600">Wide (7 points)</div>
+                    </button>
+                    <button
+                      onClick={() => setKSensVariationRange([-100, -75, -50, -25, 0, 25, 50, 75, 100])}
+                      className="p-3 border-2 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
+                    >
+                      <div className="text-sm font-semibold text-black">±100%</div>
+                      <div className="text-xs text-gray-600">Full (9 points)</div>
+                    </button>
                   </div>
                 </div>
 
-                {/* Objective Weights Label */}
-                {selectedWeightMethod !== 'equal' && selectedWeightMethod !== 'roc' && selectedWeightMethod !== 'rr' && selectedWeightMethod !== 'custom' && (
-                  <div className="mb-4">
-                    <div className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs font-semibold">
-                      Objective Weights
-                    </div>
-                  </div>
-                )}
+                <div className="border-t pt-4">
+                  <label className="block text-xs font-medium mb-2 text-black">
+                    Or Enter Custom Variation Points
+                  </label>
+                  <input
+                    type="text"
+                    value={kSensVariationRange.join(', ')}
+                    onChange={(e) => {
+                      const values = e.target.value.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+                      if (values.length > 0) setKSensVariationRange(values.sort((a, b) => a - b));
+                    }}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
+                    placeholder="e.g., -25, -10, 0, 10, 25, 40"
+                  />
+                </div>
 
-                {/* Custom Weight Input */}
-                {selectedWeightMethod === 'custom' && (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
-                    <p className="text-xs font-semibold mb-3 text-black">Enter Custom Weights:</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {criteria.map((crit) => (
-                        <div key={crit.id}>
-                          <label className="block text-xs font-medium mb-1 text-black">{crit.name}</label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            placeholder="0.0"
-                            value={customWeights[crit.id] || ''}
-                            onChange={(e) => handleCustomWeightChange(crit.id, e.target.value)}
-                            className="w-full px-2 py-1 border rounded text-xs"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <Button
-                      onClick={applyCustomWeights}
-                      className="mt-3 bg-blue-600 text-white hover:bg-blue-700 text-xs h-7"
-                      size="sm"
-                    >
-                      Apply Custom Weights
-                    </Button>
-                  </div>
-                )}
-
-                {/* Current Weights Display - Compact Card Style */}
-                <div className="bg-gray-50 rounded-lg p-4 border">
-                  <h4 className="text-xs font-semibold mb-3 text-gray-700">Current Weights</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {workingCriteria.map((crit) => (
-                      <div key={crit.id} className="bg-white rounded p-3 border border-gray-200">
-                        <div className="text-xs font-medium text-gray-700 mb-1">{crit.name}</div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-blue-600">{(crit.weight * 100).toFixed(2)}%</span>
-                          <span className={`text-sm ${crit.type === 'beneficial' ? 'text-green-600' : 'text-red-600'}`}>
-                            {crit.type === 'beneficial' ? '↑' : '↓'}
-                          </span>
-                        </div>
-                      </div>
+                <div className="p-3 bg-gray-50 rounded border">
+                  <p className="text-xs font-medium mb-2 text-black">Selected Variation Range:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {kSensVariationRange.map((val, idx) => (
+                      <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                        {val > 0 ? '+' : ''}{val}%
+                      </span>
                     ))}
                   </div>
+                  <p className="text-xs text-gray-600 mt-2">
+                    Will test <strong>{kSensVariationRange.length} variations</strong> for each of <strong>{criteria.length} criteria</strong>
+                  </p>
+                </div>
+
+                <div className="flex justify-between gap-2">
+                  <Button onClick={() => setCurrentStep(1)} variant="outline" className="text-xs h-8">← Back</Button>
+                  <Button onClick={() => setCurrentStep(3)} className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8">Continue →</Button>
                 </div>
               </div>
+            )}
 
-              {/* Alternatives Count */}
-              <div className="border rounded-lg p-4 bg-gray-50">
-                <h4 className="text-xs font-semibold mb-2 text-black flex items-center gap-2">
-                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px]">✓</span>
-                  Alternatives to Analyze
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {alternatives.map((alt) => (
-                    <span key={alt.id} className="px-3 py-1 bg-white border rounded-full text-xs text-black">
-                      {alt.name}
-                    </span>
-                  ))}
+            {/* Step 3: Run & View Results */}
+            {currentStep === 3 && (
+              <div className="space-y-4">
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h3 className="text-sm font-semibold mb-2 text-black">Step 3: Run Analysis & View Results</h3>
+                  <p className="text-xs text-gray-700">
+                    {kSensResults
+                      ? "Analysis complete! Explore the results below."
+                      : "Click the button to start the sensitivity analysis."
+                    }
+                  </p>
                 </div>
-                <p className="text-xs text-gray-600 mt-3">
-                  Total: <strong>{alternatives.length} alternatives</strong> will be analyzed across <strong>{criteria.length} criteria</strong>
-                </p>
-              </div>
 
-              <div className="flex justify-end gap-2">
-                <Button
-                  onClick={() => setCurrentStep(2)}
-                  className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
-                >
-                  Continue to Configuration →
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Configure Analysis */}
-          {currentStep === 2 && (
-            <div className="space-y-4">
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h3 className="text-sm font-semibold mb-2 text-black">Step 2: Configure Sensitivity Analysis</h3>
-                <p className="text-xs text-gray-700">
-                  Choose how much variation (%) to apply to each criterion's weight.
-                </p>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-semibold mb-3 text-black">Quick Presets</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                  <button
-                    onClick={() => setKSensVariationRange([-10, -5, 0, 5, 10])}
-                    className="p-3 border-2 rounded-lg hover:border-blue -500 hover:bg-blue-50 transition-colors text-left"
-                  >
-                    <div className="text-sm font-semibold text-black">±10%</div>
-                    <div className="text-xs text-gray-600">Fine (5 points)</div>
-                  </button>
-                  <button
-                    onClick={() => setKSensVariationRange([-30, -20, -10, 0, 10, 20, 30])}
-                    className="p-3 border-2 border-blue-500 bg-blue-50 rounded-lg hover:border-blue-600 transition-colors text-left"
-                  >
-                    <div className="text-sm font-semibold text-blue-600">±30%</div>
-                    <div className="text-xs text-gray-600">Standard (7)</div>
-                    <div className="text-[10px] text-blue-600 font-medium mt-1">Recommended</div>
-                  </button>
-                  <button
-                    onClick={() => setKSensVariationRange([-50, -30, -10, 0, 10, 30, 50])}
-                    className="p-3 border-2 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
-                  >
-                    <div className="text-sm font-semibold text-black">±50%</div>
-                    <div className="text-xs text-gray-600">Wide (7 points)</div>
-                  </button>
-                  <button
-                    onClick={() => setKSensVariationRange([-100, -75, -50, -25, 0, 25, 50, 75, 100])}
-                    className="p-3 border-2 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
-                  >
-                    <div className="text-sm font-semibold text-black">±100%</div>
-                    <div className="text-xs text-gray-600">Full (9 points)</div>
-                  </button>
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <label className="block text-xs font-medium mb-2 text-black">
-                  Or Enter Custom Variation Points
-                </label>
-                <input
-                  type="text"
-                  value={kSensVariationRange.join(', ')}
-                  onChange={(e) => {
-                    const values = e.target.value.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
-                    if (values.length > 0) setKSensVariationRange(values.sort((a, b) => a - b));
-                  }}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
-                  placeholder="e.g., -25, -10, 0, 10, 25, 40"
-                />
-              </div>
-
-              <div className="p-3 bg-gray-50 rounded border">
-                <p className="text-xs font-medium mb-2 text-black">Selected Variation Range:</p>
-                <div className="flex flex-wrap gap-1">
-                  {kSensVariationRange.map((val, idx) => (
-                    <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
-                      {val > 0 ? '+' : ''}{val}%
-                    </span>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-600 mt-2">
-                  Will test <strong>{kSensVariationRange.length} variations</strong> for each of <strong>{criteria.length} criteria</strong>
-                </p>
-              </div>
-
-              <div className="flex justify-between gap-2">
-                <Button onClick={() => setCurrentStep(1)} variant="outline" className="text-xs h-8">← Back</Button>
-                <Button onClick={() => setCurrentStep(3)} className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8">Continue →</Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Run & View Results */}
-          {currentStep === 3 && (
-            <div className="space-y-4">
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h3 className="text-sm font-semibold mb-2 text-black">Step 3: Run Analysis & View Results</h3>
-                <p className="text-xs text-gray-700">
-                  {kSensResults
-                    ? "Analysis complete! Explore the results below."
-                    : "Click the button to start the sensitivity analysis."
-                  }
-                </p>
-              </div>
-
-              {!kSensResults && (
-                <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed rounded-lg">
-                  <div className="text-center mb-4">
-                    <h4 className="text-sm font-semibold text-black mb-2">Ready to Analyze</h4>
-                    <p className="text-xs text-gray-600 mb-4">
-                      <strong>{alternatives.length} alternatives</strong> × <strong>{criteria.length} criteria</strong> × <strong>{kSensVariationRange.length} variations</strong>
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => {
-                      performKSensitivityAnalysis();
-                      setKSensActiveTab('results');
-                    }}
-                    className="bg-green-600 text-white hover:bg-green-700 text-xs h-10 px-6"
-                  >
-                    🚀 Run K% Sensitivity Analysis
-                  </Button>
-                </div>
-              )}
-
-              {kSensResults && (
-                <div>
-                  <div className="flex gap-2 mb-4 border-b">
-                    <button
-                      onClick={() => setKSensActiveTab('results')}
-                      className={`px-4 py-2 font-semibold text-xs ${kSensActiveTab === 'results' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
+                {!kSensResults && (
+                  <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed rounded-lg">
+                    <div className="text-center mb-4">
+                      <h4 className="text-sm font-semibold text-black mb-2">Ready to Analyze</h4>
+                      <p className="text-xs text-gray-600 mb-4">
+                        <strong>{alternatives.length} alternatives</strong> × <strong>{criteria.length} criteria</strong> × <strong>{kSensVariationRange.length} variations</strong>
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        performKSensitivityAnalysis();
+                        setKSensActiveTab('results');
+                      }}
+                      className="bg-green-600 text-white hover:bg-green-700 text-xs h-10 px-6"
                     >
-                      📊 Charts
-                    </button>
-                    <button
-                      onClick={() => setKSensActiveTab('tables')}
-                      className={`px-4 py-2 font-semibold text-xs ${kSensActiveTab === 'tables' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
-                    >
-                      📋 Tables
-                    </button>
+                      🚀 Run K% Sensitivity Analysis
+                    </Button>
                   </div>
+                )}
 
-                  {kSensActiveTab === 'results' && (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <h4 className="text-xs font-semibold text-black">Chart Type:</h4>
-                        <Select value={kSensChartType} onValueChange={setKSensChartType}>
-                          <SelectTrigger className="w-48 h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {kSensChartTypes.map(ct => (
-                              <SelectItem key={ct.value} value={ct.value} className="text-xs">
-                                {ct.icon} {ct.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                {kSensResults && (
+                  <div>
+                    <div className="flex gap-2 mb-4 border-b">
+                      <button
+                        onClick={() => setKSensActiveTab('results')}
+                        className={`px-4 py-2 font-semibold text-xs ${kSensActiveTab === 'results' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
+                      >
+                        📊 Charts
+                      </button>
+                      <button
+                        onClick={() => setKSensActiveTab('tables')}
+                        className={`px-4 py-2 font-semibold text-xs ${kSensActiveTab === 'tables' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
+                      >
+                        📋 Tables
+                      </button>
+                    </div>
+
+                    {kSensActiveTab === 'results' && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <h4 className="text-xs font-semibold text-black">Chart Type:</h4>
+                          <Select value={kSensChartType} onValueChange={setKSensChartType}>
+                            <SelectTrigger className="w-48 h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {kSensChartTypes.map(ct => (
+                                <SelectItem key={ct.value} value={ct.value} className="text-xs">
+                                  {ct.icon} {ct.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {criteria.map((crit) => (
+                          <Card key={crit.id} className="border-gray-200 bg-white shadow-sm">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-sm text-black">{crit.name}</CardTitle>
+                              <CardDescription className="text-xs">
+                                Base: {(crit.weight * 100).toFixed(2)}% ({crit.type === 'beneficial' ? 'Beneficial ↑' : 'Non-Beneficial ↓'})
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent>{renderKSensChart(crit.name)}</CardContent>
+                          </Card>
+                        ))}
                       </div>
-                      {criteria.map((crit) => (
-                        <Card key={crit.id} className="border-gray-200 bg-white shadow-sm">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm text-black">{crit.name}</CardTitle>
-                            <CardDescription className="text-xs">
-                              Base: {(crit.weight * 100).toFixed(2)}% ({crit.type === 'beneficial' ? 'Beneficial ↑' : 'Non-Beneficial ↓'})
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>{renderKSensChart(crit.name)}</CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                    )}
 
-                  {kSensActiveTab === 'tables' && (
-                    <div className="space-y-4">
-                      {criteria.map((crit) => (
-                        <Card key={crit.id} className="border-gray-200 bg-white shadow-sm">
-                          <CardContent className="pt-6">{generateKSensRankingTable(crit.name)}</CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                    {kSensActiveTab === 'tables' && (
+                      <div className="space-y-4">
+                        {criteria.map((crit) => (
+                          <Card key={crit.id} className="border-gray-200 bg-white shadow-sm">
+                            <CardContent className="pt-6">{generateKSensRankingTable(crit.name)}</CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
 
-                  <div className="flex justify-between gap-2 mt-6 pt-4 border-t">
-                    <Button onClick={() => { setKSensResults(null); setCurrentStep(2); }} variant="outline" className="text-xs h-8">
-                      ← Modify Config
-                    </Button>
-                    <Button onClick={() => setCurrentStep(1)} variant="outline" className="text-xs h-8">
-                      🔄 Start Over
-                    </Button>
+                    <div className="flex justify-between gap-2 mt-6 pt-4 border-t">
+                      <Button onClick={() => { setKSensResults(null); setCurrentStep(2); }} variant="outline" className="text-xs h-8">
+                        ← Modify Config
+                      </Button>
+                      <Button onClick={() => setCurrentStep(1)} variant="outline" className="text-xs h-8">
+                        🔄 Start Over
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ROC Weight Calculator Dialog */}
+      <Dialog open={isRocDialogOpen} onOpenChange={setIsRocDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto w-full">
+          <DialogHeader>
+            <DialogTitle>ROC Weight Calculator</DialogTitle>
+            <DialogDescription className="text-xs">
+              Enter the rank order for each criterion (1 = most important).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                    <TableHead className="text-xs font-semibold text-center w-24">Rank</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {criteria.map((crit) => (
+                    <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                      <TableCell className="py-2 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                      <TableCell className="text-center py-2 px-4 text-xs text-black">
+                        <Input
+                          type="number"
+                          min="1"
+                          max={criteria.length}
+                          className="w-16 h-7 text-xs text-center mx-auto"
+                          value={rankValues[crit.id] || ""}
+                          onChange={(e) => setRankValues(prev => ({ ...prev, [crit.id]: parseInt(e.target.value) || 0 }))}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-900 leading-tight">
+                <strong>Note:</strong> Ranks should be between 1 and {criteria.length}. Different criteria can have the same rank if they are equally important.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsRocDialogOpen(false)}
+              className="text-xs h-8"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleRocCalculation}
+              className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+            >
+              Calculate Weights
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* RR Weight Calculator Dialog */}
+      <Dialog open={isRrDialogOpen} onOpenChange={setIsRrDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto w-full">
+          <DialogHeader>
+            <DialogTitle>RR Weight Calculator</DialogTitle>
+            <DialogDescription className="text-xs">
+              Enter the rank order for each criterion (1 = most important).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                    <TableHead className="text-xs font-semibold text-center w-24">Rank</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {criteria.map((crit) => (
+                    <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                      <TableCell className="py-2 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                      <TableCell className="text-center py-2 px-4 text-xs text-black">
+                        <Input
+                          type="number"
+                          min="1"
+                          max={criteria.length}
+                          className="w-16 h-7 text-xs text-center mx-auto"
+                          value={rankValues[crit.id] || ""}
+                          onChange={(e) => setRankValues(prev => ({ ...prev, [crit.id]: parseInt(e.target.value) || 0 }))}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-900 leading-tight">
+                <strong>Note:</strong> Ranks should be between 1 and {criteria.length}. Different criteria can have the same rank if they are equally important.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsRrDialogOpen(false)}
+              className="text-xs h-8"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleRrCalculation}
+              className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+            >
+              Calculate Weights
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* SWARA Weight Calculator Dialog */}
+      <Dialog open={isSwaraDialogOpen} onOpenChange={setIsSwaraDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto w-full">
+          <DialogHeader>
+            <DialogTitle>SWARA Weight Calculator</DialogTitle>
+            <DialogDescription className="text-xs">
+              Enter comparative importance coefficients (sj) for each criterion. The first criterion is most important (s₁ = 0). Higher values indicate larger importance differences.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="text-xs font-semibold">Rank</TableHead>
+                    <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                    <TableHead className="text-xs font-semibold text-center">Coefficient (s_j)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {criteria.map((crit, index) => (
+                    <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                      <TableCell className="py-2 px-4 text-xs">{index + 1}</TableCell>
+                      <TableCell className="py-2 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                      <TableCell className="text-center py-2 px-4 text-xs text-black">
+                        {index === 0 ? (
+                          <span className="text-gray-500 italic">0 (most important)</span>
+                        ) : (
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className="w-20 h-7 mx-auto text-xs text-center"
+                            value={swaraCoefficients[crit.id] || ""}
+                            onChange={(e) => setSwaraCoefficients(prev => ({ ...prev, [crit.id]: parseFloat(e.target.value) || 0 }))}
+                          />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-900 leading-tight">
+                <strong>Note:</strong> Criteria are ordered by importance (top = most important). For each criterion j, enter how much less important it is compared to the previous criterion (j-1).
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsSwaraDialogOpen(false)}
+              className="text-xs h-8"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSwaraCalculation}
+              className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+            >
+              Calculate Weights
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Custom Weights Dialog */}
+      <Dialog open={selectedWeightMethod === 'custom' && isCalculatingWeights === false} onOpenChange={(open) => {
+        if (!open) setSelectedWeightMethod('equal');
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-full">
+          <DialogHeader>
+            <DialogTitle>Enter Custom Weights</DialogTitle>
+            <DialogDescription className="text-xs">
+              Enter a weight for each criterion. Weights will be automatically normalized to sum to 1.0.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                    <TableHead className="text-xs font-semibold text-center">Weight</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {criteria.map((crit) => (
+                    <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                      <TableCell className="py-3 px-4 font-medium text-black text-sm">{crit.name}</TableCell>
+                      <TableCell className="text-center py-3 px-4">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="w-32 h-9 text-sm text-center mx-auto"
+                          placeholder="0.2"
+                          value={customWeights[crit.id] || ""}
+                          onChange={(e) => handleCustomWeightChange(crit.id, e.target.value)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-900 leading-tight">
+                <strong>Note:</strong> You can enter any positive numbers. The weights will be automatically normalized to sum to 1.0. For example, if you enter 3, 2, and 1, they will be normalized to 0.5, 0.33, and 0.17.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setSelectedWeightMethod('equal')}
+              className="text-xs h-8"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                applyCustomWeights();
+                setSelectedWeightMethod('equal'); // Close dialog
+              }}
+              className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+            >
+              Apply Weights
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* PIPRECIA Weight Calculator Dialog */}
+      <Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+          <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
+          <PIPRECIAFormula
+            criteria={criteria}
+            initialScores={pipreciaScores}
+            onScoresChange={setPipreciaScores}
+            onWeightsCalculated={(weights) => {
+              const newWeights = criteria.map(c => weights[c.id] || 0);
+              const updated = criteria.map((c, idx) => ({
+                ...c,
+                weight: newWeights[idx]
+              }));
+              setWorkingCriteria(updated);
+              setIsPipreciaDialogOpen(false);
+              setKSensResults(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* AHP Weight Calculator Dialog */}
+      <Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
+          <DialogTitle>AHP Weight Calculator</DialogTitle>
+          <AHPFormula
+            criteria={criteria}
+            initialMatrix={ahpMatrix}
+            onMatrixChange={setAhpMatrix}
+            onWeightsCalculated={(weights) => {
+              setAhpWeights(criteria.map(c => weights[c.id] || 0));
+              const newWeights = criteria.map(c => weights[c.id] || 0);
+              const updated = criteria.map((c, idx) => ({
+                ...c,
+                weight: newWeights[idx]
+              }));
+              setWorkingCriteria(updated);
+              setIsAhpDialogOpen(false);
+              setKSensResults(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
