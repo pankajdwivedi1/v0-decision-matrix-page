@@ -6352,18 +6352,18 @@ export default function MCDMCalculator() {
                 <>
                   <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
                     <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div>
                           <CardTitle className="text-sm text-black">Sensitivity Results</CardTitle>
                           <CardDescription className="text-xs text-gray-700">
                             Rankings as the weight of {criteria.find(c => c.id === sensitivityCriterion)?.name} varies from 0% to 100%
                           </CardDescription>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                           <Button
                             variant="outline"
                             size="sm"
-                            className={`text-xs h-7 ${sensitivityChartType === "line" ? "bg-[#FFF2CC] border-[#FFF2CC]" : ""}`}
+                            className={`text-xs h-7 w-full sm:w-auto ${sensitivityChartType === "line" ? "bg-[#FFF2CC] border-[#FFF2CC]" : ""}`}
                             onClick={() => setSensitivityChartType("line")}
                           >
                             Line Chart
@@ -6371,7 +6371,7 @@ export default function MCDMCalculator() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className={`text-xs h-7 ${sensitivityChartType === "bar" ? "bg-[#FFF2CC] border-[#FFF2CC]" : ""}`}
+                            className={`text-xs h-7 w-full sm:w-auto ${sensitivityChartType === "bar" ? "bg-[#FFF2CC] border-[#FFF2CC]" : ""}`}
                             onClick={() => setSensitivityChartType("bar")}
                           >
                             Bar Chart
@@ -6379,7 +6379,7 @@ export default function MCDMCalculator() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-xs h-7"
+                            className="text-xs h-7 w-full sm:w-auto"
                             onClick={downloadChart}
                           >
                             <Download className="w-3 h-3 mr-1" />
@@ -6388,7 +6388,7 @@ export default function MCDMCalculator() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-xs h-7"
+                            className="text-xs h-7 w-full sm:w-auto"
                             onClick={() => downloadChartAsJpeg(sensitivityResultsRef, "sensitivity-results")}
                           >
                             <Download className="w-3 h-3 mr-1" />
@@ -11152,7 +11152,8 @@ export default function MCDMCalculator() {
                         <TableRow className="bg-gray-50 border-b border-gray-200">
                           <TableHead className="text-xs font-bold text-black py-2 px-4 w-24">Criterion</TableHead>
                           {criteria.map((crit) => (
-                            <TableHead key={crit.id} className="text-xs font-bold text-center py-2 px-4 text-green-600">
+                            <TableHead key={crit.id} className={`text-xs font-bold text-center py-2 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                              }`}>
                               {crit.name}
                             </TableHead>
                           ))}

@@ -36,6 +36,7 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
   const [kSensChartType, setKSensChartType] = useState<string>('line');
   const [kSensResults, setKSensResults] = useState<any>(null);
   const [kSensActiveTab, setKSensActiveTab] = useState<'results' | 'tables'>('results');
+  const [kSensTableDisplayStyle, setKSensTableDisplayStyle] = useState<'both' | 'rank' | 'score'>('both');
   const [currentStep, setCurrentStep] = useState<number>(1);
 
   // Weight method state
@@ -373,11 +374,13 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
 
       if (response.ok) {
         const data = await response.json();
-        const results = data.results;
+        const results = data.results || {};
 
         // Ensure variations are sorted within each criterion
         Object.keys(results).forEach(key => {
-          results[key].sort((a: any, b: any) => a.variation - b.variation);
+          if (Array.isArray(results[key])) {
+            results[key].sort((a: any, b: any) => a.variation - b.variation);
+          }
         });
 
         setKSensResults(results);
@@ -577,33 +580,45 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
           Sensitivity Analysis for {criterionName} (Base Weight: {((criterionData?.weight || 0) * 100).toFixed(2)}%)
         </h3>
         <div className="table-responsive border border-gray-200 rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-b border-gray-200">
-                <TableHead className="px-0.3 sm:px-2 py-1 sm:py-1.5 text-[7px] sm:text-xs font-normal text-black text-center whitespace-nowrap">Variation (%)</TableHead>
-                {alternatives.map(alt => (
-                  <TableHead key={alt.name} className="px-0.3 sm:px-2 py-1 sm:py-1.5 text-[7px] sm:text-xs font-normal text-black text-center whitespace-nowrap">{alt.name}</TableHead>
+          <table className="w-full text-[7px] sm:text-xs">
+            <thead className="bg-gray-50">
+              <tr className="border-b border-gray-200">
+                <th className="px-1 sm:px-3 py-1 sm:py-2 border-r border-gray-200 text-black font-semibold text-left">
+                  Weight
+                </th>
+                {alternatives.map((alt) => (
+                  <th key={alt.name} className="px-1 sm:px-3 py-1 sm:py-2 border-r border-gray-200 text-black font-semibold text-center">
+                    {alt.name}
+                  </th>
                 ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+              </tr>
+            </thead>
+            <tbody>
               {kSensResults[criterionName].map((varData: any, idx: number) => (
-                <TableRow key={varData.variation} className={`${idx !== kSensResults[criterionName].length - 1 ? 'border-b border-gray-200' : ''} hover:bg-gray-50`}>
-                  <TableCell className="px-0.3 sm:px-2 py-1 sm:py-1.5 text-center text-black text-[7px] sm:text-xs whitespace-nowrap">
+                <tr key={varData.variation} className="border-b border-gray-200 hover:bg-gray-50">
+                  <td className="px-1 sm:px-3 py-1 sm:py-2 font-medium text-black border-r border-gray-200">
                     {varData.variation > 0 ? '+' : ''}{varData.variation}%
-                  </TableCell>
-                  {alternatives.map(alt => (
-                    <TableCell key={alt.name} className="px-0.3 sm:px-2 py-1 sm:py-1.5 text-center text-black">
-                      <div className="flex flex-col">
-                        <span className="text-[7px] sm:text-xs">#{varData.rankings[alt.name]?.rank}</span>
-                        <span className="text-[7px] sm:text-[7px] text-gray-600">({varData.rankings[alt.name]?.score.toFixed(4)})</span>
+                  </td>
+                  {alternatives.map((alt) => (
+                    <td key={alt.name} className="px-1 sm:px-3 py-0.5 sm:py-1 text-center text-black border-r border-gray-200">
+                      <div className="flex flex-col leading-tight">
+                        {(kSensTableDisplayStyle === 'both' || kSensTableDisplayStyle === 'rank') && (
+                          <span className="font-semibold text-[7px] sm:text-xs text-black">
+                            {kSensTableDisplayStyle === 'both' ? '#' : ''}{varData.rankings[alt.name]?.rank}
+                          </span>
+                        )}
+                        {(kSensTableDisplayStyle === 'both' || kSensTableDisplayStyle === 'score') && (
+                          <span className={`${kSensTableDisplayStyle === 'both' ? 'text-[6px] sm:text-[10px] text-gray-500 font-normal' : 'text-[7px] sm:text-xs font-semibold text-black'}`}>
+                            {kSensTableDisplayStyle === 'both' ? `(${varData.rankings[alt.name]?.score.toFixed(4)})` : varData.rankings[alt.name]?.score.toFixed(4)}
+                          </span>
+                        )}
                       </div>
-                    </TableCell>
+                    </td>
                   ))}
-                </TableRow>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       </div>
     );
@@ -1104,19 +1119,37 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
 
                 {kSensResults && (
                   <div>
-                    <div className="flex gap-2 mb-4 border-b">
-                      <button
-                        onClick={() => setKSensActiveTab('results')}
-                        className={`px-4 py-2 font-semibold text-xs ${kSensActiveTab === 'results' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
-                      >
-                        📊 Charts
-                      </button>
-                      <button
-                        onClick={() => setKSensActiveTab('tables')}
-                        className={`px-4 py-2 font-semibold text-xs ${kSensActiveTab === 'tables' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
-                      >
-                        📋 Tables
-                      </button>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setKSensActiveTab('results')}
+                          className={`px-4 py-2 font-semibold text-xs ${kSensActiveTab === 'results' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
+                        >
+                          📊 Charts
+                        </button>
+                        <button
+                          onClick={() => setKSensActiveTab('tables')}
+                          className={`px-4 py-2 font-semibold text-xs ${kSensActiveTab === 'tables' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
+                        >
+                          📋 Tables
+                        </button>
+                      </div>
+
+                      {kSensActiveTab === 'tables' && (
+                        <div className="flex items-center gap-2 pb-2 sm:pb-0">
+                          <span className="text-[10px] font-medium text-gray-500">Display:</span>
+                          <Select value={kSensTableDisplayStyle} onValueChange={(v: any) => setKSensTableDisplayStyle(v)}>
+                            <SelectTrigger className="w-32 h-7 text-[10px] border-gray-200">
+                              <SelectValue placeholder="Display Style" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="rank" className="text-[10px]">Rank Only</SelectItem>
+                              <SelectItem value="score" className="text-[10px]">Score Only</SelectItem>
+                              <SelectItem value="both" className="text-[10px]">Rank & Score</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
 
                     {kSensActiveTab === 'results' && (
