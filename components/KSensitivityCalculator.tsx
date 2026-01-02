@@ -505,16 +505,16 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th className="border border-gray-300 px-3 py-2 bg-gray-100 text-xs">Variation</th>
+                <th className="border border-gray-300 px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-100 text-xs">Variation</th>
                 {alternatives.map(alt => (
-                  <th key={alt.name} className="border border-gray-300 px-3 py-2 bg-gray-100 text-xs">{alt.name}</th>
+                  <th key={alt.name} className="border border-gray-300 px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-100 text-xs">{alt.name}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {heatmapData.map((row: any, rIdx: number) => (
                 <tr key={rIdx}>
-                  <td className="border border-gray-300 px-3 py-2 font-semibold text-xs">{row.variation}</td>
+                  <td className="border border-gray-300 px-2 sm:px-3 py-1.5 sm:py-2 font-semibold text-xs">{row.variation}</td>
                   {alternatives.map((alt) => {
                     const value = row[alt.name];
                     const allValues = Object.values(row).filter(v => typeof v === 'number') as number[];
@@ -523,7 +523,7 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
                     return (
                       <td
                         key={alt.name}
-                        className="border border-gray-300 px-3 py-2 text-center text-xs"
+                        className="border border-gray-300 px-2 sm:px-3 py-1.5 sm:py-2 text-center text-xs"
                         style={{
                           backgroundColor: `rgb(${255 - intensity}, ${255 - intensity / 2}, ${255})`,
                           color: intensity > 150 ? 'white' : 'black'
@@ -639,28 +639,28 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
     const criterionData = criteria.find(c => c.name === criterionName);
 
     return (
-      <div className="overflow-x-auto mb-8">
-        <h3 className="text-sm font-semibold mb-3 text-black">
+      <div className="mb-8">
+        <h3 className="text-[8px] sm:text-sm mb-3 text-black">
           Sensitivity Analysis for {criterionName} (Base Weight: {((criterionData?.weight || 0) * 100).toFixed(2)}%)
         </h3>
-        <table className="w-full border-collapse border border-gray-300 text-xs">
+        <table className="w-full border-collapse border border-gray-300">
           <thead>
             <tr className="bg-gray-100">
-              <th className="border border-gray-300 px-4 py-2">Variation (%)</th>
-              {alternatives.map(alt => (<th key={alt.name} className="border border-gray-300 px-4 py-2">{alt.name}</th>))}
+              <th className="border border-gray-300 px-0.3 sm:px-2 py-1 sm:py-1.8 text-[7px] sm:text-xs font-normal">Variation (%)</th>
+              {alternatives.map(alt => (<th key={alt.name} className="border border-gray-300 px-0.3 sm:px-2 py-1 sm:py-1.8 text-[7px] sm:text-xs font-normal">{alt.name}</th>))}
             </tr>
           </thead>
           <tbody>
             {kSensResults[criterionName].map((varData: any) => (
               <tr key={varData.variation}>
-                <td className="border border-gray-300 px-4 py-2 font-semibold text-center text-black">
+                <td className="border border-gray-300 px-0.3 sm:px-2 py-1 sm:py-1.8 text-center text-black text-[7px] sm:text-xs">
                   {varData.variation > 0 ? '+' : ''}{varData.variation}%
                 </td>
                 {alternatives.map(alt => (
-                  <td key={alt.name} className="border border-gray-300 px-4 py-2 text-center text-black">
+                  <td key={alt.name} className="border border-gray-300 px-0.3 sm:px-2 py-1 sm:py-1.8 text-center text-black">
                     <div className="flex flex-col">
-                      <span className="font-semibold">#{varData.rankings[alt.name]?.rank}</span>
-                      <span className="text-xs text-gray-600">({varData.rankings[alt.name]?.score.toFixed(4)})</span>
+                      <span className="text-[7px] sm:text-xs">#{varData.rankings[alt.name]?.rank}</span>
+                      <span className="text-[7px] sm:text-[7px] text-gray-600">({varData.rankings[alt.name]?.score.toFixed(4)})</span>
                     </div>
                   </td>
                 ))}
@@ -740,110 +740,99 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
       <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm text-black">K% Sensitivity Analysis Calculator</CardTitle>
-          <CardDescription className="text-xs text-gray-700">
-            Step-by-step guided sensitivity analysis with customizable variation ranges
+          <CardDescription className="text-xs text-gray-700 flex flex-wrap items-center gap-1">
+            <span>Step-by-step guided sensitivity analysis with customizable variation ranges</span>
+            <a
+              href="#"
+              className="text-blue-600 hover:underline inline-flex items-center gap-1"
+              onClick={(e) => { e.preventDefault(); setShowFormula(!showFormula); }}
+            >
+              General formula for Sensitivity analysis methodology
+              <span className="text-gray-500 text-[10px]">{showFormula ? '▼' : '▶'}</span>
+            </a>
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {/* Formula Section - Collapsible */}
-            <div className="border rounded-lg bg-gray-50">
-              <button
-                onClick={() => setShowFormula(!showFormula)}
-                className="w-full p-3 flex items-center justify-between hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-black">K% SENSITIVITY ANALYSIS</span>
-                  <a
-                    href="#"
-                    className="text-xs text-blue-600 hover:underline"
-                    onClick={(e) => { e.stopPropagation(); setShowFormula(!showFormula); }}
-                  >
-                    General formula for Sensitivity analysis methodology
-                  </a>
-                </div>
-                <span className="text-gray-500">{showFormula ? '▼' : '▶'}</span>
-              </button>
-
-              {showFormula && (
-                <div className="p-4 space-y-4 border-t">
-                  {/* Step 1: General Formula */}
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="text-xs font-bold text-gray-900 mb-3">1. General Formula for sk% Sensitivity Analysis</h4>
-                    <div className="space-y-3 text-xs text-gray-700">
-                      <div>
-                        <p className="font-semibold mb-2">Let:</p>
-                        <div className="ml-4 space-y-2">
-                          <div>
-                            <strong>Base weights:</strong>
-                            <div className="bg-gray-50 rounded-lg mt-1 p-2">
-                              <div className="latex text-sm" dangerouslySetInnerHTML={{ __html: `\\[w_j, \\quad j = 1, 2, \\ldots, n, \\quad \\sum_{j=1}^{n} w_j = 1\\]` }} />
-                            </div>
+            {/* Formula Section Content */}
+            {showFormula && (
+              <div className="p-4 space-y-4 border rounded-lg bg-gray-50">
+                {/* Step 1: General Formula */}
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="text-xs font-bold text-gray-900 mb-3">1. General Formula for sk% Sensitivity Analysis</h4>
+                  <div className="space-y-3 text-xs text-gray-700">
+                    <div>
+                      <p className="font-semibold mb-2">Let:</p>
+                      <div className="ml-4 space-y-2">
+                        <div>
+                          <strong>Base weights:</strong>
+                          <div className="bg-gray-50 rounded-lg mt-1 p-2">
+                            <div className="latex text-sm" dangerouslySetInnerHTML={{ __html: `\\[w_j, \\quad j = 1, 2, \\ldots, n, \\quad \\sum_{j=1}^{n} w_j = 1\\]` }} />
                           </div>
-                          <div>
-                            <div className="bg-gray-50 rounded-lg p-2">
-                              <strong>Suppose weight of criterion </strong>
-                              <span className="latex" dangerouslySetInnerHTML={{ __html: `\\(C_p\\)` }} />
-                              <strong> is varied by ±k%</strong>
-                            </div>
+                        </div>
+                        <div>
+                          <div className="bg-gray-50 rounded-lg p-2">
+                            <strong>Suppose weight of criterion </strong>
+                            <span className="latex" dangerouslySetInnerHTML={{ __html: `\\(C_p\\)` }} />
+                            <strong> is varied by ±k%</strong>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Step 2: Modify selected criterion */}
-                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
-                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-1: Modify selected criterion</h4>
-                    <div className="bg-white rounded p-4 border border-purple-100">
-                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[w_p^{(k)} = w_p \\times \\left(1 \\pm \\frac{k}{100}\\right)\\]` }} />
-                    </div>
+                {/* Step 2: Modify selected criterion */}
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+                  <h4 className="text-xs font-bold text-gray-900 mb-3">Step-1: Modify selected criterion</h4>
+                  <div className="bg-white rounded p-4 border border-purple-100">
+                    <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[w_p^{(k)} = w_p \\times \\left(1 \\pm \\frac{k}{100}\\right)\\]` }} />
                   </div>
+                </div>
 
-                  {/* Step 3: Compute remaining weight mass */}
-                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
-                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-2: Compute remaining weight mass</h4>
-                    <div className="space-y-3">
-                      <div className="bg-white rounded p-4 border border-green-100">
-                        <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[R = 1 - w_p^{(k)}\\]` }} />
-                      </div>
-                      <p className="text-xs text-gray-600 italic text-center">Original remaining weights sum:</p>
-                      <div className="bg-white rounded p-4 border border-green-100">
-                        <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[S = \\sum_{j \\neq p} w_j\\]` }} />
-                      </div>
+                {/* Step 3: Compute remaining weight mass */}
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="text-xs font-bold text-gray-900 mb-3">Step-2: Compute remaining weight mass</h4>
+                  <div className="space-y-3">
+                    <div className="bg-white rounded p-4 border border-green-100">
+                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[R = 1 - w_p^{(k)}\\]` }} />
                     </div>
-                  </div>
-
-                  {/* Step 4: Proportional re-scaling factor */}
-                  <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-lg p-4">
-                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-3: Proportional re-scaling factor</h4>
-                    <div className="bg-white rounded p-4 border border-yellow-100">
-                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[\\lambda = \\frac{R}{S}\\]` }} />
-                    </div>
-                  </div>
-
-                  {/* Step 5: Adjust remaining weights */}
-                  <div className="bg-gradient-to-br from-red-50 to-orange-50 border border-red-200 rounded-lg p-4">
-                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-4: Adjust remaining weights</h4>
-                    <div className="bg-white rounded p-4 border border-red-100">
-                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[w_j^{(k)} = \\lambda \\times w_j, \\quad \\forall j \\neq p\\]` }} />
-                    </div>
-                  </div>
-
-                  {/* Step 6: Validity check */}
-                  <div className="bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-lg p-4">
-                    <h4 className="text-xs font-bold text-gray-900 mb-3">Step-5: Validity check</h4>
-                    <div className="bg-white rounded p-4 border border-teal-100">
-                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[\\sum_{j=1}^{n} w_j^{(k)} = 1\\]` }} />
-                    </div>
-                    <div className="mt-3 flex items-center gap-2 text-xs text-green-700 bg-green-100 border border-green-300 rounded p-2">
-                      <span className="text-lg">✓</span>
-                      <p className="font-semibold">This procedure is standard, reviewer-accepted, and avoids bias.</p>
+                    <p className="text-xs text-gray-600 italic text-center">Original remaining weights sum:</p>
+                    <div className="bg-white rounded p-4 border border-green-100">
+                      <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[S = \\sum_{j \\neq p} w_j\\]` }} />
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
+
+                {/* Step 4: Proportional re-scaling factor */}
+                <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-lg p-4">
+                  <h4 className="text-xs font-bold text-gray-900 mb-3">Step-3: Proportional re-scaling factor</h4>
+                  <div className="bg-white rounded p-4 border border-yellow-100">
+                    <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[\\lambda = \\frac{R}{S}\\]` }} />
+                  </div>
+                </div>
+
+                {/* Step 5: Adjust remaining weights */}
+                <div className="bg-gradient-to-br from-red-50 to-orange-50 border border-red-200 rounded-lg p-4">
+                  <h4 className="text-xs font-bold text-gray-900 mb-3">Step-4: Adjust remaining weights</h4>
+                  <div className="bg-white rounded p-4 border border-red-100">
+                    <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[w_j^{(k)} = \\lambda \\times w_j, \\quad \\forall j \\neq p\\]` }} />
+                  </div>
+                </div>
+
+                {/* Step 6: Validity check */}
+                <div className="bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-lg p-4">
+                  <h4 className="text-xs font-bold text-gray-900 mb-3">Step-5: Validity check</h4>
+                  <div className="bg-white rounded p-4 border border-teal-100">
+                    <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[\\sum_{j=1}^{n} w_j^{(k)} = 1\\]` }} />
+                  </div>
+                  <div className="mt-3 flex items-center gap-2 text-xs text-green-700 bg-green-100 border border-green-300 rounded p-2">
+                    <span className="text-lg">✓</span>
+                    <p className="font-semibold">This procedure is standard, reviewer-accepted, and avoids bias.</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Progress Steps */}
             <div className="flex items-center justify-between mb-6 px-4">
