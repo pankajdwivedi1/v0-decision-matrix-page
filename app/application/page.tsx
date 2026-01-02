@@ -6509,7 +6509,7 @@ export default function MCDMCalculator() {
                 </>
               )}
 
-              {/* K% Sensitivity Analysis Calculator */}
+              {/* K% Sensitivity Analysis */}
               <KSensitivityCalculator
                 criteria={criteria}
                 alternatives={alternatives}

@@ -333,130 +333,63 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
     setIsAnalyzing(true);
     const analysisResults: any = {};
 
-    for (const [critIdx, criterion] of workingCriteria.entries()) {
-      const variationData = [];
+    try {
+      // Prepare all analysis tasks for bulk processing
+      const tasks: any[] = [];
+      workingCriteria.forEach((criterion, critIdx) => {
+        kSensVariationRange.forEach(variation => {
+          const adjustedWeights = [...workingCriteria.map(c => c.weight)];
+          const variationFactor = 1 + (variation / 100);
+          adjustedWeights[critIdx] = workingCriteria[critIdx].weight * variationFactor;
 
-      for (const variation of kSensVariationRange) {
-        const adjustedWeights = [...workingCriteria.map(c => c.weight)];
-        const variationFactor = 1 + (variation / 100);
-        adjustedWeights[critIdx] = workingCriteria[critIdx].weight * variationFactor;
+          const weightSum = adjustedWeights.reduce((a, b) => a + b, 0);
+          const normalizedWeights = adjustedWeights.map(w => w / weightSum);
 
-        const weightSum = adjustedWeights.reduce((a, b) => a + b, 0);
-        const normalizedWeights = adjustedWeights.map(w => w / weightSum);
+          const adjustedCriteria = workingCriteria.map((c, idx) => ({
+            id: c.id,
+            name: c.name,
+            weight: normalizedWeights[idx],
+            type: c.type
+          }));
 
-        // Prepare criteria with adjusted weights
-        const adjustedCriteria = workingCriteria.map((c, idx) => ({
-          id: c.id,
-          name: c.name,
-          weight: normalizedWeights[idx],
-          type: c.type
-        }));
-
-        try {
-          // Call ranking API with selected method
-          const response = await fetch('/api/calculate-ranking', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              method: selectedRankingMethod,
-              criteria: adjustedCriteria,
-              alternatives: alternatives
-            })
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-
-            // Extract rankings and scores from API response
-            const rankings: any = {};
-            const scores: any[] = [];
-
-            if (data.ranking) {
-              data.ranking.forEach((item: any) => {
-                rankings[item.alternativeName] = {
-                  rank: item.rank,
-                  score: item.score || 0
-                };
-                scores.push({
-                  name: item.alternativeName,
-                  score: item.score || 0
-                });
-              });
-            }
-
-            variationData.push({
-              variation,
-              rankings,
-              scores
-            });
-          } else {
-            // Fallback to simple calculation if API fails
-            const scores = alternatives.map((alt) => {
-              const altValues = workingCriteria.map(c => {
-                const score = alt.scores[c.id];
-                return typeof score === 'number' ? score : 0;
-              });
-              return {
-                name: alt.name,
-                score: calculateKSensScore(altValues, normalizedWeights, workingCriteria.map(c => c.type)),
-                originalIndex: alternatives.indexOf(alt)
-              };
-            });
-
-            scores.sort((a, b) => b.score - a.score);
-
-            const rankings: any = {};
-            scores.forEach((item, rank) => {
-              rankings[item.name] = {
-                rank: rank + 1,
-                score: item.score
-              };
-            });
-
-            variationData.push({
-              variation,
-              rankings,
-              scores: scores.map(s => ({ name: s.name, score: s.score }))
-            });
-          }
-        } catch (error) {
-          console.error('Ranking API error:', error);
-          // Fallback to simple calculation
-          const scores = alternatives.map((alt) => {
-            const altValues = workingCriteria.map(c => {
-              const score = alt.scores[c.id];
-              return typeof score === 'number' ? score : 0;
-            });
-            return {
-              name: alt.name,
-              score: calculateKSensScore(altValues, normalizedWeights, workingCriteria.map(c => c.type)),
-              originalIndex: alternatives.indexOf(alt)
-            };
-          });
-
-          scores.sort((a, b) => b.score - a.score);
-
-          const rankings: any = {};
-          scores.forEach((item, rank) => {
-            rankings[item.name] = {
-              rank: rank + 1,
-              score: item.score
-            };
-          });
-
-          variationData.push({
+          tasks.push({
+            criterionName: criterion.name,
             variation,
-            rankings,
-            scores: scores.map(s => ({ name: s.name, score: s.score }))
+            criteria: adjustedCriteria
           });
-        }
+        });
+      });
+
+      // Single high-speed bulk request
+      const response = await fetch('/api/calculate-k-sens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          method: selectedRankingMethod,
+          alternatives: alternatives,
+          tasks: tasks
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const results = data.results;
+
+        // Ensure variations are sorted within each criterion
+        Object.keys(results).forEach(key => {
+          results[key].sort((a: any, b: any) => a.variation - b.variation);
+        });
+
+        setKSensResults(results);
+      } else {
+        throw new Error('KSens API failed');
       }
-
-      analysisResults[criterion.name] = variationData;
+    } catch (error) {
+      console.error('Analysis error:', error);
+      // Fallback or error handling
+    } finally {
+      setIsAnalyzing(false);
     }
-
-    setKSensResults(analysisResults);
-    setIsAnalyzing(false);
   };
 
   const generateKSensChartData = (criterionName: string) => {
@@ -501,42 +434,42 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
     if (kSensChartType === 'heatmap') {
       const heatmapData = generateKSensHeatmapData(criterionName);
       return (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="border border-gray-300 px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-100 text-xs">Variation</th>
+        <div className="table-responsive border border-gray-200 rounded-lg overflow-hidden mt-4">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b border-gray-200">
+                <TableHead className="px-2 sm:px-3 py-2 text-xs font-normal text-black text-center whitespace-nowrap">Variation</TableHead>
                 {alternatives.map(alt => (
-                  <th key={alt.name} className="border border-gray-300 px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-100 text-xs">{alt.name}</th>
+                  <TableHead key={alt.name} className="px-2 sm:px-3 py-2 text-xs font-normal text-black text-center whitespace-nowrap">{alt.name}</TableHead>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {heatmapData.map((row: any, rIdx: number) => (
-                <tr key={rIdx}>
-                  <td className="border border-gray-300 px-2 sm:px-3 py-1.5 sm:py-2 font-semibold text-xs">{row.variation}</td>
+                <TableRow key={rIdx} className={`${rIdx !== heatmapData.length - 1 ? 'border-b border-gray-200' : ''}`}>
+                  <TableCell className="px-2 sm:px-3 py-1 sm:py-1.5 font-normal text-xs text-black text-center whitespace-nowrap">{row.variation}</TableCell>
                   {alternatives.map((alt) => {
                     const value = row[alt.name];
                     const allValues = Object.values(row).filter(v => typeof v === 'number') as number[];
                     const maxValue = Math.max(...allValues);
                     const intensity = Math.floor((value / maxValue) * 255);
                     return (
-                      <td
+                      <TableCell
                         key={alt.name}
-                        className="border border-gray-300 px-2 sm:px-3 py-1.5 sm:py-2 text-center text-xs"
+                        className="px-2 sm:px-3 py-1 sm:py-1.5 text-center text-xs"
                         style={{
                           backgroundColor: `rgb(${255 - intensity}, ${255 - intensity / 2}, ${255})`,
                           color: intensity > 150 ? 'white' : 'black'
                         }}
                       >
                         {value.toFixed(4)}
-                      </td>
+                      </TableCell>
                     );
                   })}
-                </tr>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       );
     }
@@ -643,31 +576,35 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
         <h3 className="text-[8px] sm:text-sm mb-3 text-black">
           Sensitivity Analysis for {criterionName} (Base Weight: {((criterionData?.weight || 0) * 100).toFixed(2)}%)
         </h3>
-        <table className="w-full border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-gray-300 px-0.3 sm:px-2 py-1 sm:py-1.8 text-[7px] sm:text-xs font-normal">Variation (%)</th>
-              {alternatives.map(alt => (<th key={alt.name} className="border border-gray-300 px-0.3 sm:px-2 py-1 sm:py-1.8 text-[7px] sm:text-xs font-normal">{alt.name}</th>))}
-            </tr>
-          </thead>
-          <tbody>
-            {kSensResults[criterionName].map((varData: any) => (
-              <tr key={varData.variation}>
-                <td className="border border-gray-300 px-0.3 sm:px-2 py-1 sm:py-1.8 text-center text-black text-[7px] sm:text-xs">
-                  {varData.variation > 0 ? '+' : ''}{varData.variation}%
-                </td>
+        <div className="table-responsive border border-gray-200 rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b border-gray-200">
+                <TableHead className="px-0.3 sm:px-2 py-1 sm:py-1.5 text-[7px] sm:text-xs font-normal text-black text-center whitespace-nowrap">Variation (%)</TableHead>
                 {alternatives.map(alt => (
-                  <td key={alt.name} className="border border-gray-300 px-0.3 sm:px-2 py-1 sm:py-1.8 text-center text-black">
-                    <div className="flex flex-col">
-                      <span className="text-[7px] sm:text-xs">#{varData.rankings[alt.name]?.rank}</span>
-                      <span className="text-[7px] sm:text-[7px] text-gray-600">({varData.rankings[alt.name]?.score.toFixed(4)})</span>
-                    </div>
-                  </td>
+                  <TableHead key={alt.name} className="px-0.3 sm:px-2 py-1 sm:py-1.5 text-[7px] sm:text-xs font-normal text-black text-center whitespace-nowrap">{alt.name}</TableHead>
                 ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {kSensResults[criterionName].map((varData: any, idx: number) => (
+                <TableRow key={varData.variation} className={`${idx !== kSensResults[criterionName].length - 1 ? 'border-b border-gray-200' : ''} hover:bg-gray-50`}>
+                  <TableCell className="px-0.3 sm:px-2 py-1 sm:py-1.5 text-center text-black text-[7px] sm:text-xs whitespace-nowrap">
+                    {varData.variation > 0 ? '+' : ''}{varData.variation}%
+                  </TableCell>
+                  {alternatives.map(alt => (
+                    <TableCell key={alt.name} className="px-0.3 sm:px-2 py-1 sm:py-1.5 text-center text-black">
+                      <div className="flex flex-col">
+                        <span className="text-[7px] sm:text-xs">#{varData.rankings[alt.name]?.rank}</span>
+                        <span className="text-[7px] sm:text-[7px] text-gray-600">({varData.rankings[alt.name]?.score.toFixed(4)})</span>
+                      </div>
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     );
   };
@@ -739,7 +676,7 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
       }} />
       <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm text-black">K% Sensitivity Analysis Calculator</CardTitle>
+          <CardTitle className="text-sm text-black">K% Sensitivity Analysis</CardTitle>
           <CardDescription className="text-xs text-gray-700 flex flex-wrap items-center gap-1">
             <span>Step-by-step guided sensitivity analysis with customizable variation ranges</span>
             <a
@@ -1212,11 +1149,11 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
                     )}
 
                     {kSensActiveTab === 'tables' && (
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         {criteria.map((crit) => (
-                          <Card key={crit.id} className="border-gray-200 bg-white shadow-sm">
-                            <CardContent className="pt-6">{generateKSensRankingTable(crit.name)}</CardContent>
-                          </Card>
+                          <div key={crit.id} className="pt-2">
+                            {generateKSensRankingTable(crit.name)}
+                          </div>
                         ))}
                       </div>
                     )}
