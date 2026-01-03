@@ -128,19 +128,32 @@ export default function SWEIFormula({ compact = false, landingPage = false, lang
             }} />
             <div ref={containerRef} style={{ overflowWrap: "break-word", wordBreak: "break-word" }} className={`prose max-w-none text-left font-['Times_New_Roman',_Times,_serif] leading-relaxed text-black ${landingPage ? '' : 'bg-white border border-gray-200 rounded-lg p-3 md:p-6'}`}>
                 {landingPage ? (
-                    <div className="py-0">
-                        <h1 className="text-xl md:text-2xl font-bold text-center mb-4 text-black">
-                            {t.sweiTitle}
-                        </h1>
-                        <div className="bg-gray-50 rounded-lg p-3 md:p-6 mb-2 md:mb-4 space-y-2 md:space-y-4 overflow-x-auto">
+                    <div className="py-4 font-serif">
+                        <div className="flex flex-col items-center mb-4 sm:mb-8">
+                            <span className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-400 mb-2">Equation Analysis</span>
+                            <h1 className="text-xl md:text-2xl font-bold text-center text-slate-900 m-0">
+                                {t.sweiTitle}
+                            </h1>
+                        </div>
+
+                        <div className="border-y border-slate-900 py-6 sm:py-10 my-4 sm:my-8 space-y-4 sm:space-y-8 overflow-x-auto bg-slate-50/30">
                             <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_formula}\\]` }} />
                             <div className="latex text-center" dangerouslySetInnerHTML={{ __html: `\\[${latex.step4_formula2}\\]` }} />
                         </div>
-                        <div className="mt-2 md:mt-6">
-                            <h2 className="text-lg md:text-xl font-semibold text-center mb-4 text-black">{t.rankingCriteria}</h2>
-                            <p className="text-center text-base md:text-lg text-black overflow-x-auto">
+
+                        <div className="mt-8 text-center">
+                            <h2 className="text-xs uppercase tracking-widest font-black text-slate-400 mb-6">{t.rankingCriteria}</h2>
+                            <div className="text-lg md:text-xl text-slate-900 font-serif overflow-x-auto">
                                 {`$$ ${t.rankAscending} $$`}
-                            </p>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 sm:mt-12 pt-4 sm:pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Ref: Dwivedi et al. (2025)</span>
+                            </div>
+                            <span className="text-[8px] sm:text-[9px] font-bold text-blue-600/50 uppercase tracking-widest text-center sm:text-right">DOI: 10.1016/j.rser.2025.115791</span>
                         </div>
                     </div>
                 ) : (

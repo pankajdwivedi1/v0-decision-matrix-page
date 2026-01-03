@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import AHPFormula from "./AHPFormula";
 import PIPRECIAFormula from "./PIPRECIAFormula";
 import { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Check, ChevronRight } from 'lucide-react';
+import { Check, ChevronRight, Download } from 'lucide-react';
+import ExcelJS from 'exceljs';
 
 interface Criterion {
   id: string;
@@ -570,6 +571,98 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
     );
   };
 
+  const downloadAllTables = async () => {
+    if (!kSensResults) return;
+
+    const workbook = new ExcelJS.Workbook();
+    const date = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY
+
+    workingCriteria.forEach((crit) => {
+      const criterionName = crit.name;
+      const data = kSensResults[criterionName];
+      if (!data) return;
+
+      const sheetName = criterionName.replace(/[\\/*?[\]]/g, '').substring(0, 31) || "Criterion";
+      const worksheet = workbook.addWorksheet(sheetName);
+
+      // Define columns
+      const cols = [{ width: 25 }, ...alternatives.map(() => ({ width: 15 }))];
+      worksheet.columns = cols;
+
+      const applyCellStyle = (cell: ExcelJS.Cell, isHeader = false) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        if (isHeader) {
+          cell.font = { bold: true };
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFF9FAFB' }
+          };
+        }
+      };
+
+      // Header Rows 1-8
+      const headerInfo = [
+        ["DECISION ALGO"],
+        ["K% Sensitivity Analysis Report", `Date: ${date}`],
+        ["Weight Method", selectedWeightMethod.toUpperCase()],
+        ["Ranking Method", selectedRankingMethod.toUpperCase()],
+        ["Number of Alternatives", alternatives.length],
+        ["Number of Criteria", criteria.length],
+        ["Project", "Analysis 1"],
+        ["User Id:", "User 1"]
+      ];
+
+      headerInfo.forEach((rowData, i) => {
+        const row = worksheet.addRow(rowData);
+        if (i === 0) {
+          worksheet.mergeCells(`A1:${String.fromCharCode(64 + alternatives.length + 1)}1`);
+          row.getCell(1).font = { bold: true, size: 12 };
+        }
+        row.eachCell((cell) => applyCellStyle(cell, i === 0));
+      });
+
+      // Spacing (9-12)
+      for (let i = 0; i < 4; i++) worksheet.addRow([]);
+
+      // Table Header Row 13
+      const tableHeader = ["Weight Variation", ...alternatives.map(alt => alt.name)];
+      const headerRow = worksheet.addRow(tableHeader);
+      headerRow.eachCell((cell) => applyCellStyle(cell, true));
+
+      // Data Rows
+      data.forEach((varData: any) => {
+        const rowData = [
+          `${varData.variation > 0 ? '+' : ''}${varData.variation}%`,
+          ...alternatives.map(alt => {
+            const rank = varData.rankings[alt.name]?.rank;
+            const score = varData.rankings[alt.name]?.score ? varData.rankings[alt.name].score.toFixed(4) : "-";
+            if (kSensTableDisplayStyle === 'rank') return rank;
+            if (kSensTableDisplayStyle === 'score') return score;
+            return `#${rank} (${score})`;
+          })
+        ];
+        const dataRow = worksheet.addRow(rowData);
+        dataRow.eachCell((cell) => applyCellStyle(cell));
+      });
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `K_Sensitivity_Results_${selectedRankingMethod}_${selectedWeightMethod}.xlsx`;
+    anchor.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   const generateKSensRankingTable = (criterionName: string) => {
     if (!kSensResults || !kSensResults[criterionName]) return null;
     const criterionData = criteria.find(c => c.name === criterionName);
@@ -821,7 +914,7 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
                 </div>
 
                 {/* Weight & Ranking Method Selectors - Side by Side */}
-                <div className="border rounded-lg p-4 bg-white">
+                <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     {/* Weight Method Selector */}
                     <div>
@@ -955,15 +1048,15 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
                   )}
 
                   {/* Current Weights Display - Compact Card Style */}
-                  <div className="bg-gray-50 rounded-lg p-4 border">
+                  <div className="bg-gray-50 rounded-lg p-4">
                     <h4 className="text-xs font-semibold mb-3 text-gray-700">Current Weights</h4>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                       {workingCriteria.map((crit) => (
                         <div key={crit.id} className="bg-white rounded p-3 border border-gray-200">
                           <div className="text-xs font-medium text-gray-700 mb-1">{crit.name}</div>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold text-blue-600">{(crit.weight * 100).toFixed(2)}%</span>
-                            <span className={`text-sm ${crit.type === 'beneficial' ? 'text-green-600' : 'text-red-600'}`}>
+                            <span className="text-xs font-bold text-blue-600">{(crit.weight * 100).toFixed(2)}%</span>
+                            <span className={`text-xs ${crit.type === 'beneficial' ? 'text-green-600' : 'text-red-600'}`}>
                               {crit.type === 'beneficial' ? '↑' : '↓'}
                             </span>
                           </div>
@@ -974,7 +1067,7 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
                 </div>
 
                 {/* Alternatives Count */}
-                <div className="border rounded-lg p-4 bg-gray-50">
+                <div className="rounded-lg p-4 bg-gray-50">
                   <h4 className="text-xs font-semibold mb-2 text-black flex items-center gap-2">
                     <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px]">✓</span>
                     Alternatives to Analyze
@@ -1063,7 +1156,7 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
                   />
                 </div>
 
-                <div className="p-3 bg-gray-50 rounded border">
+                <div className="p-3 bg-gray-50 rounded">
                   <p className="text-xs font-medium mb-2 text-black">Selected Variation Range:</p>
                   <div className="flex flex-wrap gap-1">
                     {kSensVariationRange.map((val, idx) => (
@@ -1148,6 +1241,15 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
                               <SelectItem value="both" className="text-[10px]">Rank & Score</SelectItem>
                             </SelectContent>
                           </Select>
+                          <Button
+                            onClick={downloadAllTables}
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[10px] border-gray-200 bg-white hover:bg-gray-50 text-black ml-1"
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            Download Excel
+                          </Button>
                         </div>
                       )}
                     </div>

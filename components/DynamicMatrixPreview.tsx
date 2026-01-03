@@ -103,31 +103,30 @@ export default function DynamicMatrixPreview() {
 
     return (
         <div
-            className="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
+            className="relative overflow-hidden bg-white border border-slate-200"
             onMouseEnter={() => setPaused(true)}
             onMouseLeave={() => setPaused(false)}
         >
             {/* Header */}
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
+            <div className="p-3 sm:p-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white gap-3">
                 <div className="flex flex-col">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className={cn("text-white border-0 font-bold px-2 py-0.5 text-[10px] rounded-full", currentSlide.color)}>
+                    <div className="flex items-center gap-3">
+                        <span className={cn("text-white font-black px-2 py-0.5 text-[7px] sm:text-[8px] uppercase tracking-widest", currentSlide.color)}>
                             {currentSlide.method}
                         </span>
-                        <span className="text-sm font-bold">{currentSlide.title}</span>
+                        <span className="text-[10px] sm:text-xs font-serif font-bold text-slate-900 tracking-tight">{currentSlide.title}</span>
                     </div>
-                    <span className="text-[10px] text-gray-500 hidden sm:inline-block">{currentSlide.description}</span>
                 </div>
 
                 {/* Progress Indicators */}
-                <div className="flex gap-1.5">
+                <div className="flex gap-1">
                     {slides.map((_, idx) => (
                         <button
                             key={idx}
                             onClick={() => setCurrentIndex(idx)}
                             className={cn(
-                                "w-1.5 h-1.5 rounded-full transition-all duration-300",
-                                idx === currentIndex ? "bg-blue-600 w-3" : "bg-blue-600/20 hover:bg-blue-600/40"
+                                "w-3 sm:w-4 h-0.5 transition-all duration-500",
+                                idx === currentIndex ? "bg-slate-900" : "bg-slate-100"
                             )}
                         />
                     ))}
@@ -135,23 +134,23 @@ export default function DynamicMatrixPreview() {
             </div>
 
             {/* Table Content with Animation */}
-            <div className="relative h-[240px] overflow-hidden">
+            <div className="relative h-[260px] overflow-hidden bg-[#fafafa]">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={currentSlide.id}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.3 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.4, ease: "circOut" }}
                         className="absolute inset-0 p-0 overflow-x-auto scroller-hidden"
                     >
-                        <Table>
+                        <Table className="border-collapse">
                             <TableHeader>
-                                <TableRow className="border-border/50 hover:bg-transparent">
+                                <TableRow className="hover:bg-transparent border-b border-slate-900">
                                     {currentSlide.headers.map((header, i) => (
                                         <TableHead key={i} className={cn(
-                                            "text-xs py-2 px-3 font-semibold text-center h-10 border-b border-gray-100",
-                                            i === 0 ? "text-left text-gray-500 w-[100px]" : ""
+                                            "text-[10px] py-3 px-3 font-black text-slate-900 uppercase tracking-tighter text-center h-10",
+                                            i === 0 ? "text-left w-[120px]" : ""
                                         )}>
                                             {header}
                                         </TableHead>
@@ -160,13 +159,12 @@ export default function DynamicMatrixPreview() {
                             </TableHeader>
                             <TableBody>
                                 {currentSlide.rows.map((row, i) => (
-                                    <TableRow key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                        <TableCell className="font-medium text-xs py-3 px-3 border-r border-gray-100 bg-gray-50/30">
+                                    <TableRow key={i} className="border-b border-slate-100 hover:bg-white transition-colors">
+                                        <TableCell className="font-bold text-[10px] py-4 px-4 text-slate-900 bg-white border-r border-slate-100">
                                             {row.name}
                                         </TableCell>
-                                        {/* If first slide, show weights if applicable, but here we just show values */}
                                         {row.values.map((val, j) => (
-                                            <TableCell key={j} className="text-xs text-center border-r border-gray-100 last:border-0 font-mono text-gray-700">
+                                            <TableCell key={j} className="text-[10px] text-center font-mono text-slate-500">
                                                 {val}
                                             </TableCell>
                                         ))}
@@ -178,8 +176,10 @@ export default function DynamicMatrixPreview() {
                 </AnimatePresence>
             </div>
 
-            {/* Footer / Status */}
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-50" />
+            {/* Subtext */}
+            <div className="p-2 sm:p-3 bg-white border-t border-slate-100 italic text-[8px] sm:text-[9px] text-slate-400">
+                {currentSlide.description}
+            </div>
         </div>
     )
 }
