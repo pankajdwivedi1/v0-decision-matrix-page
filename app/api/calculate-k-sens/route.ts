@@ -46,6 +46,20 @@ function buildResponseSnippet(method: string, results: Record<string, number>, a
     return { ranking };
 }
 
+// Helper function to check if all values in the decision matrix are greater than zero
+const checkPositiveValues = (alternatives: any[], criteria: any[]): { isValid: boolean; invalidCells: string[] } => {
+    const invalidCells: string[] = [];
+    alternatives.forEach((alt) => {
+        criteria.forEach((crit) => {
+            const value = alt.scores[crit.id];
+            if (value === undefined || value === "" || Number(value) <= 0) {
+                invalidCells.push(`${alt.name} - ${crit.name}`);
+            }
+        });
+    });
+    return { isValid: invalidCells.length === 0, invalidCells };
+};
+
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
@@ -55,6 +69,24 @@ export async function POST(request: NextRequest) {
 
         if (!method || !alternatives || !tasks || !Array.isArray(tasks)) {
             return NextResponse.json({ error: "Missing required fields or invalid tasks" }, { status: 400 });
+        }
+
+        // Check if method is SWEI or SWI and validate values BEFORE processing
+        if (method.toLowerCase() === "swei" || method.toLowerCase() === "swi") {
+            // Check first task's criteria for validation (all tasks use same alternatives)
+            if (tasks.length > 0 && tasks[0].criteria) {
+                const validation = checkPositiveValues(alternatives, tasks[0].criteria);
+                if (!validation.isValid) {
+                    const methodName = method.toUpperCase();
+                    return NextResponse.json(
+                        {
+                            error: `${methodName} method requires all values to be greater than zero. Please check your decision matrix.`,
+                            invalidCells: validation.invalidCells
+                        },
+                        { status: 400 }
+                    );
+                }
+            }
         }
 
         const resultsByCriterion: Record<string, any[]> = {};

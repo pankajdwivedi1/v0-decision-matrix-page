@@ -587,13 +587,13 @@ const CHART_COLORS = [
 ]
 
 export default function MCDMCalculator() {
-  const [method, setMethod] = useState<MCDMMethod>("swei")
+  const [method, setMethod] = useState<MCDMMethod>("topsis")
   const [weightMethod, setWeightMethod] = useState<WeightMethod>("equal")
   const [activeFormulaType, setActiveFormulaType] = useState<"method" | "weight">("method")
   const [homeTab, setHomeTab] = useState<"rankingMethods" | "weightMethods" | "rankingComparison" | "sensitivityAnalysis">("rankingMethods")
   const [comparisonAlternatives, setComparisonAlternatives] = useState<Alternative[]>([])
   const [comparisonCriteria, setComparisonCriteria] = useState<Criterion[]>([])
-  const [selectedRankingMethods, setSelectedRankingMethods] = useState<MCDMMethod[]>(["topsis", "swei"])
+  const [selectedRankingMethods, setSelectedRankingMethods] = useState<MCDMMethod[]>(["topsis"])
   const [comparisonWeightMethod, setComparisonWeightMethod] = useState<WeightMethod>("equal")
   const [comparisonResults, setComparisonResults] = useState<ComparisonResult[]>([])
   const [comparisonLoading, setComparisonLoading] = useState(false)
@@ -722,6 +722,7 @@ export default function MCDMCalculator() {
   const [sensitivityResults, setSensitivityResults] = useState<SensitivityResult[]>([])
   const [sensitivityLoading, setSensitivityLoading] = useState(false)
   const [sensitivityError, setSensitivityError] = useState<string | null>(null)
+  const [sensitivityValidationError, setSensitivityValidationError] = useState<string>('') // For red banner
   // Replaced with string type below for more options
   // const [sensitivityChartType, setSensitivityChartType] = useState<"line" | "bar">("line")
   const [sensitivityChartType, setSensitivityChartType] = useState<string>("line")
@@ -732,6 +733,7 @@ export default function MCDMCalculator() {
   const [sensitivityWeightMethods, setSensitivityWeightMethods] = useState<string[]>([])
   const [sensitivityCustomWeights, setSensitivityCustomWeights] = useState<Record<string, number>>({})
   const [isCustomWeightsDialogOpen, setIsCustomWeightsDialogOpen] = useState(false)
+  const [showWeightDataWarning, setShowWeightDataWarning] = useState<boolean>(false)
 
   // Custom weights state for main flow and ranking comparison
   const [customWeights, setCustomWeights] = useState<Record<string, string>>({})
@@ -1288,6 +1290,7 @@ export default function MCDMCalculator() {
       )
 
       const payloadAlternatives = alternatives
+      let validationError: string | null = null;
 
       const resultsPromises = selectedRankingMethods.map(async (m) => {
         try {
@@ -1305,6 +1308,12 @@ export default function MCDMCalculator() {
           })
           const data = await response.json()
           if (!response.ok) {
+            // Check if it's a SWEI/SWI validation error
+            if ((m === 'swei' || m === 'swi') && data.error && data.error.includes('greater than zero')) {
+              // Store validation error instead of throwing
+              validationError = data.error;
+              return null;
+            }
             console.warn(`Method ${m} failed:`, data.error)
             return null
           }
@@ -1321,10 +1330,17 @@ export default function MCDMCalculator() {
       })
 
       const resultsRaw = await Promise.all(resultsPromises)
+
+      // Check if we encountered a validation error
+      if (validationError) {
+        setComparisonError(validationError);
+        return;
+      }
+
       const results = resultsRaw.filter((r): r is ComparisonResult => r !== null)
 
       if (results.length === 0) {
-        throw new Error("All selected methods failed. Check input data (e.g. SWEI requires positive values).")
+        throw new Error("All selected methods failed. Please check that your input data meets the requirements of the selected ranking methods.")
       }
 
       setComparisonResults(results)
@@ -2751,6 +2767,7 @@ export default function MCDMCalculator() {
 
   const handleCalculate = async (methodOverride?: string, criteriaOverride?: Criterion[]) => {
     setIsLoading(true)
+    const previousApiResults = apiResults; // Store previous results
     setApiResults(null)
 
     let currentCriteriaToUse = criteriaOverride;
@@ -2760,6 +2777,7 @@ export default function MCDMCalculator() {
       const result = await handleSaveTable(false);
       if (!result.success) {
         setIsLoading(false);
+        setApiResults(previousApiResults); // Restore previous results
         return;
       }
       currentCriteriaToUse = result.updatedCriteria;
@@ -2790,6 +2808,8 @@ export default function MCDMCalculator() {
         // Display the error message from the API
         const errorMessage = data.error || "Failed to calculate"
         alert(errorMessage)
+        setApiResults(previousApiResults); // Restore previous results on error
+        setIsLoading(false); // Stop loading immediately
         return
       }
 
@@ -2798,6 +2818,7 @@ export default function MCDMCalculator() {
     } catch (error) {
       console.error("Error:", error)
       alert("Error calculating results")
+      setApiResults(previousApiResults); // Restore previous results on error
     } finally {
       setIsLoading(false)
     }
@@ -2904,6 +2925,24 @@ export default function MCDMCalculator() {
       return
     }
 
+    // Validate for SWEI/SWI methods before starting analysis
+    if (sensitivityMethod === 'swei' || sensitivityMethod === 'swi') {
+      // Check if all values are greater than zero
+      const hasInvalidValues = alternatives.some(alt =>
+        criteria.some(crit => {
+          const value = alt.scores[crit.id];
+          return value === undefined || value === "" || Number(value) <= 0;
+        })
+      );
+
+      if (hasInvalidValues) {
+        const methodName = sensitivityMethod.toUpperCase();
+        setSensitivityValidationError(`${methodName} method requires all values to be greater than zero. Please check your decision matrix.`);
+        setTimeout(() => setSensitivityValidationError(''), 5000);
+        return;
+      }
+    }
+
     setSensitivityLoading(true)
     setSensitivityError(null)
     setSensitivityResults([])
@@ -2911,12 +2950,14 @@ export default function MCDMCalculator() {
     try {
       const selectedCrit = criteria.find(c => c.id === sensitivityCriterion)
       if (!selectedCrit) {
-        throw new Error("Selected criterion not found")
+        setSensitivityError("Selected criterion not found")
+        return
       }
 
       // Generate weight variations (0% to 100% in steps of 10%)
       const weightSteps = 11 // 0%, 10%, 20%, ..., 100%
       const results: any[] = []
+      let validationError: string | null = null;
 
       for (let i = 0; i < weightSteps; i++) {
         const newWeight = i * 0.1 // 0.0 to 1.0
@@ -2948,11 +2989,17 @@ export default function MCDMCalculator() {
           }),
         })
 
-        if (!response.ok) {
-          throw new Error(`Failed to calculate for weight ${(newWeight * 100).toFixed(0)}%`)
-        }
-
         const data = await response.json()
+
+        if (!response.ok) {
+          // Check if it's a SWEI/SWI validation error
+          if (data.error && (data.error.includes('SWEI') || data.error.includes('SWI') || data.error.includes('greater than zero'))) {
+            validationError = data.error;
+            break; // Stop the loop
+          }
+          validationError = `Failed to calculate for weight ${(newWeight * 100).toFixed(0)}%`;
+          break; // Stop the loop
+        }
 
         results.push({
           weight: newWeight * 100, // Convert to percentage
@@ -2961,7 +3008,12 @@ export default function MCDMCalculator() {
         })
       }
 
-      setSensitivityResults(results)
+      // Check if we encountered a validation error
+      if (validationError) {
+        setSensitivityError(validationError);
+      } else {
+        setSensitivityResults(results)
+      }
     } catch (error: any) {
       console.error("Sensitivity analysis error:", error)
       setSensitivityError(error?.message || "Error performing sensitivity analysis")
@@ -2969,8 +3021,6 @@ export default function MCDMCalculator() {
       setSensitivityLoading(false)
     }
   }
-
-
 
   // Download chart function (SVG)
   const downloadChart = () => {
@@ -3017,11 +3067,34 @@ export default function MCDMCalculator() {
   }, [sensitivityResults])
 
 
+  // Helper function to check if valid data exists for weight calculation
+  const hasValidDataForWeightCalculation = (): boolean => {
+    // Check if we have criteria and alternatives
+    if (!criteria || criteria.length === 0 || !alternatives || alternatives.length === 0) {
+      return false
+    }
+
+    // Check if alternatives have actual score data (not empty)
+    const hasScoresData = alternatives.some(alt => {
+      const scores = Object.values(alt.scores)
+      return scores.some(score => score !== "" && score !== null && score !== undefined)
+    })
+
+    return hasScoresData
+  }
+
   // New Logic: Compare Ranking across Weight Methods
   const handleWeightSensitivityAnalysis = async (
     pipreciaWeightsOverride?: Record<string, number>,
     swaraWeightsOverride?: Record<string, number>
   ) => {
+    // Check if valid data exists
+    if (!hasValidDataForWeightCalculation()) {
+      setShowWeightDataWarning(true)
+      setTimeout(() => setShowWeightDataWarning(false), 3000)
+      return
+    }
+
     if (sensitivityWeightMethods.length === 0) {
       setSensitivityError("Please select at least one weight method.")
       return
@@ -3083,30 +3156,41 @@ export default function MCDMCalculator() {
       // Calculate Ranking for each weight set
       const finalResults = await Promise.all(
         results.map(async ({ wm, criteria: wCrits }) => {
-          const response = await fetch("/api/calculate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              method: sensitivityMethod,
-              alternatives,
-              criteria: wCrits,
-              vikorVValue: parseFloat(vikorVValue) || 0.5,
-              waspasLambdaValue: parseFloat(waspasLambdaValue) || 0.5,
-              codasTauValue: parseFloat(codasTauValue) || 0.02,
-            }),
-          })
-          const data = await response.json()
-          if (!response.ok) throw new Error(`Failed to calculate for ${wm}`)
+          try {
+            const response = await fetch("/api/calculate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                method: sensitivityMethod,
+                alternatives,
+                criteria: wCrits,
+                vikorVValue: parseFloat(vikorVValue) || 0.5,
+                waspasLambdaValue: parseFloat(waspasLambdaValue) || 0.5,
+                codasTauValue: parseFloat(codasTauValue) || 0.02,
+              }),
+            })
+            const data = await response.json()
+            if (!response.ok) {
+              console.warn(`Failed to calculate for ${wm}:`, data.error)
+              return null
+            }
 
-          const label = WEIGHT_METHODS.find(w => w.value === wm)?.label || wm
-          return {
-            method: sensitivityMethod,
-            weightMethod: wm,
-            weightLabel: label,
-            ranking: data.ranking || []
+            const label = WEIGHT_METHODS.find(w => w.value === wm)?.label || wm
+            return {
+              method: sensitivityMethod,
+              weightMethod: wm,
+              weightLabel: label,
+              ranking: data.ranking || []
+            }
+          } catch (err) {
+            console.warn(`Error calculating for ${wm}:`, err)
+            return null
           }
         })
       )
+
+      // Filter out null results (failed calculations)
+      const validResults = finalResults.filter((r): r is NonNullable<typeof r> => r !== null);
 
       // Handle "Custom" weights
       if (sensitivityWeightMethods.includes("custom")) {
@@ -3128,7 +3212,7 @@ export default function MCDMCalculator() {
         })
         const data = await response.json()
         if (response.ok) {
-          finalResults.push({
+          validResults.push({
             method: sensitivityMethod,
             weightMethod: "custom",
             weightLabel: "Custom Weights",
@@ -3137,7 +3221,7 @@ export default function MCDMCalculator() {
         }
       }
 
-      setSensitivityWeightComparisonResults(finalResults)
+      setSensitivityWeightComparisonResults(validResults)
 
       // --- New: Prepare Weight Variation Data ---
       const weightDataMap: Record<string, any> = {}
@@ -3231,6 +3315,41 @@ export default function MCDMCalculator() {
             </p>
           </div>
         )}
+
+        {/* Data Validation Warning for Weight Calculation */}
+        {showWeightDataWarning && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
+            <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-6 py-4 rounded-lg shadow-2xl border-2 border-white">
+              <div className="flex items-center gap-3">
+                <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <div>
+                  <p className="font-bold text-sm">No Data Available!</p>
+                  <p className="text-xs mt-1">Upload data first, then proceed further</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SWEI/SWI Validation Error for Sensitivity Analysis */}
+        {sensitivityValidationError && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
+            <div className="bg-gradient-to-r from-red-600 to-red-500 text-white px-6 py-4 rounded-lg shadow-2xl border-2 border-white max-w-md">
+              <div className="flex items-center gap-3">
+                <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <div>
+                  <p className="font-bold text-sm">Validation Error!</p>
+                  <p className="text-xs mt-1">{sensitivityValidationError}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="w-full max-w-7xl px-4 sm:px-6 md:px-8 mx-auto py-4 sm:py-6">
           <div className="sticky top-0 z-40 bg-[var(--page-bg-color,white)] -mx-4 px-4 pt-4 pb-1 sm:relative sm:top-auto sm:z-auto sm:bg-transparent sm:mx-0 sm:px-0 sm:pt-0 sm:pb-0 border-b border-gray-100 sm:border-0 shadow-sm sm:shadow-none">
             <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
@@ -3808,6 +3927,11 @@ export default function MCDMCalculator() {
                               type="checkbox"
                               checked={sensitivityWeightMethods.includes(w.value)}
                               onChange={() => {
+                                if (!hasValidDataForWeightCalculation()) {
+                                  setShowWeightDataWarning(true)
+                                  setTimeout(() => setShowWeightDataWarning(false), 3000)
+                                  return
+                                }
                                 if (w.value === "piprecia" && !sensitivityWeightMethods.includes("piprecia")) {
                                   setIsPipreciaDialogOpen(true)
                                 }
@@ -3837,6 +3961,11 @@ export default function MCDMCalculator() {
                             type="checkbox"
                             checked={sensitivityWeightMethods.includes("custom")}
                             onChange={(e) => {
+                              if (!hasValidDataForWeightCalculation()) {
+                                setShowWeightDataWarning(true)
+                                setTimeout(() => setShowWeightDataWarning(false), 3000)
+                                return
+                              }
                               toggleSensitivityWeightMethod("custom")
                               if (e.target.checked) setIsCustomWeightsDialogOpen(true)
                             }}
