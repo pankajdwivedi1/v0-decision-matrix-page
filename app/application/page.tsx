@@ -3421,7 +3421,7 @@ export default function MCDMCalculator() {
                     setReturnToTab(homeTab === "weightMethods" ? "weightMethods" : "rankingMethods")
                     setCurrentStep("input")
                   }}
-                  className="w-full bg-black text-white hover:bg-gray-800 text-xs h-8"
+                  className="w-full bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
                 >
                   + Add Alternative & Criteria
                 </Button>
@@ -3510,7 +3510,7 @@ export default function MCDMCalculator() {
                     onClick={() => {
                       handleCalculate()
                     }}
-                    className="w-full bg-black text-white hover:bg-gray-800 text-sm h-10 shadow-sm"
+                    className="w-full bg-blue-600 text-white hover:bg-blue-700 text-sm h-10 shadow-sm"
                   >
                     Calculate ranking
                   </Button>
@@ -3666,7 +3666,7 @@ export default function MCDMCalculator() {
                         // Navigate to Matrix step where sidebar shows Weight Methods
                         setCurrentStep("matrix")
                       }}
-                      className="w-full bg-black text-white hover:bg-gray-800 text-sm h-10 shadow-sm"
+                      className="w-full bg-blue-600 text-white hover:bg-blue-700 text-sm h-10 shadow-sm"
                     >
                       Calculate weight
                     </Button>
@@ -4170,7 +4170,7 @@ export default function MCDMCalculator() {
                     type="button"
                     onClick={() => handleWeightSensitivityAnalysis()}
                     disabled={sensitivityLoading}
-                    className="w-full sm:w-auto bg-black text-white hover:bg-gray-800 text-xs h-8"
+                    className="w-full sm:w-auto bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
                   >
                     {sensitivityLoading ? "Calculating..." : "Calculate Weights & Compare"}
                   </Button>
@@ -4703,7 +4703,7 @@ export default function MCDMCalculator() {
                       setReturnToTab("rankingComparison")
                       setCurrentStep("input")
                     }}
-                    className="w-full bg-black text-white hover:bg-gray-800 text-xs h-8"
+                    className="w-full bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
                   >
                     + Add Alternative & Criteria
                   </Button>
@@ -4948,7 +4948,7 @@ export default function MCDMCalculator() {
                     <Button
                       type="button"
                       onClick={handleComparisonCalculate}
-                      className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                      className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
                       disabled={comparisonLoading}
                     >
                       {comparisonLoading ? "Calculating..." : "Calculate comparison"}
@@ -5655,7 +5655,7 @@ export default function MCDMCalculator() {
                       setReturnToTab("sensitivityAnalysis")
                       setCurrentStep("input")
                     }}
-                    className="w-full bg-black text-white hover:bg-gray-800 text-xs h-8"
+                    className="w-full bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
                   >
                     + Add Alternative & Criteria
                   </Button>
@@ -5891,7 +5891,7 @@ export default function MCDMCalculator() {
                     <Button
                       type="button"
                       onClick={() => handleWeightSensitivityAnalysis()}
-                      className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                      className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
                       disabled={sensitivityLoading}
                     >
                       {sensitivityLoading ? "Calculating..." : "Calculate Sensitivity"}
@@ -6468,7 +6468,7 @@ export default function MCDMCalculator() {
                   <div className="flex justify-end">
                     <Button
                       onClick={handleSensitivityAnalysis}
-                      className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                      className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
                       disabled={sensitivityLoading}
                     >
                       {sensitivityLoading ? "Calculating..." : "Run Sensitivity Analysis"}
@@ -6808,7 +6808,7 @@ export default function MCDMCalculator() {
           </Card>
 
           <div className="flex gap-2 justify-end mt-4">
-            <Button onClick={generateTable} className="bg-black text-white hover:bg-gray-800 text-xs h-8">
+            <Button onClick={generateTable} className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8">
               Next
             </Button>
           </div>
@@ -7072,7 +7072,7 @@ export default function MCDMCalculator() {
                           setCurrentStep("home")
                         }
                       }}
-                      className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                      className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
                     >
                       Import Selected Data
                     </Button>
@@ -7207,7 +7207,7 @@ export default function MCDMCalculator() {
                         }
                       }
                     }}
-                    className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                    className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
                   >
                     Next
                   </Button>

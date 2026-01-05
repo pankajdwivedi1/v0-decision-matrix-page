@@ -166,20 +166,20 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
     }
   }, [selectedCriterionToVary, criteria, alternatives, selectedRankingMethod, selectedWeightMethod]);
 
-  // Auto-recalculate when weight method changes (in results view)
+  // Auto-recalculate when weight method or actual weight values change (in results view)
   useEffect(() => {
-    if (!showConfig && kSensResults && hasValidData()) {
+    if (kSensResults && hasValidData()) {
       setKSensResults(null); // Clear old results to prevent displaying stale data
       const timer = setTimeout(() => {
         performKSensitivityAnalysis();
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [selectedWeightMethod, workingCriteria]);
+  }, [selectedWeightMethod, JSON.stringify(workingCriteria.map(c => c.weight))]);
 
   // Auto-recalculate when ranking method changes (in results view)
   useEffect(() => {
-    if (!showConfig && kSensResults && hasValidData()) {
+    if (kSensResults && hasValidData()) {
       setKSensResults(null); // Clear old results
       performKSensitivityAnalysis();
     }
@@ -187,7 +187,7 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
 
   // Auto-recalculate when criterion to vary changes (in results view)
   useEffect(() => {
-    if (!showConfig && kSensResults && hasValidData() && selectedCriterionToVary) {
+    if (kSensResults && hasValidData() && selectedCriterionToVary) {
       setKSensResults(null); // Clear old results
       performKSensitivityAnalysis(undefined, undefined, selectedCriterionToVary);
     }
@@ -195,14 +195,14 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
 
   // Auto-recalculate when variation range changes (in results view)
   useEffect(() => {
-    if (!showConfig && kSensResults && hasValidData()) {
+    if (kSensResults && hasValidData()) {
       setKSensResults(null); // Clear old results
       const timer = setTimeout(() => {
         performKSensitivityAnalysis();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [kSensVariationRange]);
+  }, [JSON.stringify(kSensVariationRange)]);
 
   // Handle ranking method change
   const handleRankingMethodChange = (method: string) => {
@@ -1723,7 +1723,7 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
                     <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px]">✓</span>
                     Alternatives to Analyze
                   </h4>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-3 gap-2 md:flex md:flex-wrap">
                     {alternatives.map((alt) => (
                       <button
                         key={alt.id}
@@ -1734,7 +1734,7 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
                           setSelectedAltIds(newIds);
                           if (kSensResults) setKSensResults(null);
                         }}
-                        className={`px-3 py-1 rounded-full text-xs transition-colors border ${selectedAltIds.includes(alt.id)
+                        className={`px-3 py-1 rounded text-xs transition-colors border ${selectedAltIds.includes(alt.id)
                           ? 'bg-blue-600 text-white border-blue-600'
                           : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
                           }`}
@@ -1748,59 +1748,60 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
                   </p>
                 </div>
 
-                {/* Ready to Analyze Card */}
-                <Card className="border-2 border-dashed border-blue-200 bg-blue-50/30 rounded-xl overflow-hidden shadow-sm">
-                  <CardContent className="p-6 sm:p-10">
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 mb-4">
-                        <RefreshCw className={`w-6 h-6 ${isAnalyzing ? 'animate-spin' : ''}`} />
-                      </div>
-                      <h3 className="text-base sm:text-xl font-bold mb-2 text-gray-900 uppercase tracking-tight">Ready to Analyze</h3>
-                      <p className="text-[10px] sm:text-sm text-gray-600 mb-8 max-w-xs mx-auto">
-                        Total workload: <strong>{selectedAltIds.length} alternatives</strong> × <strong>{criteria.length} criteria</strong> × <strong>{kSensVariationRange.length} variations</strong>
-                      </p>
-                      <Button
-                        onClick={() => {
-                          if (!hasValidData()) {
-                            setShowDataWarning(true);
-                            setTimeout(() => setShowDataWarning(false), 3000);
-                            return;
-                          }
-                          setShowConfig(false);
-                          performKSensitivityAnalysis();
-                          setKSensActiveTab('results');
-                        }}
-                        disabled={!hasValidData() || isAnalyzing}
-                        className={`w-full sm:w-auto h-11 sm:h-14 text-xs sm:text-base px-6 sm:px-12 rounded-full font-bold shadow-lg transition-all duration-300 transform active:scale-95 ${hasValidData() && !isAnalyzing
+                {/* Ready to Analyze Card - Only show before first analysis */}
+                {!kSensResults && (
+                  <Card className="border-2 border-dashed border-blue-200 bg-blue-50/30 rounded-xl overflow-hidden shadow-sm">
+                    <CardContent className="p-6 sm:p-10">
+                      <div className="text-center">
+                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 mb-4">
+                          <RefreshCw className={`w-6 h-6 ${isAnalyzing ? 'animate-spin' : ''}`} />
+                        </div>
+                        <h3 className="text-base sm:text-xl font-bold mb-2 text-gray-900 uppercase tracking-tight">Ready to Analyze</h3>
+                        <p className="text-[10px] sm:text-sm text-gray-600 mb-8 max-w-xs mx-auto">
+                          Total workload: <strong>{selectedAltIds.length} alternatives</strong> × <strong>{criteria.length} criteria</strong> × <strong>{kSensVariationRange.length} variations</strong>
+                        </p>
+                        <Button
+                          onClick={() => {
+                            if (!hasValidData()) {
+                              setShowDataWarning(true);
+                              setTimeout(() => setShowDataWarning(false), 3000);
+                              return;
+                            }
+                            performKSensitivityAnalysis();
+                            setKSensActiveTab('results');
+                          }}
+                          disabled={!hasValidData() || isAnalyzing}
+                          className={`w-full sm:w-auto h-11 sm:h-14 text-xs sm:text-base px-6 sm:px-12 rounded font-bold shadow-lg transition-all duration-300 transform active:scale-95 ${hasValidData() && !isAnalyzing
                             ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 hover:shadow-green-200/50 hover:-translate-y-0.5'
                             : 'bg-gray-300 text-gray-400 cursor-not-allowed opacity-50'
-                          }`}
-                      >
-                        {isAnalyzing ? (
-                          <div className="flex items-center gap-2">
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Processing...</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">🚀</span>
-                            <span>Run K% Sensitivity Analysis</span>
-                          </div>
-                        )}
-                      </Button>
-                      <p className="text-[9px] sm:text-[11px] text-gray-400 mt-5">
-                        Analysis processes {selectedAltIds.length * criteria.length * kSensVariationRange.length} individual ranking computations
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                            }`}
+                        >
+                          {isAnalyzing ? (
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Processing...</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">🚀</span>
+                              <span>Run K% Sensitivity Analysis</span>
+                            </div>
+                          )}
+                        </Button>
+                        <p className="text-[9px] sm:text-[11px] text-gray-400 mt-5">
+                          Analysis processes {selectedAltIds.length * criteria.length * kSensVariationRange.length} individual ranking computations
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
 
 
 
             {/* Results Section */}
-            {!showConfig && (
+            {kSensResults && (
               <div className="space-y-4">
 
                 {/* Show processing state */}
@@ -1811,391 +1812,6 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
                     <p className="text-sm text-gray-600">Please wait while we analyze your data</p>
                   </div>
                 )}
-
-                {/* Configuration controls (shown after results) */}
-                <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-6 shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Weight Method Selector */}
-                    <div>
-                      <label className="block text-xs font-semibold mb-2 text-gray-700 uppercase tracking-wide">
-                        WEIGHT METHOD
-                      </label>
-                      <Select value={selectedWeightMethod} onValueChange={handleWeightMethodChange}>
-                        <SelectTrigger className="w-full h-10 text-sm border-gray-300">
-                          <SelectValue placeholder="Select weight method" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px]">
-                          <SelectGroup>
-                            <SelectLabel className="text-xs font-bold text-blue-600 px-2 py-1.5 bg-blue-50/50">Objective Weights</SelectLabel>
-                            <SelectItem value="equal" className="text-sm pl-6">Equal Weight</SelectItem>
-                            <SelectItem value="entropy" className="text-sm pl-6">Entropy Weight</SelectItem>
-                            <SelectItem value="critic" className="text-sm pl-6">CRITIC Weight</SelectItem>
-                            <SelectItem value="merec" className="text-sm pl-6">MEREC Weight</SelectItem>
-                            <SelectItem value="wenslo" className="text-sm pl-6">WENSLO Weight</SelectItem>
-                            <SelectItem value="lopcow" className="text-sm pl-6">LOPCOW Weight</SelectItem>
-                            <SelectItem value="dematel" className="text-sm pl-6">DEMATEL Weight</SelectItem>
-                            <SelectItem value="sd" className="text-sm pl-6">SD Weight</SelectItem>
-                            <SelectItem value="variance" className="text-sm pl-6">Variance Weight</SelectItem>
-                            <SelectItem value="mad" className="text-sm pl-6">MAD Weight</SelectItem>
-                            <SelectItem value="distance" className="text-sm pl-6">Distance-based Weight</SelectItem>
-                            <SelectItem value="svp" className="text-sm pl-6">SVP Weight</SelectItem>
-                            <SelectItem value="mdm" className="text-sm pl-6">MDM Weight</SelectItem>
-                            <SelectItem value="lsw" className="text-sm pl-6">LSW Weight</SelectItem>
-                            <SelectItem value="gpow" className="text-sm pl-6">GPOW Weight</SelectItem>
-                            <SelectItem value="lpwm" className="text-sm pl-6">LPWM Weight</SelectItem>
-                            <SelectItem value="pcwm" className="text-sm pl-6">PCWM Weight</SelectItem>
-                          </SelectGroup>
-                          <SelectGroup>
-                            <SelectLabel className="text-xs font-bold text-purple-600 px-2 py-1.5 bg-purple-50/50 mt-1">Subjective Weights</SelectLabel>
-                            <SelectItem value="ahp" className="text-sm pl-6">AHP Weight</SelectItem>
-                            <SelectItem value="piprecia" className="text-sm pl-6">PIPRECIA Weight</SelectItem>
-                            <SelectItem value="swara" className="text-sm pl-6">SWARA Weight</SelectItem>
-                            <SelectItem value="roc" className="text-sm pl-6">ROC Weight</SelectItem>
-                            <SelectItem value="rr" className="text-sm pl-6">RR Weight</SelectItem>
-                            <SelectItem value="custom" className="text-sm pl-6">Enter Own Weight</SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Ranking Method Selector */}
-                    <div>
-                      <label className="block text-xs font-semibold mb-2 text-gray-700 uppercase tracking-wide">
-                        RANKING METHOD
-                      </label>
-                      <Select value={selectedRankingMethod} onValueChange={handleRankingMethodChange}>
-                        <SelectTrigger className="w-full h-10 text-sm border-gray-300">
-                          <SelectValue placeholder="Select ranking method" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px]">
-                          <SelectItem value="swei" className="text-sm">SWEI</SelectItem>
-                          <SelectItem value="swi" className="text-sm">SWI</SelectItem>
-                          <SelectItem value="topsis" className="text-sm">TOPSIS</SelectItem>
-                          <SelectItem value="vikor" className="text-sm">VIKOR</SelectItem>
-                          <SelectItem value="waspas" className="text-sm">WASPAS</SelectItem>
-                          <SelectItem value="edas" className="text-sm">EDAS</SelectItem>
-                          <SelectItem value="moora" className="text-sm">MOORA</SelectItem>
-                          <SelectItem value="multimoora" className="text-sm">MULTIMOORA</SelectItem>
-                          <SelectItem value="todim" className="text-sm">TODIM</SelectItem>
-                          <SelectItem value="codas" className="text-sm">CODAS</SelectItem>
-                          <SelectItem value="moosra" className="text-sm">MOOSRA</SelectItem>
-                          <SelectItem value="mairca" className="text-sm">MAIRCA</SelectItem>
-                          <SelectItem value="mabac" className="text-sm">MABAC</SelectItem>
-                          <SelectItem value="marcos" className="text-sm">MARCOS</SelectItem>
-                          <SelectItem value="cocoso" className="text-sm">COCOSO</SelectItem>
-                          <SelectItem value="copras" className="text-sm">COPRAS</SelectItem>
-                          <SelectItem value="promethee" className="text-sm">PROMETHEE</SelectItem>
-                          <SelectItem value="promethee1" className="text-sm">PROMETHEE I</SelectItem>
-                          <SelectItem value="promethee2" className="text-sm">PROMETHEE II</SelectItem>
-                          <SelectItem value="electre" className="text-sm">ELECTRE</SelectItem>
-                          <SelectItem value="electre1" className="text-sm">ELECTRE I</SelectItem>
-                          <SelectItem value="electre2" className="text-sm">ELECTRE II</SelectItem>
-                          <SelectItem value="gra" className="text-sm">GRA</SelectItem>
-                          <SelectItem value="aras" className="text-sm">ARAS</SelectItem>
-                          <SelectItem value="wsm" className="text-sm">WSM</SelectItem>
-                          <SelectItem value="wpm" className="text-sm">WPM</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Manual Weight Input for Subjective Methods (if needed in Step 3) */}
-                  {['ahp', 'piprecia', 'swara', 'roc', 'rr', 'custom'].includes(selectedWeightMethod) && (
-                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded text-xs font-semibold">
-                          Subjective Weights - {selectedWeightMethod.toUpperCase()}
-                        </div>
-                      </div>
-                      <p className="text-xs font-semibold mb-3 text-black">Enter Weights Manually:</p>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {criteria.map((crit) => (
-                          <div key={crit.id}>
-                            <label className="block text-xs font-medium mb-1 text-black">{crit.name}</label>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.1"
-                              placeholder="0.0"
-                              value={customWeights[crit.id] || ''}
-                              onChange={(e) => handleCustomWeightChange(crit.id, e.target.value)}
-                              className="w-full px-2 py-1 border rounded text-xs"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                      <Button
-                        onClick={applyCustomWeights}
-                        className="mt-3 bg-purple-600 text-white hover:bg-purple-700 text-xs h-7"
-                        size="sm"
-                      >
-                        Apply Weights
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Current Weights Display */}
-                  <div className="bg-gray-50 rounded-lg p-2 sm:p-4">
-                    <h4 className="text-[8px] sm:text-xs font-semibold mb-1.5 sm:mb-3 text-gray-700">Current Weights</h4>
-                    <div className="flex flex-wrap gap-1 sm:gap-2">
-                      {workingCriteria.map((crit) => (
-                        <div key={crit.id} className="bg-white rounded p-1 sm:p-2.5 border border-gray-200 flex-shrink-0">
-                          <div className="text-[7px] sm:text-xs font-medium text-gray-700 mb-0.5 sm:mb-1 whitespace-nowrap">{crit.name}</div>
-                          <div className="flex items-center gap-1 sm:gap-2">
-                            <span className="text-[7px] sm:text-xs font-bold text-blue-600 whitespace-nowrap">{(crit.weight * 100).toFixed(2)}%</span>
-                            <span className={`text-[7px] sm:text-xs ${crit.type === 'beneficial' ? 'text-green-600' : 'text-red-600'}`}>
-                              {crit.type === 'beneficial' ? '↑' : '↓'}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Criterion Selector for Variation in Step 3 */}
-                  <div className="bg-white rounded-lg p-4 border border-gray-200 mt-4">
-                    <label className="block text-xs font-semibold mb-2 text-gray-700">Select Criterion to Vary</label>
-                    <Select value={selectedCriterionToVary} onValueChange={(value) => {
-                      setSelectedCriterionToVary(value);
-                      // Auto-recalculation is now handled by useEffect
-                    }}>
-                      <SelectTrigger className="w-full h-10 text-sm border-gray-300">
-                        <SelectValue placeholder="Choose a criterion to analyze" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {workingCriteria.map((crit) => (
-                          <SelectItem key={crit.id} value={crit.id} className="text-sm">
-                            <div className="flex items-center justify-between w-full gap-3">
-                              <span className="font-medium">{crit.name}</span>
-                              <div className="flex items-center gap-2">
-                                <span className={`text-xs px-2 py-0.5 rounded ${crit.type === 'beneficial'
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-red-100 text-red-700'
-                                  }`}>
-                                  {crit.type === 'beneficial' ? '↑ Max' : '↓ Min'}
-                                </span>
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {selectedCriterionToVary && (
-                      <div className="mt-2 text-xs text-gray-600">
-                        Selected: <span className="font-semibold text-blue-600">
-                          {workingCriteria.find(c => c.id === selectedCriterionToVary)?.name}
-                        </span>
-                        {' ('}
-                        {workingCriteria.find(c => c.id === selectedCriterionToVary)?.type === 'beneficial' ? 'Beneficial ↑' : 'Non-beneficial ↓'}
-                        {')'}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Quick Presets Section */}
-                  <div className="bg-white rounded-lg p-2 sm:p-4 border border-gray-200 mt-3 sm:mt-4">
-                    <h4 className="text-[8px] sm:text-xs font-semibold mb-2 sm:mb-3 text-gray-700">Quick Presets</h4>
-                    <div className="grid grid-cols-5 gap-1 sm:gap-2">
-                      <button
-                        onClick={() => {
-                          setKSensVariationRange([-10, -5, 0, 5, 10]);
-                          // Auto-recalculation is now handled by useEffect
-                        }}
-                        className={`w-full p-1.5 sm:p-2.5 border-2 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left h-[42px] sm:h-[60px] ${JSON.stringify(kSensVariationRange) === JSON.stringify([-10, -5, 0, 5, 10])
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200'
-                          }`}
-                      >
-                        <div className="text-[8px] sm:text-sm font-semibold text-black">±10%</div>
-                        <div className="text-[7px] sm:text-xs text-gray-600">Fine (5 pts)</div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setKSensVariationRange([-20, -10, 0, 10, 20]);
-                          if (!showConfig && kSensResults) performKSensitivityAnalysis();
-                        }}
-                        className={`w-full p-1.5 sm:p-2.5 border-2 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left h-[42px] sm:h-[60px] ${JSON.stringify(kSensVariationRange) === JSON.stringify([-20, -10, 0, 10, 20])
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200'
-                          }`}
-                      >
-                        <div className="text-[8px] sm:text-sm font-semibold text-black">±20%</div>
-                        <div className="text-[7px] sm:text-xs text-gray-600">Fine (5 pts)</div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setKSensVariationRange([-30, -20, -10, 0, 10, 20, 30]);
-                          if (!showConfig && kSensResults) performKSensitivityAnalysis();
-                        }}
-                        className={`w-full p-1.5 sm:p-2.5 border-2 rounded-lg hover:border-blue-600 transition-colors text-left h-[42px] sm:h-[60px] ${JSON.stringify(kSensVariationRange) === JSON.stringify([-30, -20, -10, 0, 10, 20, 30])
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-blue-500 bg-blue-50'
-                          }`}
-                      >
-                        <div className="text-[8px] sm:text-sm font-semibold text-blue-600">±30% ★</div>
-                        <div className="text-[7px] sm:text-xs text-gray-600">Standard (7)</div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setKSensVariationRange([-40, -30, -20, -10, 0, 10, 20, 30, 40]);
-                          if (!showConfig && kSensResults) performKSensitivityAnalysis();
-                        }}
-                        className={`w-full p-1.5 sm:p-2.5 border-2 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left h-[42px] sm:h-[60px] ${JSON.stringify(kSensVariationRange) === JSON.stringify([-40, -30, -20, -10, 0, 10, 20, 30, 40])
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200'
-                          }`}
-                      >
-                        <div className="text-[8px] sm:text-sm font-semibold text-black">±40%</div>
-                        <div className="text-[7px] sm:text-xs text-gray-600">Wide (9 pts)</div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setKSensVariationRange([-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50]);
-                          if (!showConfig && kSensResults) performKSensitivityAnalysis();
-                        }}
-                        className={`w-full p-1.5 sm:p-2.5 border-2 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left h-[42px] sm:h-[60px] ${JSON.stringify(kSensVariationRange) === JSON.stringify([-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50])
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200'
-                          }`}
-                      >
-                        <div className="text-[8px] sm:text-sm font-semibold text-black">±50%</div>
-                        <div className="text-[7px] sm:text-xs text-gray-600">Wide (11 pts)</div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setKSensVariationRange([-60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60]);
-                          if (!showConfig && kSensResults) performKSensitivityAnalysis();
-                        }}
-                        className={`w-full p-1.5 sm:p-2.5 border-2 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left h-[42px] sm:h-[60px] ${JSON.stringify(kSensVariationRange) === JSON.stringify([-60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60])
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200'
-                          }`}
-                      >
-                        <div className="text-[8px] sm:text-sm font-semibold text-black">±60%</div>
-                        <div className="text-[7px] sm:text-xs text-gray-600">Wide (13 pts)</div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setKSensVariationRange([-70, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70]);
-                          if (!showConfig && kSensResults) performKSensitivityAnalysis();
-                        }}
-                        className={`w-full p-1.5 sm:p-2.5 border-2 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left h-[42px] sm:h-[60px] ${JSON.stringify(kSensVariationRange) === JSON.stringify([-70, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70])
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200'
-                          }`}
-                      >
-                        <div className="text-[8px] sm:text-sm font-semibold text-black">±70%</div>
-                        <div className="text-[7px] sm:text-xs text-gray-600">Wide (15 pts)</div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setKSensVariationRange([-80, -70, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70, 80]);
-                          if (!showConfig && kSensResults) performKSensitivityAnalysis();
-                        }}
-                        className={`w-full p-1.5 sm:p-2.5 border-2 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left h-[42px] sm:h-[60px] ${JSON.stringify(kSensVariationRange) === JSON.stringify([-80, -70, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70, 80])
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200'
-                          }`}
-                      >
-                        <div className="text-[8px] sm:text-sm font-semibold text-black">±80%</div>
-                        <div className="text-[7px] sm:text-xs text-gray-600">Wide (17 pts)</div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setKSensVariationRange([-90, -80, -70, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90]);
-                          if (!showConfig && kSensResults) performKSensitivityAnalysis();
-                        }}
-                        className={`w-full p-1.5 sm:p-2.5 border-2 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left h-[42px] sm:h-[60px] ${JSON.stringify(kSensVariationRange) === JSON.stringify([-90, -80, -70, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90])
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200'
-                          }`}
-                      >
-                        <div className="text-[8px] sm:text-sm font-semibold text-black">±90%</div>
-                        <div className="text-[7px] sm:text-xs text-gray-600">Wide (19 pts)</div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setKSensVariationRange([-100, -90, -80, -70, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
-                          if (!showConfig && kSensResults) performKSensitivityAnalysis();
-                        }}
-                        className={`w-full p-1.5 sm:p-2.5 border-2 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left h-[42px] sm:h-[60px] ${JSON.stringify(kSensVariationRange) === JSON.stringify([-100, -90, -80, -70, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200'
-                          }`}
-                      >
-                        <div className="text-[8px] sm:text-sm font-semibold text-black">±100%</div>
-                        <div className="text-[7px] sm:text-xs text-gray-600">Full (21 pts)</div>
-                      </button>
-                    </div>
-
-                    {/* Or Enter Custom Variation Points */}
-                    <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
-                      <label className="block text-[8px] sm:text-xs font-medium mb-1.5 sm:mb-2 text-gray-700">
-                        Or Enter Custom Variation Points
-                      </label>
-                      <input
-                        type="text"
-                        value={kSensVariationRange.join(', ')}
-                        onChange={(e) => {
-                          const values = e.target.value.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
-                          if (values.length > 0) {
-                            setKSensVariationRange(values.sort((a, b) => a - b));
-                            // Auto-recalculation is now handled by useEffect
-                          }
-                        }}
-                        className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-[8px] sm:text-xs"
-                        placeholder="e.g., -30, -20, -10, 0, 10, 20, 30"
-                      />
-                    </div>
-
-                    {/* Selected Variation Range Display */}
-                    <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-gray-50 rounded-lg">
-                      <p className="text-[8px] sm:text-xs font-medium mb-1 sm:mb-2 text-gray-700">Selected Variation Range:</p>
-                      <div className="flex flex-wrap gap-0.5 sm:gap-1">
-                        {kSensVariationRange.map((val, idx) => (
-                          <span key={idx} className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[7px] sm:text-xs font-medium ${val < 0 ? 'bg-red-100 text-red-700' : val > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-800'
-                            }`}>
-                            {val > 0 ? '+' : ''}{val}%
-                          </span>
-                        ))}
-                      </div>
-                      <p className="text-[7px] sm:text-xs text-gray-600 mt-1.5 sm:mt-2">
-                        Will test <strong>{kSensVariationRange.length} variations</strong> for each of <strong>{criteria.length} criteria</strong>
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Alternatives Selection */}
-                  <div className="rounded-lg p-4 bg-gray-50">
-                    <h4 className="text-xs font-semibold mb-2 text-black flex items-center gap-2">
-                      <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px]">✓</span>
-                      Alternatives to Analyze
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {alternatives.map((alt) => (
-                        <button
-                          key={alt.id}
-                          onClick={() => {
-                            const newIds = selectedAltIds.includes(alt.id)
-                              ? selectedAltIds.filter(id => id !== alt.id)
-                              : [...selectedAltIds, alt.id];
-                            setSelectedAltIds(newIds);
-                            if (!showConfig && kSensResults) performKSensitivityAnalysis(newIds);
-                          }}
-                          className={`px-3 py-1 rounded-full text-xs transition-colors border ${selectedAltIds.includes(alt.id)
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
-                            }`}
-                        >
-                          {alt.name}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs text-gray-600 mt-3">
-                      Total: <strong>{selectedAltIds.length} alternatives</strong> will be analyzed across <strong>{criteria.length} criteria</strong>
-                    </p>
-                  </div>
-                </div>
 
                 {kSensResults && (
                   <div>
