@@ -1,6 +1,8 @@
 ﻿"use client";
 
 import { useState, useRef, useMemo, Fragment, useEffect } from "react"
+import { MCDMMethod, WeightMethod, PageStep, ComparisonResult, SensitivityResult, EntropyResult, CriticResult, AHPResult, PipreciaResult, MERECResult, SWARAResult, WensloResult, LopcowResult, DematelResult, SDResult, VarianceResult, MADResult, DBWResult, SVPResult, MDMResult, LSWResult, GPOWResult, LPWMResult, PCWMResult, RankingWeightResult, ROCResult, RRResult, Criterion, Alternative, SensitivityRankingItem } from "@/types/mcdm"
+import { MCDM_METHODS, WEIGHT_METHODS, CHART_COLORS } from "@/constants/mcdm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -101,490 +103,8 @@ declare global {
   }
 }
 
-interface Criterion {
-  id: string
-  name: string
-  weight: number
-  type: "beneficial" | "non-beneficial"
-}
-
-interface Alternative {
-  id: string
-  name: string
-  scores: Record<string, number | "">
-}
-
-type MCDMMethod = "wsm" | "wpm" | "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "multimoora" | "todim" | "codas" | "moosra" | "mairca" | "marcos" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2" | "mabac" | "gra" | "aras"
-type WeightMethod = "equal" | "entropy" | "critic" | "ahp" | "piprecia" | "merec" | "swara" | "wenslo"
-  | "lopcow"
-  | "dematel"
-  | "sd"
-  | "variance"
-  | "mad"
-  | "dbw"
-  | "svp"
-  | "mdm"
-  | "lsw"
-  | "gpow"
-  | "lpwm"
-  | "pcwm"
-  | "roc"
-  | "rr"
-  | "custom"
-type PageStep = "home" | "input" | "table" | "matrix" | "calculate"
-type ComparisonResult = {
-  method: MCDMMethod
-  label: string
-  ranking: { alternativeName: string; rank: number; score: number | string }[]
-}
-
-interface PipreciaResult {
-  weights: Record<string, number>
-  s_values: Record<string, number>
-  k_values: Record<string, number>
-  q_values: Record<string, number>
-}
-
-interface EntropyResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  entropyValues: Record<string, number>
-  diversityValues: Record<string, number>
-  entropyMatrix: Record<string, Record<string, number>>
-}
-
-interface SensitivityRankingItem {
-  alternativeName: string;
-  rank: number;
-  score: number | string;
-}
-
-interface SensitivityResult {
-  weight: number;
-  weightLabel: string;
-  ranking: SensitivityRankingItem[];
-}
-
-interface CriticResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  standardDeviations: Record<string, number>
-  correlationMatrix: Record<string, Record<string, number>>
-  informationAmounts: Record<string, number>
-}
-
-interface AHPResult {
-  weights: Record<string, number>
-  pairwiseMatrix: number[][]
-  normalizedMatrix: number[][]
-  lambdaMax: number
-  consistencyIndex: number
-  consistencyRatio: number
-}
-
-interface MERECResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  performanceScores: Record<string, number>
-  removalScores: Record<string, Record<string, number>>
-  removalEffects: Record<string, number>
-}
-
-interface SWARAResult {
-  weights: Record<string, number>
-  stepFactors: Record<string, number>
-  preliminaryWeights: Record<string, number>
-  coefficients: Record<string, number>
-}
-
-interface WensloResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  wensloValues: Record<string, number>
-  diversityValues: Record<string, number>
-}
-
-interface LopcowResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  geometricMeans: Record<string, number>
-  logPercentages: Record<string, number>
-}
-
-interface DematelResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  directRelationMatrix: Record<string, Record<string, number>>
-  totalRelationMatrix: Record<string, Record<string, number>>
-  dValues: Record<string, number>
-  rValues: Record<string, number>
-  pValues: Record<string, number>
-  eValues: Record<string, number>
-}
-
-interface SDResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  sigmaValues: Record<string, number>
-}
-
-interface VarianceResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  varianceValues: Record<string, number>
-}
-
-interface MADResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  madValues: Record<string, number>
-}
-
-interface DBWResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  distanceValues: Record<string, number>
-}
-
-interface SVPResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  varianceValues: Record<string, number>
-}
-
-interface MDMResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  deviationValues: Record<string, number>
-}
-
-interface LSWResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  leastSquaresValues: Record<string, number>
-  idealSolution: Record<string, number>
-}
-
-interface GPOWResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  goalDeviationValues: Record<string, number>
-  goalValues: Record<string, number>
-}
-
-interface LPWMResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  lowerDeviationValues: Record<string, number>
-  antiIdealValues: Record<string, number>
-}
-
-interface PCWMResult {
-  weights: Record<string, number>
-  normalizedMatrix: Record<string, Record<string, number>>
-  correlationMatrix: Record<string, Record<string, number>>
-  independenceMeasures: Record<string, number>
-}
-interface RankingWeightResult {
-  weights: Record<string, number>
-  ranks: Record<string, number>
-}
-
-interface ROCResult extends RankingWeightResult { }
-interface RRResult extends RankingWeightResult { }
 
 
-const MCDM_METHODS: { value: MCDMMethod; label: string; description: string; formula: string }[] = [
-  {
-    value: "swei",
-    label: "SWEI",
-    description: "Sum Weighted Exponential Information",
-    formula: "Score = Σ(log₂(1/IDM)^Weight)"
-  },
-  {
-    value: "swi",
-    label: "SWI",
-    description: "Sum Weighted Information",
-    formula: "Score = Σ(Normalized Score × Weight)"
-  },
-  {
-    value: "topsis",
-    label: "TOPSIS",
-    description: "Technique for Order Preference by Similarity to Ideal Solution",
-    formula: "Score = D⁻ / (D⁺ + D⁻)"
-  },
-  {
-    value: "vikor",
-    label: "VIKOR",
-    description: "VlseKriterijumska Optimizacija I Kompromisno Resenje",
-    formula: "Q = v(S-S*)/(S⁻-S*) + (1-v)(R-R*)/(R⁻-R*)"
-  },
-  {
-    value: "waspas",
-    label: "WASPAS",
-    description: "Weighted Aggregated Sum Product Assessment",
-    formula: "Q = λ × WSM + (1-λ) × WPM"
-  },
-  {
-    value: "edas",
-    label: "EDAS",
-    description: "Evaluation based on Distance from Average Solution",
-    formula: "AS = (PDA + NDA) / 2"
-  },
-  {
-    value: "moora",
-    label: "MOORA",
-    description: "Multi-Objective Optimization by Ratio Analysis",
-    formula: "y = Σ(beneficial) - Σ(non-beneficial)"
-  },
-  {
-    value: "multimoora",
-    label: "MULTIMOORA",
-    description: "Multi-Objective Optimization by Ratio Analysis plus Full Multiplicative Form",
-    formula: "Score = (Rank_RS + Rank_RP + Rank_FMF) / 3"
-  },
-  {
-    value: "todim",
-    label: "TODIM",
-    description: "Tomada de Decisão Interativa e Multicritério (Interactive and Multicriteria Decision Making)",
-    formula: "ξ_i^norm = (ξ_i - ξ_min) / (ξ_max - ξ_min)"
-  },
-  {
-    value: "codas",
-    label: "CODAS",
-    description: "Combinative Distance-based Assessment",
-    formula: "RA_i = d_i^E + τ × d_i^T"
-  },
-  {
-    value: "moosra",
-    label: "MOOSRA",
-    description: "Multi-Objective Optimization on the basis of Simple Ratio Analysis",
-    formula: "v_i = S_i^+ / S_i^-"
-  },
-  {
-    value: "mairca",
-    label: "MAIRCA",
-    description: "Multi-Attributive Ideal-Real Comparative Analysis",
-    formula: "G_p = Σ(T_pj - R_pj)"
-  },
-  {
-    value: "mabac",
-    label: "MABAC",
-    description: "Multi-Attributive Border Approximation Area Comparison",
-    formula: "S_i = Σ(v_ij - g_j)"
-  },
-  {
-    value: "marcos",
-    label: "MARCOS",
-    description: "Measurement of Alternatives and Ranking according to Compromise Solution",
-    formula: "f(K_i) = K_i^+ / (K_i^+ + K_i^-)"
-  },
-  {
-    value: "cocoso",
-    label: "COCOSO",
-    description: "Combined Compromise Solution",
-    formula: "Score = (kₐ × S + kb × P + kc × (S×P)/(S+P))"
-  },
-  {
-    value: "copras",
-    label: "COPRAS",
-    description: "Complex Proportional Assessment",
-    formula: "Q = S⁺ + adjusted S⁻ term"
-  },
-  {
-    value: "promethee",
-    label: "PROMETHEE",
-    description: "Preference Ranking Organization Method for Enrichment Evaluations",
-    formula: "φ = φ⁺ - φ⁻"
-  },
-  {
-    value: "promethee1",
-    label: "PROMETHEE I",
-    description: "Preference Ranking Organization Method (Partial Preorder)",
-    formula: "Score = Outranked - OutrankedBy (based on φ⁺ and φ⁻)"
-  },
-  {
-    value: "promethee2",
-    label: "PROMETHEE II",
-    description: "Preference Ranking Organization Method (Complete Ranking)",
-    formula: "φ = φ⁺ - φ⁻"
-  },
-  {
-    value: "electre",
-    label: "ELECTRE",
-    description: "ÉLimination Et Choix Traduisant la REalité",
-    formula: "Score = Outranked - OutrankedBy"
-  },
-  {
-    value: "electre1",
-    label: "ELECTRE I",
-    description: "ÉLimination Et Choix Traduisant la REalité (Basic Outranking)",
-    formula: "Score = Outranked - OutrankedBy"
-  },
-  {
-    value: "electre2",
-    label: "ELECTRE II",
-    description: "ÉLimination Et Choix Traduisant la REalité (Complete Ranking)",
-    formula: "Score = Strong Outranked - Strong OutrankedBy"
-  },
-  {
-    value: "gra",
-    label: "GRA",
-    description: "Grey Relational Analysis",
-    formula: "γ_i = Σ(w_j × ξ_ij)"
-  },
-  {
-    value: "aras",
-    label: "ARAS",
-    description: "Additive Ratio Assessment",
-    formula: "K_i = S_i / S_0"
-  },
-  {
-    value: "wsm",
-    label: "WSM",
-    description: "Weighted Sum Model",
-    formula: "Score = Σ(w_j × r_ij)"
-  },
-  {
-    value: "wpm",
-    label: "WPM",
-    description: "Weighted Product Model",
-    formula: "Score = Π(r_ij ^ w_j)"
-  },
-]
-
-const WEIGHT_METHODS: { value: WeightMethod; label: string; description: string }[] = [
-  {
-    value: "equal",
-    label: "Equal Weight",
-    description: "Assigns equal weight to all criteria.",
-  },
-  {
-    value: "entropy",
-    label: "Entropy Weight",
-    description: "Entropy-based objective weighting method that calculates weights based on information content in the decision matrix.",
-  },
-  {
-    value: "critic",
-    label: "CRITIC Weight",
-    description: "CRITIC (Criteria Importance Through Intercriteria Correlation) method that determines weights based on contrast intensity and conflict between criteria.",
-  },
-  {
-    value: "ahp",
-    label: "AHP Weight",
-    description: "Analytic Hierarchy Process (AHP) derives weights from a pairwise comparison matrix; here derived from provided priority scores.",
-  },
-  {
-    value: "piprecia",
-    label: "PIPRECIA Weight",
-    description: "Pivot Pairwise Relative Criteria Importance Assessment (PIPRECIA) determines weights based on subjective relative importance of criteria.",
-  },
-  {
-    value: "merec",
-    label: "MEREC Weight",
-    description: "Method based on the Removal Effects of Criteria (MEREC) determines objective weights by analyzing the effect of removing each criterion.",
-  },
-  {
-    value: "swara",
-    label: "SWARA Weight",
-    description: "Step-wise Weight Assessment Ratio Analysis (SWARA) determines weights based on expert assessment of relative importance differences between criteria.",
-  },
-  {
-    value: "wenslo",
-    label: "WENSLO Weight",
-    description: "WENSLO weight method determines weights based on objective calculation similar to Entropy and MEREC.",
-  },
-  {
-    value: "lopcow",
-    label: "LOPCOW Weight",
-    description: "LOPCOW (Logarithmic Percentage Change-driven Objective Weighting) method determines weights using the magnitude of data variability.",
-  },
-  {
-    value: "dematel",
-    label: "DEMATEL Weight",
-    description: "DEMATEL (Decision Making Trial and Evaluation Laboratory) visualizes the structure of complex causal relationships between criteria.",
-  },
-  {
-    value: "sd",
-    label: "SD Weight",
-    description: "Standard Deviation (SD) method assigns weights based on the dispersion of criteria values in the normalized matrix.",
-  },
-  {
-    value: "variance",
-    label: "Variance Weight",
-    description: "Variance method determines weights based on the statistical variance of criteria values.",
-  },
-  {
-    value: "mad",
-    label: "MAD Weight",
-    description: "Mean Absolute Deviation (MAD) method calculates weights using the average absolute deviation from the mean.",
-  },
-
-  {
-    value: "dbw",
-    label: "Distance-based Weight",
-    description: "Distance-based Weighting (DBW) method calculates weights based on the pair-wise distances between alternatives for each criterion.",
-  },
-  {
-    value: "svp",
-    label: "SVP Weight",
-    description: "Statistical Variance Procedure (SVP) uses variance on Min-Max normalized data to determine objective weights.",
-  },
-  {
-    value: "mdm",
-    label: "MDM Weight",
-    description: "Maximizing Deviation Method (MDM) assigns higher weights to criteria with greater deviation between alternatives.",
-  },
-  {
-    value: "lsw",
-    label: "LSW Weight",
-    description: "Least Squares Weighting Method (LSW) determines weights based on squared deviations from the ideal solution.",
-  },
-  {
-    value: "gpow",
-    label: "GPOW Weight",
-    description: "Goal Programming–based Objective Weights (GPOW) method determines weights by minimizing total absolute deviation from the ideal goal.",
-  },
-  {
-    value: "lpwm",
-    label: "LPWM Weight",
-    description: "Linear Programming Weight Method (LPWM) determines weights based on cumulative absolute deviation from the anti-ideal solution.",
-  },
-  {
-    value: "pcwm",
-    label: "PCWM Weight",
-    description: "Pearson Correlation Weight Method (PCWM) Determines weights based on the degree of independence and conflict (correlation) between criteria.",
-  },
-  {
-    value: "roc",
-    label: "ROC Weight",
-    description: "Rank Order Centroid (ROC) method calculates weights based on a pre-defined rank order of criteria (Barron & Barrett, 1996).",
-  },
-  {
-    value: "rr",
-    label: "RR Weight",
-    description: "Rank Reciprocal (RR) method assigns weights based on the reciprocal of criteria ranks (Stillwell et al., 1981).",
-  },
-  {
-    value: "custom",
-    label: "Enter Own Weight",
-    description: "Manually specify custom weights for each criterion based on your own judgment or external analysis.",
-  },
-]
-
-
-const CHART_COLORS = [
-  "#2563eb",
-  "#db2777",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#0ea5e9",
-  "#6366f1",
-  "#14b8a6",
-  "#f97316",
-]
 
 export default function MCDMCalculator() {
   const [method, setMethod] = useState<MCDMMethod>("topsis")
@@ -777,6 +297,9 @@ export default function MCDMCalculator() {
 
   // Excel data selection state
   const [excelPreviewData, setExcelPreviewData] = useState<any[][] | null>(null)
+  const [excelWorkbook, setExcelWorkbook] = useState<any>(null)
+  const [excelSheetNames, setExcelSheetNames] = useState<string[]>([])
+  const [selectedSheetName, setSelectedSheetName] = useState<string>("")
   const [isExcelPreviewOpen, setIsExcelPreviewOpen] = useState(false)
   const [selectedDataRange, setSelectedDataRange] = useState<{
     startRow: number
@@ -857,100 +380,271 @@ export default function MCDMCalculator() {
 
 
   const parseExcelData = (data: any[][]) => {
-    if (data.length < 4) {
-      alert("Excel file must have at least 4 rows (headers, max/min, weights, and data)")
+    // 1. Sanitize: Remove completely empty rows
+    const rows = data.filter(r => r && r.length > 0)
+    if (rows.length === 0) {
+      alert("Excel file appears to be empty")
       return
     }
 
-    const headers = data[0].slice(1).filter(h => h !== undefined && h !== null && h !== '')
-    const types = data[1].slice(1)
-    const weights = data[2].slice(1)
-    const dataRows = data.slice(3).filter(row => row[0])
+    // 2. Identify components: Headers, Types, Weights, Data
+    let startRowIndex = 0
+    let criteriaNames: string[] = []
+    let criteriaTypes: ("beneficial" | "non-beneficial")[] = []
+    let criteriaWeights: number[] = []
+    let hasRowLabels = false
+    let colStartIndex = 0
 
-    if (headers.length === 0 || dataRows.length === 0) {
-      alert("Excel file doesn't contain valid data")
-      return
+    // Helper: partial check if row looks like a header (strings)
+    const isHeaderRow = (row: any[]) => {
+      // Check a sample of cells (ignoring potentially the first one which could be a label)
+      const sample = row.slice(1).slice(0, 5)
+      if (sample.length === 0) return isNaN(Number(row[0])) // single column case
+      return sample.every((c) => isNaN(Number(c)))
     }
 
-    const newCriteria: Criterion[] = headers.map((header, idx) => ({
-      id: `crit-${idx}`,
-      name: header?.toString() || `Criteria-${idx + 1}`,
-      type: types[idx]?.toString().toLowerCase().includes("min") ? "non-beneficial" as const : "beneficial" as const,
-      weight: Number(weights[idx]) || (1 / headers.length),
-    }))
+    // Helper: check for MAX/MIN keywords
+    const isTypesRow = (row: any[]) => {
+      return row.some((c) => c && c.toString().toUpperCase().match(/MAX|MIN|BENEFICIAL|COST/))
+    }
 
-    const newAlternatives: Alternative[] = dataRows.map((row, altIdx) => {
-      const scores: Record<string, number> = {}
-      newCriteria.forEach((crit, critIdx) => {
-        const value = row[critIdx + 1]
-        scores[crit.id] = Number(value) || 0
-      })
+    const parseType = (val: any) => {
+      const s = val?.toString().toLowerCase() || ""
+      return s.includes("min") || s.includes("cost") ? "non-beneficial" : "beneficial"
+    }
+
+    // Check Row 0 for Candidate Headers
+    if (isHeaderRow(rows[0])) {
+      startRowIndex = 1
+
+      // Identify Types in Row 1
+      if (rows.length > 1 && isTypesRow(rows[1])) {
+        startRowIndex = 2
+        criteriaTypes = rows[1].map((c: any) => parseType(c))
+
+        // Identify Weights in Row 2 (if Types were Row 1)
+        // Heuristic: Explicit "Weight" label OR numeric row before data
+        if (rows.length > 2) {
+          const row2 = rows[2]
+          const row2IsWeights = row2[0]?.toString().toLowerCase().includes("weight") ||
+            (!isNaN(Number(row2[1])) && rows.length > 3) // Assume 4-row format if data follows
+          if (row2IsWeights) {
+            startRowIndex = 3
+            criteriaWeights = rows[2].map((c: any) => Number(c) || 0)
+          }
+        }
+      }
+
+      // Determine if First Column is Row Labels
+      // We look at the first DATA row (at startRowIndex)
+      if (startRowIndex < rows.length) {
+        const firstDataRow = rows[startRowIndex]
+        const firstHeaderStr = rows[0][0]?.toString().toLowerCase() || ""
+        const labelKeywords = ["school", "alternative", "name", "project", "candidate", "option"]
+
+        // It is a label column if:
+        // 1. Header matches a keyword ("School", "Alternative"...)
+        // 2. OR First data cell is a String (and not a number)
+        const isLabelCol = labelKeywords.some(k => firstHeaderStr.includes(k)) || isNaN(Number(firstDataRow[0]))
+
+        if (isLabelCol) {
+          hasRowLabels = true
+          colStartIndex = 1
+        }
+      }
+
+      // extract names based on label offset
+      criteriaNames = rows[0].slice(colStartIndex).map((h: any) => h?.toString() || "")
+      if (hasRowLabels) {
+        if (criteriaTypes.length) criteriaTypes = criteriaTypes.slice(colStartIndex)
+        if (criteriaWeights.length) criteriaWeights = criteriaWeights.slice(colStartIndex)
+      }
+
+    } else {
+      // No Headers detected (Raw Matrix or unlabeled)
+      // Check if first column is labels
+      const firstRow = rows[0]
+      if (isNaN(Number(firstRow[0]))) {
+        hasRowLabels = true
+        colStartIndex = 1
+      }
+
+      const numCols = firstRow.length - colStartIndex
+      criteriaNames = Array.from({ length: numCols }, (_, i) => `C${i + 1}`)
+      startRowIndex = 0
+    }
+
+    // 3. Extract Data & Normalize
+    const dataRows = rows.slice(startRowIndex)
+    const effectiveNumCriteria = criteriaNames.length
+
+    // Default missing Types/Weights
+    const finalCriteria: Criterion[] = criteriaNames.map((name, i) => {
+      const t = criteriaTypes[i] || "beneficial"
+      const w = criteriaWeights[i] || (1 / effectiveNumCriteria)
       return {
-        id: `alt-${altIdx}`,
-        name: row[0]?.toString() || `Alt-${altIdx + 1}`,
-        scores,
+        id: `crit-${i}`,
+        name,
+        type: t,
+        weight: w
       }
     })
 
-    setCriteria(newCriteria)
+    const newAlternatives: Alternative[] = dataRows.map((row, idx) => {
+      const name = hasRowLabels ? row[0]?.toString() : `Alt-${idx + 1}`
+      // Get values segment. If row is short/long, handle gracefully
+      let values = hasRowLabels ? row.slice(1) : row
+
+      // Map to criteria
+      const scores: Record<string, number> = {}
+      finalCriteria.forEach((crit, cIdx) => {
+        // use cIdx to access value. If missing, default to 0.
+        scores[crit.id] = Number(values[cIdx]) || 0
+      })
+
+      return {
+        id: `alt-${idx}`,
+        name,
+        scores
+      }
+    })
+
+    setCriteria(finalCriteria)
     setAlternatives(newAlternatives)
-    setNumCriteria(newCriteria.length)
+    setNumCriteria(finalCriteria.length)
     setNumAlternatives(newAlternatives.length)
   }
 
   const parseComparisonExcelData = (data: any[][]) => {
     console.log("=== parseComparisonExcelData called ===")
-    console.log("Input data rows:", data.length)
-    if (data.length < 4) {
-      console.error("Error: Need at least 4 rows")
-      setComparisonError("Excel file must have at least 4 rows (headers, max/min, weights, data)")
+
+    // 1. Sanitize: Remove completely empty rows
+    const rows = data.filter(r => r && r.length > 0)
+    if (rows.length === 0) {
+      setComparisonError("Excel file appears to be empty")
       return
     }
 
-    const headers = data[0].slice(1).filter(h => h !== undefined && h !== null && h !== "")
-    const types = data[1].slice(1)
-    const weights = data[2].slice(1)
-    const dataRows = data.slice(3).filter(row => row[0])
+    // 2. Identify components: Headers, Types, Weights, Data
+    let startRowIndex = 0
+    let criteriaNames: string[] = []
+    let criteriaTypes: ("beneficial" | "non-beneficial")[] = []
+    let criteriaWeights: number[] = []
+    let hasRowLabels = false
+    let colStartIndex = 0
 
-    console.log("Parsed headers:", headers)
-    console.log("Parsed types:", types)
-    console.log("Parsed weights:", weights)
-    console.log("Data rows count:", dataRows.length)
+    // Helper: partial check if row looks like a header (strings)
+    const isHeaderRow = (row: any[]) => {
+      const sample = row.slice(1).slice(0, 5)
+      if (sample.length === 0) return isNaN(Number(row[0]))
+      return sample.every((c) => isNaN(Number(c)))
+    }
 
-    if (headers.length === 0 || dataRows.length === 0) {
-      console.error("Error: No valid data")
+    // Helper: check for MAX/MIN keywords
+    const isTypesRow = (row: any[]) => {
+      return row.some((c) => c && c.toString().toUpperCase().match(/MAX|MIN|BENEFICIAL|COST/))
+    }
+
+    const parseType = (val: any) => {
+      const s = val?.toString().toLowerCase() || ""
+      return s.includes("min") || s.includes("cost") ? "non-beneficial" : "beneficial"
+    }
+
+    // Check Row 0 for Candidate Headers
+    if (isHeaderRow(rows[0])) {
+      startRowIndex = 1
+
+      // Identify Types in Row 1
+      if (rows.length > 1 && isTypesRow(rows[1])) {
+        startRowIndex = 2
+        criteriaTypes = rows[1].map((c: any) => parseType(c))
+
+        // Identify Weights in Row 2 (if Types were Row 1)
+        if (rows.length > 2) {
+          const row2 = rows[2]
+          const row2IsWeights = row2[0]?.toString().toLowerCase().includes("weight") ||
+            (!isNaN(Number(row2[1])) && rows.length > 3)
+          if (row2IsWeights) {
+            startRowIndex = 3
+            criteriaWeights = rows[2].map((c: any) => Number(c) || 0)
+          }
+        }
+      }
+
+      // Determine if First Column is Row Labels
+      if (startRowIndex < rows.length) {
+        const firstDataRow = rows[startRowIndex]
+        const firstHeaderStr = rows[0][0]?.toString().toLowerCase() || ""
+        const labelKeywords = ["school", "alternative", "name", "project", "candidate", "option"]
+        const isLabelCol = labelKeywords.some(k => firstHeaderStr.includes(k)) || isNaN(Number(firstDataRow[0]))
+
+        if (isLabelCol) {
+          hasRowLabels = true
+          colStartIndex = 1
+        }
+      }
+
+      criteriaNames = rows[0].slice(colStartIndex).map((h: any) => h?.toString() || "")
+      if (hasRowLabels) {
+        if (criteriaTypes.length) criteriaTypes = criteriaTypes.slice(colStartIndex)
+        if (criteriaWeights.length) criteriaWeights = criteriaWeights.slice(colStartIndex)
+      }
+
+    } else {
+      // No Headers detected
+      const firstRow = rows[0]
+      if (isNaN(Number(firstRow[0]))) {
+        hasRowLabels = true
+        colStartIndex = 1
+      }
+
+      const numCols = firstRow.length - colStartIndex
+      criteriaNames = Array.from({ length: numCols }, (_, i) => `C${i + 1}`)
+      startRowIndex = 0
+    }
+
+    // 3. Extract Data & Normalize
+    const dataRows = rows.slice(startRowIndex)
+    const effectiveNumCriteria = criteriaNames.length
+
+    if (criteriaNames.length === 0 || dataRows.length === 0) {
       setComparisonError("Excel file doesn't contain valid data")
       return
     }
 
-    const newCriteria: Criterion[] = headers.map((header, idx) => ({
-      id: `crit-${idx}`,
-      name: header?.toString() || `Criteria-${idx + 1}`,
-      type: types[idx]?.toString().toLowerCase().includes("min") ? "non-beneficial" : "beneficial",
-      weight: Number(weights[idx]) || 1 / headers.length,
-    }))
-
-    const newAlternatives: Alternative[] = dataRows.map((row, altIdx) => {
-      const scores: Record<string, number> = {}
-      newCriteria.forEach((crit, critIdx) => {
-        const value = row[critIdx + 1]
-        scores[crit.id] = Number(value) || 0
-      })
+    const finalCriteria: Criterion[] = criteriaNames.map((name, i) => {
+      const t = criteriaTypes[i] || "beneficial"
+      const w = criteriaWeights[i] || (1 / effectiveNumCriteria)
       return {
-        id: `alt-${altIdx}`,
-        name: row[0]?.toString() || `Alt-${altIdx + 1}`,
-        scores,
+        id: `crit-${i}`,
+        name,
+        type: t,
+        weight: w
       }
     })
 
-    console.log("Created criteria:", newCriteria.length)
-    console.log("Created alternatives:", newAlternatives.length)
-    console.log("Setting state...")
+    const newAlternatives: Alternative[] = dataRows.map((row, idx) => {
+      const name = hasRowLabels ? row[0]?.toString() : `Alt-${idx + 1}`
+      let values = hasRowLabels ? row.slice(1) : row
 
-    setComparisonCriteria(newCriteria)
+      const scores: Record<string, number> = {}
+      finalCriteria.forEach((crit, cIdx) => {
+        scores[crit.id] = Number(values[cIdx]) || 0
+      })
+
+      return {
+        id: `alt-${idx}`,
+        name,
+        scores
+      }
+    })
+
+    console.log("Created criteria:", finalCriteria.length)
+    console.log("Created alternatives:", newAlternatives.length)
+
+    setComparisonCriteria(finalCriteria)
     setComparisonAlternatives(newAlternatives)
     setComparisonError(null)
-    console.log("State updated - data loaded successfully!")
   }
 
   const handleComparisonFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1510,6 +1204,13 @@ export default function MCDMCalculator() {
         console.log("Data loaded, size:", data.length)
         const workbook = XLSX.read(data, { type: "array" })
         console.log("Workbook parsed, sheets:", workbook.SheetNames)
+
+        // Store workbook and sheet names for multi-sheet support
+        setExcelWorkbook(workbook)
+        setExcelSheetNames(workbook.SheetNames)
+        setSelectedSheetName(workbook.SheetNames[0])
+
+        // Load first sheet data
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
         const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 })
         console.log("JSON data extracted, rows:", (jsonData as any[][]).length)
@@ -1518,17 +1219,15 @@ export default function MCDMCalculator() {
         setExcelPreviewData(jsonData as any[][])
         setIsExcelPreviewOpen(true)
 
-        // Initialize selection to include all data
-        const rows = (jsonData as any[][]).length
-        const cols = Math.max(...(jsonData as any[][]).map(row => row.length))
+        // Initialize with no selection so users can see all data and choose their table
         setSelectedDataRange({
           startRow: 0,
-          endRow: rows - 1,
+          endRow: 0,
           startCol: 0,
-          endCol: cols - 1
+          endCol: 0
         })
 
-        console.log("Excel preview opened")
+        console.log("Excel preview opened with", workbook.SheetNames.length, "sheets")
       } catch (error) {
         alert("Error reading Excel file. Please ensure it's a valid Excel file.")
         console.error("Error parsing file:", error)
@@ -1591,6 +1290,23 @@ export default function MCDMCalculator() {
       ...prev,
       [type]: value
     }))
+  }
+
+  const handleSheetChange = (sheetName: string) => {
+    if (!excelWorkbook) return
+
+    setSelectedSheetName(sheetName)
+    const sheet = excelWorkbook.Sheets[sheetName]
+    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 })
+    setExcelPreviewData(jsonData as any[][])
+
+    // Reset selection when changing sheets
+    setSelectedDataRange({
+      startRow: 0,
+      endRow: 0,
+      startCol: 0,
+      endCol: 0
+    })
   }
 
 
@@ -3455,21 +3171,26 @@ export default function MCDMCalculator() {
                       </p>
                     </div>
 
-                    <div className="table-responsive border border-gray-200 rounded-lg">
-                      <Table>
+                    <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
+                      <Table className="border-collapse table-auto w-full">
                         <TableHeader>
-                          <TableRow className="bg-gray-50">
-                            <TableHead className="text-black font-semibold w-24 text-xs">Alternative</TableHead>
+                          <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
+                            <TableHead className="bg-white text-black font-bold w-20 text-[9px] border-r border-gray-300 p-0 h-8">
+                              <div className="flex flex-col items-center justify-center h-full leading-tight">
+                                <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center">Criteria →</div>
+                                <div className="text-[10px] font-bold py-0.5 w-full text-center">Alternatives ↓</div>
+                              </div>
+                            </TableHead>
                             {criteria.map((crit) => (
-                              <TableHead key={crit.id} className="text-black font-semibold text-center min-w-20 text-xs">
-                                <div className="flex flex-col items-center">
-                                  <div className="flex items-center gap-1">
-                                    <div className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</div>
-                                    <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
+                              <TableHead key={crit.id} className="text-black font-bold text-center min-w-[60px] text-[10px] border-r border-gray-300 px-1 py-0.5">
+                                <div className="flex flex-col items-center py-0.5">
+                                  <div className="flex items-center gap-0.5">
+                                    <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
+                                    <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"} aria-hidden>
                                       {crit.type === "beneficial" ? "▲" : "▼"}
                                     </span>
                                   </div>
-                                  <div className="text-gray-500 font-normal text-[10px]">
+                                  <div className="text-gray-600 font-semibold text-[9px]">
                                     {crit.type === "beneficial" ? "Max" : "Min"}
                                   </div>
                                 </div>
@@ -3479,10 +3200,10 @@ export default function MCDMCalculator() {
                         </TableHeader>
                         <TableBody>
                           {alternatives.map((alt) => (
-                            <TableRow key={alt.id}>
-                              <TableCell className="text-black font-medium text-xs">{alt.name}</TableCell>
+                            <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
+                              <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5">{alt.name}</TableCell>
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="p-1">
+                                <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
                                   <Input
                                     type="number"
                                     step="any"
@@ -3490,7 +3211,7 @@ export default function MCDMCalculator() {
                                     value={alt.scores[crit.id] ?? ""}
                                     onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
                                     onKeyDown={handleKeyDown}
-                                    className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
+                                    className="text-center text-[10px] h-7 border-gray-100 text-black w-full shadow-none bg-white rounded-md p-1 focus:ring-1 focus:ring-blue-400"
                                   />
                                 </TableCell>
                               ))}
@@ -3601,21 +3322,26 @@ export default function MCDMCalculator() {
                         </p>
                       </div>
 
-                      <div className="table-responsive border border-gray-200 rounded-lg">
-                        <Table>
+                      <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
+                        <Table className="border-collapse">
                           <TableHeader>
-                            <TableRow className="bg-gray-50">
-                              <TableHead className="text-black font-semibold w-24 text-xs">Alternative</TableHead>
+                            <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
+                              <TableHead className="bg-white text-black font-bold w-20 text-[9px] border-r border-gray-300 p-0 h-8">
+                                <div className="flex flex-col items-center justify-center h-full leading-tight">
+                                  <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center">Criteria →</div>
+                                  <div className="text-[10px] font-bold py-0.5 w-full text-center">Alternatives ↓</div>
+                                </div>
+                              </TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className="text-black font-semibold text-center min-w-20 text-xs">
-                                  <div className="flex flex-col items-center">
+                                <TableHead key={crit.id} className="text-black font-bold text-center min-w-[60px] text-[10px] border-r border-gray-300 px-1 py-0.5">
+                                  <div className="flex flex-col items-center py-0.5">
                                     <div className="flex items-center gap-1">
-                                      <div className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</div>
-                                      <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
+                                      <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
+                                      <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"} aria-hidden>
                                         {crit.type === "beneficial" ? "▲" : "▼"}
                                       </span>
                                     </div>
-                                    <div className="text-gray-500 font-normal text-[10px]">
+                                    <div className="text-gray-600 font-semibold text-[9px]">
                                       {crit.type === "beneficial" ? "Max" : "Min"}
                                     </div>
                                   </div>
@@ -3625,10 +3351,10 @@ export default function MCDMCalculator() {
                           </TableHeader>
                           <TableBody>
                             {alternatives.map((alt) => (
-                              <TableRow key={alt.id}>
-                                <TableCell className="text-black font-medium text-xs">{alt.name}</TableCell>
+                              <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
+                                <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
-                                  <TableCell key={crit.id} className="p-1">
+                                  <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
                                     <Input
                                       type="number"
                                       step="any"
@@ -3636,7 +3362,7 @@ export default function MCDMCalculator() {
                                       value={alt.scores[crit.id] ?? ""}
                                       onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
                                       onKeyDown={handleKeyDown}
-                                      className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
+                                      className="text-center text-[10px] h-7 border-gray-100 text-black w-full shadow-none bg-white rounded-md p-1 focus:ring-1 focus:ring-blue-400"
                                     />
                                   </TableCell>
                                 ))}
@@ -3682,7 +3408,7 @@ export default function MCDMCalculator() {
                         </DialogHeader>
 
                         <div className="space-y-4 mt-4">
-                          <div className="border border-gray-200 rounded-lg overflow-hidden">
+                          <div className="border border-gray-200 rounded-lg overflow-x-auto">
                             <Table>
                               <TableHeader>
                                 <TableRow className="bg-gray-50">
@@ -3752,7 +3478,7 @@ export default function MCDMCalculator() {
                         </DialogHeader>
 
                         <div className="space-y-4 mt-4">
-                          <div className="border border-gray-200 rounded-lg overflow-hidden">
+                          <div className="border border-gray-200 rounded-lg overflow-x-auto">
                             <Table>
                               <TableHeader>
                                 <TableRow className="bg-gray-50">
@@ -4061,7 +3787,7 @@ export default function MCDMCalculator() {
                         </DialogHeader>
 
                         <div className="space-y-4 mt-4">
-                          <div className="border border-gray-200 rounded-lg overflow-hidden">
+                          <div className="border border-gray-200 rounded-lg overflow-x-auto">
                             <Table>
                               <TableHeader>
                                 <TableRow className="bg-gray-50">
@@ -4728,22 +4454,26 @@ export default function MCDMCalculator() {
                       </div>
 
                       {/* Editable Decision Matrix Table */}
-                      <div className="table-responsive border border-gray-200 rounded-lg">
-                        <Table>
+                      <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
+                        <Table className="border-collapse">
                           <TableHeader>
-                            <TableRow className="bg-gray-50">
-                              <TableHead className="text-black font-semibold w-24 text-xs">Alternative</TableHead>
+                            <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
+                              <TableHead className="bg-white text-black font-bold w-20 text-[9px] border-r border-gray-300 p-0 h-8">
+                                <div className="flex flex-col items-center justify-center h-full leading-tight">
+                                  <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center">Criteria →</div>
+                                  <div className="text-[10px] font-bold py-0.5 w-full text-center">Alternatives ↓</div>
+                                </div>
+                              </TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`font-semibold text-center min-w-20 text-xs ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
-                                  }`}>
-                                  <div className="flex flex-col items-center">
+                                <TableHead key={crit.id} className="text-black font-bold text-center min-w-[60px] text-[10px] border-r border-gray-300 px-1 py-0.5">
+                                  <div className="flex flex-col items-center py-0.5">
                                     <div className="flex items-center gap-1">
-                                      <div className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</div>
-                                      <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
+                                      <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
+                                      <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"} aria-hidden>
                                         {crit.type === "beneficial" ? "▲" : "▼"}
                                       </span>
                                     </div>
-                                    <div className="text-gray-500 font-normal text-[10px]">
+                                    <div className="text-gray-600 font-semibold text-[9px]">
                                       {crit.type === "beneficial" ? "Max" : "Min"}
                                     </div>
                                   </div>
@@ -4753,10 +4483,10 @@ export default function MCDMCalculator() {
                           </TableHeader>
                           <TableBody>
                             {alternatives.map((alt) => (
-                              <TableRow key={alt.id}>
-                                <TableCell className="text-black font-medium text-xs">{alt.name}</TableCell>
+                              <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
+                                <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
-                                  <TableCell key={crit.id} className="p-1">
+                                  <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
                                     <Input
                                       type="number"
                                       step="any"
@@ -4764,7 +4494,7 @@ export default function MCDMCalculator() {
                                       value={alt.scores[crit.id] ?? ""}
                                       onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
                                       onKeyDown={handleKeyDown}
-                                      className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
+                                      className="text-center text-[10px] h-7 border-gray-100 text-black w-full shadow-none bg-white rounded-md p-1 focus:ring-1 focus:ring-blue-400"
                                     />
                                   </TableCell>
                                 ))}
@@ -5038,7 +4768,7 @@ export default function MCDMCalculator() {
                   </DialogHeader>
 
                   <div className="space-y-4 mt-4">
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="border border-gray-200 rounded-lg overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-gray-50">
@@ -5188,7 +4918,7 @@ export default function MCDMCalculator() {
                   </DialogHeader>
 
                   <div className="space-y-4 mt-4">
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="border border-gray-200 rounded-lg overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-gray-50">
@@ -5302,7 +5032,7 @@ export default function MCDMCalculator() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="table-responsive">
-                    <table className="min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="min-w-full text-xs border border-gray-200 rounded-lg overflow-x-auto">
                       <thead className="bg-gray-50">
                         <tr>
                           <th rowSpan={2} className="text-left px-3 py-2 border-b border-r border-gray-200 text-black font-semibold align-bottom">
@@ -5681,22 +5411,26 @@ export default function MCDMCalculator() {
                       </div>
 
                       {/* Editable Decision Matrix Table */}
-                      <div className="table-responsive border border-gray-200 rounded-lg">
-                        <Table>
+                      <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
+                        <Table className="border-collapse">
                           <TableHeader>
-                            <TableRow className="bg-gray-50">
-                              <TableHead className="text-black font-semibold w-24 text-xs">Alternative</TableHead>
+                            <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
+                              <TableHead className="bg-white text-black font-bold w-20 text-[9px] border-r border-gray-300 p-0 h-8">
+                                <div className="flex flex-col items-center justify-center h-full leading-tight">
+                                  <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center">Criteria →</div>
+                                  <div className="text-[10px] font-bold py-0.5 w-full text-center">Alternatives ↓</div>
+                                </div>
+                              </TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`font-semibold text-center min-w-20 text-xs ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
-                                  }`}>
-                                  <div className="flex flex-col items-center">
+                                <TableHead key={crit.id} className="text-black font-bold text-center min-w-[60px] text-[10px] border-r border-gray-300 px-1 py-0.5">
+                                  <div className="flex flex-col items-center py-0.5">
                                     <div className="flex items-center gap-1">
-                                      <div className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</div>
-                                      <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
+                                      <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
+                                      <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"} aria-hidden>
                                         {crit.type === "beneficial" ? "▲" : "▼"}
                                       </span>
                                     </div>
-                                    <div className="text-gray-500 font-normal text-[10px]">
+                                    <div className="text-gray-600 font-semibold text-[9px]">
                                       {crit.type === "beneficial" ? "Max" : "Min"}
                                     </div>
                                   </div>
@@ -5706,10 +5440,10 @@ export default function MCDMCalculator() {
                           </TableHeader>
                           <TableBody>
                             {alternatives.map((alt) => (
-                              <TableRow key={alt.id}>
-                                <TableCell className="text-black font-medium text-xs">{alt.name}</TableCell>
+                              <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
+                                <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
-                                  <TableCell key={crit.id} className="p-1">
+                                  <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
                                     <Input
                                       type="number"
                                       step="any"
@@ -5717,7 +5451,7 @@ export default function MCDMCalculator() {
                                       value={alt.scores[crit.id] ?? ""}
                                       onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
                                       onKeyDown={handleKeyDown}
-                                      className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
+                                      className="text-center text-[10px] h-7 border-gray-100 text-black w-full shadow-none bg-white rounded-md p-1 focus:ring-1 focus:ring-blue-400"
                                     />
                                   </TableCell>
                                 ))}
@@ -5978,7 +5712,7 @@ export default function MCDMCalculator() {
                       </DialogHeader>
 
                       <div className="space-y-4 mt-4">
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="border border-gray-200 rounded-lg overflow-x-auto">
                           <Table>
                             <TableHeader>
                               <TableRow className="bg-gray-50">
@@ -6111,50 +5845,52 @@ export default function MCDMCalculator() {
                             <CardDescription className="text-xs text-gray-700">Ranking variations across weight methods</CardDescription>
                           </div>
                         </CardHeader>
-                        <CardContent className="table-responsive">
-                          <table className="min-w-full text-xs border border-gray-200 rounded-lg">
-                            <thead className="bg-gray-50">
-                              <tr>
-                                <th className="px-3 py-2 text-left border-b text-black font-semibold">Alternative</th>
-                                {sensitivityWeightComparisonResults.map((res, i) => (
-                                  <Fragment key={i}>
-                                    <th className="px-3 py-2 text-center border-b text-black font-semibold border-l border-gray-200" colSpan={2}>
-                                      {res.weightLabel} ({res.method})
-                                    </th>
-                                  </Fragment>
-                                ))}
-                              </tr>
-                              <tr>
-                                <th className="border-b"></th>
-                                {sensitivityWeightComparisonResults.map((res, i) => (
-                                  <Fragment key={i}>
-                                    <th className="px-2 py-1 text-center border-b text-gray-500 font-medium text-[10px] border-l border-gray-200">Score</th>
-                                    <th className="px-2 py-1 text-center border-b text-gray-500 font-medium text-[10px]">Rank</th>
-                                  </Fragment>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {alternatives.map((alt) => (
-                                <tr key={alt.id} className="hover:bg-gray-50 border-b last:border-0 border-gray-100">
-                                  <td className="px-3 py-2 text-black font-medium">{alt.name}</td>
-                                  {sensitivityWeightComparisonResults.map((res, i) => {
-                                    const item = res.ranking.find((r: any) => r.alternativeName === alt.name)
-                                    return (
-                                      <Fragment key={i}>
-                                        <td className="px-2 py-2 text-center text-black border-l border-gray-200">
-                                          {item?.score !== undefined ? Number(item.score).toFixed(resultsDecimalPlaces) : "-"}
-                                        </td>
-                                        <td className="px-2 py-2 text-center text-black font-bold">
-                                          {item?.rank}
-                                        </td>
-                                      </Fragment>
-                                    )
-                                  })}
+                        <CardContent>
+                          <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                            <table className="min-w-full text-[9px] border-collapse bg-white">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th className="px-1.5 py-1 text-left border-b border-r border-gray-200 text-black font-bold sticky left-0 bg-gray-50 z-10 w-20">Alternative</th>
+                                  {sensitivityWeightComparisonResults.map((res, i) => (
+                                    <Fragment key={i}>
+                                      <th className="px-1 py-1 text-center border-b border-r border-gray-200 text-black font-bold bg-[#FFD966]" colSpan={2}>
+                                        {res.weightLabel} ({res.method})
+                                      </th>
+                                    </Fragment>
+                                  ))}
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                                <tr>
+                                  <th className="border-b border-r border-gray-200 sticky left-0 bg-gray-50 z-10"></th>
+                                  {sensitivityWeightComparisonResults.map((res, i) => (
+                                    <Fragment key={i}>
+                                      <th className="px-1 py-0.5 text-center border-b border-r border-gray-200 text-gray-600 font-semibold text-[8px]">Score</th>
+                                      <th className="px-1 py-0.5 text-center border-b border-r border-gray-200 text-gray-600 font-semibold text-[8px]">Rank</th>
+                                    </Fragment>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {alternatives.map((alt) => (
+                                  <tr key={alt.id} className="hover:bg-gray-50 border-b last:border-0 border-gray-100">
+                                    <td className="px-1.5 py-1 text-black font-bold border-r border-gray-200 bg-[#F4B084] sticky left-0 z-10">{alt.name}</td>
+                                    {sensitivityWeightComparisonResults.map((res, i) => {
+                                      const item = res.ranking.find((r: any) => r.alternativeName === alt.name)
+                                      return (
+                                        <Fragment key={i}>
+                                          <td className="px-1 py-1 text-center text-black border-r border-gray-200">
+                                            {item?.score !== undefined ? Number(item.score).toFixed(resultsDecimalPlaces) : "-"}
+                                          </td>
+                                          <td className="px-1 py-1 text-center text-black font-bold border-r border-gray-200">
+                                            {item?.rank}
+                                          </td>
+                                        </Fragment>
+                                      )
+                                    })}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         </CardContent>
                       </Card>
 
@@ -6936,79 +6672,89 @@ export default function MCDMCalculator() {
                 </DialogContent>
               </Dialog>
 
-              {/* Excel Data Preview Dialog */}
+              {/* Excel Data Preview Dialog - Simplified with Click/Drag Selection */}
               <Dialog open={isExcelPreviewOpen} onOpenChange={setIsExcelPreviewOpen}>
-                <DialogContent className="w-[95vw] sm:w-auto sm:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col p-3 sm:p-6">
+                <DialogContent className="w-fit max-w-[100vw] h-fit max-h-[100vh] overflow-y-auto flex flex-col p-3 sm:p-6">
                   <DialogHeader>
                     <DialogTitle className="text-base sm:text-lg font-bold text-black">Select Data to Import</DialogTitle>
                     <DialogDescription className="text-[10px] sm:text-xs text-gray-700">
-                      Review the Excel data and select the range you want to import.
+                      Click and drag to select the complete table including: <strong>Headers → Max/Min row → Weights row → Data rows</strong>
                     </DialogDescription>
                   </DialogHeader>
 
-                  <div className="flex flex-wrap gap-2 sm:gap-4 mb-4">
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-semibold text-black">Start Row:</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={excelPreviewData ? excelPreviewData.length - 1 : 0}
-                        value={selectedDataRange.startRow}
-                        onChange={(e) => updateSelectionRange('startRow', parseInt(e.target.value) || 0)}
-                        className="w-20 h-8 text-xs border-gray-200"
-                      />
+                  {/* Sheet Info & Instructions Card */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="text-xs text-blue-900">
+                        <strong>📊 Excel Sheet Information:</strong>
+                        {excelPreviewData && (
+                          <div className="ml-4 mt-1">
+                            <div>Total Rows: <strong>{excelPreviewData.length}</strong></div>
+                            <div>Total Columns: <strong>{Math.max(...excelPreviewData.map(row => row.length))}</strong></div>
+                            {excelSheetNames.length > 1 && (
+                              <div className="mt-2">
+                                <span>Available Sheets: <strong>{excelSheetNames.length}</strong></span>
+                                <div className="mt-1">
+                                  <Select value={selectedSheetName} onValueChange={handleSheetChange}>
+                                    <SelectTrigger className="w-48 h-7 text-xs bg-white">
+                                      <SelectValue placeholder="Select sheet" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {excelSheetNames.map((sheetName) => (
+                                        <SelectItem key={sheetName} value={sheetName} className="text-xs">
+                                          {sheetName}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-xs text-blue-900">
+                        <strong>📋 How to select data:</strong>
+                        <ol className="ml-4 mt-1 space-y-1">
+                          <li>1️⃣ Scroll through the sheet to find your table</li>
+                          <li>2️⃣ Click on the first cell (top-left corner)</li>
+                          <li>3️⃣ Drag to the last cell (bottom-right corner)</li>
+                          <li>4️⃣ Include: Headers, Max/Min, Weights, and Data rows</li>
+                        </ol>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-semibold text-black">End Row:</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={excelPreviewData ? excelPreviewData.length - 1 : 0}
-                        value={selectedDataRange.endRow}
-                        onChange={(e) => updateSelectionRange('endRow', parseInt(e.target.value) || 0)}
-                        className="w-20 h-8 text-xs border-gray-200"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-semibold text-black">Start Col:</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={excelPreviewData ? Math.max(...excelPreviewData.map(row => row.length)) - 1 : 0}
-                        value={selectedDataRange.startCol}
-                        onChange={(e) => updateSelectionRange('startCol', parseInt(e.target.value) || 0)}
-                        className="w-20 h-8 text-xs border-gray-200"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-semibold text-black">End Col:</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={excelPreviewData ? Math.max(...excelPreviewData.map(row => row.length)) - 1 : 0}
-                        value={selectedDataRange.endCol}
-                        onChange={(e) => updateSelectionRange('endCol', parseInt(e.target.value) || 0)}
-                        className="w-20 h-8 text-xs border-gray-200"
-                      />
+                  </div>
+
+                  <div className="flex justify-between items-center mb-3">
+                    <div className="text-xs text-gray-600">
+                      {selectedDataRange.startRow !== selectedDataRange.endRow || selectedDataRange.startCol !== selectedDataRange.endCol ? (
+                        <span className="font-medium">
+                          ✅ Selected: Row {selectedDataRange.startRow}-{selectedDataRange.endRow},
+                          Col {selectedDataRange.startCol}-{selectedDataRange.endCol}
+                          {' '}({(selectedDataRange.endRow - selectedDataRange.startRow + 1)} rows × {(selectedDataRange.endCol - selectedDataRange.startCol + 1)} cols)
+                        </span>
+                      ) : (
+                        <span className="text-amber-600">⚠️ Click and drag to select your data table</span>
+                      )}
                     </div>
                     <Button
                       type="button"
                       onClick={selectAllData}
                       variant="outline"
-                      className="text-xs h-8 border-gray-200 text-black hover:bg-gray-100"
+                      className="text-xs h-7 border-gray-200 text-black hover:bg-gray-100"
                     >
                       Select All
                     </Button>
                   </div>
 
-                  <div className="flex-1 overflow-auto border border-gray-200 rounded-lg">
+                  <div className="border border-gray-200 rounded-lg">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50">
-                          <TableHead className="text-xs font-semibold text-black w-12 text-center">#</TableHead>
+                          <TableHead className="text-xs font-semibold text-black w-12 text-center sticky left-0 bg-gray-50 z-10">#</TableHead>
                           {excelPreviewData && excelPreviewData[0] &&
                             Array.from({ length: Math.max(...excelPreviewData.map(row => row.length)) }).map((_, colIdx) => (
-                              <TableHead key={colIdx} className="text-xs font-semibold text-black text-center min-w-24">
+                              <TableHead key={colIdx} className="text-xs font-semibold text-black text-center min-w-16 whitespace-nowrap">
                                 Col {colIdx}
                               </TableHead>
                             ))
@@ -7016,37 +6762,70 @@ export default function MCDMCalculator() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {excelPreviewData?.map((row, rowIdx) => (
-                          <TableRow
-                            key={rowIdx}
-                            className={`border-b border-gray-200 ${rowIdx >= selectedDataRange.startRow &&
-                              rowIdx <= selectedDataRange.endRow
-                              ? 'bg-blue-50'
-                              : 'hover:bg-gray-50'
-                              }`}
-                          >
-                            <TableCell className="text-xs font-semibold text-gray-600 text-center">
-                              {rowIdx}
-                            </TableCell>
-                            {Array.from({ length: Math.max(...excelPreviewData.map(r => r.length)) }).map((_, colIdx) => {
-                              const isSelected =
-                                rowIdx >= selectedDataRange.startRow &&
-                                rowIdx <= selectedDataRange.endRow &&
-                                colIdx >= selectedDataRange.startCol &&
-                                colIdx <= selectedDataRange.endCol
+                        {excelPreviewData?.map((row, rowIdx) => {
+                          const maxCols = Math.max(...excelPreviewData.map(r => r.length));
+                          const isRowSelected = rowIdx >= selectedDataRange.startRow && rowIdx <= selectedDataRange.endRow;
 
-                              return (
-                                <TableCell
-                                  key={colIdx}
-                                  className={`text-xs text-black text-center ${isSelected ? 'bg-blue-100 font-semibold' : ''
-                                    }`}
-                                >
-                                  {row[colIdx] !== undefined && row[colIdx] !== null ? String(row[colIdx]) : ''}
-                                </TableCell>
-                              )
-                            })}
-                          </TableRow>
-                        ))}
+                          return (
+                            <TableRow
+                              key={rowIdx}
+                              className={`border-b border-gray-200 ${isRowSelected ? 'bg-blue-50' : ''}`}
+                            >
+                              <TableCell className={`text-xs font-semibold text-center sticky left-0 z-10 ${isRowSelected ? 'bg-blue-100' : 'bg-white'} ${isRowSelected ? 'text-blue-900' : 'text-gray-600'}`}>
+                                {rowIdx}
+                              </TableCell>
+                              {Array.from({ length: maxCols }).map((_, colIdx) => {
+                                const isSelected =
+                                  rowIdx >= selectedDataRange.startRow &&
+                                  rowIdx <= selectedDataRange.endRow &&
+                                  colIdx >= selectedDataRange.startCol &&
+                                  colIdx <= selectedDataRange.endCol
+
+                                const isCorner =
+                                  (rowIdx === selectedDataRange.startRow && colIdx === selectedDataRange.startCol) ||
+                                  (rowIdx === selectedDataRange.endRow && colIdx === selectedDataRange.endCol);
+
+                                return (
+                                  <TableCell
+                                    key={colIdx}
+                                    onMouseDown={() => {
+                                      setSelectedDataRange({
+                                        startRow: rowIdx,
+                                        endRow: rowIdx,
+                                        startCol: colIdx,
+                                        endCol: colIdx
+                                      })
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      if (e.buttons === 1) { // Left mouse button is pressed
+                                        setSelectedDataRange(prev => ({
+                                          startRow: Math.min(prev.startRow, rowIdx),
+                                          endRow: Math.max(prev.endRow, rowIdx),
+                                          startCol: Math.min(prev.startCol, colIdx),
+                                          endCol: Math.max(prev.endCol, colIdx)
+                                        }))
+                                      }
+                                    }}
+                                    className={`text-xs text-black text-center cursor-pointer select-none transition-colors ${isSelected
+                                      ? `bg-blue-200 font-semibold ${isCorner ? 'ring-2 ring-blue-500' : 'border-2 border-blue-400'}`
+                                      : 'hover:bg-gray-100 border border-gray-200'
+                                      }`}
+                                  >
+                                    {(() => {
+                                      const val = row[colIdx];
+                                      if (val === undefined || val === null) return '';
+                                      const num = Number(val);
+                                      if (!isNaN(num) && String(val).trim() !== '') {
+                                        return parseFloat(num.toFixed(4));
+                                      }
+                                      return String(val);
+                                    })()}
+                                  </TableCell>
+                                )
+                              })}
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
@@ -7072,7 +6851,8 @@ export default function MCDMCalculator() {
                           setCurrentStep("home")
                         }
                       }}
-                      className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
+                      disabled={selectedDataRange.startRow === selectedDataRange.endRow && selectedDataRange.startCol === selectedDataRange.endCol}
+                      className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Import Selected Data
                     </Button>
@@ -7085,85 +6865,81 @@ export default function MCDMCalculator() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm text-black">Decision Matrix</CardTitle>
                   <CardDescription className="text-xs text-gray-700">
-                    Edit names, set criteria types, weights, and fill in scores
+                    Define alternatives (rows) and criteria (columns) with their values
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-3">
-                  <div className="table-responsive border border-gray-200 rounded-lg">
+                  <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4 min-w-32">Alt</TableHead>
+                        {/* Row 1: Criteria Names */}
+                        <TableRow className="bg-gray-100 border-b border-gray-300">
+                          <TableHead className="text-xs font-bold text-black py-2 px-3 min-w-32 border-r border-gray-300">
+                            Criteria →<br />Alternatives ↓
+                          </TableHead>
                           {criteria.map((crit) => (
                             <TableHead
                               key={crit.id}
-                              className="text-xs font-semibold text-black text-center py-3 px-4 min-w-40"
+                              className="text-xs font-bold text-center py-2 px-3 min-w-28 border-r border-gray-300 last:border-r-0"
                             >
-                              <div className="flex flex-col items-center">
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    value={crit.name}
-                                    onChange={(e) => updateCriterion(crit.id, { name: e.target.value })}
-                                    className="text-xs h-8 border-gray-200 text-black text-center shadow-none font-semibold"
-                                  />
-                                  <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
-                                    {crit.type === "beneficial" ? "▲" : "▼"}
-                                  </span>
-                                </div>
-                              </div>
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-white border-b border-gray-200">
-                          <TableHead className="text-xs font-semibold text-black py-3 px-4">max/min</TableHead>
-                          {criteria.map((crit) => (
-                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-3 px-4">
-                              <div className="flex items-center justify-center gap-2">
-                                <Select
-                                  value={crit.type}
-                                  onValueChange={(value) =>
-                                    updateCriterion(crit.id, { type: value as "beneficial" | "non-beneficial" })
-                                  }
-                                >
-                                  <SelectTrigger className="text-xs h-8 border-gray-200 bg-white text-black shadow-none">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="beneficial">max</SelectItem>
-                                    <SelectItem value="non-beneficial">min</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
+                              <div className="flex flex-col items-center gap-1">
+                                <Input
+                                  value={crit.name}
+                                  onChange={(e) => updateCriterion(crit.id, { name: e.target.value })}
+                                  className="text-xs h-7 border-gray-300 text-black text-center shadow-none font-bold bg-white"
+                                />
+                                <span className={`text-sm ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
                                   {crit.type === "beneficial" ? "▲" : "▼"}
                                 </span>
                               </div>
                             </TableHead>
                           ))}
                         </TableRow>
-
+                        {/* Row 2: Max/Min */}
+                        <TableRow className="bg-gray-50 border-b border-gray-300">
+                          <TableHead className="text-xs font-semibold text-black py-2 px-3 border-r border-gray-300">Max/Min</TableHead>
+                          {criteria.map((crit) => (
+                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-2 px-3 border-r border-gray-300 last:border-r-0">
+                              <Select
+                                value={crit.type}
+                                onValueChange={(value) =>
+                                  updateCriterion(crit.id, { type: value as "beneficial" | "non-beneficial" })
+                                }
+                              >
+                                <SelectTrigger className="text-xs h-7 border-gray-300 bg-white text-black shadow-none w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="beneficial">Max</SelectItem>
+                                  <SelectItem value="non-beneficial">Min</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableHead>
+                          ))}
+                        </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {alternatives.map((alt) => (
-                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-3 px-4">
+                        {alternatives.map((alt, idx) => (
+                          <TableRow key={alt.id} className={`border-b border-gray-200 hover:bg-gray-50 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                            <TableCell className="py-2 px-3 border-r border-gray-200 font-medium">
                               <Input
-                                placeholder="Name"
+                                placeholder="Alternative name"
                                 value={alt.name}
                                 onChange={(e) => updateAlternativeName(alt.id, e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                className="text-xs font-medium h-8 border-gray-200 text-black shadow-none"
+                                className="text-xs font-semibold h-7 border-gray-300 text-black shadow-none bg-white"
                               />
                             </TableCell>
                             {criteria.map((crit) => (
-                              <TableCell key={crit.id} className="text-center py-3 px-4">
+                              <TableCell key={crit.id} className="text-center py-2 px-3 border-r border-gray-200 last:border-r-0">
                                 <Input
                                   type="number"
                                   inputMode="decimal"
-                                  placeholder="Enter value"
+                                  placeholder="0"
                                   value={alt.scores[crit.id] ?? ""}
                                   onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
                                   onKeyDown={handleKeyDown}
-                                  className="text-center text-xs h-8 border-gray-200 text-black w-full shadow-none"
+                                  className="text-center text-xs h-7 border-gray-300 text-black w-full shadow-none bg-white"
                                 />
                               </TableCell>
                             ))}
@@ -7228,7 +7004,7 @@ export default function MCDMCalculator() {
             </DialogHeader>
 
             <div className="space-y-4 mt-4">
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="border border-gray-200 rounded-lg overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
@@ -7647,22 +7423,32 @@ export default function MCDMCalculator() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-3">
-                  <div className="table-responsive border border-gray-200 rounded-lg">
-                    <Table>
+                  <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                    <Table className="border-collapse table-auto w-full">
                       <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="font-semibold text-black py-3 px-4 text-xs">Alternative</TableHead>
+                        <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
+                          <TableHead className="bg-white text-black font-bold w-20 text-[9px] border-r border-gray-300 p-0 h-8">
+                            <div className="flex flex-col items-center justify-center h-full leading-tight">
+                              <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center">Criteria →</div>
+                              <div className="text-[10px] font-bold py-0.5 w-full text-center">Alternatives ↓</div>
+                            </div>
+                          </TableHead>
                           {criteria.map((crit) => (
                             <TableHead
                               key={crit.id}
-                              className="font-semibold text-center py-3 px-4 text-xs"
+                              className="text-black font-bold text-center min-w-[60px] text-[10px] border-r border-gray-300 px-1"
                             >
-                              <div className="flex flex-col items-center">
-                                <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>{crit.name}</span>
-                                <span className="text-gray-500 mt-1 text-[10px]">
-                                  <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"}>
-                                    {crit.type === "beneficial" ? "↑" : "↓"}
-                                  </span>{" "}
+                              <div className="flex flex-col items-center py-0.5">
+                                <div className="flex items-center gap-1">
+                                  <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</span>
+                                  <span className={crit.type === "beneficial" ? "text-green-700 font-bold" : "text-red-700 font-bold"}>
+                                    {crit.type === "beneficial" ? "▲" : "▼"}
+                                  </span>
+                                </div>
+                                <span className="text-gray-600 font-semibold text-[9px]">
+                                  {crit.type === "beneficial" ? "Max" : "Min"}
+                                </span>
+                                <span className="text-gray-500 text-[8px] font-normal leading-none">
                                   ({crit.weight.toFixed(weightsDecimalPlaces)})
                                 </span>
                               </div>
@@ -7672,15 +7458,17 @@ export default function MCDMCalculator() {
                       </TableHeader>
                       <TableBody>
                         {alternatives.map((alt) => (
-                          <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <TableCell className="py-3 px-4 font-medium text-black text-xs">
+                          <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
+                            <TableCell className="bg-[#F4B084] text-black font-bold text-[10px] border-r border-gray-300 py-1.5 px-2">
                               {alt.name}
                             </TableCell>
                             {criteria.map((crit) => (
-                              <TableCell key={crit.id} className="text-center py-3 px-4 text-black">
-                                {alt.scores[crit.id] !== undefined && alt.scores[crit.id] !== ""
-                                  ? Number(alt.scores[crit.id]).toString()
-                                  : "-"}
+                              <TableCell key={crit.id} className="text-center p-0.5 border-r border-gray-300">
+                                <div className="bg-white border border-gray-200 rounded-md py-1 px-1.5 inline-block min-w-[50px] shadow-none text-[10px]">
+                                  {alt.scores[crit.id] !== undefined && alt.scores[crit.id] !== ""
+                                    ? Number(alt.scores[crit.id]).toString()
+                                    : "-"}
+                                </div>
                               </TableCell>
                             ))}
                           </TableRow>
@@ -7703,13 +7491,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -7742,13 +7530,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -7781,13 +7569,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -7808,7 +7596,7 @@ export default function MCDMCalculator() {
                             <TableRow className="bg-gray-50/50 border-b border-gray-200 border-t-2">
                               <TableCell className="py-3 px-4 font-bold text-black text-xs">Entropy (Ej)</TableCell>
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {entropyResult.entropyValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -7828,12 +7616,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -7843,7 +7631,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {entropyResult.diversityValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -7863,12 +7651,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -7878,7 +7666,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {entropyResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -7902,13 +7690,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -7941,13 +7729,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -7980,12 +7768,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -7995,7 +7783,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {criticResult.standardDeviations[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -8015,13 +7803,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Criterion</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8054,12 +7842,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8069,7 +7857,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {criticResult.informationAmounts[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -8089,12 +7877,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8104,7 +7892,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {criticResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -8126,7 +7914,7 @@ export default function MCDMCalculator() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pt-3">
-                    <div className="table-responsive border border-gray-200 rounded-lg">
+                    <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -8152,7 +7940,7 @@ export default function MCDMCalculator() {
                           <TableRow className="bg-yellow-50 border-b border-gray-200">
                             <TableCell className="py-3 px-4 font-bold text-black text-xs">Weights (Wj)</TableCell>
                             {criteria.map((crit) => (
-                              <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                              <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                 {ahpResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                               </TableCell>
                             ))}
@@ -8170,7 +7958,7 @@ export default function MCDMCalculator() {
                     <CardTitle className="text-sm text-black">PIPRECIA Weight Calculation Results</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-3">
-                    <div className="table-responsive border border-gray-200 rounded-lg">
+                    <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -8194,7 +7982,7 @@ export default function MCDMCalculator() {
                               <TableCell className="text-center py-3 px-4 text-xs text-black">
                                 {pipreciaResult.q_values[crit.id]?.toFixed(weightsDecimalPlaces)}
                               </TableCell>
-                              <TableCell className="text-center py-3 px-4 text-xs text-black font-bold">
+                              <TableCell className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                 {pipreciaResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                               </TableCell>
                             </TableRow>
@@ -8217,13 +8005,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8256,13 +8044,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8295,7 +8083,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -8307,7 +8095,7 @@ export default function MCDMCalculator() {
                             {alternatives.map((alt) => (
                               <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
-                                <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {merecResult.performanceScores[alt.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               </TableRow>
@@ -8327,13 +8115,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   Remove {crit.name}
                                 </TableHead>
@@ -8366,12 +8154,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8381,7 +8169,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {merecResult.removalEffects[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -8401,12 +8189,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8416,7 +8204,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {merecResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -8484,13 +8272,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8523,13 +8311,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8562,12 +8350,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8577,7 +8365,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {wensloResult.wensloValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -8597,12 +8385,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8612,7 +8400,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {wensloResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -8636,13 +8424,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8675,13 +8463,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8714,12 +8502,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8729,7 +8517,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {lopcowResult.geometricMeans[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -8749,12 +8537,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8764,7 +8552,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {lopcowResult.logPercentages[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -8784,12 +8572,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8799,7 +8587,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {lopcowResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -8823,13 +8611,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8862,13 +8650,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8901,13 +8689,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Criteria</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8940,13 +8728,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Criteria</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -8979,7 +8767,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -8992,10 +8780,10 @@ export default function MCDMCalculator() {
                             {criteria.map((crit) => (
                               <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
-                                <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {dematelResult.dValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
-                                <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {dematelResult.rValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               </TableRow>
@@ -9015,7 +8803,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -9028,10 +8816,10 @@ export default function MCDMCalculator() {
                             {criteria.map((crit) => (
                               <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
-                                <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {dematelResult.pValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
-                                <TableCell className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {dematelResult.eValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               </TableRow>
@@ -9051,12 +8839,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9066,7 +8854,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {dematelResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -9089,13 +8877,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9128,13 +8916,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9167,12 +8955,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9182,7 +8970,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {sdResult.sigmaValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -9202,12 +8990,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9217,7 +9005,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {sdResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -9240,13 +9028,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9279,13 +9067,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9318,12 +9106,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9333,7 +9121,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {varianceResult.varianceValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -9353,12 +9141,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9368,7 +9156,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {varianceResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -9391,13 +9179,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9430,13 +9218,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9469,12 +9257,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9484,7 +9272,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {madResult.madValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -9504,12 +9292,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9519,7 +9307,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {madResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -9544,13 +9332,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9583,13 +9371,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9622,12 +9410,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9637,7 +9425,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {dbwResult.distanceValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -9657,12 +9445,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9672,7 +9460,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {dbwResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -9695,13 +9483,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9734,13 +9522,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9773,12 +9561,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9788,7 +9576,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {svpResult.varianceValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -9808,12 +9596,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9823,7 +9611,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {svpResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -9847,13 +9635,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9886,13 +9674,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9925,12 +9713,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9940,7 +9728,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {mdmResult.deviationValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -9960,12 +9748,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -9975,7 +9763,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {mdmResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -9999,13 +9787,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -10038,13 +9826,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -10077,13 +9865,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Metric</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -10094,7 +9882,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               <TableCell className="py-3 px-4 font-medium text-black text-xs">Ideal Solution (A*)</TableCell>
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {lswResult.idealSolution[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -10102,7 +9890,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               <TableCell className="py-3 px-4 font-medium text-black text-xs">Least Squares (LS_j)</TableCell>
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {lswResult.leastSquaresValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -10122,12 +9910,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -10137,7 +9925,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {lswResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -10161,13 +9949,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -10200,13 +9988,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -10239,13 +10027,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Metric</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -10256,7 +10044,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               <TableCell className="py-3 px-4 font-medium text-black text-xs">Goal Value (G_j)</TableCell>
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {gpowResult.goalValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -10264,7 +10052,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               <TableCell className="py-3 px-4 font-medium text-black text-xs">Goal Deviation (D_j)</TableCell>
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {gpowResult.goalDeviationValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -10284,12 +10072,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -10299,7 +10087,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {gpowResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -10323,13 +10111,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -10362,13 +10150,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -10401,13 +10189,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Metric</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -10418,7 +10206,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               <TableCell className="py-3 px-4 font-medium text-black text-xs">Anti-Ideal (A⁻)</TableCell>
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {lpwmResult.antiIdealValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -10426,7 +10214,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               <TableCell className="py-3 px-4 font-medium text-black text-xs">Lower Deviation (LD_j)</TableCell>
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {lpwmResult.lowerDeviationValues[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -10446,12 +10234,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -10461,7 +10249,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {lpwmResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -10485,13 +10273,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -10524,13 +10312,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -10563,7 +10351,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -10601,12 +10389,12 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -10616,7 +10404,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             <TableRow className="bg-yellow-50 border-b border-gray-200">
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-bold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-bold border-r border-gray-300">
                                   {pcwmResult.weights[crit.id]?.toFixed(weightsDecimalPlaces)}
                                 </TableCell>
                               ))}
@@ -10639,7 +10427,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -10678,7 +10466,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-3">
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -10718,7 +10506,7 @@ export default function MCDMCalculator() {
                   </DialogHeader>
 
                   <div className="space-y-4 mt-4">
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="border border-gray-200 rounded-lg overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-gray-50">
@@ -10842,7 +10630,7 @@ export default function MCDMCalculator() {
                   </DialogHeader>
 
                   <div className="space-y-4 mt-4">
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="border border-gray-200 rounded-lg overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-gray-50">
@@ -11233,7 +11021,7 @@ export default function MCDMCalculator() {
                   </div>
 
                   {/* Results Table */}
-                  <div className="table-responsive border border-gray-200 rounded-lg">
+                  <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                     <table className="min-w-full text-xs">
                       <thead className="bg-gray-50">
                         <tr>
@@ -11266,7 +11054,7 @@ export default function MCDMCalculator() {
                 </CardContent>
               </Card>
 
-              {/* Criteria Weights Display - Styled per Screenshot 2 */}
+              {/* Criteria Weights Display */}
               <Card className="border-gray-200 bg-white shadow-none mb-6">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-bold text-black">Criteria Weights</CardTitle>
@@ -11275,30 +11063,29 @@ export default function MCDMCalculator() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="table-responsive border border-gray-200 rounded-lg">
+                  <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-gray-50 border-b border-gray-200">
-                          <TableHead className="text-xs font-bold text-black py-2 px-4 w-24">Criterion</TableHead>
+                        <TableRow className="bg-gray-100 border-b border-gray-300">
+                          <TableHead className="text-xs font-bold text-black py-2 px-3 w-28 border-r border-gray-300">Criterion</TableHead>
                           {criteria.map((crit) => (
-                            <TableHead key={crit.id} className={`text-xs font-bold text-center py-2 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
-                              }`}>
-                              {crit.name}
+                            <TableHead key={crit.id} className="text-xs font-bold text-center py-2 px-3 border-r border-gray-300 last:border-r-0">
+                              <div className="flex flex-col items-center gap-1">
+                                <span>{crit.name}</span>
+                                <span className={`text-sm ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
+                                  {crit.type === "beneficial" ? "▲" : "▼"}
+                                </span>
+                              </div>
                             </TableHead>
                           ))}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        <TableRow className="border-b border-gray-200 hover:bg-gray-50">
-                          <TableCell className="py-3 px-4 text-xs font-bold text-black">Weight</TableCell>
+                        <TableRow className="border-b border-gray-200 hover:bg-gray-50 bg-white">
+                          <TableCell className="py-2 px-3 text-xs font-semibold text-black border-r border-gray-200">Weight</TableCell>
                           {criteria.map((crit) => (
-                            <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                              <div className="flex items-center justify-center gap-1 font-medium whitespace-nowrap">
-                                <span className={`${crit.type === "beneficial" ? "text-green-600" : "text-red-600"} font-bold`}>
-                                  {crit.type === "beneficial" ? "↑" : "↓"}
-                                </span>
-                                <span className="font-bold">({(crit.weight ?? 0).toFixed(resultsDecimalPlaces)})</span>
-                              </div>
+                            <TableCell key={crit.id} className="text-center py-2 px-3 text-xs text-black border-r border-gray-200 last:border-r-0">
+                              <span className="font-medium">{(crit.weight ?? 0).toFixed(resultsDecimalPlaces)}</span>
                             </TableCell>
                           ))}
                         </TableRow>
@@ -11319,13 +11106,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -11358,13 +11145,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -11401,13 +11188,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -11440,13 +11227,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -11483,13 +11270,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -11522,13 +11309,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -11561,13 +11348,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -11604,13 +11391,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name}
                                 </TableHead>
@@ -11643,7 +11430,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -11679,7 +11466,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -11723,13 +11510,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -11762,13 +11549,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -11801,7 +11588,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -11845,13 +11632,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -11884,7 +11671,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -11928,13 +11715,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -11964,7 +11751,7 @@ export default function MCDMCalculator() {
                       <CardTitle className="text-sm text-black">Table 3: Aggregated Preference Matrix</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -12002,7 +11789,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -12035,7 +11822,7 @@ export default function MCDMCalculator() {
                       <CardTitle className="text-sm text-black">Table 5: Outranking Matrix</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -12077,13 +11864,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -12116,13 +11903,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -12155,13 +11942,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -12198,13 +11985,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -12237,13 +12024,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -12276,13 +12063,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Solution</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -12321,7 +12108,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
                           <thead className="bg-gray-50">
                             <tr>
@@ -12358,7 +12145,7 @@ export default function MCDMCalculator() {
                       <CardDescription className="text-xs text-gray-700">Grey Relational Normalization</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -12393,7 +12180,7 @@ export default function MCDMCalculator() {
                       <CardDescription className="text-xs text-gray-700">Absolute difference from reference sequence</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -12428,7 +12215,7 @@ export default function MCDMCalculator() {
                       <CardDescription className="text-xs text-gray-700">Correlation measure (ζ = 0.5)</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -12467,7 +12254,7 @@ export default function MCDMCalculator() {
                       <CardDescription className="text-xs text-gray-700">Detailed normalized values (including optimal alternative)</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -12528,7 +12315,7 @@ export default function MCDMCalculator() {
                       <CardDescription className="text-xs text-gray-700">Normalized values × Weights</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -12563,7 +12350,7 @@ export default function MCDMCalculator() {
                       <CardDescription className="text-xs text-gray-700">Si (Optimality Function) and Ki (Degree of Utility)</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
                           <thead className="bg-gray-50">
                             <tr>
@@ -12607,13 +12394,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -12646,13 +12433,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Value Type</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -12691,7 +12478,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
                           <thead className="bg-gray-50">
                             <tr>
@@ -12735,13 +12522,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -12774,13 +12561,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -12813,13 +12600,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -12852,7 +12639,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
                           <thead className="bg-gray-50">
                             <tr>
@@ -12898,7 +12685,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -12933,13 +12720,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -12972,13 +12759,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13011,7 +12798,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
                           <thead className="bg-gray-50">
                             <tr>
@@ -13064,13 +12851,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13103,13 +12890,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13142,13 +12929,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Metric</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13159,7 +12946,7 @@ export default function MCDMCalculator() {
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
                               <TableCell className="py-3 px-4 font-bold text-black text-xs">BAA (G)</TableCell>
                               {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black font-semibold">
+                                <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {apiResults.metrics?.mabacBorderApproximationArea[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
                                 </TableCell>
                               ))}
@@ -13179,13 +12966,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13222,13 +13009,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13261,13 +13048,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13300,13 +13087,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Solution</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13345,7 +13132,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
                           <thead className="bg-gray-50">
                             <tr>
@@ -13389,13 +13176,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13428,13 +13215,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13467,7 +13254,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
                           <thead className="bg-gray-50">
                             <tr>
@@ -13511,13 +13298,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13550,13 +13337,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13589,7 +13376,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
                           <thead className="bg-gray-50">
                             <tr>
@@ -13650,13 +13437,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13689,7 +13476,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -13724,7 +13511,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -13768,13 +13555,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13807,7 +13594,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
@@ -13842,7 +13629,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
                           <thead className="bg-gray-50">
                             <tr>
@@ -13886,13 +13673,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13925,13 +13712,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -13964,7 +13751,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
                           <thead className="bg-gray-50">
                             <tr>
@@ -14008,13 +13795,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -14047,13 +13834,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -14086,13 +13873,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -14125,13 +13912,13 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                   }`}>
                                   {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                 </TableHead>
@@ -14164,7 +13951,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="table-responsive border border-gray-200 rounded-lg">
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
                           <thead className="bg-gray-50">
                             <tr>
@@ -14251,7 +14038,7 @@ export default function MCDMCalculator() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-4">
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="border border-gray-200 rounded-lg overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
@@ -14335,7 +14122,7 @@ export default function MCDMCalculator() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-4">
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="border border-gray-200 rounded-lg overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
@@ -14393,7 +14180,7 @@ export default function MCDMCalculator() {
               </DialogHeader>
 
               <div className="space-y-4 mt-4">
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="border border-gray-200 rounded-lg overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50">

@@ -91,7 +91,8 @@ export async function POST(request: NextRequest) {
 
         const resultsByCriterion: Record<string, any[]> = {};
 
-        for (const task of tasks) {
+        // Parallelize task processing for significant performance gain
+        await Promise.all(tasks.map(async (task) => {
             const { criterionName, variation, criteria } = task;
             let scores: Record<string, number> = {};
 
@@ -144,7 +145,7 @@ export async function POST(request: NextRequest) {
             } catch (err) {
                 console.error(`Error calculating ${method} for ${criterionName} at variation ${variation}:`, err);
             }
-        }
+        }));
 
         return NextResponse.json({ results: resultsByCriterion });
     } catch (error) {
