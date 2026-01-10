@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useRef, useMemo, Fragment, useEffect } from "react"
 import { MCDMMethod, WeightMethod, PageStep, ComparisonResult, SensitivityResult, EntropyResult, CriticResult, AHPResult, PipreciaResult, MERECResult, SWARAResult, WensloResult, LopcowResult, DematelResult, SDResult, VarianceResult, MADResult, DBWResult, SVPResult, MDMResult, LSWResult, GPOWResult, LPWMResult, PCWMResult, RankingWeightResult, ROCResult, RRResult, Criterion, Alternative, SensitivityRankingItem } from "@/types/mcdm"
@@ -3172,17 +3172,17 @@ export default function MCDMCalculator() {
                     </div>
 
                     <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
-                      <Table className="border-collapse table-auto w-full">
+                      <Table className="border-collapse w-full" style={{ width: `${80 + (criteria.length * 60)}px`, minWidth: '100%' }}>
                         <TableHeader>
                           <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
-                            <TableHead className="bg-white text-black font-bold w-20 text-[9px] border-r border-gray-300 p-0 h-8">
+                            <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
                               <div className="flex flex-col items-center justify-center h-full leading-tight">
                                 <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center">Criteria →</div>
                                 <div className="text-[10px] font-bold py-0.5 w-full text-center">Alternatives ↓</div>
                               </div>
                             </TableHead>
                             {criteria.map((crit) => (
-                              <TableHead key={crit.id} className="text-black font-bold text-center min-w-[60px] text-[10px] border-r border-gray-300 px-1 py-0.5">
+                              <TableHead key={crit.id} className="text-black font-bold text-center text-[10px] border-r border-gray-300 px-1 py-0.5" style={{ width: '60px', minWidth: '60px' }}>
                                 <div className="flex flex-col items-center py-0.5">
                                   <div className="flex items-center gap-0.5">
                                     <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
@@ -3201,7 +3201,7 @@ export default function MCDMCalculator() {
                         <TableBody>
                           {alternatives.map((alt) => (
                             <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
-                              <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5">{alt.name}</TableCell>
+                              <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5 text-center">{alt.name}</TableCell>
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
                                   <Input
@@ -3323,17 +3323,17 @@ export default function MCDMCalculator() {
                       </div>
 
                       <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
-                        <Table className="border-collapse">
+                        <Table className="border-collapse w-full" style={{ width: `${80 + (criteria.length * 60)}px`, minWidth: '100%' }}>
                           <TableHeader>
                             <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
-                              <TableHead className="bg-white text-black font-bold w-20 text-[9px] border-r border-gray-300 p-0 h-8">
+                              <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
                                 <div className="flex flex-col items-center justify-center h-full leading-tight">
                                   <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center">Criteria →</div>
                                   <div className="text-[10px] font-bold py-0.5 w-full text-center">Alternatives ↓</div>
                                 </div>
                               </TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className="text-black font-bold text-center min-w-[60px] text-[10px] border-r border-gray-300 px-1 py-0.5">
+                                <TableHead key={crit.id} className="text-black font-bold text-center text-[10px] border-r border-gray-300 px-1 py-0.5" style={{ width: '60px', minWidth: '60px' }}>
                                   <div className="flex flex-col items-center py-0.5">
                                     <div className="flex items-center gap-1">
                                       <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
@@ -3352,7 +3352,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             {alternatives.map((alt) => (
                               <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
-                                <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5">{alt.name}</TableCell>
+                                <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5 text-center">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
                                     <Input
@@ -4455,17 +4455,17 @@ export default function MCDMCalculator() {
 
                       {/* Editable Decision Matrix Table */}
                       <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
-                        <Table className="border-collapse">
+                        <Table className="border-collapse w-full" style={{ width: `${80 + (criteria.length * 60)}px`, minWidth: '100%' }}>
                           <TableHeader>
                             <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
-                              <TableHead className="bg-white text-black font-bold w-20 text-[9px] border-r border-gray-300 p-0 h-8">
+                              <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
                                 <div className="flex flex-col items-center justify-center h-full leading-tight">
                                   <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center">Criteria →</div>
                                   <div className="text-[10px] font-bold py-0.5 w-full text-center">Alternatives ↓</div>
                                 </div>
                               </TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className="text-black font-bold text-center min-w-[60px] text-[10px] border-r border-gray-300 px-1 py-0.5">
+                                <TableHead key={crit.id} className="text-black font-bold text-center text-[10px] border-r border-gray-300 px-1 py-0.5" style={{ width: '60px', minWidth: '60px' }}>
                                   <div className="flex flex-col items-center py-0.5">
                                     <div className="flex items-center gap-1">
                                       <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
@@ -4484,7 +4484,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             {alternatives.map((alt) => (
                               <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
-                                <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5">{alt.name}</TableCell>
+                                <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5 text-center">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
                                     <Input
@@ -5412,17 +5412,17 @@ export default function MCDMCalculator() {
 
                       {/* Editable Decision Matrix Table */}
                       <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
-                        <Table className="border-collapse">
+                        <Table className="border-collapse w-full" style={{ width: `${80 + (criteria.length * 60)}px`, minWidth: '100%' }}>
                           <TableHeader>
                             <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
-                              <TableHead className="bg-white text-black font-bold w-20 text-[9px] border-r border-gray-300 p-0 h-8">
+                              <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
                                 <div className="flex flex-col items-center justify-center h-full leading-tight">
                                   <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center">Criteria →</div>
                                   <div className="text-[10px] font-bold py-0.5 w-full text-center">Alternatives ↓</div>
                                 </div>
                               </TableHead>
                               {criteria.map((crit) => (
-                                <TableHead key={crit.id} className="text-black font-bold text-center min-w-[60px] text-[10px] border-r border-gray-300 px-1 py-0.5">
+                                <TableHead key={crit.id} className="text-black font-bold text-center text-[10px] border-r border-gray-300 px-1 py-0.5" style={{ width: '60px', minWidth: '60px' }}>
                                   <div className="flex flex-col items-center py-0.5">
                                     <div className="flex items-center gap-1">
                                       <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
@@ -5441,7 +5441,7 @@ export default function MCDMCalculator() {
                           <TableBody>
                             {alternatives.map((alt) => (
                               <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
-                                <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5">{alt.name}</TableCell>
+                                <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5 text-center">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
                                     <Input
@@ -5872,7 +5872,7 @@ export default function MCDMCalculator() {
                               <tbody>
                                 {alternatives.map((alt) => (
                                   <tr key={alt.id} className="hover:bg-gray-50 border-b last:border-0 border-gray-100">
-                                    <td className="px-1.5 py-1 text-black font-bold border-r border-gray-200 bg-[#F4B084] sticky left-0 z-10">{alt.name}</td>
+                                    <td className="px-1.5 py-1 text-black font-bold border-r border-gray-200 bg-[#F4B084] sticky left-0 z-10 text-center">{alt.name}</td>
                                     {sensitivityWeightComparisonResults.map((res, i) => {
                                       const item = res.ranking.find((r: any) => r.alternativeName === alt.name)
                                       return (
@@ -7459,7 +7459,7 @@ export default function MCDMCalculator() {
                       <TableBody>
                         {alternatives.map((alt) => (
                           <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
-                            <TableCell className="bg-[#F4B084] text-black font-bold text-[10px] border-r border-gray-300 py-1.5 px-2">
+                            <TableCell className="bg-[#F4B084] text-black font-bold text-[10px] border-r border-gray-300 py-1.5 px-2 text-center">
                               {alt.name}
                             </TableCell>
                             {criteria.map((crit) => (
@@ -11070,9 +11070,9 @@ export default function MCDMCalculator() {
                           <TableHead className="text-xs font-bold text-black py-2 px-3 w-28 border-r border-gray-300">Criterion</TableHead>
                           {criteria.map((crit) => (
                             <TableHead key={crit.id} className="text-xs font-bold text-center py-2 px-3 border-r border-gray-300 last:border-r-0">
-                              <div className="flex flex-col items-center gap-1">
+                              <div className="flex items-center justify-center gap-1">
                                 <span>{crit.name}</span>
-                                <span className={`text-sm ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
+                                <span className={`text-[10px] ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
                                   {crit.type === "beneficial" ? "▲" : "▼"}
                                 </span>
                               </div>

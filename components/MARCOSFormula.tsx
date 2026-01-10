@@ -67,8 +67,10 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
   const latex = {
     title: "\\textbf{MARCOS (Measurement of Alternatives and Ranking according to Compromise Solution) — Steps}",
     intro: "\\text{MARCOS is a multi-criteria decision-making method that evaluates alternatives by comparing them to both ideal and anti-ideal solutions, calculating utility degrees to determine the final ranking.}",
-    step1:
-      "\\textbf{1. Decision Matrix:} \\quad X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix}, \\quad \\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)} \\tag{1}",
+    step1_matrix:
+      "X = [x_{i,j}]_{m\\times n} = \\begin{bmatrix} x_{1,1} & x_{1,2} & \\dots & x_{1,n} \\\\ x_{2,1} & x_{2,2} & \\dots & x_{2,n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ x_{m,1} & x_{m,2} & \\dots & x_{m,n} \\end{bmatrix} \\tag{1}",
+    step1_explanation:
+      "\\text{where } i=1,2,\\dots,m \\text{ (alternatives)}, \\quad j=1,2,\\dots,n \\text{ (criteria)}",
     step2_intro:
       "\\textbf{2. Ideal and Anti-Ideal Solutions:} \\quad \\text{Determine the ideal (AI) and anti-ideal (AAI) solutions for each criterion.}",
     step2_ideal:
@@ -201,7 +203,12 @@ export default function MARCOSFormula({ compact = false }: MARCOSFormulaProps) {
               <div
                 className="latex text-sm text-center"
                 style={{ fontSize: "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: `\\[${latex.step1}\\]` }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step1_matrix}\\]` }}
+              />
+              <div
+                className="latex text-sm text-center"
+                style={{ fontSize: "0.875rem" }}
+                dangerouslySetInnerHTML={{ __html: `\\[${latex.step1_explanation}\\]` }}
               />
             </div>
           </li>

@@ -490,10 +490,9 @@ body {
   .table-responsive {
     @apply w-full;
     -webkit-overflow-scrolling: touch;
-    overflow-x: auto;
   }
 
-  /* Scrollbar styling */
+  /* Scrollbar styling - only for desktop */
   .table-responsive::-webkit-scrollbar {
     height: 4px;
   }
@@ -506,31 +505,42 @@ body {
     @apply bg-gray-100;
   }
 
-  /* Mobile: Compact table with smaller fonts */
+  /* Mobile: Ultra-compact table to fit without scrolling */
   @media (max-width: 768px) {
+
+    /* Remove horizontal scroll on mobile */
+    .table-responsive {
+      overflow-x: visible !important;
+    }
+
     .table-responsive table {
-      font-size: 0.563rem !important;
-      /* 9px - reduced from 10px */
+      font-size: 0.5rem !important;
+      /* 8px - ultra compact */
       width: 100%;
+      table-layout: fixed !important;
+      /* Force columns to be equal width */
     }
 
     .table-responsive th,
     .table-responsive td {
-      padding: 0.25rem 0.15rem !important;
+      padding: 0.15rem 0.1rem !important;
       /* Minimal padding */
       white-space: nowrap;
-      font-size: 0.563rem !important;
-      /* 9px */
-      line-height: 1.1 !important;
+      font-size: 0.5rem !important;
+      /* 8px */
+      line-height: 1 !important;
     }
 
-    /* Force header cells to same size */
+    /* Force header cells to same size - COMPACT like body cells */
     .table-responsive thead th,
     .table-responsive thead td {
-      font-size: 0.563rem !important;
-      /* 9px */
+      font-size: 0.5rem !important;
+      /* 8px */
       font-weight: 600 !important;
-      padding: 0.35rem 0.15rem !important;
+      padding: 0.15rem 0.1rem !important;
+      /* Reduced from 0.2rem to match body cells */
+      height: auto !important;
+      line-height: 1 !important;
     }
 
     /* Force all text inside headers to same size */
@@ -540,15 +550,15 @@ body {
     .table-responsive thead td span,
     .table-responsive thead th div,
     .table-responsive thead td div {
-      font-size: 0.563rem !important;
-      /* 9px */
+      font-size: 0.5rem !important;
+      /* 8px */
     }
 
     /* Force all text inside body cells to same size */
     .table-responsive tbody th,
     .table-responsive tbody td {
-      font-size: 0.563rem !important;
-      /* 9px */
+      font-size: 0.5rem !important;
+      /* 8px */
     }
 
     .table-responsive tbody th *,
@@ -557,28 +567,30 @@ body {
     .table-responsive tbody td span,
     .table-responsive tbody th div,
     .table-responsive tbody td div {
-      font-size: 0.563rem !important;
-      /* 9px */
+      font-size: 0.5rem !important;
+      /* 8px */
     }
 
-    /* Compact input fields on mobile */
+    /* Ultra-compact input fields on mobile */
     .table-responsive input,
     .table-responsive input[type="number"],
     .table-responsive input[type="text"] {
-      font-size: 0.563rem !important;
-      /* 9px */
-      height: 1.5rem !important;
-      /* 24px - reduced from 28px */
-      padding: 0.15rem 0.25rem !important;
-      min-height: 1.5rem !important;
-      line-height: 1.1 !important;
-      min-width: 2.5rem !important;
-      /* Narrow input fields */
+      font-size: 0.5rem !important;
+      /* 8px */
+      height: 1.3rem !important;
+      /* 20px - very compact */
+      padding: 0.1rem 0.15rem !important;
+      min-height: 1.3rem !important;
+      line-height: 1 !important;
+      min-width: 2rem !important;
+      /* Very narrow input fields */
+      max-width: 100% !important;
     }
 
     /* Reduce table cell padding when there are inputs */
+    .table-responsive tbody td[class*="p-0"],
     .table-responsive tbody td.p-1 {
-      padding: 0.15rem !important;
+      padding: 0.1rem !important;
     }
 
     /* Reduce card content spacing on mobile */
@@ -587,30 +599,32 @@ body {
     }
 
     /* Compact table headers with criteria info */
-    .table-responsive thead th .flex.flex-col {
-      gap: 0.1rem !important;
+    .table-responsive thead th .flex[class*="flex-col"] {
+      gap: 0.05rem !important;
     }
 
-    /* Narrow columns for criteria */
+    /* Ultra-narrow columns for criteria */
     .table-responsive th.min-w-20,
     .table-responsive td {
       min-width: auto !important;
-      max-width: 4rem !important;
+      max-width: none !important;
+      width: auto !important;
     }
 
-    /* Narrow first column (Alternative) */
+    /* Ultra-narrow first column (Alternative) */
     .table-responsive th.w-24,
+    .table-responsive th.w-20,
     .table-responsive thead th:first-child {
       width: auto !important;
-      min-width: 3rem !important;
-      max-width: 4rem !important;
+      min-width: 2rem !important;
+      max-width: 3rem !important;
     }
 
     /* Make table text even smaller on very small screens */
     @media (max-width: 480px) {
       .table-responsive table {
-        font-size: 0.563rem !important;
-        /* 9px */
+        font-size: 0.45rem !important;
+        /* 7.2px - extra compact */
       }
 
       .table-responsive th,
@@ -619,9 +633,9 @@ body {
       .table-responsive thead td,
       .table-responsive tbody th,
       .table-responsive tbody td {
-        font-size: 0.563rem !important;
-        /* 9px */
-        padding: 0.25rem 0.15rem !important;
+        font-size: 0.45rem !important;
+        /* 7.2px */
+        padding: 0.15rem 0.08rem !important;
       }
 
       .table-responsive thead th *,
@@ -636,13 +650,21 @@ body {
       .table-responsive tbody td span,
       .table-responsive tbody th div,
       .table-responsive tbody td div {
-        font-size: 0.563rem !important;
-        /* 9px */
+        font-size: 0.45rem !important;
+        /* 7.2px */
+      }
+
+      .table-responsive input,
+      .table-responsive input[type="number"],
+      .table-responsive input[type="text"] {
+        font-size: 0.45rem !important;
+        height: 1.2rem !important;
+        padding: 0.08rem 0.12rem !important;
       }
     }
   }
 
-  /* Desktop: Normal table */
+  /* Desktop: Normal table with horizontal scroll if needed */
   @media (min-width: 769px) {
     .table-responsive {
       overflow-x: auto;
