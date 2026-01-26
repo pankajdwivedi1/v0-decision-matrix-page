@@ -143,6 +143,13 @@ export async function POST(request: NextRequest) {
     if (metrics) {
       const preferredOrder = [
         'normalizedMatrix',
+        'weightedMatrix',
+        'idealBest',
+        'idealWorst',
+        'idealSolution',
+        'antiIdealSolution',
+        'avVector',
+        'averageSolution',
         'entropyMatrix',
         'standardDeviations',
         'correlationMatrix',
@@ -172,7 +179,11 @@ export async function POST(request: NextRequest) {
         k.toLowerCase().includes('measure') ||
         k.toLowerCase().includes('entropy') ||
         k.toLowerCase().includes('pairwise') ||
-        k.toLowerCase().includes('consistency')
+        k.toLowerCase().includes('consistency') ||
+        k.toLowerCase().includes('ideal') ||
+        k.toLowerCase().includes('solution') ||
+        k.toLowerCase().includes('best') ||
+        k.toLowerCase().includes('worst')
       ).sort((a, b) => {
         const indexA = preferredOrder.indexOf(a)
         const indexB = preferredOrder.indexOf(b)
@@ -202,18 +213,32 @@ export async function POST(request: NextRequest) {
           let tableName = key.replace(/([A-Z])/g, ' $1').trim().replace(/^[a-z]/, (char) => char.toUpperCase())
           let rowHeader = tableName
 
-          const methodLower = weightMethod?.toLowerCase() || ''
+          const methodLower = (method || '').toLowerCase()
+          const isTopsis = methodLower.includes('topsis')
+          const isMarcos = methodLower.includes('marcos')
+          const isEdas = methodLower.includes('edas')
           const isEntropy = methodLower.includes('entropy')
           const isCritic = methodLower.includes('critic')
 
           if (key === 'weights' || key === 'weightsWj') {
             tableName = 'Final Weights'
             rowHeader = 'Weights'
+          } else if (key === 'idealBest' || key === 'idealSolution') {
+            tableName = isTopsis ? 'Positive Ideal Solution (PIS)' : (isMarcos ? 'Ideal Solution (AI)' : 'Positive Ideal Solution')
+            rowHeader = isTopsis ? 'PIS (A+)' : (isMarcos ? 'AI' : 'Ideal')
+          } else if (key === 'idealWorst' || key === 'antiIdealSolution') {
+            tableName = isTopsis ? 'Negative Ideal Solution (NIS)' : (isMarcos ? 'Anti-Ideal Solution (AAI)' : 'Negative Ideal Solution')
+            rowHeader = isTopsis ? 'NIS (A-)' : (isMarcos ? 'AAI' : 'Anti-Ideal')
+          } else if (key === 'avVector' || key === 'averageSolution') {
+            tableName = 'Average Solution'
+            rowHeader = 'AV'
           } else if (key === 'diversityValues') {
             tableName = 'Diversity Degree'
             rowHeader = 'Diversity Degree'
           } else if (key === 'normalizedMatrix') {
-            tableName = isEntropy ? 'Normalized Decision Matrix' : (isCritic ? 'Normalization (r_ij)' : 'Normalized Decision Matrix')
+            tableName = isEntropy ? 'Normalized Decision Matrix' : (isCritic ? 'Normalization (r_ij)' : (isTopsis ? 'Topsis Normalized Matrix' : 'Normalized Decision Matrix'))
+          } else if (key === 'weightedMatrix') {
+            tableName = isTopsis ? 'Topsis Weighted Matrix' : 'Weighted Normalized Matrix'
           } else if (key === 'entropyMatrix') {
             tableName = 'Entropy for Attributes'
           } else if (key === 'standardDeviations') {
@@ -246,7 +271,7 @@ export async function POST(request: NextRequest) {
             const headerRow = [
               isCriterionMatrix ? "Criterion" : "Alternative",
               ...colIds.map((cid: string) => {
-                const crit = criteria.find(c => c.id === cid)
+                const crit = criteria.find((c: Criterion) => c.id === cid)
                 return crit ? getCriterionHeader(crit) : cid
               })
             ]
@@ -254,7 +279,7 @@ export async function POST(request: NextRequest) {
 
             rowIds.forEach((rid: string) => {
               const row: (string | number)[] = [
-                isCriterionMatrix ? (criteria.find(c => c.id === rid)?.name || rid) : (alternatives.find(a => a.id === rid)?.name || rid)
+                isCriterionMatrix ? (criteria.find((c: Criterion) => c.id === rid)?.name || rid) : (alternatives.find((a: Alternative) => a.id === rid)?.name || rid)
               ]
               const matrixRow = valueAsObj[rid] as Record<string, any>
               colIds.forEach((cid: string) => {

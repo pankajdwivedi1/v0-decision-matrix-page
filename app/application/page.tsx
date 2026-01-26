@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo, Fragment, useEffect } from "react"
-import { MCDMMethod, WeightMethod, PageStep, ComparisonResult, SensitivityResult, EntropyResult, CriticResult, AHPResult, PipreciaResult, MERECResult, SWARAResult, WensloResult, LopcowResult, DematelResult, SDResult, VarianceResult, MADResult, DBWResult, SVPResult, MDMResult, LSWResult, GPOWResult, LPWMResult, PCWMResult, RankingWeightResult, ROCResult, RRResult, Criterion, Alternative, SensitivityRankingItem } from "@/types/mcdm"
+import { MCDMMethod, WeightMethod, PageStep, ComparisonResult, EntropyResult, CriticResult, AHPResult, PipreciaResult, MERECResult, SWARAResult, WensloResult, LopcowResult, DematelResult, SDResult, VarianceResult, MADResult, DBWResult, SVPResult, MDMResult, LSWResult, GPOWResult, LPWMResult, PCWMResult, RankingWeightResult, ROCResult, RRResult, Criterion, Alternative } from "@/types/mcdm"
 import { MCDM_METHODS, WEIGHT_METHODS, CHART_COLORS } from "@/constants/mcdm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -41,7 +41,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import * as XLSX from "xlsx"
-import { Upload, ChevronDown, ChevronRight, ArrowLeft, Home, Download, LayoutGrid } from "lucide-react"
+import { Upload, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, ArrowDown, Home, Download, LayoutGrid } from "lucide-react"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar, PieChart, Pie, ReferenceLine } from "recharts"
 import { toJpeg } from "html-to-image"
 import SWEIFormula from "@/components/SWEIFormula"
@@ -119,17 +119,16 @@ export default function MCDMCalculator() {
   const [comparisonLoading, setComparisonLoading] = useState(false)
   const [comparisonError, setComparisonError] = useState<string | null>(null)
   const [comparisonFileName, setComparisonFileName] = useState<string>("")
-
   const comparisonFileInputRef = useRef<HTMLInputElement>(null)
   const [currentStep, setCurrentStep] = useState<PageStep>("home")
   const [rankingOpen, setRankingOpen] = useState(true)
   const [weightOpen, setWeightOpen] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-
   const [comparisonChartType, setComparisonChartType] = useState<string>("composed")
   const comparisonChartRef = useRef<HTMLDivElement>(null)
+  const weightChartRef = useRef<HTMLDivElement>(null)
   const sensitivityGraphicalVariationRef = useRef<HTMLDivElement>(null)
-  const sensitivityResultsRef = useRef<HTMLDivElement>(null)
+  const sensitivityChartRef = useRef<HTMLDivElement>(null)
 
   // State to track where to return after completing input flow
   const [returnToTab, setReturnToTab] = useState<"rankingMethods" | "weightMethods" | "rankingComparison" | "sensitivityAnalysis" | null>(null)
@@ -176,8 +175,6 @@ export default function MCDMCalculator() {
   useEffect(() => {
     const savedStep = localStorage.getItem("currentStep") as PageStep
     if (savedStep) {
-      // If the saved step is "calculate", revert to "matrix" because apiResults are lost on reload.
-      // This prevents the infinite "Loading results..." spinner and ensures the user explicitly triggers calculation.
       if (savedStep === "calculate") {
         setCurrentStep("matrix")
       } else {
@@ -198,11 +195,9 @@ export default function MCDMCalculator() {
 
   const handleResetAndHome = () => {
     setCurrentStep("home")
-    // Optional: Reset other transient states if needed
     setIsLoading(false)
   }
 
-  // Prevent Enter key from triggering submit/reload
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault()
@@ -219,13 +214,11 @@ export default function MCDMCalculator() {
         setItemsPerPage(8)
       }
     }
-
-    // Set initial
     handleResize()
-
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
   const [ahpResult, setAhpResult] = useState<AHPResult | null>(null)
   const [pipreciaResult, setPipreciaResult] = useState<PipreciaResult | null>(null)
   const [merecResult, setMerecResult] = useState<MERECResult | null>(null)
@@ -236,32 +229,22 @@ export default function MCDMCalculator() {
   const [dematelResult, setDematelResult] = useState<DematelResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Sensitivity Analysis state
-  const [sensitivityCriterion, setSensitivityCriterion] = useState<string>("")
   const [sensitivityMethod, setSensitivityMethod] = useState<MCDMMethod>("topsis")
-  const [sensitivityResults, setSensitivityResults] = useState<SensitivityResult[]>([])
   const [sensitivityLoading, setSensitivityLoading] = useState(false)
   const [sensitivityError, setSensitivityError] = useState<string | null>(null)
-  const [sensitivityValidationError, setSensitivityValidationError] = useState<string>('') // For red banner
-  // Replaced with string type below for more options
-  // const [sensitivityChartType, setSensitivityChartType] = useState<"line" | "bar">("line")
+  const [sensitivityValidationError, setSensitivityValidationError] = useState<string>('')
   const [sensitivityChartType, setSensitivityChartType] = useState<string>("line")
-  const sensitivityChartRef = useRef<HTMLDivElement>(null)
-  const weightChartRef = useRef<HTMLDivElement>(null)
 
-  // New state for Weight Method Comparison in Sensitivity Analysis
   const [sensitivityWeightMethods, setSensitivityWeightMethods] = useState<string[]>([])
   const [sensitivityCustomWeights, setSensitivityCustomWeights] = useState<Record<string, number>>({})
   const [isCustomWeightsDialogOpen, setIsCustomWeightsDialogOpen] = useState(false)
   const [showWeightDataWarning, setShowWeightDataWarning] = useState<boolean>(false)
 
-  // Custom weights state for main flow and ranking comparison
   const [customWeights, setCustomWeights] = useState<Record<string, string>>({})
   const [isMainCustomWeightsDialogOpen, setIsMainCustomWeightsDialogOpen] = useState(false)
   const [isComparisonCustomWeightsDialogOpen, setIsComparisonCustomWeightsDialogOpen] = useState(false)
   const [customWeightsCalculated, setCustomWeightsCalculated] = useState<Record<string, number> | null>(null)
 
-  // PIPRECIA State
   const [isPipreciaDialogOpen, setIsPipreciaDialogOpen] = useState(false)
   const [pipreciaCalculatedWeights, setPipreciaCalculatedWeights] = useState<Record<string, number> | null>(null)
   const [pipreciaScores, setPipreciaScores] = useState<Record<number, string>>({})
@@ -283,7 +266,6 @@ export default function MCDMCalculator() {
   const [ahpMatrix, setAhpMatrix] = useState<number[][]>([])
 
   const [isWeightSelectorOpen, setIsWeightSelectorOpen] = useState(false)
-  const [sensitivityAnalysisType, setSensitivityAnalysisType] = useState<"criterion" | "weights">("criterion") // Toggle between old and new analysis
   const [sensitivityWeightComparisonResults, setSensitivityWeightComparisonResults] = useState<any[]>([])
   const [sensitivityCriteriaWeights, setSensitivityCriteriaWeights] = useState<any[]>([])
   const [weightChartType, setWeightChartType] = useState<string>("bar")
@@ -2630,157 +2612,7 @@ export default function MCDMCalculator() {
     }
   }
 
-  // Sensitivity Analysis calculation function
-  const handleSensitivityAnalysis = async () => {
-    if (!sensitivityCriterion) {
-      setSensitivityError("Please select a criterion to analyze")
-      return
-    }
-    if (!isFullyDataFilled) {
-      setSensitivityError("Please fill in the decision matrix completely first")
-      return
-    }
 
-    // Validate for SWEI/SWI methods before starting analysis
-    if (sensitivityMethod === 'swei' || sensitivityMethod === 'swi') {
-      // Check if all values are greater than zero
-      const hasInvalidValues = alternatives.some(alt =>
-        criteria.some(crit => {
-          const value = alt.scores[crit.id];
-          return value === undefined || value === "" || Number(value) <= 0;
-        })
-      );
-
-      if (hasInvalidValues) {
-        const methodName = sensitivityMethod.toUpperCase();
-        setSensitivityValidationError(`${methodName} method requires all values to be greater than zero. Please check your decision matrix.`);
-        setTimeout(() => setSensitivityValidationError(''), 5000);
-        return;
-      }
-    }
-
-    setSensitivityLoading(true)
-    setSensitivityError(null)
-    setSensitivityResults([])
-
-    try {
-      const selectedCrit = criteria.find(c => c.id === sensitivityCriterion)
-      if (!selectedCrit) {
-        setSensitivityError("Selected criterion not found")
-        return
-      }
-
-      // Generate weight variations (0% to 100% in steps of 10%)
-      const weightSteps = 11 // 0%, 10%, 20%, ..., 100%
-      const results: any[] = []
-      let validationError: string | null = null;
-
-      for (let i = 0; i < weightSteps; i++) {
-        const newWeight = i * 0.1 // 0.0 to 1.0
-
-        // Create modified criteria with adjusted weights
-        const modifiedCriteria = criteria.map(crit => {
-          if (crit.id === sensitivityCriterion) {
-            return { ...crit, weight: newWeight }
-          } else {
-            // Distribute remaining weight proportionally among other criteria
-            const remainingWeight = 1 - newWeight
-            const otherCriteriaCount = criteria.length - 1
-            const otherWeight = otherCriteriaCount > 0 ? remainingWeight / otherCriteriaCount : 0
-            return { ...crit, weight: otherWeight }
-          }
-        })
-
-        // Calculate ranking with modified weights
-        const response = await fetch("/api/calculate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            method: sensitivityMethod,
-            alternatives,
-            criteria: modifiedCriteria,
-            vikorVValue: parseFloat(vikorVValue) || 0.5,
-            waspasLambdaValue: parseFloat(waspasLambdaValue) || 0.5,
-            codasTauValue: parseFloat(codasTauValue) || 0.02,
-          }),
-        })
-
-        const data = await response.json()
-
-        if (!response.ok) {
-          // Check if it's a SWEI/SWI validation error
-          if (data.error && (data.error.includes('SWEI') || data.error.includes('SWI') || data.error.includes('greater than zero'))) {
-            validationError = data.error;
-            break; // Stop the loop
-          }
-          validationError = `Failed to calculate for weight ${(newWeight * 100).toFixed(0)}%`;
-          break; // Stop the loop
-        }
-
-        results.push({
-          weight: newWeight * 100, // Convert to percentage
-          weightLabel: `${(newWeight * 100).toFixed(0)}%`,
-          ranking: data.ranking || [],
-        })
-      }
-
-      // Check if we encountered a validation error
-      if (validationError) {
-        setSensitivityError(validationError);
-      } else {
-        setSensitivityResults(results)
-      }
-    } catch (error: any) {
-      console.error("Sensitivity analysis error:", error)
-      setSensitivityError(error?.message || "Error performing sensitivity analysis")
-    } finally {
-      setSensitivityLoading(false)
-    }
-  }
-
-  // Download chart function (SVG)
-  const downloadChart = () => {
-    if (!sensitivityResultsRef.current) return
-    // ... existing SVG export logic preserved for backward compatibility/preference
-    const svgElement = sensitivityResultsRef.current.querySelector('svg')
-    if (!svgElement) return
-
-    const serializer = new XMLSerializer()
-    const svgString = serializer.serializeToString(svgElement)
-    const blob = new Blob([svgString], { type: 'image/svg+xml' })
-    const url = URL.createObjectURL(blob)
-
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `sensitivity-analysis-${sensitivityMethod}-${Date.now()}.svg`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
-  // Prepare data for sensitivity chart
-  const sensitivityChartData = useMemo(() => {
-    if (sensitivityResults.length === 0) return []
-
-    return sensitivityResults.map(result => {
-      const dataPoint: Record<string, any> = {
-        weight: result.weight,
-        weightLabel: result.weightLabel,
-      }
-
-      result.ranking.forEach((item: any) => {
-        dataPoint[item.alternativeName] = item.rank
-      })
-
-      return dataPoint
-    })
-  }, [sensitivityResults])
-
-  const sensitivityAlternatives = useMemo(() => {
-    if (sensitivityResults.length === 0 || sensitivityResults[0].ranking.length === 0) return []
-    return sensitivityResults[0].ranking.map((item: SensitivityRankingItem) => item.alternativeName)
-  }, [sensitivityResults])
 
 
   // Helper function to check if valid data exists for weight calculation
@@ -3177,8 +3009,8 @@ export default function MCDMCalculator() {
                           <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
                             <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
                               <div className="flex flex-col items-center justify-center h-full leading-tight">
-                                <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center">Criteria →</div>
-                                <div className="text-[10px] font-bold py-0.5 w-full text-center">Alternatives ↓</div>
+                                <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center flex items-center justify-center gap-1">Criteria <ArrowRight className="w-2.5 h-2.5 stroke-[3]" /></div>
+                                <div className="text-[10px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">Alternatives <ArrowDown className="w-2.5 h-2.5 stroke-[3]" /></div>
                               </div>
                             </TableHead>
                             {criteria.map((crit) => (
@@ -3328,8 +3160,8 @@ export default function MCDMCalculator() {
                             <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
                               <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
                                 <div className="flex flex-col items-center justify-center h-full leading-tight">
-                                  <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center">Criteria →</div>
-                                  <div className="text-[10px] font-bold py-0.5 w-full text-center">Alternatives ↓</div>
+                                  <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center flex items-center justify-center gap-1">Criteria <ArrowRight className="w-2.5 h-2.5 stroke-[3]" /></div>
+                                  <div className="text-[10px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">Alternatives <ArrowDown className="w-2.5 h-2.5 stroke-[3]" /></div>
                                 </div>
                               </TableHead>
                               {criteria.map((crit) => (
@@ -4460,8 +4292,8 @@ export default function MCDMCalculator() {
                             <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
                               <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
                                 <div className="flex flex-col items-center justify-center h-full leading-tight">
-                                  <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center">Criteria →</div>
-                                  <div className="text-[10px] font-bold py-0.5 w-full text-center">Alternatives ↓</div>
+                                  <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center flex items-center justify-center gap-1">Criteria <ArrowRight className="w-2.5 h-2.5 stroke-[3]" /></div>
+                                  <div className="text-[10px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">Alternatives <ArrowDown className="w-2.5 h-2.5 stroke-[3]" /></div>
                                 </div>
                               </TableHead>
                               {criteria.map((crit) => (
@@ -5417,8 +5249,8 @@ export default function MCDMCalculator() {
                             <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
                               <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
                                 <div className="flex flex-col items-center justify-center h-full leading-tight">
-                                  <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center">Criteria →</div>
-                                  <div className="text-[10px] font-bold py-0.5 w-full text-center">Alternatives ↓</div>
+                                  <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center flex items-center justify-center gap-1">Criteria <ArrowRight className="w-2.5 h-2.5 stroke-[3]" /></div>
+                                  <div className="text-[10px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">Alternatives <ArrowDown className="w-2.5 h-2.5 stroke-[3]" /></div>
                                 </div>
                               </TableHead>
                               {criteria.map((crit) => (
@@ -5470,33 +5302,7 @@ export default function MCDMCalculator() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-semibold text-black">Select Criterion to Vary</label>
-                      <Select value={sensitivityCriterion} onValueChange={setSensitivityCriterion}>
-                        <SelectTrigger className="text-xs h-8 border-gray-200">
-                          <SelectValue placeholder="Choose a criterion..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {criteria.map((crit) => (
-                            <SelectItem key={crit.id} value={crit.id} className="text-xs">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span>{crit.name}</span>
-                                  <span className={crit.type === "beneficial" ? "text-green-600" : "text-red-600"} aria-hidden>
-                                    {crit.type === "beneficial" ? "▲" : "▼"}
-                                  </span>
-                                </div>
-                                <span className="text-[10px] text-gray-500">{crit.type === "beneficial" ? "Max" : "Min"}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-[10px] text-gray-500">
-                        The weight will vary from 0% to 100%, while others adjust proportionally
-                      </p>
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
 
                     <div className="space-y-2">
                       <label className="text-xs font-semibold text-black">Choose weight method</label>
@@ -5574,6 +5380,17 @@ export default function MCDMCalculator() {
                       </p>
                     </div>
 
+                    <div className="pt-6">
+                      <Button
+                        type="button"
+                        onClick={() => handleWeightSensitivityAnalysis()}
+                        className="w-full bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
+                        disabled={sensitivityLoading}
+                      >
+                        {sensitivityLoading ? "Calculating..." : "Calculate Sensitivity"}
+                      </Button>
+                    </div>
+
                     {waspasLambdaValue !== undefined && sensitivityMethod === "waspas" && (
                       <div className="border border-teal-200 bg-teal-50 rounded-lg p-3 md:col-span-3">
                         <div className="flex items-center justify-between">
@@ -5589,7 +5406,7 @@ export default function MCDMCalculator() {
                             value={waspasLambdaValue}
                             onChange={(e) => setWpasLambdaValue(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            onBlur={handleSensitivityAnalysis}
+                            onBlur={() => handleWeightSensitivityAnalysis()}
                             placeholder="0.5"
                             className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
                           />
@@ -5612,24 +5429,13 @@ export default function MCDMCalculator() {
                             value={codasTauValue}
                             onChange={(e) => setCodasTauValue(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            onBlur={handleSensitivityAnalysis}
+                            onBlur={() => handleWeightSensitivityAnalysis()}
                             placeholder="0.02"
                             className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
                           />
                         </div>
                       </div>
                     )}
-                  </div>
-
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      onClick={() => handleWeightSensitivityAnalysis()}
-                      className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
-                      disabled={sensitivityLoading}
-                    >
-                      {sensitivityLoading ? "Calculating..." : "Calculate Sensitivity"}
-                    </Button>
                   </div>
 
                   <Dialog open={isCustomWeightsDialogOpen} onOpenChange={setIsCustomWeightsDialogOpen}>
@@ -6201,178 +6007,9 @@ export default function MCDMCalculator() {
                     </div>
                   )}
 
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={handleSensitivityAnalysis}
-                      className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
-                      disabled={sensitivityLoading}
-                    >
-                      {sensitivityLoading ? "Calculating..." : "Run Sensitivity Analysis"}
-                    </Button>
-                  </div>
                 </CardContent>
               </Card>
 
-              {sensitivityResults.length > 0 && (
-                <>
-                  <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                    <CardHeader className="pb-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div>
-                          <CardTitle className="text-sm text-black">Sensitivity Results</CardTitle>
-                          <CardDescription className="text-xs text-gray-700">
-                            Rankings as the weight of {criteria.find(c => c.id === sensitivityCriterion)?.name} varies from 0% to 100%
-                          </CardDescription>
-                        </div>
-                        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={`text-xs h-7 w-full sm:w-auto ${sensitivityChartType === "line" ? "bg-[#FFF2CC] border-[#FFF2CC]" : ""}`}
-                            onClick={() => setSensitivityChartType("line")}
-                          >
-                            Line Chart
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={`text-xs h-7 w-full sm:w-auto ${sensitivityChartType === "bar" ? "bg-[#FFF2CC] border-[#FFF2CC]" : ""}`}
-                            onClick={() => setSensitivityChartType("bar")}
-                          >
-                            Bar Chart
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs h-7 w-full sm:w-auto"
-                            onClick={downloadChart}
-                          >
-                            <Download className="w-3 h-3 mr-1" />
-                            SVG (Legacy)
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs h-7 w-full sm:w-auto"
-                            onClick={() => downloadChartAsJpeg(sensitivityResultsRef, "sensitivity-results")}
-                          >
-                            <Download className="w-3 h-3 mr-1" />
-                            JPG
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div ref={sensitivityResultsRef} className="chart-container">
-                        <ResponsiveContainer width="100%" height="100%">
-                          {sensitivityChartType === "line" ? (
-                            <LineChart data={sensitivityChartData} margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis
-                                dataKey="weightLabel"
-                                tick={{ fontSize: 10 }}
-                              />
-                              <YAxis
-                                allowDecimals={false}
-                                tick={{ fontSize: 10 }}
-                                label={{ value: 'Rank', angle: -90, position: 'insideLeft', fontSize: 11 }}
-                                interval={0}
-                                domain={[0, 'dataMax']}
-                              />
-                              <Tooltip />
-                              <Legend
-                                verticalAlign="bottom"
-                                height={36}
-                                wrapperStyle={{ fontSize: "10px", margin: "0 auto" }}
-                              />
-                              {sensitivityAlternatives.map((alt, idx) => (
-                                <Line
-                                  key={alt}
-                                  type="monotone"
-                                  dataKey={alt}
-                                  stroke={CHART_COLORS[idx % CHART_COLORS.length]}
-                                  activeDot={{ r: 5 }}
-                                  strokeWidth={2}
-                                />
-                              ))}
-                            </LineChart>
-                          ) : (
-                            <BarChart data={sensitivityChartData} margin={{ top: 10, right: 30, left: 10, bottom: 40 }}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis
-                                dataKey="weightLabel"
-                                tick={{ fontSize: 10 }}
-                              />
-                              <YAxis
-                                allowDecimals={false}
-                                tick={{ fontSize: 10 }}
-                                label={{ value: 'Rank', angle: -90, position: 'insideLeft', fontSize: 11 }}
-                                interval={0}
-                                domain={[0, 'dataMax']}
-                              />
-                              <Tooltip />
-                              <Legend
-                                verticalAlign="bottom"
-                                height={36}
-                                wrapperStyle={{ fontSize: "10px", margin: "0 auto" }}
-                              />
-                              {sensitivityAlternatives.map((alt, idx) => (
-                                <Bar
-                                  key={alt}
-                                  dataKey={alt}
-                                  fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                                />
-                              ))}
-                            </BarChart>
-                          )}
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Detailed Results Table</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Complete ranking data for each weight variation
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="table-responsive">
-                      <table className="min-w-full text-xs border border-gray-200 rounded-lg">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-3 py-2 border-b border-r border-gray-200 text-black font-semibold text-left">
-                              Weight
-                            </th>
-                            {sensitivityAlternatives.map((alt) => (
-                              <th key={alt} className="px-3 py-2 border-b border-r border-gray-200 text-black font-semibold text-center">
-                                {alt}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sensitivityResults.map((result, idx) => (
-                            <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                              <td className="px-3 py-2 font-medium text-black border-r border-gray-200">
-                                {result.weightLabel}
-                              </td>
-                              {sensitivityAlternatives.map((alt) => {
-                                const ranking = result.ranking.find((r: SensitivityRankingItem) => r.alternativeName === alt)
-                                return (
-                                  <td key={alt} className="px-3 py-2 text-center text-black border-r border-gray-200">
-                                    {ranking?.rank ?? "-"}
-                                  </td>
-                                )
-                              })}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </CardContent>
-                  </Card>
-                </>
-              )}
 
               {/* K% Sensitivity Analysis */}
               <KSensitivityCalculator
@@ -6875,7 +6512,7 @@ export default function MCDMCalculator() {
                         {/* Row 1: Criteria Names */}
                         <TableRow className="bg-gray-100 border-b border-gray-300">
                           <TableHead className="text-xs font-bold text-black py-2 px-3 min-w-32 border-r border-gray-300">
-                            Criteria →<br />Alternatives ↓
+                            Criteria <ArrowRight className="inline-block w-3 h-3 stroke-[3] ml-1" /><br />Alternatives <ArrowDown className="inline-block w-3 h-3 stroke-[3] ml-1" />
                           </TableHead>
                           {criteria.map((crit) => (
                             <TableHead
@@ -7429,8 +7066,8 @@ export default function MCDMCalculator() {
                         <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
                           <TableHead className="bg-white text-black font-bold w-20 text-[9px] border-r border-gray-300 p-0 h-8">
                             <div className="flex flex-col items-center justify-center h-full leading-tight">
-                              <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center">Criteria →</div>
-                              <div className="text-[10px] font-bold py-0.5 w-full text-center">Alternatives ↓</div>
+                              <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center flex items-center justify-center gap-1">Criteria <ArrowRight className="w-2.5 h-2.5 stroke-[3]" /></div>
+                              <div className="text-[10px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">Alternatives <ArrowDown className="w-2.5 h-2.5 stroke-[3]" /></div>
                             </div>
                           </TableHead>
                           {criteria.map((crit) => (
