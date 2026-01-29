@@ -18,20 +18,43 @@ import type { Alternative, Criterion } from "./types"
  *
  * Higher score indicates a better alternative.
  */
+export interface ELECTREResult {
+  scores: Record<string, number>
+  normalizedMatrix: Record<string, Record<string, number>>
+  concordanceMatrix: Record<string, Record<string, number>>
+  discordanceMatrix: Record<string, Record<string, number>>
+  outrankingMatrix: Record<string, Record<string, boolean>>
+}
+
 export function calculateELECTRE(
   alternatives: Alternative[],
   criteria: Criterion[]
-): Record<string, number> {
+): ELECTREResult {
   const scores: Record<string, number> = {}
   const epsilon = 1e-12
 
   const m = alternatives.length
   const n = criteria.length
 
-  if (m === 0 || n === 0) return scores
-  if (m === 1) {
-    scores[alternatives[0].id] = 0
-    return scores
+  // Initialize result structures
+  const normalizedMatrixObj: Record<string, Record<string, number>> = {}
+  const concordanceMatrixObj: Record<string, Record<string, number>> = {}
+  const discordanceMatrixObj: Record<string, Record<string, number>> = {}
+  const outrankingMatrixObj: Record<string, Record<string, boolean>> = {}
+
+  alternatives.forEach(a => {
+    normalizedMatrixObj[a.id] = {}
+    concordanceMatrixObj[a.id] = {}
+    discordanceMatrixObj[a.id] = {}
+    outrankingMatrixObj[a.id] = {}
+  })
+
+  if (m === 0 || n === 0) return {
+    scores,
+    normalizedMatrix: normalizedMatrixObj,
+    concordanceMatrix: concordanceMatrixObj,
+    discordanceMatrix: discordanceMatrixObj,
+    outrankingMatrix: outrankingMatrixObj
   }
 
   // Default thresholds
@@ -50,7 +73,9 @@ export function calculateELECTRE(
     const colVals = matrix.map((row) => row[j])
     const denom = Math.sqrt(colVals.reduce((sum, v) => sum + v * v, 0)) || epsilon
     for (let i = 0; i < m; i++) {
-      normalizedMatrix[i][j] = matrix[i][j] / denom
+      const val = matrix[i][j] / denom
+      normalizedMatrix[i][j] = val
+      normalizedMatrixObj[alternatives[i].id][criteria[j].id] = val
     }
   }
 
@@ -64,8 +89,6 @@ export function calculateELECTRE(
   }
 
   // Step 3 & 4: Calculate concordance and discordance indices
-  // C[i][k] = concordance index (how much i is better than k)
-  // D[i][k] = discordance index (how much i is worse than k)
   const concordance: number[][] = Array.from({ length: m }, () => Array(m).fill(0))
   const discordance: number[][] = Array.from({ length: m }, () => Array(m).fill(0))
 
@@ -74,6 +97,8 @@ export function calculateELECTRE(
       if (i === k) {
         concordance[i][k] = 1
         discordance[i][k] = 0
+        concordanceMatrixObj[alternatives[i].id][alternatives[k].id] = 1
+        discordanceMatrixObj[alternatives[i].id][alternatives[k].id] = 0
         continue
       }
 
@@ -85,7 +110,6 @@ export function calculateELECTRE(
         const valI = normalizedMatrix[i][j]
         const valK = normalizedMatrix[k][j]
 
-        // Check if i is better than k for this criterion
         let iIsBetter = false
         if (crit.type === "beneficial") {
           iIsBetter = valI >= valK
@@ -96,7 +120,6 @@ export function calculateELECTRE(
         if (iIsBetter) {
           concordanceSum += crit.weight
         } else {
-          // Calculate discordance (how much k is better than i)
           const diff = Math.abs(valK - valI)
           const normalizedDiff = ranges[j] > epsilon ? diff / ranges[j] : 0
           maxDiscordance = Math.max(maxDiscordance, normalizedDiff)
@@ -105,11 +128,12 @@ export function calculateELECTRE(
 
       concordance[i][k] = concordanceSum
       discordance[i][k] = maxDiscordance
+      concordanceMatrixObj[alternatives[i].id][alternatives[k].id] = concordanceSum
+      discordanceMatrixObj[alternatives[i].id][alternatives[k].id] = maxDiscordance
     }
   }
 
   // Step 5: Build outranking relation
-  // outranks[i][k] = true if alternative i outranks alternative k
   const outranks: boolean[][] = Array.from({ length: m }, () => Array(m).fill(false))
 
   for (let i = 0; i < m; i++) {
@@ -117,32 +141,36 @@ export function calculateELECTRE(
       if (i !== k) {
         const c = concordance[i][k]
         const d = discordance[i][k]
-        outranks[i][k] = c >= concordanceThreshold && d <= discordanceThreshold
+        const isOutranking = c >= concordanceThreshold && d <= discordanceThreshold
+        outranks[i][k] = isOutranking
+        outrankingMatrixObj[alternatives[i].id][alternatives[k].id] = isOutranking
+      } else {
+        outrankingMatrixObj[alternatives[i].id][alternatives[k].id] = false
       }
     }
   }
 
   // Step 6: Calculate scores
-  // Score = number of alternatives outranked - number of alternatives that outrank this
   for (let i = 0; i < m; i++) {
     let outrankedCount = 0
     let outrankedByCount = 0
 
     for (let k = 0; k < m; k++) {
       if (i !== k) {
-        if (outranks[i][k]) {
-          outrankedCount++
-        }
-        if (outranks[k][i]) {
-          outrankedByCount++
-        }
+        if (outranks[i][k]) outrankedCount++
+        if (outranks[k][i]) outrankedByCount++
       }
     }
 
-    const score = outrankedCount - outrankedByCount
-    scores[alternatives[i].id] = score
+    scores[alternatives[i].id] = outrankedCount - outrankedByCount
   }
 
-  return scores
+  return {
+    scores,
+    normalizedMatrix: normalizedMatrixObj,
+    concordanceMatrix: concordanceMatrixObj,
+    discordanceMatrix: discordanceMatrixObj,
+    outrankingMatrix: outrankingMatrixObj
+  }
 }
 

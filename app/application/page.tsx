@@ -2431,7 +2431,7 @@ export default function MCDMCalculator() {
       // or just put all metrics in.
       const exportData = {
         method: weightMethodLabel,
-        weightMethod: weightMethodLabel,
+        weightMethod: weightMethod, // Send actual method value like "dematel", not label
         isWeightExport: true,
         ranking: [],
         alternatives: alternatives,
@@ -11478,6 +11478,461 @@ export default function MCDMCalculator() {
                                 {alternatives.map((colAlt) => (
                                   <TableCell key={colAlt.id} className="text-center py-3 px-4 text-xs text-black">
                                     {apiResults.metrics?.promethee1OutrankingMatrix[rowAlt.id]?.[colAlt.id] ? "Yes" : "No"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {method === "promethee2" && apiResults?.metrics?.promethee2NormalizedMatrix && (
+                <>
+                  {/* Table 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Vector Normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
+                                  }`}>
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.promethee2NormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 3: Aggregated Preference Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Aggregated Preference Matrix</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alt \ Alt</TableHead>
+                              {alternatives.map((alt) => (
+                                <TableHead key={alt.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {alt.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((rowAlt) => (
+                              <TableRow key={rowAlt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowAlt.name}</TableCell>
+                                {alternatives.map((colAlt) => (
+                                  <TableCell key={colAlt.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.promethee2AggregatedPreferenceMatrix[rowAlt.id]?.[colAlt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 4: Preference Flows */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Preference Flows</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Positive (φ+), Negative (φ-), and Net (φ) flows.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Positive Flow (φ+)</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Negative Flow (φ-)</TableHead>
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Net Flow (φ)</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => {
+                              const phiPlus = apiResults.metrics?.promethee2PositiveFlow[alt.id] ?? 0
+                              const phiMinus = apiResults.metrics?.promethee2NegativeFlow[alt.id] ?? 0
+                              const netFlow = phiPlus - phiMinus
+                              return (
+                                <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                  <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                  <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                    {phiPlus.toFixed(resultsDecimalPlaces)}
+                                  </TableCell>
+                                  <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                    {phiMinus.toFixed(resultsDecimalPlaces)}
+                                  </TableCell>
+                                  <TableCell className="text-center py-3 px-4 text-xs text-black font-bold">
+                                    {netFlow.toFixed(resultsDecimalPlaces)}
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {/* ELECTRE Results */}
+              {(method === "electre" || method === "electre1") && (apiResults?.metrics?.electreNormalizedMatrix || apiResults?.metrics?.electre1NormalizedMatrix) && (
+                <>
+                  {/* Table 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Vector Normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
+                                  }`}>
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {(apiResults.metrics?.electreNormalizedMatrix?.[alt.id]?.[crit.id] ?? apiResults.metrics?.electre1NormalizedMatrix?.[alt.id]?.[crit.id])?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 3: Concordance Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Concordance Matrix</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alt \ Alt</TableHead>
+                              {alternatives.map((alt) => (
+                                <TableHead key={alt.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {alt.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((rowAlt) => (
+                              <TableRow key={rowAlt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowAlt.name}</TableCell>
+                                {alternatives.map((colAlt) => (
+                                  <TableCell key={colAlt.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {(apiResults.metrics?.electreConcordanceMatrix?.[rowAlt.id]?.[colAlt.id] ?? apiResults.metrics?.electre1ConcordanceMatrix?.[rowAlt.id]?.[colAlt.id])?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 4: Discordance Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Discordance Matrix</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alt \ Alt</TableHead>
+                              {alternatives.map((alt) => (
+                                <TableHead key={alt.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {alt.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((rowAlt) => (
+                              <TableRow key={rowAlt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowAlt.name}</TableCell>
+                                {alternatives.map((colAlt) => (
+                                  <TableCell key={colAlt.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {(apiResults.metrics?.electreDiscordanceMatrix?.[rowAlt.id]?.[colAlt.id] ?? apiResults.metrics?.electre1DiscordanceMatrix?.[rowAlt.id]?.[colAlt.id])?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 5: Outranking Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 5: Outranking Matrix</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alt \ Alt</TableHead>
+                              {alternatives.map((alt) => (
+                                <TableHead key={alt.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {alt.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((rowAlt) => (
+                              <TableRow key={rowAlt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowAlt.name}</TableCell>
+                                {alternatives.map((colAlt) => (
+                                  <TableCell key={colAlt.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {(apiResults.metrics?.electreOutrankingMatrix?.[rowAlt.id]?.[colAlt.id] ?? apiResults.metrics?.electre1OutrankingMatrix?.[rowAlt.id]?.[colAlt.id]) ? "Yes" : "No"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {method === "electre2" && apiResults?.metrics?.electre2NormalizedMatrix && (
+                <>
+                  {/* Table 2: Normalized Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Vector Normalization
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
+                              {criteria.map((crit) => (
+                                <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
+                                  }`}>
+                                  {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((alt) => (
+                              <TableRow key={alt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
+                                {criteria.map((crit) => (
+                                  <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.electre2NormalizedMatrix[alt.id]?.[crit.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 3: Concordance Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 3: Concordance Matrix</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alt \ Alt</TableHead>
+                              {alternatives.map((alt) => (
+                                <TableHead key={alt.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {alt.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((rowAlt) => (
+                              <TableRow key={rowAlt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowAlt.name}</TableCell>
+                                {alternatives.map((colAlt) => (
+                                  <TableCell key={colAlt.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.electre2ConcordanceMatrix[rowAlt.id]?.[colAlt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 4: Discordance Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 4: Discordance Matrix</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alt \ Alt</TableHead>
+                              {alternatives.map((alt) => (
+                                <TableHead key={alt.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {alt.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((rowAlt) => (
+                              <TableRow key={rowAlt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowAlt.name}</TableCell>
+                                {alternatives.map((colAlt) => (
+                                  <TableCell key={colAlt.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.electre2DiscordanceMatrix[rowAlt.id]?.[colAlt.id]?.toFixed(resultsDecimalPlaces) || "-"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 5: Strong Outranking Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 5: Strong Outranking Matrix</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alt \ Alt</TableHead>
+                              {alternatives.map((alt) => (
+                                <TableHead key={alt.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {alt.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((rowAlt) => (
+                              <TableRow key={rowAlt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowAlt.name}</TableCell>
+                                {alternatives.map((colAlt) => (
+                                  <TableCell key={colAlt.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.electre2StrongOutrankingMatrix[rowAlt.id]?.[colAlt.id] ? "Yes" : "No"}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Table 6: Weak Outranking Matrix */}
+                  <Card className="border-gray-200 bg-white shadow-none mb-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm text-black">Table 6: Weak Outranking Matrix</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                              <TableHead className="text-xs font-semibold text-black py-3 px-4">Alt \ Alt</TableHead>
+                              {alternatives.map((alt) => (
+                                <TableHead key={alt.id} className="text-xs font-semibold text-black text-center py-3 px-4">
+                                  {alt.name}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {alternatives.map((rowAlt) => (
+                              <TableRow key={rowAlt.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{rowAlt.name}</TableCell>
+                                {alternatives.map((colAlt) => (
+                                  <TableCell key={colAlt.id} className="text-center py-3 px-4 text-xs text-black">
+                                    {apiResults.metrics?.electre2WeakOutrankingMatrix[rowAlt.id]?.[colAlt.id] ? "Yes" : "No"}
                                   </TableCell>
                                 ))}
                               </TableRow>

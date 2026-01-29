@@ -340,15 +340,40 @@ export async function POST(request: NextRequest) {
         };
         break;
       }
-      case "electre":
-        results = calculateELECTRE(alternatives, criteria);
+      case "electre": {
+        const electreData = calculateELECTRE(alternatives, criteria);
+        results = electreData.scores;
+        (request as any).extraMetrics = {
+          electreNormalizedMatrix: electreData.normalizedMatrix,
+          electreConcordanceMatrix: electreData.concordanceMatrix,
+          electreDiscordanceMatrix: electreData.discordanceMatrix,
+          electreOutrankingMatrix: electreData.outrankingMatrix
+        };
         break;
-      case "electre1":
-        results = calculateELECTRE1(alternatives, criteria);
+      }
+      case "electre1": {
+        const electre1Data = calculateELECTRE1(alternatives, criteria);
+        results = electre1Data.scores;
+        (request as any).extraMetrics = {
+          electre1NormalizedMatrix: electre1Data.normalizedMatrix,
+          electre1ConcordanceMatrix: electre1Data.concordanceMatrix,
+          electre1DiscordanceMatrix: electre1Data.discordanceMatrix,
+          electre1OutrankingMatrix: electre1Data.outrankingMatrix
+        };
         break;
-      case "electre2":
-        results = calculateELECTRE2(alternatives, criteria);
+      }
+      case "electre2": {
+        const electre2Data = calculateELECTRE2(alternatives, criteria);
+        results = electre2Data.scores;
+        (request as any).extraMetrics = {
+          electre2NormalizedMatrix: electre2Data.normalizedMatrix,
+          electre2ConcordanceMatrix: electre2Data.concordanceMatrix,
+          electre2DiscordanceMatrix: electre2Data.discordanceMatrix,
+          electre2StrongOutrankingMatrix: electre2Data.strongOutrankingMatrix,
+          electre2WeakOutrankingMatrix: electre2Data.weakOutrankingMatrix
+        };
         break;
+      }
       case "mabac": {
         const mabacData = calculateMABAC(alternatives, criteria);
         results = mabacData.scores;
