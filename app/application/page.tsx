@@ -41,7 +41,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import * as XLSX from "xlsx"
-import { Upload, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, ArrowDown, Home, Download, LayoutGrid } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Upload, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, ArrowDown, Home, Download, LayoutGrid, Sparkles, FileText, Cpu, Bot } from "lucide-react"
+import ReactMarkdown from "react-markdown"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar, PieChart, Pie, ReferenceLine } from "recharts"
 import { toJpeg } from "html-to-image"
 import SWEIFormula from "@/components/SWEIFormula"
@@ -277,6 +280,31 @@ export default function MCDMCalculator() {
   const [waspasLambdaValue, setWpasLambdaValue] = useState<string>("0.5")
   const [codasTauValue, setCodasTauValue] = useState<string>("0.02")
 
+  // AI Analysis State
+  const [showAiPanel, setShowAiPanel] = useState(false)
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiAnalysisType, setAiAnalysisType] = useState<"full_report" | "sensitivity" | "ranking_comparison" | "k_sensitivity">("full_report")
+  const [aiResearchContext, setAiResearchContext] = useState<{ topic: string, researchGap: string, criteriaDefs: Record<string, string> }>({
+    topic: "",
+    researchGap: "",
+    criteriaDefs: {}
+  })
+
+  // Load research context from local storage on mount
+  useEffect(() => {
+    const savedTopic = localStorage.getItem("ai_research_topic") || ""
+    const savedGap = localStorage.getItem("ai_research_gap") || ""
+    const savedDefs = localStorage.getItem("ai_criteria_defs")
+
+    setAiResearchContext({
+      topic: savedTopic,
+      researchGap: savedGap,
+      criteriaDefs: savedDefs ? JSON.parse(savedDefs) : {}
+    })
+  }, [])
+  const [isResearchContextDialogOpen, setIsResearchContextDialogOpen] = useState(false)
+
   // Excel data selection state
   const [excelPreviewData, setExcelPreviewData] = useState<any[][] | null>(null)
   const [excelWorkbook, setExcelWorkbook] = useState<any>(null)
@@ -495,6 +523,12 @@ export default function MCDMCalculator() {
     setAlternatives(newAlternatives)
     setNumCriteria(finalCriteria.length)
     setNumAlternatives(newAlternatives.length)
+
+    // Clear saved Research Context on new file upload
+    localStorage.removeItem("ai_research_topic")
+    localStorage.removeItem("ai_research_gap")
+    localStorage.removeItem("ai_criteria_defs")
+    setAiResearchContext({ topic: "", researchGap: "", criteriaDefs: {} })
   }
 
   const parseComparisonExcelData = (data: any[][]) => {
@@ -2513,12 +2547,54 @@ export default function MCDMCalculator() {
 
       setApiResults(data)
       setCurrentStep("calculate")
+      // Reset AI state on new calculation
+      setAiAnalysisResult(null)
+      setShowAiPanel(false)
     } catch (error) {
       console.error("Error:", error)
       alert("Error calculating results")
       setApiResults(previousApiResults); // Restore previous results on error
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleAiAnalysis = async (type: "full_report" | "sensitivity" | "ranking_comparison" | "k_sensitivity" = "full_report", overrideData: any = {}) => {
+    if (type === "full_report" && (!apiResults || !apiResults.ranking)) return
+
+    setAiLoading(true)
+    setAiAnalysisType(type)
+    setShowAiPanel(true)
+
+    try {
+      const payload = {
+        alternatives,
+        criteria,
+        ranking: apiResults?.ranking || [],
+        method,
+        analysisType: type,
+        researchContext: aiResearchContext,
+        ...overrideData
+      }
+
+      const response = await fetch("/api/ai-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate AI analysis")
+      }
+
+      setAiAnalysisResult(data.markdown)
+    } catch (error: any) {
+      console.error("AI Analysis Error:", error)
+      alert(error.message || "Failed to analyze results")
+    } finally {
+      setAiLoading(false)
     }
   }
 
@@ -2952,8 +3028,83 @@ export default function MCDMCalculator() {
               >
                 Sensitivity Analysis
               </Button>
+              <Button
+                variant="outline"
+                className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100`}
+                onClick={() => setIsResearchContextDialogOpen(true)}
+              >
+                <Sparkles className="w-3 h-3 mr-1" />
+                Define Research Context (AI)
+              </Button>
             </div>
           </div>
+
+          <Dialog open={isResearchContextDialogOpen} onOpenChange={setIsResearchContextDialogOpen}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-indigo-600" />
+                  Define Research Context for AI
+                </DialogTitle>
+                <DialogDescription>
+                  Provide domain-specific context to generate a high-quality, research-grade analysis.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label htmlFor="research-topic" className="text-sm font-semibold">Research Topic / Title</Label>
+                  <Input
+                    id="research-topic"
+                    placeholder="e.g. Selection of Sustainable Industrial Robots for Automotive Assembly"
+                    value={aiResearchContext.topic}
+                    onChange={(e) => setAiResearchContext(prev => ({ ...prev, topic: e.target.value }))}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="research-gap" className="text-sm font-semibold">Problem Statement / Research Gap</Label>
+                  <p className="text-xs text-gray-500">What specific problem is this decision matrix solving? What are the key constraints or goals?</p>
+                  <Textarea
+                    id="research-gap"
+                    placeholder="e.g. Current selection methods focus only on cost, ignoring energy consumption. This study aims to find a balance between performance and sustainability..."
+                    value={aiResearchContext.researchGap}
+                    onChange={(e) => setAiResearchContext(prev => ({ ...prev, researchGap: e.target.value }))}
+                    className="text-sm h-24"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">Criteria Definitions & Context</Label>
+                  <p className="text-xs text-gray-500">Briefly explain what each criterion represents in your real-world scenario.</p>
+                  <div className="border rounded-md divide-y max-h-60 overflow-y-auto">
+                    {criteria.map((c) => (
+                      <div key={c.id} className="p-2 flex items-center gap-2 bg-gray-50">
+                        <div className="w-1/3 text-xs font-medium truncate" title={c.name}>{c.name}</div>
+                        <Input
+                          placeholder={`Context for ${c.name} (e.g. "Initial Cost in USD")`}
+                          value={aiResearchContext.criteriaDefs[c.id] || ""}
+                          onChange={(e) => setAiResearchContext(prev => ({
+                            ...prev,
+                            criteriaDefs: { ...prev.criteriaDefs, [c.id]: e.target.value }
+                          }))}
+                          className="text-xs h-7 bg-white"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={() => {
+                  // Save to Local Storage
+                  localStorage.setItem("ai_research_topic", aiResearchContext.topic)
+                  localStorage.setItem("ai_research_gap", aiResearchContext.researchGap)
+                  localStorage.setItem("ai_criteria_defs", JSON.stringify(aiResearchContext.criteriaDefs))
+
+                  setIsResearchContextDialogOpen(false)
+                }}>Save Context</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {(homeTab === "rankingMethods" || homeTab === "weightMethods") && (
             <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
@@ -3737,6 +3888,7 @@ export default function MCDMCalculator() {
 
               {sensitivityCriteriaWeights.length > 0 && (
                 <>
+
                   <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
                     <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div>
@@ -3764,6 +3916,7 @@ export default function MCDMCalculator() {
                             <SelectItem value="kde">KDE Density</SelectItem>
                           </SelectContent>
                         </Select>
+
                         <Button onClick={() => downloadChartAsJpeg(weightChartRef, 'weight-analysis')} variant="outline" size="sm" className="h-7 text-xs"><Download className="w-3 h-3 mr-1" /> JPG</Button>
                       </div>
                     </CardHeader>
@@ -4239,6 +4392,8 @@ export default function MCDMCalculator() {
                   </Card>
                 </>
               )}
+
+
 
 
 
@@ -4921,283 +5076,328 @@ export default function MCDMCalculator() {
               )}
 
               {comparisonResults.length > 0 && comparisonChartData.length > 0 && (
-                <Card className="border-gray-200 bg-white shadow-none w-full">
-                  <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div>
-                      <CardTitle className="text-sm text-black">Ranking variation</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        {comparisonChartType === "composed"
-                          ? "Deviation from average rank - bars extending left are better than average."
-                          : "Chart comparing alternative ranks across selected methods."}
-                      </CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Select value={comparisonChartType} onValueChange={setComparisonChartType}>
-                        <SelectTrigger className="w-28 sm:w-40 h-7 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="line">Line Chart</SelectItem>
-                          <SelectItem value="step">Step Line Chart</SelectItem>
-                          <SelectItem value="bar">Bar Chart</SelectItem>
-                          <SelectItem value="stackedBar">Stacked Bar Chart</SelectItem>
-                          <SelectItem value="area">Area Chart</SelectItem>
-                          <SelectItem value="stackedArea">Stacked Area Chart</SelectItem>
-                          <SelectItem value="scatter">Scatter Plot</SelectItem>
-                          <SelectItem value="composed">Diverging Bar Chart</SelectItem>
-                          <SelectItem value="radar">Radar Chart</SelectItem>
-                          <SelectItem value="heatmap">Heatmap</SelectItem>
-                          <SelectItem value="boxPlot">Box Plot</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button onClick={downloadComparisonChartAsJpeg} variant="outline" size="sm" className="h-7 text-xs">
-                        <Download className="w-3 h-3 mr-1" /> JPG
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className={`${comparisonChartType === "heatmap" ? "h-auto" : "h-[500px] sm:h-[500px]"} p-0 sm:p-6 mt-4`}>
-                    {(() => {
-                      if (comparisonChartType === "heatmap") {
-                        return (
-                          <div ref={comparisonChartRef} className="w-full h-full flex flex-col overflow-x-auto">
-                            <div className="flex-1 flex flex-col min-w-[max-content]">
-                              <div className="flex text-xs font-semibold border-b">
-                                <div className="w-24 sm:w-32 p-2 border-r bg-gray-50 flex-shrink-0">Method</div>
-                                <div className="flex flex-1">
-                                  {comparisonChartAlternatives.map((alt) => (
-                                    <div key={alt} className="flex-1 min-w-[100px] p-2 border-r text-center bg-gray-50 truncate">
-                                      {alt}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              {comparisonChartData.map((row, idx) => (
-                                <div key={idx} className="flex border-b">
-                                  <div className="w-24 sm:w-32 p-2 border-r text-xs font-medium bg-gray-50 flex-shrink-0 truncate">
-                                    {row.method}
-                                  </div>
-                                  <div className="flex flex-1">
-                                    {comparisonChartAlternatives.map((alt, altIdx) => {
-                                      const value = row[alt]
-                                      const minVal = 1
-                                      const maxVal = Math.max(...comparisonChartData.flatMap((r) => comparisonChartAlternatives.map((a) => r[a])).filter((v) => v != null))
-                                      const normalized = (value - minVal || 1) / (maxVal - minVal || 1)
-                                      const hue = (1 - normalized) * 120
-                                      const bgColor = `hsl(${hue}, 70%, 60%)`
-                                      return (
-                                        <div
-                                          key={alt}
-                                          className="flex-1 min-w-[100px] p-3 border-r flex items-center justify-center text-xs font-medium text-white"
-                                          style={{ backgroundColor: bgColor }}
-                                        >
-                                          {value}
-                                        </div>
-                                      )
-                                    })}
-                                  </div>
-                                </div>
-                              ))}
+                <>
+                  {/* AI Ranking Comparison Panel */}
+                  {showAiPanel && aiAnalysisType === "ranking_comparison" && (
+                    <Card className="border-indigo-100 bg-indigo-50/50 mb-6 overflow-hidden transition-all duration-300">
+                      <CardHeader className="border-b border-indigo-100 pb-3 bg-white/50">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="flex items-center gap-2 text-sm text-indigo-900 font-bold">
+                            <Sparkles className="w-4 h-4 text-indigo-600" />
+                            AI Ranking Comparison
+                          </CardTitle>
+                          <Button variant="ghost" size="sm" onClick={() => setShowAiPanel(false)} className="h-6 w-6 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"><span className="sr-only">Close</span><span className="text-lg">×</span></Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        {!aiAnalysisResult ? (
+                          <div className="p-8 text-center space-y-5 bg-white/40">
+                            <div className="mx-auto w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm border border-indigo-50">
+                              <Bot className={`w-7 h-7 text-indigo-600 ${aiLoading ? 'animate-pulse' : ''}`} />
                             </div>
-                            <div className="flex items-center justify-center gap-4 text-xs" style={{ paddingTop: "8px" }}>
-                              <div className="flex items-center gap-1.5">
-                                <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(120, 70%, 60%)" }}></div>
-                                <span>Better Alternative (Rank)</span>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(0, 70%, 60%)" }}></div>
-                                <span>Worse Alternative (Rank)</span>
-                              </div>
+                            <p className="text-xs text-gray-600">{aiLoading ? "Comparing methodologies..." : "Ready to analyze rankings."}</p>
+                          </div>
+                        ) : (
+                          <div className="prose prose-sm max-w-none p-6 bg-white text-gray-800">
+                            <ReactMarkdown
+                              components={{
+                                h1: ({ node, ...props }) => <h1 className="text-lg font-bold text-indigo-900 mb-3 mt-2 border-b-2 border-indigo-100 pb-2" {...props} />,
+                                h2: ({ node, ...props }) => <h2 className="text-sm font-bold text-gray-900 mb-2 mt-4 uppercase tracking-wide" {...props} />,
+                                p: ({ node, ...props }) => <p className="text-xs leading-relaxed text-gray-600 mb-3 text-justify" {...props} />,
+                                ul: ({ node, ...props }) => <ul className="list-disc list-outside text-xs text-gray-600 mb-3 ml-4 space-y-1" {...props} />,
+                                li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                                strong: ({ node, ...props }) => <strong className="font-bold text-indigo-900" {...props} />,
+                              }}
+                            >
+                              {aiAnalysisResult}
+                            </ReactMarkdown>
+                            <div className="mt-6 flex justify-end border-t border-gray-100 pt-3">
+                              <Button onClick={() => handleAiAnalysis("ranking_comparison", { comparisonData: comparisonResults })} variant="outline" size="sm" className="text-xs h-7 gap-1"><Sparkles className="w-3 h-3" /> Regenerate</Button>
                             </div>
                           </div>
-                        )
-                      }
-
-                      return (
-                        <div ref={comparisonChartRef} className="w-full h-full">
-                          <ResponsiveContainer width="100%" height="100%">
-                            {(() => {
-                              switch (comparisonChartType) {
-                                case "radar":
-                                  return (
-                                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
-                                      <PolarGrid />
-                                      <PolarAngleAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                      <PolarRadiusAxis />
-                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                      <Tooltip />
-                                      {comparisonChartAlternatives.map((alt, idx) => (
-                                        <Radar key={alt} name={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.1} />
-                                      ))}
-                                    </RadarChart>
-                                  );
-                                case "bar":
-                                  return (
-                                    <BarChart data={comparisonChartData}>
-                                      <CartesianGrid strokeDasharray="3 3" />
-                                      <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                      <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
-                                      <Tooltip />
-                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                      {comparisonChartAlternatives.map((alt, idx) => (
-                                        <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
-                                      ))}
-                                    </BarChart>
-                                  );
-                                case "stackedBar":
-                                  return (
-                                    <BarChart data={comparisonChartData}>
-                                      <CartesianGrid strokeDasharray="3 3" />
-                                      <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                      <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
-                                      <Tooltip />
-                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                      {comparisonChartAlternatives.map((alt, idx) => (
-                                        <Bar key={alt} stackId="a" dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
-                                      ))}
-                                    </BarChart>
-                                  );
-                                case "area":
-                                  return (
-                                    <AreaChart data={comparisonChartData}>
-                                      <CartesianGrid strokeDasharray="3 3" />
-                                      <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                      <YAxis />
-                                      <Tooltip />
-                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                      {comparisonChartAlternatives.map((alt, idx) => (
-                                        <Area type="monotone" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
-                                      ))}
-                                    </AreaChart>
-                                  );
-                                case "stackedArea":
-                                  return (
-                                    <AreaChart data={comparisonChartData}>
-                                      <CartesianGrid strokeDasharray="3 3" />
-                                      <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                      <YAxis />
-                                      <Tooltip />
-                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                      {comparisonChartAlternatives.map((alt, idx) => (
-                                        <Area type="monotone" stackId="1" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
-                                      ))}
-                                    </AreaChart>
-                                  );
-                                case "composed":
-                                  const composedData = comparisonChartData.map(d => {
-                                    const avgRank = comparisonChartAlternatives.reduce((sum, alt) => sum + (d[alt] || 0), 0) / comparisonChartAlternatives.length;
-                                    const divergingData: any = { method: d.method };
-                                    comparisonChartAlternatives.forEach(alt => {
-                                      const rank = d[alt] || 0;
-                                      divergingData[alt] = rank - avgRank;
-                                    });
-                                    return divergingData;
-                                  });
-                                  return (
-                                    <BarChart data={composedData} layout="vertical" margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
-                                      <CartesianGrid strokeDasharray="3 3" />
-                                      <XAxis type="number" label={{ value: "Deviation from Average Rank", position: "insideBottom", offset: -10 }} tick={{ fontSize: 10 }} />
-                                      <YAxis type="category" dataKey="method" tick={{ fontSize: 10 }} width={90} />
-                                      <Tooltip formatter={(value: any, name: string) => [`${parseFloat(value) > 0 ? '+' : ''}${parseFloat(value).toFixed(2)} (${parseFloat(value) < 0 ? 'Better' : 'Worse'} than avg)`, name]} />
-                                      <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "20px" }} layout="horizontal" align="center" verticalAlign="bottom" iconType="square" />
-                                      <ReferenceLine x={0} stroke="#666" strokeWidth={2} />
-                                      {comparisonChartAlternatives.map((alt, idx) => (
-                                        <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} stackId="stack" />
-                                      ))}
-                                    </BarChart>
-                                  );
-                                case "scatter":
-                                  return (
-                                    <ScatterChart>
-                                      <CartesianGrid strokeDasharray="3 3" />
-                                      <XAxis dataKey="x" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} name="Method" />
-                                      <YAxis dataKey="y" type="number" name="Rank" label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
-                                      <Tooltip cursor={{ strokeDasharray: "3 3" }} />
-                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                      {comparisonChartAlternatives.map((alt, idx) => (
-                                        <Scatter key={alt} name={alt} data={comparisonChartData.map((d) => ({ x: d.method, y: d[alt] }))} fill={CHART_COLORS[idx % CHART_COLORS.length]} shape={["circle", "cross", "diamond", "square", "star", "triangle", "wye"][idx % 7] as any} line />
-                                      ))}
-                                    </ScatterChart>
-                                  );
-                                case "boxPlot":
-                                  const boxData = comparisonChartAlternatives.map((alt) => {
-                                    const values = comparisonChartData.map((r) => r[alt]).filter((v) => v != null).sort((a, b) => a - b)
-                                    if (values.length === 0) return null
-                                    const q1 = values[Math.floor(values.length * 0.25)]
-                                    const median = values[Math.floor(values.length * 0.5)]
-                                    const q3 = values[Math.floor(values.length * 0.75)]
-                                    const min = Math.min(...values)
-                                    const max = Math.max(...values)
-                                    const iqr = q3 - q1
-                                    const whiskerLow = Math.max(min, q1 - 1.5 * iqr)
-                                    const whiskerHigh = Math.min(max, q3 + 1.5 * iqr)
-                                    return { alt, min, q1, median, q3, max, whiskerLow, whiskerHigh, n: values.length }
-                                  }).filter((d): d is any => d !== null)
-
-                                  if (boxData.length === 0) return <></>
-                                  const allVals = boxData.flatMap(d => [d.whiskerLow, d.whiskerHigh])
-                                  const minV = Math.min(...allVals)
-                                  const maxV = Math.max(...allVals)
-                                  const yR = maxV - minV || 1
-                                  const pad = { top: 30, right: 30, bottom: 50, left: 50 }
-                                  const cW = 800 - pad.left - pad.right
-                                  const cH = 400 - pad.top - pad.bottom
-                                  const bW = Math.max(15, (cW / boxData.length) * 0.6)
-                                  const sp = cW / boxData.length
-                                  const gY = (v: number) => pad.top + cH - ((v - minV) / yR) * cH
-                                  const gX = (idx: number) => pad.left + (idx + 0.5) * sp
-
-                                  return (
-                                    <svg viewBox="0 0 800 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-                                      <line x1={pad.left} y1={pad.top} x2={pad.left} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
-                                      <line x1={pad.left} y1={pad.top + cH} x2={800 - pad.right} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
-                                      {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
-                                        <g key={`ylabel-${pct}`}>
-                                          <line x1={pad.left - 5} y1={gY(minV + pct * yR)} x2={pad.left} y2={gY(minV + pct * yR)} stroke="#999" strokeWidth="1" />
-                                          <text x={pad.left - 10} y={gY(minV + pct * yR) + 4} fontSize="11" textAnchor="end" fill="#666">{(minV + pct * yR).toFixed(1)}</text>
-                                          <line x1={pad.left} y1={gY(minV + pct * yR)} x2={800 - pad.right} y2={gY(minV + pct * yR)} stroke="#eee" strokeWidth="1" strokeDasharray="2,2" />
-                                        </g>
-                                      ))}
-                                      {boxData.map((data, idx) => {
-                                        const x = gX(idx)
-                                        const color = CHART_COLORS[idx % CHART_COLORS.length]
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+                  <Card className="border-gray-200 bg-white shadow-none w-full">
+                    <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div>
+                        <CardTitle className="text-sm text-black">Ranking variation</CardTitle>
+                        <CardDescription className="text-xs text-gray-700">
+                          {comparisonChartType === "composed"
+                            ? "Deviation from average rank - bars extending left are better than average."
+                            : "Chart comparing alternative ranks across selected methods."}
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Select value={comparisonChartType} onValueChange={setComparisonChartType}>
+                          <SelectTrigger className="w-28 sm:w-40 h-7 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="line">Line Chart</SelectItem>
+                            <SelectItem value="step">Step Line Chart</SelectItem>
+                            <SelectItem value="bar">Bar Chart</SelectItem>
+                            <SelectItem value="stackedBar">Stacked Bar Chart</SelectItem>
+                            <SelectItem value="area">Area Chart</SelectItem>
+                            <SelectItem value="stackedArea">Stacked Area Chart</SelectItem>
+                            <SelectItem value="scatter">Scatter Plot</SelectItem>
+                            <SelectItem value="composed">Diverging Bar Chart</SelectItem>
+                            <SelectItem value="radar">Radar Chart</SelectItem>
+                            <SelectItem value="heatmap">Heatmap</SelectItem>
+                            <SelectItem value="boxPlot">Box Plot</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button onClick={() => handleAiAnalysis("ranking_comparison", { comparisonData: comparisonResults })} variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700 h-7 text-xs gap-1"><Sparkles className="w-3 h-3" /> AI Analysis</Button>
+                        <Button onClick={downloadComparisonChartAsJpeg} variant="outline" size="sm" className="h-7 text-xs">
+                          <Download className="w-3 h-3 mr-1" /> JPG
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className={`${comparisonChartType === "heatmap" ? "h-auto" : "h-[500px] sm:h-[500px]"} p-0 sm:p-6 mt-4`}>
+                      {(() => {
+                        if (comparisonChartType === "heatmap") {
+                          return (
+                            <div ref={comparisonChartRef} className="w-full h-full flex flex-col overflow-x-auto">
+                              <div className="flex-1 flex flex-col min-w-[max-content]">
+                                <div className="flex text-xs font-semibold border-b">
+                                  <div className="w-24 sm:w-32 p-2 border-r bg-gray-50 flex-shrink-0">Method</div>
+                                  <div className="flex flex-1">
+                                    {comparisonChartAlternatives.map((alt) => (
+                                      <div key={alt} className="flex-1 min-w-[100px] p-2 border-r text-center bg-gray-50 truncate">
+                                        {alt}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                                {comparisonChartData.map((row, idx) => (
+                                  <div key={idx} className="flex border-b">
+                                    <div className="w-24 sm:w-32 p-2 border-r text-xs font-medium bg-gray-50 flex-shrink-0 truncate">
+                                      {row.method}
+                                    </div>
+                                    <div className="flex flex-1">
+                                      {comparisonChartAlternatives.map((alt, altIdx) => {
+                                        const value = row[alt]
+                                        const minVal = 1
+                                        const maxVal = Math.max(...comparisonChartData.flatMap((r) => comparisonChartAlternatives.map((a) => r[a])).filter((v) => v != null))
+                                        const normalized = (value - minVal || 1) / (maxVal - minVal || 1)
+                                        const hue = (1 - normalized) * 120
+                                        const bgColor = `hsl(${hue}, 70%, 60%)`
                                         return (
-                                          <g key={`box-${data.alt}`}>
-                                            <line x1={x} y1={gY(data.whiskerLow)} x2={x} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2" opacity="0.8" />
-                                            <line x1={x - bW / 3} y1={gY(data.whiskerLow)} x2={x + bW / 3} y2={gY(data.whiskerLow)} stroke={color} strokeWidth="2.5" opacity="0.8" />
-                                            <line x1={x - bW / 3} y1={gY(data.whiskerHigh)} x2={x + bW / 3} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2.5" opacity="0.8" />
-                                            <rect x={x - bW / 2} y={gY(data.q3)} width={bW} height={Math.max(1, gY(data.q1) - gY(data.q3))} fill={color} fillOpacity="0.4" stroke={color} strokeWidth="2" />
-                                            <line x1={x - bW / 2} y1={gY(data.median)} x2={x + bW / 2} y2={gY(data.median)} stroke="#ff3333" strokeWidth="3" />
-                                            <circle cx={x} cy={gY(data.min)} r="3" fill={color} opacity="0.6" />
-                                            <circle cx={x} cy={gY(data.max)} r="3" fill={color} opacity="0.6" />
-                                            <text x={x} y={pad.top + cH + 25} fontSize="12" textAnchor="middle" fill="#333" fontWeight="500">{data.alt.substring(0, 8)}</text>
-                                          </g>
+                                          <div
+                                            key={alt}
+                                            className="flex-1 min-w-[100px] p-3 border-r flex items-center justify-center text-xs font-medium text-white"
+                                            style={{ backgroundColor: bgColor }}
+                                          >
+                                            {value}
+                                          </div>
                                         )
                                       })}
-                                      <text x={25} y={15} fontSize="12" fontWeight="600" fill="#333">Rank</text>
-                                      <text x={750} y={pad.top + cH + 40} fontSize="12" fontWeight="600" fill="#333">Alts</text>
-                                    </svg>
-                                  );
-                                default:
-                                  return (
-                                    <LineChart data={comparisonChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                      <CartesianGrid strokeDasharray="3 3" />
-                                      <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                      <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                                      <Tooltip />
-                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                      {comparisonChartAlternatives.map((alt, idx) => (
-                                        <Line key={alt} type={comparisonChartType === "step" ? "step" : "monotone"} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2} strokeDasharray={["0", "5 5", "3 3", "10 5", "2 2", "15 5"][idx % 6]} activeDot={{ r: 6 }} dot={{ r: 4, strokeWidth: 1, fill: "white", stroke: CHART_COLORS[idx % CHART_COLORS.length] }} />
-                                      ))}
-                                    </LineChart>
-                                  );
-                              }
-                            })()}
-                          </ResponsiveContainer>
-                        </div>
-                      );
-                    })()}
-                  </CardContent>
-                </Card>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="flex items-center justify-center gap-4 text-xs" style={{ paddingTop: "8px" }}>
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(120, 70%, 60%)" }}></div>
+                                  <span>Better Alternative (Rank)</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(0, 70%, 60%)" }}></div>
+                                  <span>Worse Alternative (Rank)</span>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        }
+
+                        return (
+                          <div ref={comparisonChartRef} className="w-full h-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              {(() => {
+                                switch (comparisonChartType) {
+                                  case "radar":
+                                    return (
+                                      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
+                                        <PolarGrid />
+                                        <PolarAngleAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                        <PolarRadiusAxis />
+                                        <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                        <Tooltip />
+                                        {comparisonChartAlternatives.map((alt, idx) => (
+                                          <Radar key={alt} name={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.1} />
+                                        ))}
+                                      </RadarChart>
+                                    );
+                                  case "bar":
+                                    return (
+                                      <BarChart data={comparisonChartData}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                        <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
+                                        <Tooltip />
+                                        <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                        {comparisonChartAlternatives.map((alt, idx) => (
+                                          <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
+                                        ))}
+                                      </BarChart>
+                                    );
+                                  case "stackedBar":
+                                    return (
+                                      <BarChart data={comparisonChartData}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                        <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
+                                        <Tooltip />
+                                        <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                        {comparisonChartAlternatives.map((alt, idx) => (
+                                          <Bar key={alt} stackId="a" dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
+                                        ))}
+                                      </BarChart>
+                                    );
+                                  case "area":
+                                    return (
+                                      <AreaChart data={comparisonChartData}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                        {comparisonChartAlternatives.map((alt, idx) => (
+                                          <Area type="monotone" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
+                                        ))}
+                                      </AreaChart>
+                                    );
+                                  case "stackedArea":
+                                    return (
+                                      <AreaChart data={comparisonChartData}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                        {comparisonChartAlternatives.map((alt, idx) => (
+                                          <Area type="monotone" stackId="1" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
+                                        ))}
+                                      </AreaChart>
+                                    );
+                                  case "composed":
+                                    const composedData = comparisonChartData.map(d => {
+                                      const avgRank = comparisonChartAlternatives.reduce((sum, alt) => sum + (d[alt] || 0), 0) / comparisonChartAlternatives.length;
+                                      const divergingData: any = { method: d.method };
+                                      comparisonChartAlternatives.forEach(alt => {
+                                        const rank = d[alt] || 0;
+                                        divergingData[alt] = rank - avgRank;
+                                      });
+                                      return divergingData;
+                                    });
+                                    return (
+                                      <BarChart data={composedData} layout="vertical" margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis type="number" label={{ value: "Deviation from Average Rank", position: "insideBottom", offset: -10 }} tick={{ fontSize: 10 }} />
+                                        <YAxis type="category" dataKey="method" tick={{ fontSize: 10 }} width={90} />
+                                        <Tooltip formatter={(value: any, name: string) => [`${parseFloat(value) > 0 ? '+' : ''}${parseFloat(value).toFixed(2)} (${parseFloat(value) < 0 ? 'Better' : 'Worse'} than avg)`, name]} />
+                                        <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "20px" }} layout="horizontal" align="center" verticalAlign="bottom" iconType="square" />
+                                        <ReferenceLine x={0} stroke="#666" strokeWidth={2} />
+                                        {comparisonChartAlternatives.map((alt, idx) => (
+                                          <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} stackId="stack" />
+                                        ))}
+                                      </BarChart>
+                                    );
+                                  case "scatter":
+                                    return (
+                                      <ScatterChart>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="x" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} name="Method" />
+                                        <YAxis dataKey="y" type="number" name="Rank" label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
+                                        <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+                                        <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                        {comparisonChartAlternatives.map((alt, idx) => (
+                                          <Scatter key={alt} name={alt} data={comparisonChartData.map((d) => ({ x: d.method, y: d[alt] }))} fill={CHART_COLORS[idx % CHART_COLORS.length]} shape={["circle", "cross", "diamond", "square", "star", "triangle", "wye"][idx % 7] as any} line />
+                                        ))}
+                                      </ScatterChart>
+                                    );
+                                  case "boxPlot":
+                                    const boxData = comparisonChartAlternatives.map((alt) => {
+                                      const values = comparisonChartData.map((r) => r[alt]).filter((v) => v != null).sort((a, b) => a - b)
+                                      if (values.length === 0) return null
+                                      const q1 = values[Math.floor(values.length * 0.25)]
+                                      const median = values[Math.floor(values.length * 0.5)]
+                                      const q3 = values[Math.floor(values.length * 0.75)]
+                                      const min = Math.min(...values)
+                                      const max = Math.max(...values)
+                                      const iqr = q3 - q1
+                                      const whiskerLow = Math.max(min, q1 - 1.5 * iqr)
+                                      const whiskerHigh = Math.min(max, q3 + 1.5 * iqr)
+                                      return { alt, min, q1, median, q3, max, whiskerLow, whiskerHigh, n: values.length }
+                                    }).filter((d): d is any => d !== null)
+
+                                    if (boxData.length === 0) return <></>
+                                    const allVals = boxData.flatMap(d => [d.whiskerLow, d.whiskerHigh])
+                                    const minV = Math.min(...allVals)
+                                    const maxV = Math.max(...allVals)
+                                    const yR = maxV - minV || 1
+                                    const pad = { top: 30, right: 30, bottom: 50, left: 50 }
+                                    const cW = 800 - pad.left - pad.right
+                                    const cH = 400 - pad.top - pad.bottom
+                                    const bW = Math.max(15, (cW / boxData.length) * 0.6)
+                                    const sp = cW / boxData.length
+                                    const gY = (v: number) => pad.top + cH - ((v - minV) / yR) * cH
+                                    const gX = (idx: number) => pad.left + (idx + 0.5) * sp
+
+                                    return (
+                                      <svg viewBox="0 0 800 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+                                        <line x1={pad.left} y1={pad.top} x2={pad.left} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
+                                        <line x1={pad.left} y1={pad.top + cH} x2={800 - pad.right} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
+                                        {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
+                                          <g key={`ylabel-${pct}`}>
+                                            <line x1={pad.left - 5} y1={gY(minV + pct * yR)} x2={pad.left} y2={gY(minV + pct * yR)} stroke="#999" strokeWidth="1" />
+                                            <text x={pad.left - 10} y={gY(minV + pct * yR) + 4} fontSize="11" textAnchor="end" fill="#666">{(minV + pct * yR).toFixed(1)}</text>
+                                            <line x1={pad.left} y1={gY(minV + pct * yR)} x2={800 - pad.right} y2={gY(minV + pct * yR)} stroke="#eee" strokeWidth="1" strokeDasharray="2,2" />
+                                          </g>
+                                        ))}
+                                        {boxData.map((data, idx) => {
+                                          const x = gX(idx)
+                                          const color = CHART_COLORS[idx % CHART_COLORS.length]
+                                          return (
+                                            <g key={`box-${data.alt}`}>
+                                              <line x1={x} y1={gY(data.whiskerLow)} x2={x} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2" opacity="0.8" />
+                                              <line x1={x - bW / 3} y1={gY(data.whiskerLow)} x2={x + bW / 3} y2={gY(data.whiskerLow)} stroke={color} strokeWidth="2.5" opacity="0.8" />
+                                              <line x1={x - bW / 3} y1={gY(data.whiskerHigh)} x2={x + bW / 3} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2.5" opacity="0.8" />
+                                              <rect x={x - bW / 2} y={gY(data.q3)} width={bW} height={Math.max(1, gY(data.q1) - gY(data.q3))} fill={color} fillOpacity="0.4" stroke={color} strokeWidth="2" />
+                                              <line x1={x - bW / 2} y1={gY(data.median)} x2={x + bW / 2} y2={gY(data.median)} stroke="#ff3333" strokeWidth="3" />
+                                              <circle cx={x} cy={gY(data.min)} r="3" fill={color} opacity="0.6" />
+                                              <circle cx={x} cy={gY(data.max)} r="3" fill={color} opacity="0.6" />
+                                              <text x={x} y={pad.top + cH + 25} fontSize="12" textAnchor="middle" fill="#333" fontWeight="500">{data.alt.substring(0, 8)}</text>
+                                            </g>
+                                          )
+                                        })}
+                                        <text x={25} y={15} fontSize="12" fontWeight="600" fill="#333">Rank</text>
+                                        <text x={750} y={pad.top + cH + 40} fontSize="12" fontWeight="600" fill="#333">Alts</text>
+                                      </svg>
+                                    );
+                                  default:
+                                    return (
+                                      <LineChart data={comparisonChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                        <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                                        <Tooltip />
+                                        <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                        {comparisonChartAlternatives.map((alt, idx) => (
+                                          <Line key={alt} type={comparisonChartType === "step" ? "step" : "monotone"} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2} strokeDasharray={["0", "5 5", "3 3", "10 5", "2 2", "15 5"][idx % 6]} activeDot={{ r: 6 }} dot={{ r: 4, strokeWidth: 1, fill: "white", stroke: CHART_COLORS[idx % CHART_COLORS.length] }} />
+                                        ))}
+                                      </LineChart>
+                                    );
+                                }
+                              })()}
+                            </ResponsiveContainer>
+                          </div>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+                </>
               )}
             </>
           )}
@@ -5643,362 +5843,408 @@ export default function MCDMCalculator() {
                   </Dialog>
 
                   {sensitivityWeightComparisonResults.length > 0 && (
-                    <div className="space-y-6 animate-in fade-in duration-500">
-                      <Card className="border-gray-200 bg-white shadow-none w-full">
-                        <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                          <div>
-                            <CardTitle className="text-sm text-black">Comparison Results</CardTitle>
-                            <CardDescription className="text-xs text-gray-700">Ranking variations across weight methods</CardDescription>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
-                            <table className="min-w-full text-[9px] border-collapse bg-white">
-                              <thead className="bg-gray-50">
-                                <tr>
-                                  <th className="px-1.5 py-1 text-left border-b border-r border-gray-200 text-black font-bold sticky left-0 bg-gray-50 z-10 w-20">Alternative</th>
-                                  {sensitivityWeightComparisonResults.map((res, i) => (
-                                    <Fragment key={i}>
-                                      <th className="px-1 py-1 text-center border-b border-r border-gray-200 text-black font-bold bg-[#FFD966]" colSpan={2}>
-                                        {res.weightLabel} ({res.method})
-                                      </th>
-                                    </Fragment>
-                                  ))}
-                                </tr>
-                                <tr>
-                                  <th className="border-b border-r border-gray-200 sticky left-0 bg-gray-50 z-10"></th>
-                                  {sensitivityWeightComparisonResults.map((res, i) => (
-                                    <Fragment key={i}>
-                                      <th className="px-1 py-0.5 text-center border-b border-r border-gray-200 text-gray-600 font-semibold text-[8px]">Score</th>
-                                      <th className="px-1 py-0.5 text-center border-b border-r border-gray-200 text-gray-600 font-semibold text-[8px]">Rank</th>
-                                    </Fragment>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {alternatives.map((alt) => (
-                                  <tr key={alt.id} className="hover:bg-gray-50 border-b last:border-0 border-gray-100">
-                                    <td className="px-1.5 py-1 text-black font-bold border-r border-gray-200 bg-[#F4B084] sticky left-0 z-10 text-center">{alt.name}</td>
-                                    {sensitivityWeightComparisonResults.map((res, i) => {
-                                      const item = res.ranking.find((r: any) => r.alternativeName === alt.name)
-                                      return (
-                                        <Fragment key={i}>
-                                          <td className="px-1 py-1 text-center text-black border-r border-gray-200">
-                                            {item?.score !== undefined ? Number(item.score).toFixed(resultsDecimalPlaces) : "-"}
-                                          </td>
-                                          <td className="px-1 py-1 text-center text-black font-bold border-r border-gray-200">
-                                            {item?.rank}
-                                          </td>
-                                        </Fragment>
-                                      )
-                                    })}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <Card className="border-gray-200 bg-white shadow-none w-full">
-                        <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          <div>
-                            <CardTitle className="text-sm text-black">Graphical Variation</CardTitle>
-                            <CardDescription className="text-xs text-gray-700">Visualizing the impact of weight methods</CardDescription>
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Select value={sensitivityChartType} onValueChange={setSensitivityChartType}>
-                              <SelectTrigger className="w-28 sm:w-32 h-7 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="line">Line Chart</SelectItem>
-                                <SelectItem value="step">Step Line Chart</SelectItem>
-                                <SelectItem value="bar">Bar Chart</SelectItem>
-                                <SelectItem value="stackedBar">Stacked Bar Chart</SelectItem>
-                                <SelectItem value="area">Area Chart</SelectItem>
-                                <SelectItem value="stackedArea">Stacked Area Chart</SelectItem>
-                                <SelectItem value="scatter">Scatter Plot</SelectItem>
-                                <SelectItem value="composed">Gantt Chart (Range)</SelectItem>
-                                <SelectItem value="radar">Radar Chart</SelectItem>
-                                <SelectItem value="radial">Radial Bar Chart</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Button onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation")} variant="outline" size="sm" className="h-7 text-xs"><Download className="w-3 h-3 mr-1" /> JPG</Button>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="chart-container" ref={sensitivityGraphicalVariationRef}>
-                            <ResponsiveContainer width="100%" height="100%">
-                              {sensitivityChartType === 'radar' ? (
-                                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={sensitivityWeightChartData}>
-                                  <PolarGrid />
-                                  <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                  <PolarRadiusAxis />
-                                  <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                  <Tooltip />
-                                  {sensitivityWeightComparisonResults.map((res, i) => (
-                                    <Radar
-                                      key={res.weightLabel}
-                                      name={`${res.weightLabel} Rank`}
-                                      dataKey={`${res.weightLabel} Rank`}
-                                      stroke={CHART_COLORS[i % CHART_COLORS.length]}
-                                      fill={CHART_COLORS[i % CHART_COLORS.length]}
-                                      fillOpacity={0.1}
-                                    />
-                                  ))}
-                                </RadarChart>
-                              ) : sensitivityChartType === "bar" ? (
-                                <BarChart data={sensitivityWeightChartData}>
-                                  <CartesianGrid strokeDasharray="3 3" />
-                                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                  <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
-                                  <Tooltip />
-                                  <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                  {sensitivityWeightComparisonResults.map((res, i) => (
-                                    <Bar key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} name={`${res.weightLabel} Rank`} />
-                                  ))}
-                                </BarChart>
-                              ) : sensitivityChartType === "stackedBar" ? (
-                                <BarChart data={sensitivityWeightChartData}>
-                                  <CartesianGrid strokeDasharray="3 3" />
-                                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                  <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
-                                  <Tooltip />
-                                  <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                  {sensitivityWeightComparisonResults.map((res, i) => (
-                                    <Bar key={res.weightLabel} stackId="a" dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} name={`${res.weightLabel} Rank`} />
-                                  ))}
-                                </BarChart>
-                              ) : sensitivityChartType === "area" ? (
-                                <AreaChart data={sensitivityWeightChartData}>
-                                  <CartesianGrid strokeDasharray="3 3" />
-                                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                  <YAxis interval={0} domain={[0, 'dataMax']} />
-                                  <Tooltip />
-                                  <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                  {sensitivityWeightComparisonResults.map((res, i) => (
-                                    <Area type="monotone" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={`${res.weightLabel} Rank`} />
-                                  ))}
-                                </AreaChart>
-                              ) : sensitivityChartType === "stackedArea" ? (
-                                <AreaChart data={sensitivityWeightChartData}>
-                                  <CartesianGrid strokeDasharray="3 3" />
-                                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                  <YAxis interval={0} domain={[0, 'dataMax']} />
-                                  <Tooltip />
-                                  <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                  {sensitivityWeightComparisonResults.map((res, i) => (
-                                    <Area type="monotone" stackId="1" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={`${res.weightLabel} Rank`} />
-                                  ))}
-                                </AreaChart>
-                              ) : sensitivityChartType === "composed" ? (
-                                <BarChart
-                                  data={sensitivityWeightComparisonResults.map((res, idx) => {
-                                    // Get all ranks for this weight method across alternatives
-                                    const ranks = sensitivityWeightChartData.map(d => d[`${res.weightLabel} Rank`] || 0);
-                                    const minRank = Math.min(...ranks);
-                                    const maxRank = Math.max(...ranks);
-                                    const avgRank = ranks.reduce((a, b) => a + b, 0) / ranks.length;
-
-                                    return {
-                                      method: res.weightLabel,
-                                      start: minRank,
-                                      range: maxRank - minRank,
-                                      avg: avgRank,
-                                      min: minRank,
-                                      max: maxRank
-                                    };
-                                  })}
-                                  layout="vertical"
-                                  margin={{ top: 20, right: 30, left: 10, bottom: 60 }}
+                    <>
+                      {/* AI Sensitivity Panel */}
+                      {showAiPanel && aiAnalysisType === "sensitivity" && (
+                        <Card className="border-indigo-100 bg-indigo-50/50 mb-6 overflow-hidden transition-all duration-300">
+                          <CardHeader className="border-b border-indigo-100 pb-3 bg-white/50">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="flex items-center gap-2 text-sm text-indigo-900 font-bold">
+                                <Sparkles className="w-4 h-4 text-indigo-600" />
+                                AI Sensitivity Insights
+                              </CardTitle>
+                              <Button variant="ghost" size="sm" onClick={() => setShowAiPanel(false)} className="h-6 w-6 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"><span className="sr-only">Close</span><span className="text-lg">×</span></Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-0">
+                            {!aiAnalysisResult ? (
+                              <div className="p-8 text-center space-y-5 bg-white/40">
+                                <div className="mx-auto w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm border border-indigo-50">
+                                  <Bot className={`w-7 h-7 text-indigo-600 ${aiLoading ? 'animate-pulse' : ''}`} />
+                                </div>
+                                <p className="text-xs text-gray-600">{aiLoading ? "Analyzing weight stability..." : "Ready to analyze."}</p>
+                              </div>
+                            ) : (
+                              <div className="prose prose-sm max-w-none p-6 bg-white text-gray-800">
+                                <ReactMarkdown
+                                  components={{
+                                    h1: ({ node, ...props }) => <h1 className="text-lg font-bold text-indigo-900 mb-3 mt-2 border-b-2 border-indigo-100 pb-2" {...props} />,
+                                    h2: ({ node, ...props }) => <h2 className="text-sm font-bold text-gray-900 mb-2 mt-4 uppercase tracking-wide" {...props} />,
+                                    p: ({ node, ...props }) => <p className="text-xs leading-relaxed text-gray-600 mb-3 text-justify" {...props} />,
+                                    ul: ({ node, ...props }) => <ul className="list-disc list-outside text-xs text-gray-600 mb-3 ml-4 space-y-1" {...props} />,
+                                    li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                                    strong: ({ node, ...props }) => <strong className="font-bold text-indigo-900" {...props} />,
+                                  }}
                                 >
-                                  <CartesianGrid strokeDasharray="3 3" />
-                                  <XAxis
-                                    type="number"
-                                    domain={[0, 'dataMax']}
-                                    label={{
-                                      value: "Rank Range (Best to Worst)",
-                                      position: "insideBottom",
-                                      offset: -45,
-                                      style: { fontSize: 11, fontWeight: 500 }
-                                    }}
-                                    tick={{ fontSize: 10 }}
-                                    interval={0}
-                                    allowDecimals={false}
-                                    height={60}
-                                  />
-                                  <YAxis
-                                    type="category"
-                                    dataKey="method"
-                                    tick={{ fontSize: 10 }}
-                                    width={130}
-                                  />
-                                  <Tooltip
-                                    content={({ active, payload }) => {
-                                      if (active && payload && payload.length > 0) {
-                                        const data = payload[0].payload;
+                                  {aiAnalysisResult}
+                                </ReactMarkdown>
+                                <div className="mt-6 flex justify-end border-t border-gray-100 pt-3">
+                                  <Button onClick={() => handleAiAnalysis("sensitivity", { sensitivityData: sensitivityCriteriaWeights })} variant="outline" size="sm" className="text-xs h-7 gap-1"><Sparkles className="w-3 h-3" /> Regenerate</Button>
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      <div className="space-y-6 animate-in fade-in duration-500">
+                        <Card className="border-gray-200 bg-white shadow-none w-full">
+                          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                            <div>
+                              <CardTitle className="text-sm text-black">Comparison Results</CardTitle>
+                              <CardDescription className="text-xs text-gray-700">Ranking variations across weight methods</CardDescription>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                              <table className="min-w-full text-[9px] border-collapse bg-white">
+                                <thead className="bg-gray-50">
+                                  <tr>
+                                    <th className="px-1.5 py-1 text-left border-b border-r border-gray-200 text-black font-bold sticky left-0 bg-gray-50 z-10 w-20">Alternative</th>
+                                    {sensitivityWeightComparisonResults.map((res, i) => (
+                                      <Fragment key={i}>
+                                        <th className="px-1 py-1 text-center border-b border-r border-gray-200 text-black font-bold bg-[#FFD966]" colSpan={2}>
+                                          {res.weightLabel} ({res.method})
+                                        </th>
+                                      </Fragment>
+                                    ))}
+                                  </tr>
+                                  <tr>
+                                    <th className="border-b border-r border-gray-200 sticky left-0 bg-gray-50 z-10"></th>
+                                    {sensitivityWeightComparisonResults.map((res, i) => (
+                                      <Fragment key={i}>
+                                        <th className="px-1 py-0.5 text-center border-b border-r border-gray-200 text-gray-600 font-semibold text-[8px]">Score</th>
+                                        <th className="px-1 py-0.5 text-center border-b border-r border-gray-200 text-gray-600 font-semibold text-[8px]">Rank</th>
+                                      </Fragment>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {alternatives.map((alt) => (
+                                    <tr key={alt.id} className="hover:bg-gray-50 border-b last:border-0 border-gray-100">
+                                      <td className="px-1.5 py-1 text-black font-bold border-r border-gray-200 bg-[#F4B084] sticky left-0 z-10 text-center">{alt.name}</td>
+                                      {sensitivityWeightComparisonResults.map((res, i) => {
+                                        const item = res.ranking.find((r: any) => r.alternativeName === alt.name)
                                         return (
-                                          <div className="bg-white border border-gray-300 rounded-lg p-3 shadow-lg text-xs">
-                                            <p className="font-semibold text-black mb-1">{data.method}</p>
-                                            <p className="text-gray-700">Best Rank: <span className="font-medium text-black">{data.min}</span></p>
-                                            <p className="text-gray-700">Worst Rank: <span className="font-medium text-black">{data.max}</span></p>
-                                            <p className="text-gray-700">Range: <span className="font-medium text-black">{data.range}</span></p>
-                                            <p className="text-gray-700">Avg Rank: <span className="font-medium text-black">{data.avg.toFixed(2)}</span></p>
-                                          </div>
-                                        );
-                                      }
-                                      return null;
-                                    }}
-                                  />
-                                  <Legend
-                                    wrapperStyle={{ fontSize: "10px", paddingTop: "10px" }}
-                                    iconType="rect"
-                                  />
-                                  {/* Base bar showing starting position */}
-                                  <Bar
-                                    dataKey="start"
-                                    stackId="a"
-                                    fill="transparent"
-                                    name=""
-                                    legendType="none"
-                                  />
-                                  {/* Range bar showing the spread */}
-                                  <Bar
-                                    dataKey="range"
-                                    stackId="a"
-                                    name="Rank Range"
-                                    radius={[0, 4, 4, 0]}
-                                  >
-                                    {sensitivityWeightComparisonResults.map((res, index) => (
-                                      <Cell
-                                        key={`cell-${index}`}
-                                        fill={CHART_COLORS[index % CHART_COLORS.length]}
-                                        opacity={0.75}
+                                          <Fragment key={i}>
+                                            <td className="px-1 py-1 text-center text-black border-r border-gray-200">
+                                              {item?.score !== undefined ? Number(item.score).toFixed(resultsDecimalPlaces) : "-"}
+                                            </td>
+                                            <td className="px-1 py-1 text-center text-black font-bold border-r border-gray-200">
+                                              {item?.rank}
+                                            </td>
+                                          </Fragment>
+                                        )
+                                      })}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="border-gray-200 bg-white shadow-none w-full">
+                          <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div>
+                              <CardTitle className="text-sm text-black">Graphical Variation</CardTitle>
+                              <CardDescription className="text-xs text-gray-700">Visualizing the impact of weight methods</CardDescription>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Select value={sensitivityChartType} onValueChange={setSensitivityChartType}>
+                                <SelectTrigger className="w-28 sm:w-32 h-7 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="line">Line Chart</SelectItem>
+                                  <SelectItem value="step">Step Line Chart</SelectItem>
+                                  <SelectItem value="bar">Bar Chart</SelectItem>
+                                  <SelectItem value="stackedBar">Stacked Bar Chart</SelectItem>
+                                  <SelectItem value="area">Area Chart</SelectItem>
+                                  <SelectItem value="stackedArea">Stacked Area Chart</SelectItem>
+                                  <SelectItem value="scatter">Scatter Plot</SelectItem>
+                                  <SelectItem value="composed">Gantt Chart (Range)</SelectItem>
+                                  <SelectItem value="radar">Radar Chart</SelectItem>
+                                  <SelectItem value="radial">Radial Bar Chart</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Button onClick={() => handleAiAnalysis("sensitivity", { sensitivityData: sensitivityCriteriaWeights })} variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700 h-7 text-xs gap-1"><Sparkles className="w-3 h-3" /> AI Analysis</Button>
+                              <Button onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation")} variant="outline" size="sm" className="h-7 text-xs"><Download className="w-3 h-3 mr-1" /> JPG</Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="chart-container" ref={sensitivityGraphicalVariationRef}>
+                              <ResponsiveContainer width="100%" height="100%">
+                                {sensitivityChartType === 'radar' ? (
+                                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={sensitivityWeightChartData}>
+                                    <PolarGrid />
+                                    <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                    <PolarRadiusAxis />
+                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                    <Tooltip />
+                                    {sensitivityWeightComparisonResults.map((res, i) => (
+                                      <Radar
+                                        key={res.weightLabel}
+                                        name={`${res.weightLabel} Rank`}
+                                        dataKey={`${res.weightLabel} Rank`}
+                                        stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                                        fill={CHART_COLORS[i % CHART_COLORS.length]}
+                                        fillOpacity={0.1}
                                       />
                                     ))}
-                                  </Bar>
-                                  {/* Markers for average */}
-                                  <Scatter
-                                    dataKey="avg"
-                                    fill="#1a1a1a"
-                                    shape="diamond"
-                                    name="Average Rank"
-                                  />
-                                </BarChart>
-                              ) : sensitivityChartType === "scatter" ? (
-                                <ScatterChart>
-                                  <CartesianGrid strokeDasharray="3 3" />
-                                  <XAxis dataKey="name" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} />
-                                  <YAxis type="number" dataKey="rank" name="Rank" label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
-                                  <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                  <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                  {sensitivityWeightComparisonResults.map((res, i) => (
-                                    <Scatter key={res.weightLabel} name={`${res.weightLabel} Rank`} data={sensitivityWeightChartData.map(d => ({ name: d.name, rank: d[`${res.weightLabel} Rank`] }))} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                                  ))}
-                                </ScatterChart>
-                              ) : sensitivityChartType === "radial" ? (
-                                (() => {
-                                  if (sensitivityWeightComparisonResults.length === 0) return <div />;
+                                  </RadarChart>
+                                ) : sensitivityChartType === "bar" ? (
+                                  <BarChart data={sensitivityWeightChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                    <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
+                                    <Tooltip />
+                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                    {sensitivityWeightComparisonResults.map((res, i) => (
+                                      <Bar key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} name={`${res.weightLabel} Rank`} />
+                                    ))}
+                                  </BarChart>
+                                ) : sensitivityChartType === "stackedBar" ? (
+                                  <BarChart data={sensitivityWeightChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                    <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
+                                    <Tooltip />
+                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                    {sensitivityWeightComparisonResults.map((res, i) => (
+                                      <Bar key={res.weightLabel} stackId="a" dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} name={`${res.weightLabel} Rank`} />
+                                    ))}
+                                  </BarChart>
+                                ) : sensitivityChartType === "area" ? (
+                                  <AreaChart data={sensitivityWeightChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                    <YAxis interval={0} domain={[0, 'dataMax']} />
+                                    <Tooltip />
+                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                    {sensitivityWeightComparisonResults.map((res, i) => (
+                                      <Area type="monotone" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={`${res.weightLabel} Rank`} />
+                                    ))}
+                                  </AreaChart>
+                                ) : sensitivityChartType === "stackedArea" ? (
+                                  <AreaChart data={sensitivityWeightChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                    <YAxis interval={0} domain={[0, 'dataMax']} />
+                                    <Tooltip />
+                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                    {sensitivityWeightComparisonResults.map((res, i) => (
+                                      <Area type="monotone" stackId="1" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={`${res.weightLabel} Rank`} />
+                                    ))}
+                                  </AreaChart>
+                                ) : sensitivityChartType === "composed" ? (
+                                  <BarChart
+                                    data={sensitivityWeightComparisonResults.map((res, idx) => {
+                                      // Get all ranks for this weight method across alternatives
+                                      const ranks = sensitivityWeightChartData.map(d => d[`${res.weightLabel} Rank`] || 0);
+                                      const minRank = Math.min(...ranks);
+                                      const maxRank = Math.max(...ranks);
+                                      const avgRank = ranks.reduce((a, b) => a + b, 0) / ranks.length;
 
-                                  const firstMethod = sensitivityWeightComparisonResults[0];
-                                  const labelKey = firstMethod.weightLabel;
-                                  const rankKey = `${labelKey} Rank`;
-                                  const scoreKey = `${labelKey} Score`;
-
-                                  // Prepare data for the radial bar chart to match screenshot style
-                                  // We show each alternative as a bar
-                                  const maxRank = Math.max(...sensitivityWeightChartData.map(d => d[rankKey] || 0));
-
-                                  const transformedData = sensitivityWeightChartData.map((d, idx) => ({
-                                    name: d.name,
-                                    // Map rank to a value for bar length: maxRank - rank + 1
-                                    // This makes Rank 1 the longest bar
-                                    value: d[rankKey] ? (maxRank - d[rankKey] + 1) : 0,
-                                    actualRank: d[rankKey],
-                                    actualScore: d[scoreKey],
-                                    fill: CHART_COLORS[idx % CHART_COLORS.length]
-                                  })).sort((a, b) => b.value - a.value);
-
-                                  return (
-                                    <RadialBarChart
-                                      cx="50%"
-                                      cy="50%"
-                                      innerRadius="15%"
-                                      outerRadius="90%"
-                                      barSize={12}
-                                      data={transformedData}
-                                      startAngle={90}
-                                      endAngle={-270}
+                                      return {
+                                        method: res.weightLabel,
+                                        start: minRank,
+                                        range: maxRank - minRank,
+                                        avg: avgRank,
+                                        min: minRank,
+                                        max: maxRank
+                                      };
+                                    })}
+                                    layout="vertical"
+                                    margin={{ top: 20, right: 30, left: 10, bottom: 60 }}
+                                  >
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis
+                                      type="number"
+                                      domain={[0, 'dataMax']}
+                                      label={{
+                                        value: "Rank Range (Best to Worst)",
+                                        position: "insideBottom",
+                                        offset: -45,
+                                        style: { fontSize: 11, fontWeight: 500 }
+                                      }}
+                                      tick={{ fontSize: 10 }}
+                                      interval={0}
+                                      allowDecimals={false}
+                                      height={60}
+                                    />
+                                    <YAxis
+                                      type="category"
+                                      dataKey="method"
+                                      tick={{ fontSize: 10 }}
+                                      width={130}
+                                    />
+                                    <Tooltip
+                                      content={({ active, payload }) => {
+                                        if (active && payload && payload.length > 0) {
+                                          const data = payload[0].payload;
+                                          return (
+                                            <div className="bg-white border border-gray-300 rounded-lg p-3 shadow-lg text-xs">
+                                              <p className="font-semibold text-black mb-1">{data.method}</p>
+                                              <p className="text-gray-700">Best Rank: <span className="font-medium text-black">{data.min}</span></p>
+                                              <p className="text-gray-700">Worst Rank: <span className="font-medium text-black">{data.max}</span></p>
+                                              <p className="text-gray-700">Range: <span className="font-medium text-black">{data.range}</span></p>
+                                              <p className="text-gray-700">Avg Rank: <span className="font-medium text-black">{data.avg.toFixed(2)}</span></p>
+                                            </div>
+                                          );
+                                        }
+                                        return null;
+                                      }}
+                                    />
+                                    <Legend
+                                      wrapperStyle={{ fontSize: "10px", paddingTop: "10px" }}
+                                      iconType="rect"
+                                    />
+                                    {/* Base bar showing starting position */}
+                                    <Bar
+                                      dataKey="start"
+                                      stackId="a"
+                                      fill="transparent"
+                                      name=""
+                                      legendType="none"
+                                    />
+                                    {/* Range bar showing the spread */}
+                                    <Bar
+                                      dataKey="range"
+                                      stackId="a"
+                                      name="Rank Range"
+                                      radius={[0, 4, 4, 0]}
                                     >
-                                      <RadialBar
-                                        label={{
-                                          position: 'insideStart',
-                                          fill: '#fff',
-                                          fontSize: 9,
-                                          fontWeight: 'bold',
-                                          formatter: (value: any, name: any, entry: any, index: number) => {
-                                            const item = entry?.payload || (transformedData && typeof index === 'number' ? transformedData[index] : null);
-                                            if (!item) return "";
-                                            return `${item.name || ""} (${item.actualRank || ""})`;
-                                          }
-                                        }}
-                                        background={{ fill: '#f3f4f6' }}
-                                        dataKey="value"
-                                      />
-                                      <Legend
-                                        iconSize={10}
-                                        layout="vertical"
-                                        verticalAlign="middle"
-                                        align="right"
-                                        wrapperStyle={{ fontSize: '10px', paddingLeft: '10px' }}
-                                      />
-                                      <Tooltip
-                                        content={({ active, payload }) => {
-                                          if (active && payload && payload.length) {
-                                            const data = payload[0].payload;
-                                            return (
-                                              <div className="bg-white border border-gray-200 p-2 rounded shadow-md text-[10px] text-black">
-                                                <p className="font-bold border-b pb-1 mb-1">{data.name}</p>
-                                                <p><span className="text-gray-500 font-medium">Rank:</span> <span className="font-bold">{data.actualRank}</span></p>
-                                                <p><span className="text-gray-500 font-medium">Score:</span> {typeof data.actualScore === 'number' ? data.actualScore.toFixed(4) : data.actualScore}</p>
-                                                <p className="mt-1 text-[8px] text-gray-400 capitalize">{labelKey} method</p>
-                                              </div>
-                                            );
-                                          }
-                                          return null;
-                                        }}
-                                      />
-                                      {/* Center "Total" text to match screenshot style */}
-                                      <text
-                                        x="50%"
-                                        y="50%"
-                                        textAnchor="middle"
-                                        dominantBaseline="middle"
-                                        className="fill-black font-bold text-[10px]"
+                                      {sensitivityWeightComparisonResults.map((res, index) => (
+                                        <Cell
+                                          key={`cell-${index}`}
+                                          fill={CHART_COLORS[index % CHART_COLORS.length]}
+                                          opacity={0.75}
+                                        />
+                                      ))}
+                                    </Bar>
+                                    {/* Markers for average */}
+                                    <Scatter
+                                      dataKey="avg"
+                                      fill="#1a1a1a"
+                                      shape="diamond"
+                                      name="Average Rank"
+                                    />
+                                  </BarChart>
+                                ) : sensitivityChartType === "scatter" ? (
+                                  <ScatterChart>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} />
+                                    <YAxis type="number" dataKey="rank" name="Rank" label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
+                                    <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                    {sensitivityWeightComparisonResults.map((res, i) => (
+                                      <Scatter key={res.weightLabel} name={`${res.weightLabel} Rank`} data={sensitivityWeightChartData.map(d => ({ name: d.name, rank: d[`${res.weightLabel} Rank`] }))} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                                    ))}
+                                  </ScatterChart>
+                                ) : sensitivityChartType === "radial" ? (
+                                  (() => {
+                                    if (sensitivityWeightComparisonResults.length === 0) return <div />;
+
+                                    const firstMethod = sensitivityWeightComparisonResults[0];
+                                    const labelKey = firstMethod.weightLabel;
+                                    const rankKey = `${labelKey} Rank`;
+                                    const scoreKey = `${labelKey} Score`;
+
+                                    // Prepare data for the radial bar chart to match screenshot style
+                                    // We show each alternative as a bar
+                                    const maxRank = Math.max(...sensitivityWeightChartData.map(d => d[rankKey] || 0));
+
+                                    const transformedData = sensitivityWeightChartData.map((d, idx) => ({
+                                      name: d.name,
+                                      // Map rank to a value for bar length: maxRank - rank + 1
+                                      // This makes Rank 1 the longest bar
+                                      value: d[rankKey] ? (maxRank - d[rankKey] + 1) : 0,
+                                      actualRank: d[rankKey],
+                                      actualScore: d[scoreKey],
+                                      fill: CHART_COLORS[idx % CHART_COLORS.length]
+                                    })).sort((a, b) => b.value - a.value);
+
+                                    return (
+                                      <RadialBarChart
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius="15%"
+                                        outerRadius="90%"
+                                        barSize={12}
+                                        data={transformedData}
+                                        startAngle={90}
+                                        endAngle={-270}
                                       >
-                                        Total ({transformedData.length})
-                                      </text>
-                                    </RadialBarChart>
-                                  );
-                                })()
-                              ) : (
-                                <LineChart data={sensitivityWeightChartData}>
-                                  <CartesianGrid strokeDasharray="3 3" />
-                                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                  <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
-                                  <Tooltip />
-                                  <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                  {sensitivityWeightComparisonResults.map((res, i) => (
-                                    <Line type={sensitivityChartType === "step" ? "step" : "monotone"} key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2} name={`${res.weightLabel} Rank`} />
-                                  ))}
-                                </LineChart>
-                              )}
-                            </ResponsiveContainer>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
+                                        <RadialBar
+                                          label={{
+                                            position: 'insideStart',
+                                            fill: '#fff',
+                                            fontSize: 9,
+                                            fontWeight: 'bold',
+                                            formatter: (value: any, name: any, entry: any, index: number) => {
+                                              const item = entry?.payload || (transformedData && typeof index === 'number' ? transformedData[index] : null);
+                                              if (!item) return "";
+                                              return `${item.name || ""} (${item.actualRank || ""})`;
+                                            }
+                                          }}
+                                          background={{ fill: '#f3f4f6' }}
+                                          dataKey="value"
+                                        />
+                                        <Legend
+                                          iconSize={10}
+                                          layout="vertical"
+                                          verticalAlign="middle"
+                                          align="right"
+                                          wrapperStyle={{ fontSize: '10px', paddingLeft: '10px' }}
+                                        />
+                                        <Tooltip
+                                          content={({ active, payload }) => {
+                                            if (active && payload && payload.length) {
+                                              const data = payload[0].payload;
+                                              return (
+                                                <div className="bg-white border border-gray-200 p-2 rounded shadow-md text-[10px] text-black">
+                                                  <p className="font-bold border-b pb-1 mb-1">{data.name}</p>
+                                                  <p><span className="text-gray-500 font-medium">Rank:</span> <span className="font-bold">{data.actualRank}</span></p>
+                                                  <p><span className="text-gray-500 font-medium">Score:</span> {typeof data.actualScore === 'number' ? data.actualScore.toFixed(4) : data.actualScore}</p>
+                                                  <p className="mt-1 text-[8px] text-gray-400 capitalize">{labelKey} method</p>
+                                                </div>
+                                              );
+                                            }
+                                            return null;
+                                          }}
+                                        />
+                                        {/* Center "Total" text to match screenshot style */}
+                                        <text
+                                          x="50%"
+                                          y="50%"
+                                          textAnchor="middle"
+                                          dominantBaseline="middle"
+                                          className="fill-black font-bold text-[10px]"
+                                        >
+                                          Total ({transformedData.length})
+                                        </text>
+                                      </RadialBarChart>
+                                    );
+                                  })()
+                                ) : (
+                                  <LineChart data={sensitivityWeightChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                    <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
+                                    <Tooltip />
+                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                    {sensitivityWeightComparisonResults.map((res, i) => (
+                                      <Line type={sensitivityChartType === "step" ? "step" : "monotone"} key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2} name={`${res.weightLabel} Rank`} />
+                                    ))}
+                                  </LineChart>
+                                )}
+                              </ResponsiveContainer>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </>
                   )}
 
                   {sensitivityError && (
@@ -6011,11 +6257,20 @@ export default function MCDMCalculator() {
               </Card>
 
 
-              {/* K% Sensitivity Analysis */}
+              {/* K% Sensitivity Analysis - Panel is now internal to the calculator */}
               <KSensitivityCalculator
                 criteria={criteria}
                 alternatives={alternatives}
                 weightMethod={criteria.some(c => c.weight > 0) ? "Applied" : "Not Set"}
+                onAiAnalysis={(data) => handleAiAnalysis("k_sensitivity", {
+                  kSensData: data.kSensData,
+                  criterionName: data.criterionName,
+                  variationRange: data.variationRange
+                })}
+                aiAnalysisResult={aiAnalysisResult}
+                isAiLoading={aiLoading}
+                showAiPanel={showAiPanel && aiAnalysisType === "k_sensitivity"}
+                onCloseAiPanel={() => setShowAiPanel(false)}
               />
             </>
           )}
@@ -10535,6 +10790,84 @@ export default function MCDMCalculator() {
                 </Breadcrumb>
               </div>
 
+              {/* AI Decision Intelligence Panel */}
+              {showAiPanel && (
+                <Card className="border-indigo-100 bg-indigo-50/50 mb-6 overflow-hidden transition-all duration-300">
+                  <CardHeader className="border-b border-indigo-100 pb-3 bg-white/50">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2 text-sm text-indigo-900 font-bold">
+                        <Sparkles className="w-4 h-4 text-indigo-600" />
+                        AI Decision Intelligence
+                      </CardTitle>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAiPanel(false)}
+                        className="h-6 w-6 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                      >
+                        <span className="sr-only">Close</span>
+                        <span className="text-lg">×</span>
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {!aiAnalysisResult ? (
+                      <div className="p-8 text-center space-y-5 bg-white/40">
+                        <div className="mx-auto w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm border border-indigo-50">
+                          <Bot className={`w-7 h-7 text-indigo-600 ${aiLoading ? 'animate-pulse' : ''}`} />
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-bold text-gray-900">
+                            {aiLoading ? "Analyzing Decision Matrix..." : "Tap to Generate Insights"}
+                          </h3>
+                          <p className="text-xs text-gray-600 max-w-sm mx-auto leading-relaxed">
+                            {aiLoading
+                              ? "Our AI is reviewing your weights, alternatives, and rankings to prepare a professional research summary..."
+                              : "Generate a professional Discussion, Conclusion, and Future Scope report based on these specific results."}
+                          </p>
+                        </div>
+                        {!aiLoading && (
+                          <div className="flex justify-center">
+                            <Button
+                              onClick={() => handleAiAnalysis("full_report")}
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-6 h-9 shadow-indigo-200 shadow-lg"
+                            >
+                              <Sparkles className="w-3 h-3 mr-2" />
+                              Generate Full Report (Free)
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="prose prose-sm max-w-none p-6 bg-white text-gray-800">
+                        <ReactMarkdown
+                          components={{
+                            h1: ({ node, ...props }) => <h1 className="text-lg font-bold text-indigo-900 mb-3 mt-2 border-b-2 border-indigo-100 pb-2" {...props} />,
+                            h2: ({ node, ...props }) => <h2 className="text-sm font-bold text-gray-900 mb-2 mt-4 uppercase tracking-wide" {...props} />,
+                            p: ({ node, ...props }) => <p className="text-xs leading-relaxed text-gray-600 mb-3 text-justify" {...props} />,
+                            ul: ({ node, ...props }) => <ul className="list-disc list-outside text-xs text-gray-600 mb-3 ml-4 space-y-1" {...props} />,
+                            li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                            strong: ({ node, ...props }) => <strong className="font-bold text-indigo-900" {...props} />,
+                          }}
+                        >
+                          {aiAnalysisResult}
+                        </ReactMarkdown>
+                        <div className="mt-6 flex justify-end border-t border-gray-100 pt-3">
+                          <Button
+                            onClick={() => handleAiAnalysis("full_report")}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-7 gap-1"
+                          >
+                            <Sparkles className="w-3 h-3" /> Regenerate
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               <Card className="border-gray-200 bg-white shadow-none mb-6">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm text-black">{methodInfo?.label} Results</CardTitle>
@@ -10643,6 +10976,16 @@ export default function MCDMCalculator() {
                           className="w-16 md:w-12 h-9 md:h-8 text-xs text-center border-gray-200 text-black shadow-none bg-transparent focus:ring-1 focus:ring-blue-500"
                         />
                       </div>
+
+                      {/* AI Analysis Button */}
+                      <Button
+                        onClick={() => setShowAiPanel(true)}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-9 md:h-8 border-none flex-1 md:flex-initial shadow-sm transition-all"
+                        title="Generate AI Analysis from Results"
+                      >
+                        <Sparkles className="w-3 h-3 mr-1" />
+                        AI Analysis
+                      </Button>
 
                       {/* Export to Excel Button */}
                       <Button

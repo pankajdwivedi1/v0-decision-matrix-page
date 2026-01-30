@@ -10,8 +10,9 @@ import { Input } from "@/components/ui/input";
 import AHPFormula from "./AHPFormula";
 import PIPRECIAFormula from "./PIPRECIAFormula";
 import { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label } from 'recharts';
-import { Check, ChevronRight, Download, RefreshCw, Loader2 } from 'lucide-react';
+import { Check, ChevronRight, Download, RefreshCw, Loader2, Sparkles, Bot } from 'lucide-react';
 import ExcelJS from 'exceljs';
+import ReactMarkdown from 'react-markdown';
 
 interface Criterion {
   id: string;
@@ -30,9 +31,23 @@ interface KSensitivityCalculatorProps {
   criteria: Criterion[];
   alternatives: Alternative[];
   weightMethod?: string;
+  onAiAnalysis?: (data: any) => void;
+  aiAnalysisResult?: string | null;
+  isAiLoading?: boolean;
+  showAiPanel?: boolean;
+  onCloseAiPanel?: () => void;
 }
 
-export default function KSensitivityCalculator({ criteria, alternatives, weightMethod = "Custom" }: KSensitivityCalculatorProps) {
+export default function KSensitivityCalculator({
+  criteria,
+  alternatives,
+  weightMethod = "Custom",
+  onAiAnalysis,
+  aiAnalysisResult,
+  isAiLoading,
+  showAiPanel,
+  onCloseAiPanel
+}: KSensitivityCalculatorProps) {
   const [kSensVariationRange, setKSensVariationRange] = useState<number[]>([-30, -20, -10, 0, 10, 20, 30]);
   const [kSensChartType, setKSensChartType] = useState<string>('line');
   const [kSensResults, setKSensResults] = useState<any>(null);
@@ -1566,14 +1581,12 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
                         ))}
                       </SelectContent>
                     </Select>
-                    {selectedCriterionToVary && (
-                      <div className="mt-2 text-xs text-gray-600">
-                        Selected: <span className="font-semibold text-blue-600">
-                          {workingCriteria.find(c => c.id === selectedCriterionToVary)?.name}
-                        </span>
-                        {' '}({workingCriteria.find(c => c.id === selectedCriterionToVary)?.type === 'beneficial' ? 'Beneficial ↑' : 'Non-beneficial ↓'})
-                      </div>
-                    )}
+
+
+
+                    {/* AI Report Generation Button - Moved here */}
+
+
 
                     {/* Quick Presets - directly below criterion selector */}
                     <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
@@ -1698,21 +1711,7 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
                         />
                       </div>
 
-                      {/* Selected Variation Range Display */}
-                      <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-gray-50 rounded-lg">
-                        <p className="text-[12px] sm:text-xs font-medium mb-1 sm:mb-2 text-gray-700">Selected Variation Range:</p>
-                        <div className="flex flex-wrap gap-0.5 sm:gap-1">
-                          {kSensVariationRange.map((val, idx) => (
-                            <span key={idx} className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[7px] sm:text-xs font-medium ${val < 0 ? 'bg-red-100 text-red-700' : val > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-800'
-                              }`}>
-                              {val > 0 ? '+' : ''}{val}%
-                            </span>
-                          ))}
-                        </div>
-                        <p className="text-[12px] sm:text-xs text-gray-600 mt-1.5 sm:mt-2">
-                          Will test <strong>{kSensVariationRange.length} variations</strong> for each of <strong>{criteria.length} criteria</strong>
-                        </p>
-                      </div>
+
                     </div>
                   </div>
                 </div>
@@ -1929,14 +1928,90 @@ export default function KSensitivityCalculator({ criteria, alternatives, weightM
                       </div>
                     )}
 
-                    <div className="flex justify-between gap-2 mt-6 pt-4 border-t">
-                      <Button onClick={() => { setKSensResults(null); setShowConfig(true); }} variant="outline" className="text-xs h-8">
-                        ← Modify Config
-                      </Button>
-                      <Button onClick={() => { setKSensResults(null); setShowConfig(true); }} variant="outline" className="text-xs h-8">
-                        🔄 Start Over
-                      </Button>
+                    <div className="flex justify-between gap-2 mt-6 pt-4 border-t items-center">
+                      <div className="flex gap-2">
+                        <Button onClick={() => { setKSensResults(null); setShowConfig(true); }} variant="outline" className="text-xs h-8">
+                          ← Modify Config
+                        </Button>
+                        <Button onClick={() => { setKSensResults(null); setShowConfig(true); }} variant="outline" className="text-xs h-8">
+                          🔄 Start Over
+                        </Button>
+                      </div>
+
+                      {onAiAnalysis && selectedCriterionToVary && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const criterionName = workingCriteria.find(c => c.id === selectedCriterionToVary)?.name || selectedCriterionToVary;
+                            const dataForAi = {
+                              kSensData: kSensResults ? kSensResults[criterionName] : null,
+                              criterionName: criterionName,
+                              variationRange: kSensVariationRange.join(", ")
+                            };
+                            onAiAnalysis(dataForAi);
+                          }}
+                          disabled={!kSensResults || isAnalyzing || isAiLoading}
+                          className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700 border-none h-8 text-xs gap-1.5 shadow-sm min-w-[140px]"
+                        >
+                          {isAiLoading ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3.5 h-3.5" />
+                              Generate AI Report
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
+
+                    {/* AI Report Panel - Displayed here at the bottom */}
+                    {showAiPanel && (
+                      <Card className="border-indigo-100 bg-indigo-50/50 mt-6 overflow-hidden transition-all duration-300">
+                        <CardHeader className="border-b border-indigo-100 pb-3 bg-white/50">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2 text-sm text-indigo-900 font-bold">
+                              <Sparkles className="w-4 h-4 text-indigo-600" />
+                              AI Robustness & Perturbation Report
+                            </CardTitle>
+                            {onCloseAiPanel && (
+                              <Button variant="ghost" size="sm" onClick={onCloseAiPanel} className="h-6 w-6 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                                <span className="sr-only">Close</span><span className="text-lg">×</span>
+                              </Button>
+                            )}
+                          </div>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                          {!aiAnalysisResult ? (
+                            <div className="p-8 text-center space-y-5 bg-white/40">
+                              <div className="mx-auto w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm border border-indigo-50">
+                                <Bot className={`w-7 h-7 text-indigo-600 ${isAiLoading ? 'animate-pulse' : ''}`} />
+                              </div>
+                              <p className="text-xs text-gray-600">{isAiLoading ? "Conducting K% perturbation analysis..." : "Ready to analyze."}</p>
+                            </div>
+                          ) : (
+                            <div className="prose prose-sm max-w-none p-6 bg-white text-gray-800">
+                              <ReactMarkdown
+                                components={{
+                                  h1: ({ node, ...props }) => <h1 className="text-lg font-bold text-indigo-900 mb-3 mt-2 border-b-2 border-indigo-100 pb-2" {...props} />,
+                                  h2: ({ node, ...props }) => <h2 className="text-sm font-bold text-gray-900 mb-2 mt-4 uppercase tracking-wide" {...props} />,
+                                  p: ({ node, ...props }) => <p className="text-xs leading-relaxed text-gray-600 mb-3 text-justify" {...props} />,
+                                  ul: ({ node, ...props }) => <ul className="list-disc list-outside text-xs text-gray-600 mb-3 ml-4 space-y-1" {...props} />,
+                                  li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                                  strong: ({ node, ...props }) => <strong className="font-bold text-indigo-900" {...props} />,
+                                }}
+                              >
+                                {aiAnalysisResult}
+                              </ReactMarkdown>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 )}
               </div>
