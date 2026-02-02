@@ -1,6 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+// Helper function to format all numbers in an object to 4 decimal places
+function formatNumbersInObject(obj: any): any {
+    if (obj === null || obj === undefined) return obj;
+
+    if (typeof obj === 'number') {
+        return parseFloat(obj.toFixed(4));
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(item => formatNumbersInObject(item));
+    }
+
+    if (typeof obj === 'object') {
+        const formatted: any = {};
+        for (const key in obj) {
+            formatted[key] = formatNumbersInObject(obj[key]);
+        }
+        return formatted;
+    }
+
+    return obj;
+}
+
 // POST handler for AI Analysis
 export async function POST(req: NextRequest) {
     try {
@@ -136,7 +159,7 @@ export async function POST(req: NextRequest) {
        `;
         } else if (analysisType === "k_sensitivity") {
             const kSensContext = reqContent.kSensData ?
-                `\n**K-Sensitivity Data (Perturbation Analysis):**\n${JSON.stringify(reqContent.kSensData, null, 2)}` : "";
+                `\n**K-Sensitivity Data (Perturbation Analysis):**\n${JSON.stringify(formatNumbersInObject(reqContent.kSensData), null, 2)}` : "";
 
             prompt = `
         You are conducting a sophisticated One-at-a-Time (OAT) Sensitivity Analysis for an MCDM research study.
@@ -216,6 +239,175 @@ export async function POST(req: NextRequest) {
         **Final Recommendation** (~150-200 words)
         Based on consensus analysis and methodological alignment, which alternative emerges as the robust winner? Which MCDM method appears most appropriate for this specific research context and why? Provide actionable guidance for decision-makers on interpreting these results.
        `;
+        } else if (analysisType === "research_abstract") {
+            const comparisonContext = reqContent.comparisonData ?
+                `\n**Comparison Results:**\n${JSON.stringify(formatNumbersInObject(reqContent.comparisonData), null, 2)}` : "";
+            const sensitivityContext = reqContent.sensitivityData ?
+                `\n**Sensitivity Analysis Results:**\n${JSON.stringify(formatNumbersInObject(reqContent.sensitivityData), null, 2)}` : "";
+            const kSensContext = reqContent.kSensData ?
+                `\n**K% Sensitivity Analysis Results:**\n${JSON.stringify(formatNumbersInObject(reqContent.kSensData), null, 2)}` : "";
+
+            const citationInfo = reqContent.extractedPaperData?.citation ?
+                `Based on the study by ${reqContent.extractedPaperData.citation.authors} (${reqContent.extractedPaperData.citation.year}) titled "${reqContent.extractedPaperData.citation.title}".` : "";
+
+            prompt = `
+        You are writing a professional, high-impact Research Abstract for an academic comparative study.
+        
+        ${contextInjection}
+        ${citationInfo}
+
+        **Context:**
+        - Current Methodology Applied: ${method ? method.toUpperCase() : "MCDM"}
+        - Alternatives: ${alternativesList}
+        - Criteria: ${criteriaSummary}
+
+        **Your Analysis Results:**
+        ${comparisonContext}
+        ${sensitivityContext}
+        ${kSensContext}
+
+        **Current Ranking Results:**
+        ${rankingSummary}
+
+        **Task:**
+        Generate a structured, publication-ready Research Abstract (300-400 words).
+        
+        **Key Goal:**
+        If this is a comparative study based on a previously extracted paper, acknowledge the foundation but emphasize how the **${method.toUpperCase()}** analysis provides new insights or validates previous findings.
+        
+        **Abstract Structure:**
+        1. **Background**: Contextualize the problem within the domain.
+        2. **Objective/Gap**: State the research gap addressed (optionally comparing with previous work).
+        3. **Methodology**: Detail the ${method.toUpperCase()} approach and any validation (sensitivity).
+        4. **Findings**: Report specific numerical rankings and stability thresholds.
+        5. **Conclusion**: State the contribution to the field.
+
+        **Tone**: formal, objective, synthesized (not just a summary).
+        `;
+        } else if (analysisType === "introduction") {
+            const citation = reqContent.extractedPaperData?.citation;
+            const citationText = citation ? `${citation.authors} (${citation.year})` : "previous studies";
+
+            prompt = `
+        Write a high-quality, 1000-word academic **Introduction** section.
+        
+        ${contextInjection}
+        
+        **Task:**
+        Develop a compelling introduction that establishes the importance of "${reqContent.researchContext?.topic || 'the research topic'}".
+        
+        **Structure:**
+        1. **Broad Context**: Discuss the significance of the industry/domain.
+        2. **Specific Problem**: Detail the decision-making complexities. 
+        3. **Reference Previous Work**: Build upon the foundation of ${citationText}, acknowledging their contributions to the topic.
+        4. **Research Gap**: Clearly state why a comparative analysis using ${method.toUpperCase()} is necessary now.
+        5. **Objectives**: Outline the scope of this particular study.
+
+        **Requirements**: 
+        - Use professional academic language.
+        - Flow naturally from general background to the specific research gap.
+        - Ensure it reads as a "different way" of looking at the same problem, with higher quality synthesis.
+        `;
+        } else if (analysisType === "literature_review") {
+            const paperData = reqContent.extractedPaperData;
+
+            prompt = `
+        Write a 1200-word academic **Literature Review** section.
+        
+        ${contextInjection}
+        
+        **Context from Extracted Paper:**
+        ${paperData ? JSON.stringify(paperData.citation) : "Standard academic references"}
+        
+        **Task:**
+        Synthesize the current state of research in "${reqContent.researchContext?.topic || 'this field'}" with a focus on MCDM applications.
+        
+        **Content Guidance:**
+        1. **Evolution of the Domain**: How has decision-making evolved in this specific application area?
+        2. **MCDM Methodology Trends**: Discuss the shift toward modern methods like ${method.toUpperCase()}.
+        3. **Critical Synthesis**: Don't just list papers. Group them by theme (e.g., "Sustainability Factors", "Operational Efficiency").
+        4. **Positioning**: Locate the current study (your analysis) within this literature. Explain how your use of ${method.toUpperCase()} responds to limitations found in broader literature.
+        
+        **Requirements**: 
+        - Sophisticated synthesis, not a summary.
+        - High-quality, publication-ready prose.
+        - Integrate the provided citation naturally as a key landmark in the field.
+        `;
+        } else if (analysisType === "methodology") {
+            prompt = `
+        Write a technical, 800-word **Methodology** section for ${method.toUpperCase()}.
+        
+        ${contextInjection}
+        
+        **Task:**
+        Detail the step-by-step mathematical and procedural framework used in your analysis.
+        
+        **Structure:**
+        1. **Conceptual Framework**: Why is ${method.toUpperCase()} appropriate for this specific problem? (Mention its strengths like compromise solution, distance from ideal, etc.)
+        2. **Evaluation Setup**: List the ${alternatives.length} alternatives and ${criteria.length} criteria defined.
+        3. **Mathematical Steps**: Describe the normalization, weighting (using your selected ${reqContent.weightMethod || 'weighting'} approach), and aggregation steps of ${method.toUpperCase()}.
+        4. **Validation Procedure**: Explain the rationale behind the sensitivity analysis and K% perturbation analysis performed.
+
+        **Requirements**: 
+        - Technical precision.
+        - Academic clarity.
+        - Tailored specifically to the ${method.toUpperCase()} method.
+        `;
+        } else if (analysisType === "custom_section") {
+            // Custom section generation with user-defined prompts
+            const { customPrompt, wordCount, additionalContext, sectionType } = reqContent;
+
+            const kSensContext = reqContent.kSensData ?
+                `\n**K% Sensitivity Analysis Results:**\n${JSON.stringify(formatNumbersInObject(reqContent.kSensData), null, 2)}` : "";
+
+            prompt = `
+        You are an expert academic writer specializing in Multi-Criteria Decision Analysis (MCDM) research papers.
+        
+        ${contextInjection}
+
+        **Research Context:**
+        - Method Used: ${method ? method.toUpperCase() : "MCDM"}
+        - Alternatives Evaluated: ${alternativesList}
+        - Evaluation Criteria:
+        ${criteriaSummary}
+        
+        **Analysis Results:**
+        Top 3 alternatives:
+        ${rankingSummary}
+        
+        ${kSensContext}
+        
+        ${additionalContext ? `\n**Additional Context Provided by Researcher:**\n${additionalContext}\n` : ""}
+        
+        **Your Task:**
+        ${customPrompt || "Generate academic content based on the MCDM analysis results."}
+        
+        **Requirements:**
+        - Target Length: Approximately ${wordCount || 1000} words
+        - Academic Quality: Publication-ready, suitable for high-impact journals
+        - Writing Style: Formal academic tone with clear, flowing prose
+        - Evidence-Based: Reference specific numerical results from the analysis
+        - Structure: Use appropriate headings and subheadings for readability
+        - Citations: If the researcher provides citations in additional context, integrate them appropriately
+        - Objectivity: Maintain scholarly objectivity while providing insightful analysis
+        
+        **Quality Standards:**
+        - Every claim must be supported by data from the analysis results
+        - Use varied sentence structure for engaging reading
+        - Integrate quantitative evidence naturally into narrative
+        - Maintain logical flow and coherent argumentation
+        - Use transition phrases to connect ideas smoothly
+        - Avoid generic statements - be specific to THIS analysis
+        
+        **Formatting Guidelines:**
+        - Use markdown format for headings (##, ###)
+        - Bold key terms and important concepts
+        - Organize content with clear paragraph breaks
+        - Include bulleted lists only where appropriate (not excessively)
+        - Present complex ideas clearly and precisely
+        
+        Generate high-quality academic content that directly addresses the prompt while utilizing all the MCDM analysis data provided.
+       `;
         }
 
         // ---------------------------------------------------------
@@ -226,7 +418,7 @@ export async function POST(req: NextRequest) {
             try {
                 // Initialize AI with current key
                 const genAI = new GoogleGenerativeAI(key);
-                // Use gemini-2.5-flash which is the latest available model
+                // Use gemini-2.5-flash (original working model)
                 const model = genAI.getGenerativeModel({
                     model: "gemini-2.5-flash",
                     generationConfig: {

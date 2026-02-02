@@ -43,8 +43,9 @@ import {
 import * as XLSX from "xlsx"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Upload, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, ArrowDown, Home, Download, LayoutGrid, Sparkles, FileText, Cpu, Bot } from "lucide-react"
+import { Upload, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, ArrowDown, Home, Download, LayoutGrid, Sparkles, FileText, Cpu, Bot, Pencil, Book, Settings, MessageCircle } from "lucide-react"
 import ReactMarkdown from "react-markdown"
+import PaperExtractor from "@/components/PaperExtractor"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar, PieChart, Pie, ReferenceLine } from "recharts"
 import { toJpeg } from "html-to-image"
 import SWEIFormula from "@/components/SWEIFormula"
@@ -284,25 +285,77 @@ export default function MCDMCalculator() {
   const [showAiPanel, setShowAiPanel] = useState(false)
   const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
-  const [aiAnalysisType, setAiAnalysisType] = useState<"full_report" | "sensitivity" | "ranking_comparison" | "k_sensitivity">("full_report")
-  const [aiResearchContext, setAiResearchContext] = useState<{ topic: string, researchGap: string, criteriaDefs: Record<string, string> }>({
+  const [aiAnalysisType, setAiAnalysisType] = useState<"full_report" | "sensitivity" | "ranking_comparison" | "k_sensitivity" | "research_abstract" | "introduction" | "literature_review" | "methodology">("full_report")
+  const [aiResearchContext, setAiResearchContext] = useState<{
+    topic: string,
+    researchGap: string,
+    criteriaDefs: Record<string, string>,
+    extractionMode: 'manual' | 'smart'
+  }>({
     topic: "",
     researchGap: "",
-    criteriaDefs: {}
+    criteriaDefs: {},
+    extractionMode: 'manual'
   })
 
-  // Load research context from local storage on mount
+  // Load research context and results from local storage on mount
   useEffect(() => {
     const savedTopic = localStorage.getItem("ai_research_topic") || ""
     const savedGap = localStorage.getItem("ai_research_gap") || ""
     const savedDefs = localStorage.getItem("ai_criteria_defs")
+    const savedApiResults = localStorage.getItem("mcdm_api_results")
+    const savedAiAnalysis = localStorage.getItem("ai_analysis_result")
+    const savedMethod = localStorage.getItem("mcdm_method")
 
     setAiResearchContext({
       topic: savedTopic,
       researchGap: savedGap,
-      criteriaDefs: savedDefs ? JSON.parse(savedDefs) : {}
+      criteriaDefs: savedDefs ? JSON.parse(savedDefs) : {},
+      extractionMode: 'manual'
     })
+
+    if (savedApiResults) {
+      try {
+        setApiResults(JSON.parse(savedApiResults))
+      } catch (e) {
+        console.error("Failed to parse saved API results", e)
+      }
+    }
+
+    if (savedAiAnalysis) setAiAnalysisResult(savedAiAnalysis)
+    if (savedMethod) setMethod(savedMethod as MCDMMethod)
   }, [])
+
+  // Helper to clear all calculation results and analysis
+  const clearResultsData = () => {
+    setApiResults(null)
+    setAiAnalysisResult(null)
+    localStorage.removeItem("mcdm_api_results")
+    localStorage.removeItem("ai_analysis_result")
+
+    // Clear all specific weight results
+    setEntropyResult(null)
+    setCriticResult(null)
+    setSdResult(null)
+    setVarianceResult(null)
+    setMadResult(null)
+    setDbwResult(null)
+    setSvpResult(null)
+    setMdmResult(null)
+    setLswResult(null)
+    setGpowResult(null)
+    setLpwmResult(null)
+    setPcwmResult(null)
+    setRocResult(null)
+    setRrResult(null)
+    setAhpResult(null)
+    setPipreciaResult(null)
+    setMerecResult(null)
+    setSwaraResult(null)
+    setWensloResult(null)
+    setLopcowResult(null)
+    setDematelResult(null)
+  }
   const [isResearchContextDialogOpen, setIsResearchContextDialogOpen] = useState(false)
 
   // Excel data selection state
@@ -356,6 +409,31 @@ export default function MCDMCalculator() {
       )
     }
   }, [alternatives, criteria, numAlternatives, numCriteria, weightMethod, weightsDecimalPlaces, resultsDecimalPlaces])
+
+  // Save Research Context and persistent results
+  useEffect(() => {
+    localStorage.setItem("ai_research_topic", aiResearchContext.topic)
+    localStorage.setItem("ai_research_gap", aiResearchContext.researchGap)
+    localStorage.setItem("ai_criteria_defs", JSON.stringify(aiResearchContext.criteriaDefs))
+  }, [aiResearchContext])
+
+  useEffect(() => {
+    if (apiResults) {
+      localStorage.setItem("mcdm_api_results", JSON.stringify(apiResults))
+    }
+  }, [apiResults])
+
+  useEffect(() => {
+    if (aiAnalysisResult) {
+      localStorage.setItem("ai_analysis_result", aiAnalysisResult)
+    }
+  }, [aiAnalysisResult])
+
+  useEffect(() => {
+    if (method) {
+      localStorage.setItem("mcdm_method", method)
+    }
+  }, [method])
 
   // Auto-play carousel for ranking methods removed in favor of grid view
 
@@ -524,11 +602,13 @@ export default function MCDMCalculator() {
     setNumCriteria(finalCriteria.length)
     setNumAlternatives(newAlternatives.length)
 
-    // Clear saved Research Context on new file upload
+    // Clear saved Research Context and calculation results on new file upload
     localStorage.removeItem("ai_research_topic")
     localStorage.removeItem("ai_research_gap")
     localStorage.removeItem("ai_criteria_defs")
-    setAiResearchContext({ topic: "", researchGap: "", criteriaDefs: {} })
+    localStorage.removeItem("extracted_paper_data")
+    clearResultsData()
+    setAiResearchContext({ topic: "", researchGap: "", criteriaDefs: {}, extractionMode: 'manual' })
   }
 
   const parseComparisonExcelData = (data: any[][]) => {
@@ -2559,21 +2639,40 @@ export default function MCDMCalculator() {
     }
   }
 
-  const handleAiAnalysis = async (type: "full_report" | "sensitivity" | "ranking_comparison" | "k_sensitivity" = "full_report", overrideData: any = {}) => {
-    if (type === "full_report" && (!apiResults || !apiResults.ranking)) return
+  const handleAiAnalysis = async (type: "full_report" | "sensitivity" | "ranking_comparison" | "k_sensitivity" | "research_abstract" | "introduction" | "literature_review" | "methodology" = "full_report", overrideData: any = {}) => {
+    // Basic validation
+    if (["full_report", "research_abstract", "introduction", "literature_review", "methodology"].includes(type) && (!apiResults || !apiResults.ranking)) {
+      alert("Please calculate rankings first before generating academic sections.")
+      return
+    }
 
     setAiLoading(true)
     setAiAnalysisType(type)
     setShowAiPanel(true)
 
     try {
+      // Get extracted paper data from local storage to ground the AI's writing
+      let extractedPaperData = null
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('extracted_paper_data')
+        if (saved) {
+          try {
+            extractedPaperData = JSON.parse(saved)
+          } catch (e) {
+            console.error("Failed to parse extracted paper data", e)
+          }
+        }
+      }
+
       const payload = {
         alternatives,
         criteria,
         ranking: apiResults?.ranking || [],
         method,
+        weightMethod, // Pass weighting method too
         analysisType: type,
         researchContext: aiResearchContext,
+        extractedPaperData: extractedPaperData,
         ...overrideData
       }
 
@@ -3040,7 +3139,7 @@ export default function MCDMCalculator() {
           </div>
 
           <Dialog open={isResearchContextDialogOpen} onOpenChange={setIsResearchContextDialogOpen}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto w-[95vw]">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-indigo-600" />
@@ -3050,49 +3149,224 @@ export default function MCDMCalculator() {
                   Provide domain-specific context to generate a high-quality, research-grade analysis.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-2">
-                <div className="space-y-2">
-                  <Label htmlFor="research-topic" className="text-sm font-semibold">Research Topic / Title</Label>
-                  <Input
-                    id="research-topic"
-                    placeholder="e.g. Selection of Sustainable Industrial Robots for Automotive Assembly"
-                    value={aiResearchContext.topic}
-                    onChange={(e) => setAiResearchContext(prev => ({ ...prev, topic: e.target.value }))}
-                    className="text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="research-gap" className="text-sm font-semibold">Problem Statement / Research Gap</Label>
-                  <p className="text-xs text-gray-500">What specific problem is this decision matrix solving? What are the key constraints or goals?</p>
-                  <Textarea
-                    id="research-gap"
-                    placeholder="e.g. Current selection methods focus only on cost, ignoring energy consumption. This study aims to find a balance between performance and sustainability..."
-                    value={aiResearchContext.researchGap}
-                    onChange={(e) => setAiResearchContext(prev => ({ ...prev, researchGap: e.target.value }))}
-                    className="text-sm h-24"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold">Criteria Definitions & Context</Label>
-                  <p className="text-xs text-gray-500">Briefly explain what each criterion represents in your real-world scenario.</p>
-                  <div className="border rounded-md divide-y max-h-60 overflow-y-auto">
-                    {criteria.map((c) => (
-                      <div key={c.id} className="p-2 flex items-center gap-2 bg-gray-50">
-                        <div className="w-1/3 text-xs font-medium truncate" title={c.name}>{c.name}</div>
-                        <Input
-                          placeholder={`Context for ${c.name} (e.g. "Initial Cost in USD")`}
-                          value={aiResearchContext.criteriaDefs[c.id] || ""}
-                          onChange={(e) => setAiResearchContext(prev => ({
-                            ...prev,
-                            criteriaDefs: { ...prev.criteriaDefs, [c.id]: e.target.value }
-                          }))}
-                          className="text-xs h-7 bg-white"
-                        />
-                      </div>
-                    ))}
+
+              {/* Mode Selection Tabs */}
+              <div className="flex gap-2 border-b pb-2">
+                <Button
+                  variant={aiResearchContext.extractionMode === 'manual' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setAiResearchContext(prev => ({ ...prev, extractionMode: 'manual' }))}
+                  className="flex-1 text-xs h-9"
+                >
+                  ✍️ Manual Entry
+                </Button>
+                <Button
+                  variant={aiResearchContext.extractionMode === 'smart' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setAiResearchContext(prev => ({ ...prev, extractionMode: 'smart' }))}
+                  className="flex-1 text-xs h-9 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 border-0 text-white"
+                >
+                  🤖 Smart Extract from Paper
+                </Button>
+              </div>
+
+              {/* Conditional Content Based on Mode */}
+              {aiResearchContext.extractionMode === 'smart' ? (
+                <PaperExtractor
+                  onExtractComplete={(extractedData) => {
+                    // Clear old calculation results when new data is extracted
+                    clearResultsData();
+
+                    // 1. Auto-fill research context from extracted data
+                    const gapsList = extractedData.identifiedGaps.map((g, i) => `${i + 1}. ${g}`).join('\n');
+                    const contribsList = extractedData.suggestedContributions.map((c, i) => `${i + 1}. ${c}`).join('\n');
+                    const researchGapText = `Building upon ${extractedData.citation.authors} (${extractedData.citation.year}), this study addresses critical gaps:\n\n${gapsList}\n\nNovel Contributions:\n${contribsList}`;
+
+                    // Establish new criteria mapping for consistent IDs
+                    const newCriteria: Criterion[] = extractedData.criteria.map((c: any, i: number) => ({
+                      id: `crit-${i}`,
+                      name: c.name,
+                      type: (c.type === 'non-beneficial' || c.type === 'cost') ? 'non-beneficial' : 'beneficial',
+                      weight: c.weight || (1 / extractedData.criteria.length)
+                    }));
+
+                    setAiResearchContext(prev => ({
+                      ...prev,
+                      topic: extractedData.citation.title,
+                      researchGap: researchGapText,
+                      criteriaDefs: extractedData.criteria.reduce((acc: any, c: any, i: number) => ({
+                        ...acc,
+                        [`crit-${i}`]: c.description + (c.unit ? ` (Unit: ${c.unit})` : '')
+                      }), {}),
+                      extractionMode: 'manual'
+                    }));
+
+                    // 2. Auto-import decision matrix data
+                    if (extractedData.alternatives && extractedData.alternatives.length > 0) {
+                      const matrixValues = extractedData.decisionMatrix?.values;
+                      const hasMatrix = extractedData.decisionMatrix?.hasMatrix;
+
+                      const newAlternatives: Alternative[] = extractedData.alternatives.map((a: any, i: number) => {
+                        const scores: Record<string, number> = {};
+                        const rowData = matrixValues ? matrixValues[i] : null;
+                        if (hasMatrix && rowData) {
+                          newCriteria.forEach((crit, critIdx) => {
+                            const val = rowData[critIdx];
+                            scores[crit.id] = typeof val === 'number' ? val : 0;
+                          });
+                        }
+                        return {
+                          id: `alt-${i}`,
+                          name: a.name,
+                          scores: scores
+                        };
+                      });
+
+                      setCriteria(newCriteria);
+                      setAlternatives(newAlternatives);
+                      setNumCriteria(newCriteria.length);
+                      setNumAlternatives(newAlternatives.length);
+
+                      // Move to table step automatically if we have matrix data
+                      if (extractedData.decisionMatrix && extractedData.decisionMatrix.hasMatrix) {
+                        setCurrentStep("table");
+                      }
+                    }
+
+                    // Store extracted data for auditing
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('extracted_paper_data', JSON.stringify(extractedData));
+                    }
+                  }}
+                  onClose={() => setIsResearchContextDialogOpen(false)}
+                />
+              ) : (
+                <div className="space-y-6 py-2">
+                  {/* Research Topic */}
+                  <div className="space-y-2">
+                    <Label htmlFor="research-topic" className="text-sm font-semibold">Research Topic / Title</Label>
+                    <Input
+                      id="research-topic"
+                      placeholder="e.g. Multi-Criteria Selection of Sustainable Industrial Robots for Automotive Manufacturing"
+                      value={aiResearchContext.topic}
+                      onChange={(e) => setAiResearchContext(prev => ({ ...prev, topic: e.target.value }))}
+                      className="text-sm"
+                    />
+                    <p className="text-xs text-gray-500">💡 Make it specific and descriptive - include your domain and what you're selecting/evaluating</p>
+                  </div>
+
+                  {/* Problem Statement / Research Gap */}
+                  <div className="space-y-2">
+                    <Label htmlFor="research-gap" className="text-sm font-semibold">Problem Statement / Research Gap</Label>
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3 space-y-2 text-xs">
+                      <p className="font-semibold text-blue-900">💡 Guiding Questions to Answer:</p>
+                      <ul className="list-disc list-inside space-y-1 text-blue-800">
+                        <li>What industrial/business problem are you addressing?</li>
+                        <li>Why do existing methods or approaches fall short?</li>
+                        <li>What are the consequences of poor decisions? (costs, time, risks)</li>
+                        <li>What gap exists in current research or industry practice?</li>
+                        <li>What makes your approach unique or novel?</li>
+                      </ul>
+                      <details className="mt-2">
+                        <summary className="cursor-pointer font-semibold text-blue-900 hover:text-blue-700">
+                          📋 See Example (Manufacturing Domain)
+                        </summary>
+                        <div className="mt-2 p-2 bg-white rounded border border-blue-200 text-gray-700 leading-relaxed">
+                          "Industrial robotic selection involves high-stakes investments ($2-5M) where inadequate evaluation frameworks lead to suboptimal decisions. Current methods rely on single-criterion evaluation (typically cost alone) or subjective expert judgment, lacking systematic multi-criteria approaches with sensitivity validation. This results in inconsistent selections and potential multi-million dollar losses in operational efficiency. Existing MCDM studies (Li et al., 2021; Wang, 2022) apply static criteria weights without examining decision robustness under varying stakeholder preferences. This study addresses this gap by integrating K% perturbation sensitivity analysis with SWEI methodology to provide validated, robust decision frameworks for high-investment industrial contexts."
+                        </div>
+                      </details>
+                      <p className="text-blue-700 font-medium mt-2">🎯 Aim for 150-300 words for best AI quality</p>
+                    </div>
+                    <Textarea
+                      id="research-gap"
+                      placeholder="Describe your problem statement and research gap here... (150-300 words recommended)"
+                      value={aiResearchContext.researchGap}
+                      onChange={(e) => setAiResearchContext(prev => ({ ...prev, researchGap: e.target.value }))}
+                      className="text-sm min-h-[120px]"
+                    />
+                    <div className="flex items-center justify-between text-xs">
+                      <span className={`${aiResearchContext.researchGap.split(' ').filter(w => w.length > 0).length < 50 ? 'text-amber-600' : aiResearchContext.researchGap.split(' ').filter(w => w.length > 0).length > 150 ? 'text-green-600' : 'text-blue-600'}`}>
+                        {aiResearchContext.researchGap.split(' ').filter(w => w.length > 0).length} words
+                        {aiResearchContext.researchGap.split(' ').filter(w => w.length > 0).length < 50 && ' - Add more detail for better AI results'}
+                        {aiResearchContext.researchGap.split(' ').filter(w => w.length > 0).length >= 150 && ' - Excellent detail! ✅'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Criteria Definitions */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">Criteria Definitions & Context</Label>
+                    <div className="bg-green-50 border border-green-200 rounded-md p-3 space-y-2 text-xs">
+                      <p className="font-semibold text-green-900">💡 For Each Criterion, Explain:</p>
+                      <ul className="list-disc list-inside space-y-1 text-green-800">
+                        <li>What does this criterion measure in your real-world context?</li>
+                        <li>Why is it important for your decision?</li>
+                        <li>How is it measured or evaluated?</li>
+                        <li>Is it beneficial (higher is better) or non-beneficial (lower is better)?</li>
+                      </ul>
+                      <details className="mt-2">
+                        <summary className="cursor-pointer font-semibold text-green-900 hover:text-green-700">
+                          📋 See Examples
+                        </summary>
+                        <div className="mt-2 p-2 bg-white rounded border border-green-200 text-gray-700 space-y-2">
+                          <div>
+                            <span className="font-semibold">Power Consumption:</span>
+                            <p className="text-xs">"Robot's average power usage in kilowatts. Critical for operational costs and sustainability goals. Lower consumption reduces annual operating expenses by $10,000-50,000. Non-beneficial criterion (lower is better)."</p>
+                          </div>
+                          <div>
+                            <span className="font-semibold">Payload Capacity:</span>
+                            <p className="text-xs">"Maximum weight the robot can handle in kilograms. Essential for manufacturing flexibility and handling diverse products. Higher capacity enables broader application range. Beneficial criterion (higher is better)."</p>
+                          </div>
+                          <div>
+                            <span className="font-semibold">Repeatability:</span>
+                            <p className="text-xs">"Precision in millimeters - ability to return to same position. Critical for quality control in automotive assembly. Affects defect rates and rework costs. Non-beneficial criterion (lower/tighter tolerance is better)."</p>
+                          </div>
+                        </div>
+                      </details>
+                    </div>
+                    <div className="border rounded-md divide-y max-h-64 overflow-y-auto">
+                      {criteria.map((c) => (
+                        <div key={c.id} className="p-3 space-y-2 bg-gray-50 hover:bg-gray-100 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <div className="text-xs font-bold text-gray-700 min-w-[60px]">{c.name}</div>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.type === 'beneficial'
+                              ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                              : 'bg-red-100 text-red-700 border border-red-200'
+                              }`}>
+                              {c.type === 'beneficial' ? '↑ Higher is better' : '↓ Lower is better'}
+                            </span>
+                          </div>
+                          <Textarea
+                            placeholder={`Explain what ${c.name} represents, why it matters, how it's measured, and its impact on decisions...`}
+                            value={aiResearchContext.criteriaDefs[c.id] || ""}
+                            onChange={(e) => setAiResearchContext(prev => ({
+                              ...prev,
+                              criteriaDefs: { ...prev.criteriaDefs, [c.id]: e.target.value }
+                            }))}
+                            className="text-xs h-16 bg-white resize-none"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      💡 Tip: More context = Better AI quality. Aim for 30-60 words per criterion.
+                    </p>
+                  </div>
+
+                  {/* Additional Tips Section */}
+                  <div className="bg-purple-50 border border-purple-200 rounded-md p-3">
+                    <p className="text-xs font-semibold text-purple-900 mb-2">✨ Quality Tips for Best AI Results:</p>
+                    <ul className="text-xs text-purple-800 space-y-1">
+                      <li>✅ <strong>Be Specific:</strong> Include dollar amounts, timeframes, industry details</li>
+                      <li>✅ <strong>Mention Literature:</strong> Reference existing studies if known (e.g., "Smith et al., 2020")</li>
+                      <li>✅ <strong>State Novelty:</strong> Clearly identify what's unique about your approach</li>
+                      <li>✅ <strong>Define Impact:</strong> Explain real-world consequences and significance</li>
+                      <li>✅ <strong>Use Complete Sentences:</strong> A write properly for professional AI output</li>
+                    </ul>
                   </div>
                 </div>
-              </div>
+              )}
+
               <DialogFooter>
                 <Button onClick={() => {
                   // Save to Local Storage
@@ -10792,75 +11066,138 @@ export default function MCDMCalculator() {
 
               {/* AI Decision Intelligence Panel */}
               {showAiPanel && (
-                <Card className="border-indigo-100 bg-indigo-50/50 mb-6 overflow-hidden transition-all duration-300">
-                  <CardHeader className="border-b border-indigo-100 pb-3 bg-white/50">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center gap-2 text-sm text-indigo-900 font-bold">
-                        <Sparkles className="w-4 h-4 text-indigo-600" />
-                        AI Decision Intelligence
-                      </CardTitle>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowAiPanel(false)}
-                        className="h-6 w-6 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                      >
-                        <span className="sr-only">Close</span>
-                        <span className="text-lg">×</span>
-                      </Button>
+                <Card className="border-indigo-100 bg-indigo-50/50 mb-6 overflow-hidden transition-all duration-300 shadow-xl ring-1 ring-indigo-500/10">
+                  <CardHeader className="border-b border-indigo-100 pb-3 bg-white/70 backdrop-blur-sm">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-md">
+                            <Sparkles className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-sm text-indigo-900 font-bold uppercase tracking-tight">AI Academic Co-Author</CardTitle>
+                            <p className="text-[10px] text-indigo-600 font-medium">Professional Section Generation</p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowAiPanel(false)}
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                        >
+                          <span className="sr-only">Close</span>
+                          <span className="text-lg">×</span>
+                        </Button>
+                      </div>
+
+                      {/* AI Mode Tabs */}
+                      <div className="flex flex-wrap gap-1.5 p-1 bg-indigo-50/50 rounded-lg border border-indigo-100 w-full overflow-x-auto scrollbar-hide">
+                        {[
+                          { id: "research_abstract", label: "📄 Abstract", icon: <FileText className="w-3 h-3" /> },
+                          { id: "introduction", label: "✍️ Introduction", icon: <Pencil className="w-3 h-3" /> },
+                          { id: "literature_review", label: "📚 Lit. Review", icon: <Book className="w-3 h-3" /> },
+                          { id: "methodology", label: "⚙️ Methodology", icon: <Settings className="w-3 h-3" /> },
+                          { id: "full_report", label: "📊 Discussion", icon: <MessageCircle className="w-3 h-3" /> }
+                        ].map((tab) => (
+                          <Button
+                            key={tab.id}
+                            variant={aiAnalysisType === tab.id ? "default" : "ghost"}
+                            size="sm"
+                            className={`h-7 px-3 text-[10px] font-bold gap-1.5 transition-all outline-none border-none ${aiAnalysisType === tab.id
+                              ? "bg-indigo-600 text-white shadow-sm ring-0"
+                              : "text-indigo-600/70 hover:text-indigo-600 hover:bg-white/50"
+                              }`}
+                            onClick={() => {
+                              if (aiAnalysisType !== tab.id) {
+                                setAiAnalysisType(tab.id as any);
+                                setAiAnalysisResult(null); // Clear previous if switching
+                                handleAiAnalysis(tab.id as any);
+                              }
+                            }}
+                          >
+                            {tab.icon}
+                            {tab.label}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-0">
+                  <CardContent className="p-0 bg-white/50">
                     {!aiAnalysisResult ? (
-                      <div className="p-8 text-center space-y-5 bg-white/40">
-                        <div className="mx-auto w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm border border-indigo-50">
-                          <Bot className={`w-7 h-7 text-indigo-600 ${aiLoading ? 'animate-pulse' : ''}`} />
+                      <div className="p-12 text-center space-y-6">
+                        <div className="relative mx-auto w-20 h-20">
+                          <div className="absolute inset-0 bg-indigo-200 rounded-full animate-ping opacity-25"></div>
+                          <div className="relative bg-white rounded-full w-20 h-20 flex items-center justify-center shadow-inner border border-indigo-50">
+                            <Bot className={`w-10 h-10 text-indigo-600 ${aiLoading ? 'animate-bounce' : ''}`} />
+                          </div>
                         </div>
                         <div className="space-y-2">
-                          <h3 className="text-sm font-bold text-gray-900">
-                            {aiLoading ? "Analyzing Decision Matrix..." : "Tap to Generate Insights"}
+                          <h3 className="text-base font-bold text-gray-900">
+                            {aiLoading ? `Drafting ${aiAnalysisType.replace('_', ' ').toUpperCase()}...` : "AI Research Consultant Ready"}
                           </h3>
-                          <p className="text-xs text-gray-600 max-w-sm mx-auto leading-relaxed">
+                          <p className="text-xs text-gray-600 max-w-sm mx-auto leading-relaxed italic">
                             {aiLoading
-                              ? "Our AI is reviewing your weights, alternatives, and rankings to prepare a professional research summary..."
-                              : "Generate a professional Discussion, Conclusion, and Future Scope report based on these specific results."}
+                              ? "The AI is synthesizing your numerical results with the extracted paper context to produce high-quality academic prose..."
+                              : `Generating professional ${aiAnalysisType.replace('_', ' ')} based on your current results and extracted PDF context.`}
                           </p>
                         </div>
-                        {!aiLoading && (
-                          <div className="flex justify-center">
-                            <Button
-                              onClick={() => handleAiAnalysis("full_report")}
-                              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-6 h-9 shadow-indigo-200 shadow-lg"
-                            >
-                              <Sparkles className="w-3 h-3 mr-2" />
-                              Generate Full Report (Free)
-                            </Button>
+                        {aiLoading && (
+                          <div className="w-48 mx-auto h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-indigo-600 animate-infinite-progress"></div>
                           </div>
                         )}
                       </div>
                     ) : (
-                      <div className="prose prose-sm max-w-none p-6 bg-white text-gray-800">
-                        <ReactMarkdown
-                          components={{
-                            h1: ({ node, ...props }) => <h1 className="text-lg font-bold text-indigo-900 mb-3 mt-2 border-b-2 border-indigo-100 pb-2" {...props} />,
-                            h2: ({ node, ...props }) => <h2 className="text-sm font-bold text-gray-900 mb-2 mt-4 uppercase tracking-wide" {...props} />,
-                            p: ({ node, ...props }) => <p className="text-xs leading-relaxed text-gray-600 mb-3 text-justify" {...props} />,
-                            ul: ({ node, ...props }) => <ul className="list-disc list-outside text-xs text-gray-600 mb-3 ml-4 space-y-1" {...props} />,
-                            li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-                            strong: ({ node, ...props }) => <strong className="font-bold text-indigo-900" {...props} />,
-                          }}
-                        >
-                          {aiAnalysisResult}
-                        </ReactMarkdown>
-                        <div className="mt-6 flex justify-end border-t border-gray-100 pt-3">
-                          <Button
-                            onClick={() => handleAiAnalysis("full_report")}
-                            variant="outline"
-                            size="sm"
-                            className="text-xs h-7 gap-1"
+                      <div className="bg-white group relative">
+                        {/* Summary Stats Header for AI Report */}
+                        <div className="px-6 py-4 bg-gray-50/80 border-b border-gray-100 flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">MCDM: <span className="text-indigo-600">{method.toUpperCase()}</span></div>
+                            <div className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Weight: <span className="text-indigo-600">{weightMethod.toUpperCase()}</span></div>
+                          </div>
+                          <div className="text-[10px] text-gray-400 italic">Estimated: ~{aiAnalysisType === 'research_abstract' ? '350' : '1000'} words</div>
+                        </div>
+
+                        <div className="relative p-6 sm:p-10">
+                          <ReactMarkdown
+                            components={{
+                              h1: ({ ...props }) => <h1 className="text-xl font-black text-indigo-950 mb-6 mt-2 border-l-4 border-indigo-600 pl-4 py-1" {...props} />,
+                              h2: ({ ...props }) => <h2 className="text-sm font-black text-gray-900 mb-3 mt-8 uppercase tracking-[0.15em] border-b border-gray-100 pb-2" {...props} />,
+                              h3: ({ ...props }) => <h3 className="text-xs font-bold text-indigo-800 mb-2 mt-6" {...props} />,
+                              p: ({ ...props }) => <p className="text-xs leading-loose text-gray-700 mb-4 text-justify font-serif" {...props} />,
+                              ul: ({ ...props }) => <ul className="list-disc list-outside text-xs text-gray-600 mb-6 ml-6 space-y-2" {...props} />,
+                              li: ({ ...props }) => <li className="pl-2" {...props} />,
+                              blockquote: ({ ...props }) => <blockquote className="border-l-4 border-gray-200 pl-6 italic my-6 text-gray-500" {...props} />,
+                              strong: ({ ...props }) => <strong className="font-bold text-indigo-900" {...props} />,
+                            }}
                           >
-                            <Sparkles className="w-3 h-3" /> Regenerate
-                          </Button>
+                            {aiAnalysisResult}
+                          </ReactMarkdown>
+                        </div>
+
+                        <div className="sticky bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 flex justify-between items-center px-8">
+                          <p className="text-[10px] text-gray-400">© AI Generated Academic Draft - Review for precision</p>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => {
+                                navigator.clipboard.writeText(aiAnalysisResult || "");
+                                alert("Copied to clipboard!");
+                              }}
+                              variant="outline"
+                              size="sm"
+                              className="text-xs h-8 px-4"
+                            >
+                              📋 Copy Text
+                            </Button>
+                            <Button
+                              onClick={() => handleAiAnalysis(aiAnalysisType as any)}
+                              variant="default"
+                              size="sm"
+                              className="text-xs h-8 px-4 bg-indigo-600 hover:bg-indigo-700"
+                            >
+                              <Sparkles className="w-3 h-3 mr-2" /> Regenerate
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     )}

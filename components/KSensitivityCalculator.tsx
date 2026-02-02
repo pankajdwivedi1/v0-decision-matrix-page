@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,9 +10,12 @@ import { Input } from "@/components/ui/input";
 import AHPFormula from "./AHPFormula";
 import PIPRECIAFormula from "./PIPRECIAFormula";
 import { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label } from 'recharts';
-import { Check, ChevronRight, Download, RefreshCw, Loader2, Sparkles, Bot } from 'lucide-react';
+import { Check, ChevronRight, Download, RefreshCw, Loader2, Sparkles, Bot, FileText } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import ReactMarkdown from 'react-markdown';
+import { AIResearchAssistant } from './AIResearchAssistant';
+import { toJpeg } from 'html-to-image';
+
 
 interface Criterion {
   id: string;
@@ -48,6 +51,7 @@ export default function KSensitivityCalculator({
   showAiPanel,
   onCloseAiPanel
 }: KSensitivityCalculatorProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
   const [kSensVariationRange, setKSensVariationRange] = useState<number[]>([-30, -20, -10, 0, 10, 20, 30]);
   const [kSensChartType, setKSensChartType] = useState<string>('line');
   const [kSensResults, setKSensResults] = useState<any>(null);
@@ -56,6 +60,16 @@ export default function KSensitivityCalculator({
   const [showConfig, setShowConfig] = useState<boolean>(true);
   const [selectedCriterionToVary, setSelectedCriterionToVary] = useState<string>(''); // New state for criterion selection
   const [kSensViewType, setKSensViewType] = useState<'ranking' | 'weight'>('ranking'); // New state for view type
+
+  // Separate AI Analysis States for Reports and Abstracts
+  const [aiReportResult, setAiReportResult] = useState<string | null>(null);
+  const [aiAbstractResult, setAiAbstractResult] = useState<string | null>(null);
+  const [isAiReportLoading, setIsAiReportLoading] = useState<boolean>(false);
+  const [isAiAbstractLoading, setIsAiAbstractLoading] = useState<boolean>(false);
+  const [showAiReportPanel, setShowAiReportPanel] = useState<boolean>(false);
+  const [showAiAbstractPanel, setShowAiAbstractPanel] = useState<boolean>(false);
+  const [showAIAssistant, setShowAIAssistant] = useState<boolean>(false);
+
 
   // Weight method state
   const [selectedWeightMethod, setSelectedWeightMethod] = useState<string>('equal');
@@ -124,6 +138,77 @@ export default function KSensitivityCalculator({
 
     return { isValid: invalidCells.length === 0, invalidCells };
   };
+
+  // Handler for AI Report generation
+  const handleAiReportGeneration = async (data: any) => {
+    setIsAiReportLoading(true);
+    setShowAiReportPanel(true);
+
+    try {
+      // Compute ranking from K-sens results
+      const criterionName = data.criterionName;
+      const baseResults = data.kSensData?.results?.['0'] || {};
+      const ranking = Object.entries(baseResults).map(([altName, score]: [string, any]) => ({
+        alternativeName: altName,
+        score: typeof score === 'number' ? score : 0
+      })).sort((a, b) => b.score - a.score);
+
+      const response = await fetch('/api/ai-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          alternatives,
+          criteria: workingCriteria,
+          method: selectedRankingMethod,
+          ranking
+        })
+      });
+
+      const result = await response.json();
+      setAiReportResult(result.markdown || result.error);
+    } catch (error) {
+      setAiReportResult('Error generating AI report');
+    } finally {
+      setIsAiReportLoading(false);
+    }
+  };
+
+  // Handler for Research Abstract generation
+  const handleResearchAbstractGeneration = async (data: any) => {
+    setIsAiAbstractLoading(true);
+    setShowAiAbstractPanel(true);
+
+    try {
+      // Compute ranking from K-sens results
+      const criterionName = data.criterionName;
+      const baseResults = data.kSensData?.results?.['0'] || {};
+      const ranking = Object.entries(baseResults).map(([altName, score]: [string, any]) => ({
+        alternativeName: altName,
+        score: typeof score === 'number' ? score : 0
+      })).sort((a, b) => b.score - a.score);
+
+      const response = await fetch('/api/ai-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          alternatives,
+          criteria: workingCriteria,
+          method: selectedRankingMethod,
+          ranking
+        })
+      });
+
+      const result = await response.json();
+      setAiAbstractResult(result.markdown || result.error);
+    } catch (error) {
+      setAiAbstractResult('Error generating research abstract');
+    } finally {
+      setIsAiAbstractLoading(false);
+    }
+  };
+
 
   // Robust MathJax loader
   useEffect(() => {
@@ -470,6 +555,33 @@ export default function KSensitivityCalculator({
     }, 0);
   };
 
+  const downloadChartAsJpeg = () => {
+    if (!chartRef.current) return;
+
+    // Use a slightly larger pixel ratio for better quality
+    toJpeg(chartRef.current, {
+      quality: 1.0,
+      backgroundColor: "#ffffff",
+      pixelRatio: 4,
+      style: {
+        padding: '20px'
+      }
+    })
+      .then((dataUrl) => {
+        const link = document.createElement("a");
+        const criterionName = workingCriteria.find(c => c.id === selectedCriterionToVary)?.name || "Sensitivity";
+        link.download = `sensitivity-analysis-${criterionName.replace(/\s+/g, '_').toLowerCase()}-${Date.now()}.jpg`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      })
+      .catch((err) => {
+        console.error("Error exporting chart", err);
+        alert("Failed to export chart. Please try again.");
+      });
+  };
+
   const performKSensitivityAnalysis = async (altIdsOverride?: string[], rankingMethodOverride?: string, criterionIdOverride?: string) => {
     if (!hasValidData()) {
       setShowDataWarning(true);
@@ -732,7 +844,7 @@ export default function KSensitivityCalculator({
     }
     const commonProps = {
       data,
-      margin: { top: 20, right: 30, left: 20, bottom: 60 }
+      margin: { top: 20, right: 30, left: 60, bottom: 60 }
     };
 
     if (kSensChartType === 'heatmap') {
@@ -815,108 +927,138 @@ export default function KSensitivityCalculator({
     }
 
     return (
-      <ResponsiveContainer width="100%" height={400}>
-        {['line', 'area'].includes(kSensChartType) ? (
-          <LineChart {...commonProps}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="variation" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 10 }} />
-            <YAxis reversed={false} tick={{ fontSize: 10 }}>
-              <Label
-                value={isWeightView ? 'Criterion Weight' : 'Alternative Rank'}
-                angle={-90}
-                position="insideLeft"
-                style={{ textAnchor: 'middle', fill: '#374151', fontSize: '10px', fontWeight: 500 }}
-              />
-            </YAxis>
-            <Tooltip />
-            <Legend wrapperStyle={{ fontSize: '10px' }} />
-            {isWeightView ? (
-              workingCriteria.map((crit, idx) => (
-                <Line
-                  key={crit.id}
-                  type="monotone"
-                  dataKey={crit.name}
-                  name={crit.name}
-                  stroke={colors[idx % colors.length]}
-                  strokeWidth={crit.id === selectedCriterionToVary ? 3 : 1}
-                  strokeDasharray={crit.id === selectedCriterionToVary ? '' : '5 5'}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
+      <div ref={chartRef} className="bg-white">
+        <ResponsiveContainer width="100%" height={400}>
+          {['line', 'area'].includes(kSensChartType) ? (
+            <LineChart {...commonProps}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="variation" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 10 }} />
+              <YAxis
+                reversed={false}
+                tick={{ fontSize: 10, fill: '#333' }}
+                width={50}
+                domain={isWeightView ? [0, 'auto'] : [0, alternatives.length]}
+                allowDecimals={isWeightView}
+                tickCount={isWeightView ? undefined : alternatives.length + 1}
+              >
+                <Label
+                  value={isWeightView ? 'Criterion Weight' : 'Alternative Rank'}
+                  angle={-90}
+                  position="insideLeft"
+                  style={{ textAnchor: 'middle', fill: '#374151', fontSize: '11px', fontWeight: 700 }}
+                  offset={-15}
                 />
-              ))
-            ) : (
-              alternatives.map((alt, altIdx) => (
-                <Line
-                  key={alt.name}
-                  type="monotone"
-                  dataKey={alt.name}
-                  stroke={colors[altIdx % colors.length]}
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  fill={kSensChartType === 'area' ? colors[altIdx % colors.length] : undefined}
-                  fillOpacity={kSensChartType === 'area' ? 0.3 : undefined}
-                />
-              )))}
-          </LineChart>
-        ) : kSensChartType === 'scatter' ? (
-          <ScatterChart {...commonProps}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" dataKey="x" name="Variation Index" tick={{ fontSize: 10 }} />
-            <YAxis reversed={false} type="number" dataKey="y" name={isWeightView ? "Weight" : "Rank"} tick={{ fontSize: 10 }}>
-              <Label
-                value={isWeightView ? 'Criterion Weight' : 'Alternative Rank'}
-                angle={-90}
-                position="insideLeft"
-                style={{ textAnchor: 'middle', fill: '#374151', fontSize: '10px', fontWeight: 500 }}
-              />
-            </YAxis>
-            <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-            <Legend wrapperStyle={{ fontSize: '10px' }} />
-            {isWeightView ? (
-              workingCriteria.map((crit, idx) => {
-                const scatterData = data.map((d: any, i: number) => ({ x: i, y: d[crit.name] }));
-                return <Scatter key={crit.name} name={crit.name} data={scatterData} fill={colors[idx % colors.length]} />;
-              })
-            ) : (
-              alternatives.map((alt, altIdx) => {
-                const scatterData = data.map((d, idx) => ({ x: idx, y: d[alt.name] }));
-                return (<Scatter key={alt.name} name={alt.name} data={scatterData} fill={colors[altIdx % colors.length]} />);
-              }))}
-          </ScatterChart>
-        ) : (
-          <BarChart {...commonProps} layout={kSensChartType === 'bar' ? 'vertical' : undefined}>
-            <CartesianGrid strokeDasharray="3 3" />
-            {kSensChartType === 'bar' ? (
-              <>
-                <XAxis type="number" tick={{ fontSize: 10 }} />
-                <YAxis dataKey="variation" type="category" tick={{ fontSize: 10 }} />
-              </>
-            ) : (
-              <>
-                <XAxis dataKey="variation" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }}>
-                  <Label
-                    value={isWeightView ? 'Criterion Weight' : 'Alternative Rank'}
-                    angle={-90}
-                    position="insideLeft"
-                    style={{ textAnchor: 'middle', fill: '#374151', fontSize: '10px', fontWeight: 500 }}
+              </YAxis>
+
+              <Tooltip />
+              <Legend wrapperStyle={{ fontSize: '10px' }} />
+              {isWeightView ? (
+                workingCriteria.map((crit, idx) => (
+                  <Line
+                    key={crit.id}
+                    type="monotone"
+                    dataKey={crit.name}
+                    name={crit.name}
+                    stroke={colors[idx % colors.length]}
+                    strokeWidth={crit.id === selectedCriterionToVary ? 3 : 1}
+                    strokeDasharray={crit.id === selectedCriterionToVary ? '' : '5 5'}
+                    dot={{ r: 3 }}
+                    activeDot={{ r: 5 }}
                   />
-                </YAxis>
-              </>
-            )}
-            <Tooltip />
-            <Legend wrapperStyle={{ fontSize: '10px' }} />
-            {isWeightView ? (
-              workingCriteria.map((crit, idx) => (
-                <Bar key={crit.name} dataKey={crit.name} fill={colors[idx % colors.length]} />
-              ))
-            ) : (
-              alternatives.map((alt, altIdx) => (
-                <Bar key={alt.name} dataKey={alt.name} fill={colors[altIdx % colors.length]} />
-              )))}
-          </BarChart>
-        )}
-      </ResponsiveContainer>
+                ))
+              ) : (
+                alternatives.map((alt, altIdx) => (
+                  <Line
+                    key={alt.name}
+                    type="monotone"
+                    dataKey={alt.name}
+                    stroke={colors[altIdx % colors.length]}
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    fill={kSensChartType === 'area' ? colors[altIdx % colors.length] : undefined}
+                    fillOpacity={kSensChartType === 'area' ? 0.3 : undefined}
+                  />
+                )))}
+            </LineChart>
+          ) : kSensChartType === 'scatter' ? (
+            <ScatterChart {...commonProps}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" dataKey="x" name="Variation Index" tick={{ fontSize: 10 }} />
+              <YAxis
+                reversed={false}
+                type="number"
+                dataKey="y"
+                name={isWeightView ? "Weight" : "Rank"}
+                tick={{ fontSize: 10, fill: '#333' }}
+                width={50}
+                domain={isWeightView ? [0, 'auto'] : [0, alternatives.length]}
+                allowDecimals={isWeightView}
+                tickCount={isWeightView ? undefined : alternatives.length + 1}
+              >
+                <Label
+                  value={isWeightView ? 'Criterion Weight' : 'Alternative Rank'}
+                  angle={-90}
+                  position="insideLeft"
+                  style={{ textAnchor: 'middle', fill: '#374151', fontSize: '11px', fontWeight: 700 }}
+                  offset={-15}
+                />
+              </YAxis>
+              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+              <Legend wrapperStyle={{ fontSize: '10px' }} />
+              {isWeightView ? (
+                workingCriteria.map((crit, idx) => {
+                  const scatterData = data.map((d: any, i: number) => ({ x: i, y: d[crit.name] }));
+                  return <Scatter key={crit.name} name={crit.name} data={scatterData} fill={colors[idx % colors.length]} />;
+                })
+              ) : (
+                alternatives.map((alt, altIdx) => {
+                  const scatterData = data.map((d, idx) => ({ x: idx, y: d[alt.name] }));
+                  return (<Scatter key={alt.name} name={alt.name} data={scatterData} fill={colors[altIdx % colors.length]} />);
+                }))}
+            </ScatterChart>
+          ) : (
+            <BarChart {...commonProps} layout={kSensChartType === 'bar' ? 'vertical' : undefined}>
+              <CartesianGrid strokeDasharray="3 3" />
+              {kSensChartType === 'bar' ? (
+                <>
+                  <XAxis type="number" tick={{ fontSize: 10 }} />
+                  <YAxis dataKey="variation" type="category" tick={{ fontSize: 10 }} />
+                </>
+              ) : (
+                <>
+                  <XAxis dataKey="variation" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 10 }} />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: '#333' }}
+                    width={50}
+                    domain={isWeightView ? [0, 'auto'] : [0, alternatives.length]}
+                    allowDecimals={isWeightView}
+                    tickCount={isWeightView ? undefined : alternatives.length + 1}
+                  >
+                    <Label
+                      value={isWeightView ? 'Criterion Weight' : 'Alternative Rank'}
+                      angle={-90}
+                      position="insideLeft"
+                      style={{ textAnchor: 'middle', fill: '#374151', fontSize: '11px', fontWeight: 700 }}
+                      offset={-15}
+                    />
+                  </YAxis>
+
+                </>
+              )}
+              <Tooltip />
+              <Legend wrapperStyle={{ fontSize: '10px' }} />
+              {isWeightView ? (
+                workingCriteria.map((crit, idx) => (
+                  <Bar key={crit.name} dataKey={crit.name} fill={colors[idx % colors.length]} />
+                ))
+              ) : (
+                alternatives.map((alt, altIdx) => (
+                  <Bar key={alt.name} dataKey={alt.name} fill={colors[altIdx % colors.length]} />
+                )))}
+            </BarChart>
+          )}
+        </ResponsiveContainer>
+      </div>
     );
   };
 
@@ -1883,17 +2025,30 @@ export default function KSensitivityCalculator({
                     {kSensActiveTab === 'results' && (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <h4 className="text-xs font-semibold text-black">Chart Type:</h4>
-                          <Select value={kSensChartType} onValueChange={setKSensChartType}>
-                            <SelectTrigger className="w-48 h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {kSensChartTypes.map(ct => (
-                                <SelectItem key={ct.value} value={ct.value} className="text-xs">
-                                  {ct.icon} {ct.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-xs font-semibold text-black">Chart Type:</h4>
+                              <Select value={kSensChartType} onValueChange={setKSensChartType}>
+                                <SelectTrigger className="w-48 h-8 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {kSensChartTypes.map(ct => (
+                                    <SelectItem key={ct.value} value={ct.value} className="text-xs">
+                                      {ct.icon} {ct.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <Button
+                            onClick={downloadChartAsJpeg}
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1.5 border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
+                          >
+                            <Download className="w-3.5 h-3.5 text-blue-600" />
+                            Download JPG
+                          </Button>
                         </div>
                         {/* Display only selected criterion results */}
                         {selectedCriterionToVary && workingCriteria.find(c => c.id === selectedCriterionToVary) && (
@@ -1938,79 +2093,36 @@ export default function KSensitivityCalculator({
                         </Button>
                       </div>
 
-                      {onAiAnalysis && selectedCriterionToVary && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const criterionName = workingCriteria.find(c => c.id === selectedCriterionToVary)?.name || selectedCriterionToVary;
-                            const dataForAi = {
-                              kSensData: kSensResults ? kSensResults[criterionName] : null,
-                              criterionName: criterionName,
-                              variationRange: kSensVariationRange.join(", ")
-                            };
-                            onAiAnalysis(dataForAi);
-                          }}
-                          disabled={!kSensResults || isAnalyzing || isAiLoading}
-                          className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700 border-none h-8 text-xs gap-1.5 shadow-sm min-w-[140px]"
-                        >
-                          {isAiLoading ? (
-                            <>
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-3.5 h-3.5" />
-                              Generate AI Report
-                            </>
-                          )}
-                        </Button>
-                      )}
+                      <div className="flex gap-2">
+                        {selectedCriterionToVary && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowAIAssistant(true)}
+                            disabled={!kSensResults || isAnalyzing}
+                            className="bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 text-white hover:from-violet-700 hover:via-purple-700 hover:to-pink-700 border-none h-8 text-xs gap-1.5 shadow-lg min-w-[180px]"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            AI Research Assistant
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
-                    {/* AI Report Panel - Displayed here at the bottom */}
-                    {showAiPanel && (
-                      <Card className="border-indigo-100 bg-indigo-50/50 mt-6 overflow-hidden transition-all duration-300">
-                        <CardHeader className="border-b border-indigo-100 pb-3 bg-white/50">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="flex items-center gap-2 text-sm text-indigo-900 font-bold">
-                              <Sparkles className="w-4 h-4 text-indigo-600" />
-                              AI Robustness & Perturbation Report
-                            </CardTitle>
-                            {onCloseAiPanel && (
-                              <Button variant="ghost" size="sm" onClick={onCloseAiPanel} className="h-6 w-6 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                                <span className="sr-only">Close</span><span className="text-lg">×</span>
-                              </Button>
-                            )}
-                          </div>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                          {!aiAnalysisResult ? (
-                            <div className="p-8 text-center space-y-5 bg-white/40">
-                              <div className="mx-auto w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm border border-indigo-50">
-                                <Bot className={`w-7 h-7 text-indigo-600 ${isAiLoading ? 'animate-pulse' : ''}`} />
-                              </div>
-                              <p className="text-xs text-gray-600">{isAiLoading ? "Conducting K% perturbation analysis..." : "Ready to analyze."}</p>
-                            </div>
-                          ) : (
-                            <div className="prose prose-sm max-w-none p-6 bg-white text-gray-800">
-                              <ReactMarkdown
-                                components={{
-                                  h1: ({ node, ...props }) => <h1 className="text-lg font-bold text-indigo-900 mb-3 mt-2 border-b-2 border-indigo-100 pb-2" {...props} />,
-                                  h2: ({ node, ...props }) => <h2 className="text-sm font-bold text-gray-900 mb-2 mt-4 uppercase tracking-wide" {...props} />,
-                                  p: ({ node, ...props }) => <p className="text-xs leading-relaxed text-gray-600 mb-3 text-justify" {...props} />,
-                                  ul: ({ node, ...props }) => <ul className="list-disc list-outside text-xs text-gray-600 mb-3 ml-4 space-y-1" {...props} />,
-                                  li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-                                  strong: ({ node, ...props }) => <strong className="font-bold text-indigo-900" {...props} />,
-                                }}
-                              >
-                                {aiAnalysisResult}
-                              </ReactMarkdown>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
+
+                    {/* AI Research Assistant */}
+                    {showAIAssistant && selectedCriterionToVary && (
+                      <div className="mt-6">
+                        <AIResearchAssistant
+                          kSensData={kSensResults ? kSensResults[workingCriteria.find(c => c.id === selectedCriterionToVary)?.name || selectedCriterionToVary] : null}
+                          criterionName={workingCriteria.find(c => c.id === selectedCriterionToVary)?.name || selectedCriterionToVary}
+                          variationRange={kSensVariationRange.join(", ")}
+                          alternatives={alternatives}
+                          criteria={workingCriteria}
+                          method={selectedRankingMethod}
+                          onClose={() => setShowAIAssistant(false)}
+                        />
+                      </div>
                     )}
                   </div>
                 )}
