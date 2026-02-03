@@ -69,6 +69,21 @@ export default function KSensitivityCalculator({
   const [showAiReportPanel, setShowAiReportPanel] = useState<boolean>(false);
   const [showAiAbstractPanel, setShowAiAbstractPanel] = useState<boolean>(false);
   const [showAIAssistant, setShowAIAssistant] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [kSensVariationInput, setKSensVariationInput] = useState<string>('-30, -20, -10, 0, 10, 20, 30');
+
+  useEffect(() => {
+    // Sync the input string when the range array changes (e.g., from presets)
+    // but only if it's not currently being edited to avoid cursor jumping
+    setKSensVariationInput(kSensVariationRange.join(', '));
+  }, [kSensVariationRange]);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
 
   // Weight method state
@@ -844,7 +859,9 @@ export default function KSensitivityCalculator({
     }
     const commonProps = {
       data,
-      margin: { top: 20, right: 30, left: 60, bottom: 60 }
+      margin: isMobile
+        ? { top: 10, right: 5, left: 30, bottom: 55 }
+        : { top: 20, right: 30, left: 60, bottom: 60 }
     };
 
     if (kSensChartType === 'heatmap') {
@@ -1021,18 +1038,27 @@ export default function KSensitivityCalculator({
               <CartesianGrid strokeDasharray="3 3" />
               {kSensChartType === 'bar' ? (
                 <>
-                  <XAxis type="number" tick={{ fontSize: 10 }} />
+                  <XAxis
+                    type="number"
+                    tick={{ fontSize: 10 }}
+                    domain={isWeightView ? [0, 'auto'] : [0, alternatives.length]}
+                    tickCount={isWeightView ? undefined : alternatives.length + 1}
+                    allowDecimals={isWeightView}
+                  />
                   <YAxis dataKey="variation" type="category" tick={{ fontSize: 10 }} />
                 </>
               ) : (
                 <>
                   <XAxis dataKey="variation" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 10 }} />
                   <YAxis
+                    type="number"
                     tick={{ fontSize: 10, fill: '#333' }}
                     width={50}
                     domain={isWeightView ? [0, 'auto'] : [0, alternatives.length]}
                     allowDecimals={isWeightView}
                     tickCount={isWeightView ? undefined : alternatives.length + 1}
+                    interval={0}
+                    reversed={false}
                   >
                     <Label
                       value={isWeightView ? 'Criterion Weight' : 'Alternative Rank'}
@@ -1360,7 +1386,7 @@ export default function KSensitivityCalculator({
         `
       }} />
       <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 px-3 sm:px-6">
           <CardTitle className="text-sm text-black">K% Sensitivity Analysis</CardTitle>
           <CardDescription className="text-xs text-gray-700 flex flex-wrap items-center gap-1">
             <span>Step-by-step guided sensitivity analysis with customizable variation ranges</span>
@@ -1374,7 +1400,7 @@ export default function KSensitivityCalculator({
             </a>
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 sm:px-6">
           <div className="space-y-6">
             {/* Formula Section Content */}
             {showFormula && (
@@ -1545,7 +1571,7 @@ export default function KSensitivityCalculator({
 
                 {/* Weight & Ranking Method Selectors - Side by Side */}
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mb-4">
                     {/* Weight Method Selector */}
                     <div>
                       <label className="block text-xs font-semibold mb-2 text-gray-700 uppercase tracking-wide">
@@ -1761,7 +1787,7 @@ export default function KSensitivityCalculator({
                             : 'border-blue-500 bg-blue-50'
                             }`}
                         >
-                          <div className="text-[8px] sm:text-sm font-semibold text-blue-600">±30% ★</div>
+                          <div className="text-[8px] sm:text-sm font-semibold text-blue-600">±30% Recommended</div>
                           <div className="text-[7px] sm:text-xs text-gray-600">Standard (7)</div>
                         </button>
                         <button
@@ -1843,10 +1869,21 @@ export default function KSensitivityCalculator({
                         </label>
                         <input
                           type="text"
-                          value={kSensVariationRange.join(', ')}
+                          value={kSensVariationInput}
                           onChange={(e) => {
-                            const values = e.target.value.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
-                            if (values.length > 0) setKSensVariationRange(values.sort((a, b) => a - b));
+                            setKSensVariationInput(e.target.value);
+                            const values = e.target.value.split(',')
+                              .map(v => parseFloat(v.trim()))
+                              .filter(v => !isNaN(v));
+                            if (values.length > 0) {
+                              setKSensVariationRange(values);
+                            }
+                          }}
+                          onBlur={() => {
+                            // On blur, sort the values and update the input to be clean
+                            const sorted = [...kSensVariationRange].sort((a, b) => a - b);
+                            setKSensVariationRange(sorted);
+                            setKSensVariationInput(sorted.join(', '));
                           }}
                           className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-[8px] sm:text-xs"
                           placeholder="e.g., -30, -20, -10, 0, 10, 20, 30"
@@ -2052,8 +2089,8 @@ export default function KSensitivityCalculator({
                         </div>
                         {/* Display only selected criterion results */}
                         {selectedCriterionToVary && workingCriteria.find(c => c.id === selectedCriterionToVary) && (
-                          <Card className="border-gray-200 bg-white shadow-sm">
-                            <CardHeader className="pb-3">
+                          <Card className="border-gray-200 bg-white shadow-sm -mx-3 sm:mx-0 rounded-none sm:rounded-xl">
+                            <CardHeader className="pb-3 px-3 sm:px-6">
                               <CardTitle className="text-sm text-black">
                                 {workingCriteria.find(c => c.id === selectedCriterionToVary)?.name}
                               </CardTitle>
@@ -2061,7 +2098,7 @@ export default function KSensitivityCalculator({
                                 Base: {(workingCriteria.find(c => c.id === selectedCriterionToVary)!.weight * 100).toFixed(2)}% ({workingCriteria.find(c => c.id === selectedCriterionToVary)?.type === 'beneficial' ? 'Beneficial ↑' : 'Non-Beneficial ↓'})
                               </CardDescription>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="px-0 sm:px-6">
                               {renderKSensChart(workingCriteria.find(c => c.id === selectedCriterionToVary)!.name)}
                             </CardContent>
                           </Card>
@@ -2083,30 +2120,25 @@ export default function KSensitivityCalculator({
                       </div>
                     )}
 
-                    <div className="flex justify-between gap-2 mt-6 pt-4 border-t items-center">
-                      <div className="flex gap-2">
-                        <Button onClick={() => { setKSensResults(null); setShowConfig(true); }} variant="outline" className="text-xs h-8">
-                          ← Modify Config
+                    <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t items-center justify-start">
+                      <Button onClick={() => { setKSensResults(null); setShowConfig(true); }} variant="outline" className="text-xs h-8">
+                        ← Modify Config
+                      </Button>
+                      <Button onClick={() => { setKSensResults(null); setShowConfig(true); }} variant="outline" className="text-xs h-8">
+                        🔄 Start Over
+                      </Button>
+                      {selectedCriterionToVary && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowAIAssistant(true)}
+                          disabled={!kSensResults || isAnalyzing}
+                          className="bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 text-white hover:from-violet-700 hover:via-purple-700 hover:to-pink-700 border-none h-8 text-xs gap-1.5 shadow-lg px-3"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          AI Research
                         </Button>
-                        <Button onClick={() => { setKSensResults(null); setShowConfig(true); }} variant="outline" className="text-xs h-8">
-                          🔄 Start Over
-                        </Button>
-                      </div>
-
-                      <div className="flex gap-2">
-                        {selectedCriterionToVary && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowAIAssistant(true)}
-                            disabled={!kSensResults || isAnalyzing}
-                            className="bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 text-white hover:from-violet-700 hover:via-purple-700 hover:to-pink-700 border-none h-8 text-xs gap-1.5 shadow-lg min-w-[180px]"
-                          >
-                            <Sparkles className="w-3.5 h-3.5" />
-                            AI Research Assistant
-                          </Button>
-                        )}
-                      </div>
+                      )}
                     </div>
 
 

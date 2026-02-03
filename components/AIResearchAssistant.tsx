@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Sparkles, FileText, X, BookOpen, Lightbulb, Target, TrendingUp, Check } from 'lucide-react';
+import { Loader2, Sparkles, FileText, X, BookOpen, Lightbulb, Target, TrendingUp, Check, Download } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } from "docx";
+import { saveAs } from "file-saver";
 
 interface AIResearchAssistantProps {
     kSensData: any;
@@ -25,7 +27,7 @@ const SECTION_TEMPLATES = [
         name: 'Abstract',
         icon: <FileText className="w-4 h-4" />,
         description: 'Concise summary of the entire study',
-        defaultPrompt: 'Write a comprehensive abstract (250-350 words) summarizing this MCDM study including: research objective, methodology, key findings, and practical implications.',
+        defaultPrompt: 'Write a high-quality academic abstract following this exact structure: 1. Context & Problem: Start by describing the real-world challenge and the research gap (why is this study needed?). 2. Solution: Introduce the specific MCDM methodology as a tool to solve this specific problem. 3. Methodology: Describe how the criteria and alternatives were established. 4. Findings: Summarize the final rankings and the stability discovered in the sensitivity analysis. 5. Significance: Conclude with the practical impact for decision-makers. Also, at the very end, provide exactly 5-6 professional "Keywords" related to the study.',
         defaultWordCount: 300,
         color: 'from-blue-600 to-cyan-600'
     },
@@ -34,7 +36,7 @@ const SECTION_TEMPLATES = [
         name: 'Introduction',
         icon: <BookOpen className="w-4 h-4" />,
         description: 'Background, research gap, and objectives',
-        defaultPrompt: 'Write a detailed introduction (3000-4000 words) that includes: research background, literature gap, research questions, study objectives, and significance of the study.',
+        defaultPrompt: 'Write a comprehensive scholarly introduction. Structure it to: 1. Background: Detail the significance of the decision-making problem in its specific field. 2. The Research Gap: Explain why current methods are insufficient or why a structured MCDM approach is necessary for this specific case. 3. Study Objective: State the goal of identifying the optimal choice through mathematical rigor. 4. Methodology Overview: Briefly justify the selection of the chosen weighting and ranking methods.',
         defaultWordCount: 3500,
         color: 'from-violet-600 to-purple-600'
     },
@@ -61,7 +63,7 @@ const SECTION_TEMPLATES = [
         name: 'Results & Analysis',
         icon: <TrendingUp className="w-4 h-4" />,
         description: 'Presentation and interpretation of findings',
-        defaultPrompt: 'Write a comprehensive results section (2000-3000 words) presenting: ranking results, score analysis, sensitivity analysis findings, robustness validation, and visual interpretation of charts and tables.',
+        defaultPrompt: 'Write a comprehensive results section. You MUST follow these academic rules: 1. Refer to the final weights as "Table 1" and the ranking results as "Table 2". 2. Analyze specific numerical differences between alternatives. 3. Discuss any rank reversals observed during the sensitivity analysis (refer to this as "Figure 1"). 4. Use formal scholarly language (e.g., "The data indicates," "It is observed that"). 5. Discuss why the top alternative was chosen based on its performance across conflicting criteria.',
         defaultWordCount: 2500,
         color: 'from-amber-600 to-orange-600'
     },
@@ -112,6 +114,11 @@ export function AIResearchAssistant({
     const [showResult, setShowResult] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
 
+    // Full Manuscript States
+    const [isProcessingFull, setIsProcessingFull] = useState(false);
+    const [fullProgress, setFullProgress] = useState(0);
+    const [fullManuscriptData, setFullManuscriptData] = useState<Record<string, string>>({});
+
     const currentTemplate = SECTION_TEMPLATES.find(t => t.id === selectedSection) || SECTION_TEMPLATES[0];
 
     // Update defaults when section changes
@@ -161,6 +168,160 @@ export function AIResearchAssistant({
             setGeneratedContent('Error: Failed to generate content. Please try again.');
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleGenerateFullManuscript = async () => {
+        setIsProcessingFull(true);
+        setFullProgress(0);
+        const results: Record<string, string> = {};
+
+        const sectionsToGenerate = SECTION_TEMPLATES.filter(s => s.id !== 'custom');
+
+        try {
+            for (let i = 0; i < sectionsToGenerate.length; i++) {
+                const section = sectionsToGenerate[i];
+                setFullProgress(Math.round(((i) / sectionsToGenerate.length) * 100));
+
+                const response = await fetch('/api/ai-analysis', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        analysisType: 'custom_section',
+                        sectionType: section.id,
+                        customPrompt: section.defaultPrompt + " This is part of a COMPLETE research paper. Ensure it flows correctly.",
+                        wordCount: section.defaultWordCount,
+                        additionalContext: additionalContext + (i > 0 ? " Previous section context: " + results[sectionsToGenerate[i - 1].id]?.substring(0, 500) : ""),
+                        kSensData,
+                        criterionName,
+                        variationRange,
+                        alternatives,
+                        criteria,
+                        method,
+                        ranking: kSensData?.results?.['0']
+                            ? Object.entries(kSensData.results['0']).map(([altName, score]: [string, any]) => ({
+                                alternativeName: altName,
+                                score: typeof score === 'number' ? score : 0
+                            })).sort((a, b) => b.score - a.score)
+                            : []
+                    })
+                });
+
+                const result = await response.json();
+                results[section.id] = result.markdown || "Section generation failed.";
+            }
+
+            setFullManuscriptData(results);
+            setFullProgress(100);
+
+            // Auto-assemble the content for display
+            const assembled = sectionsToGenerate.map(s => `# ${s.name}\n\n${results[s.id]}`).join('\n\n---\n\n');
+            setGeneratedContent(assembled);
+            setShowResult(true);
+            setSelectedSection('abstract'); // Reset to a valid template for font/style
+        } catch (error) {
+            console.error("Full manuscript error:", error);
+            alert("An error occurred while generating the full manuscript. Please try again.");
+        } finally {
+            setIsProcessingFull(false);
+        }
+    };
+
+    const handleDownloadDocx = async (contentInput?: string, titleInput?: string) => {
+        const content = contentInput || generatedContent;
+        if (!content) return;
+
+        // Helper to parse bold markdown and return TextRun array
+        const parseMarkdownToRuns = (text: string) => {
+            const parts = text.split(/(\*\*.*?\*\*)/g);
+            return parts.map(part => {
+                if (part.startsWith('**') && part.endsWith('**')) {
+                    return new TextRun({
+                        text: part.slice(2, -2),
+                        bold: true,
+                        size: 24,
+                        font: "Times New Roman"
+                    });
+                }
+                return new TextRun({
+                    text: part,
+                    size: 24,
+                    font: "Times New Roman"
+                });
+            });
+        };
+
+        try {
+            const doc = new Document({
+                sections: [
+                    {
+                        properties: {},
+                        children: [
+                            new Paragraph({
+                                children: [
+                                    new TextRun({
+                                        text: (titleInput || currentTemplate.name).toUpperCase(),
+                                        bold: true,
+                                        size: 28,
+                                        font: "Times New Roman"
+                                    }),
+                                ],
+                                heading: HeadingLevel.HEADING_1,
+                                alignment: AlignmentType.CENTER,
+                                spacing: { after: 400 },
+                            }),
+                            ...content.split('\n').map(line => {
+                                const cleanLine = line.trim();
+                                if (!cleanLine) return new Paragraph({ spacing: { after: 120 } });
+
+                                if (cleanLine.startsWith('# ')) {
+                                    return new Paragraph({
+                                        children: [new TextRun({ text: cleanLine.replace('# ', ''), bold: true, size: 26, font: "Times New Roman" })],
+                                        heading: HeadingLevel.HEADING_1,
+                                        spacing: { before: 240, after: 120 }
+                                    });
+                                }
+                                if (cleanLine.startsWith('## ')) {
+                                    return new Paragraph({
+                                        children: [new TextRun({ text: cleanLine.replace('## ', ''), bold: true, size: 24, font: "Times New Roman" })],
+                                        heading: HeadingLevel.HEADING_2,
+                                        spacing: { before: 200, after: 100 }
+                                    });
+                                }
+                                if (cleanLine.startsWith('### ')) {
+                                    return new Paragraph({
+                                        children: [new TextRun({ text: cleanLine.replace('### ', ''), bold: true, size: 22, font: "Times New Roman" })],
+                                        heading: HeadingLevel.HEADING_3,
+                                        spacing: { before: 160, after: 80 }
+                                    });
+                                }
+
+                                // Handling bullet points
+                                if (cleanLine.startsWith('* ') || cleanLine.startsWith('- ')) {
+                                    return new Paragraph({
+                                        children: parseMarkdownToRuns(cleanLine.substring(2)),
+                                        bullet: { level: 0 },
+                                        spacing: { after: 120 }
+                                    });
+                                }
+
+                                return new Paragraph({
+                                    children: parseMarkdownToRuns(cleanLine),
+                                    spacing: { after: 200 },
+                                    alignment: AlignmentType.JUSTIFIED
+                                });
+                            }),
+                        ],
+                    },
+                ],
+            });
+
+            const blob = await Packer.toBlob(doc);
+            const fileName = titleInput ? `Full_Research_Manuscript.docx` : `Research_Manuscript_${currentTemplate.id}.docx`;
+            saveAs(blob, fileName);
+        } catch (error) {
+            console.error("Error generating docx:", error);
+            alert("Failed to generate Word document. Please try again.");
         }
     };
 
@@ -268,54 +429,103 @@ export function AIResearchAssistant({
                     </p>
                 </div>
 
-                {/* Generate Button */}
-                <Button
-                    onClick={handleGenerate}
-                    disabled={isGenerating || !customPrompt}
-                    className={`w-full h-12 text-sm font-semibold bg-gradient-to-r ${currentTemplate.color} hover:opacity-90 text-white shadow-lg`}
-                >
-                    {isGenerating ? (
-                        <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Generating {wordCount} words...
-                        </>
-                    ) : (
-                        <>
-                            <Sparkles className="w-4 h-4 mr-2" />
-                            Generate {currentTemplate.name}
-                        </>
-                    )}
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                        onClick={handleGenerate}
+                        disabled={isGenerating || isProcessingFull || !customPrompt}
+                        className={`flex-1 h-12 text-sm font-semibold bg-gradient-to-r ${currentTemplate.color} hover:opacity-90 text-white shadow-lg`}
+                    >
+                        {isGenerating ? (
+                            <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Generating {wordCount} words...
+                            </>
+                        ) : (
+                            <>
+                                <Sparkles className="w-4 h-4 mr-2" />
+                                Generate {currentTemplate.name}
+                            </>
+                        )}
+                    </Button>
+
+                    <Button
+                        onClick={handleGenerateFullManuscript}
+                        disabled={isGenerating || isProcessingFull}
+                        variant="outline"
+                        className="flex-1 h-12 text-sm font-bold border-2 border-indigo-600 text-indigo-700 hover:bg-indigo-50 shadow-md"
+                    >
+                        {isProcessingFull ? (
+                            <div className="flex flex-col items-center">
+                                <div className="flex items-center gap-2">
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    <span>Writing Paper ({fullProgress}%)</span>
+                                </div>
+                                <div className="w-full bg-gray-200 h-1 mt-1 rounded-full overflow-hidden">
+                                    <div className="bg-indigo-600 h-full transition-all duration-300" style={{ width: `${fullProgress}%` }} />
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <BookOpen className="w-4 h-4 mr-2" />
+                                🚀 Generate Full Manuscript
+                            </>
+                        )}
+                    </Button>
+                </div>
 
                 {/* Generated Content Display */}
                 {showResult && (
                     <div className="mt-6 p-6 bg-gray-50 rounded-lg border-2 border-gray-200">
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                             <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
                                 {currentTemplate.icon}
-                                Generated {currentTemplate.name}
+                                {fullProgress === 100 && Object.keys(fullManuscriptData).length > 0
+                                    ? "Complete Research Manuscript"
+                                    : `Generated ${currentTemplate.name}`}
                             </h3>
-                            <Button
-                                onClick={() => {
-                                    navigator.clipboard.writeText(generatedContent);
-                                    setIsCopied(true);
-                                    setTimeout(() => setIsCopied(false), 2000);
-                                }}
-                                variant="outline"
-                                size="sm"
-                                className={`h-8 text-xs ${isCopied ? 'border-blue-500 text-blue-600' : ''}`}
-                            >
-                                {isCopied ? (
-                                    <>
-                                        <Check className="w-4 h-4 mr-1 text-blue-600" />
-                                        Copied
-                                    </>
-                                ) : (
-                                    <>
-                                        📋 Copy
-                                    </>
+                            <div className="flex flex-wrap items-center gap-2">
+                                {fullProgress === 100 && Object.keys(fullManuscriptData).length > 0 && (
+                                    <Button
+                                        onClick={() => handleDownloadDocx(undefined, "Full Research Manuscript")}
+                                        variant="default"
+                                        size="sm"
+                                        className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white flex items-center gap-1.5"
+                                    >
+                                        <Download className="w-3.5 h-3.5" />
+                                        Download Full Paper (.docx)
+                                    </Button>
                                 )}
-                            </Button>
+                                <Button
+                                    onClick={() => handleDownloadDocx()}
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 flex items-center gap-1.5"
+                                >
+                                    <Download className="w-3.5 h-3.5" />
+                                    Download Word (.docx)
+                                </Button>
+                                <Button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(generatedContent);
+                                        setIsCopied(true);
+                                        setTimeout(() => setIsCopied(false), 2000);
+                                    }}
+                                    variant="outline"
+                                    size="sm"
+                                    className={`h-8 text-xs ${isCopied ? 'border-blue-500 text-blue-600' : ''}`}
+                                >
+                                    {isCopied ? (
+                                        <>
+                                            <Check className="w-4 h-4 mr-1 text-blue-600" />
+                                            Copied
+                                        </>
+                                    ) : (
+                                        <>
+                                            📋 Copy
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
                         </div>
                         <div className="prose prose-sm max-w-none">
                             {isGenerating ? (

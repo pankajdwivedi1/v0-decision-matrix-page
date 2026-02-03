@@ -3073,8 +3073,8 @@ export default function MCDMCalculator() {
           </div>
         )}
 
-        <div className="w-full max-w-7xl px-4 sm:px-6 md:px-8 mx-auto py-4 sm:py-6">
-          <div className="sticky top-0 z-40 bg-[var(--page-bg-color,white)] -mx-4 px-4 pt-4 pb-1 sm:relative sm:top-auto sm:z-auto sm:bg-transparent sm:mx-0 sm:px-0 sm:pt-0 sm:pb-0 border-b border-gray-100 sm:border-0 shadow-sm sm:shadow-none">
+        <div className="w-full max-w-7xl px-0 sm:px-6 md:px-8 mx-auto py-4 sm:py-6">
+          <div className="sticky top-0 z-40 bg-[var(--page-bg-color,white)] px-4 pt-4 pb-1 sm:relative sm:top-auto sm:z-auto sm:bg-transparent sm:mx-0 sm:px-0 sm:pt-0 sm:pb-0 border-b border-gray-100 sm:border-0 shadow-sm sm:shadow-none">
             <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
               {/* SidebarTrigger removed */}
               <div className="min-w-0 flex-1">
@@ -3129,7 +3129,7 @@ export default function MCDMCalculator() {
               </Button>
               <Button
                 variant="outline"
-                className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100`}
+                className={`w-full sm:w-auto col-span-2 text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100`}
                 onClick={() => setIsResearchContextDialogOpen(true)}
               >
                 <Sparkles className="w-3 h-3 mr-1" />
@@ -3381,8 +3381,8 @@ export default function MCDMCalculator() {
           </Dialog>
 
           {(homeTab === "rankingMethods" || homeTab === "weightMethods") && (
-            <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-              <CardHeader className="pb-3">
+            <Card className="border-gray-200 bg-white shadow-none w-full mb-6 rounded-none sm:rounded-xl">
+              <CardHeader className="pb-3 px-4 sm:px-6">
                 <CardTitle className="text-sm text-black">Construct the Decision Matrix</CardTitle>
                 <CardDescription className="text-xs text-gray-700">
                   Create a decision matrix by adding alternatives and criteria
@@ -3413,8 +3413,8 @@ export default function MCDMCalculator() {
                 </div>
               )}
               {isFullyDataFilled && (
-                <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                  <CardHeader className="pb-3">
+                <Card className="border-gray-200 bg-white shadow-none w-full mb-6 rounded-none sm:rounded-xl">
+                  <CardHeader className="pb-3 px-4 sm:px-6">
                     <CardTitle className="text-sm text-black">Ranking Methods</CardTitle>
                     <CardDescription className="text-xs text-gray-700">
                       Review and edit the decision matrix before calculation
@@ -3572,7 +3572,7 @@ export default function MCDMCalculator() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
+                      <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded mx-3 sm:mx-0">
                         <p className="font-semibold">✓ Data has uploaded</p>
                         <p className="mt-1">
                           {alternatives.length} alternatives × {criteria.length} criteria
@@ -4707,7 +4707,7 @@ export default function MCDMCalculator() {
                 <CardContent className="space-y-4">
                   {isFullyDataFilled ? (
                     <div className="space-y-3">
-                      <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
+                      <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded mx-3 sm:mx-0">
                         <p className="font-semibold">✓ Data has uploaded</p>
                         <p className="mt-1">
                           {alternatives.length} alternatives × {criteria.length} criteria
@@ -4780,7 +4780,7 @@ export default function MCDMCalculator() {
                         onClick={() => setComparisonWeightOpen((prev) => !prev)}
                         className="flex w-full items-center justify-between mb-2"
                       >
-                        <p className="text-xs font-semibold text-black">Weight method (choose one)</p>
+                        <p className="text-[10px] font-semibold text-black">Weight method (choose one)</p>
                         {comparisonWeightOpen ? (
                           <ChevronDown className="w-4 h-4 text-black" />
                         ) : (
@@ -4790,7 +4790,7 @@ export default function MCDMCalculator() {
                       {comparisonWeightOpen && (
                         <div className="grid grid-cols-2 gap-2 mt-2 max-h-[200px] overflow-y-auto">
                           {WEIGHT_METHODS.map((w) => (
-                            <label key={w.value} className="flex items-start gap-2 text-[11px] text-black cursor-pointer hover:bg-gray-50 p-1 rounded">
+                            <label key={w.value} className="flex items-start gap-2 text-[10px] text-black cursor-pointer hover:bg-gray-50 p-1 rounded leading-none">
                               <input
                                 type="checkbox"
                                 checked={comparisonWeightMethod === w.value}
@@ -4816,7 +4816,7 @@ export default function MCDMCalculator() {
                                 className="mt-0.5"
                               />
                               <span>
-                                <span className="font-semibold">{w.label}</span>
+                                <span className="font-normal">{w.label}</span>
                               </span>
                             </label>
                           ))}
@@ -4830,7 +4830,7 @@ export default function MCDMCalculator() {
                         onClick={() => setComparisonRankingOpen((prev) => !prev)}
                         className="flex w-full items-center justify-between mb-2"
                       >
-                        <p className="text-xs font-semibold text-black">
+                        <p className="text-[10px] font-semibold text-black">
                           Ranking methods Reference ({selectedRankingMethods.length} selected)
                         </p>
                         {comparisonRankingOpen ? (
@@ -4842,7 +4842,7 @@ export default function MCDMCalculator() {
                       {comparisonRankingOpen && (
                         <div className="grid grid-cols-2 gap-2 mt-2 max-h-[200px] overflow-y-auto">
                           {MCDM_METHODS.map((m) => (
-                            <label key={m.value} className="flex items-start gap-2 text-[11px] text-black cursor-pointer hover:bg-gray-50 p-1 rounded">
+                            <label key={m.value} className="flex items-start gap-2 text-[10px] text-black cursor-pointer hover:bg-gray-50 p-1 rounded leading-none">
                               <input
                                 type="checkbox"
                                 checked={selectedRankingMethods.includes(m.value)}
@@ -4851,7 +4851,7 @@ export default function MCDMCalculator() {
                                 className="mt-0.5"
                               />
                               <span>
-                                <span className="font-semibold">{m.label}</span>
+                                <span className="font-normal">{m.label}</span>
                               </span>
                             </label>
                           ))}
@@ -5678,8 +5678,8 @@ export default function MCDMCalculator() {
 
           {homeTab === "sensitivityAnalysis" && (
             <>
-              <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                <CardHeader className="pb-3">
+              <Card className="border-gray-200 bg-white shadow-none w-full mb-6 rounded-none sm:rounded-xl">
+                <CardHeader className="pb-3 px-4 sm:px-6">
                   <CardTitle className="text-sm text-black">Construct the Decision Matrix</CardTitle>
                   <CardDescription className="text-xs text-gray-700">
                     Create a decision matrix by adding alternatives and criteria
@@ -5699,8 +5699,8 @@ export default function MCDMCalculator() {
               </Card>
 
 
-              <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                <CardHeader className="pb-3">
+              <Card className="border-gray-200 bg-white shadow-none w-full mb-6 rounded-none sm:rounded-xl">
+                <CardHeader className="pb-3 px-4 sm:px-6">
                   <CardTitle className="text-sm text-black">Sensitivity Analysis Configuration</CardTitle>
                   <CardDescription className="text-xs text-gray-700">
                     Analyze how changing the weight of a specific criterion affects the ranking of alternatives
@@ -5776,23 +5776,23 @@ export default function MCDMCalculator() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 items-start">
 
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold text-black">Choose weight method</label>
+                      <label className="text-[10px] sm:text-xs font-bold text-black uppercase">WEIGHT METHOD</label>
                       <div className="relative">
                         <button
                           type="button"
                           onClick={() => setIsWeightSelectorOpen(!isWeightSelectorOpen)}
-                          className="w-full flex items-center justify-between text-xs h-8 border border-gray-200 rounded px-3 bg-white"
+                          className="w-full flex items-center justify-between text-xs h-9 border border-gray-200 rounded px-2 sm:px-3 bg-white"
                         >
-                          <span>{sensitivityWeightMethods.length > 0 ? `${sensitivityWeightMethods.length} selected` : "Select weight methods..."}</span>
-                          <ChevronDown className="w-4 h-4 text-gray-500" />
+                          <span className="truncate">{sensitivityWeightMethods.length > 0 ? `${sensitivityWeightMethods.length} selected` : "Select..."}</span>
+                          <ChevronDown className="w-4 h-4 text-gray-400" />
                         </button>
                         {isWeightSelectorOpen && (
                           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-60 overflow-y-auto p-2">
                             {WEIGHT_METHODS.map((w) => (
-                              <label key={w.value} className="flex items-center gap-2 text-xs p-1 hover:bg-gray-50 cursor-pointer text-black">
+                              <label key={w.value} className="flex items-center gap-2 text-[10px] p-1 hover:bg-gray-50 cursor-pointer text-black font-normal">
                                 <input
                                   type="checkbox"
                                   checked={sensitivityWeightMethods.includes(w.value)}
@@ -5816,7 +5816,7 @@ export default function MCDMCalculator() {
                               </label>
                             ))}
                             <div className="border-t my-1"></div>
-                            <label className="flex items-center gap-2 text-xs p-1 hover:bg-gray-50 cursor-pointer text-black">
+                            <label className="flex items-center gap-2 text-[10px] p-1 hover:bg-gray-50 cursor-pointer text-black font-normal">
                               <input
                                 type="checkbox"
                                 checked={sensitivityWeightMethods.includes("custom")}
@@ -5830,16 +5830,13 @@ export default function MCDMCalculator() {
                           </div>
                         )}
                       </div>
-                      <p className="text-[10px] text-gray-500">
-                        Select methods to compare outcomes
-                      </p>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold text-black">Select MCDM Method</label>
+                      <label className="text-[10px] sm:text-xs font-bold text-black uppercase">RANKING METHOD</label>
                       <Select value={sensitivityMethod} onValueChange={(value) => setSensitivityMethod(value as MCDMMethod)}>
-                        <SelectTrigger className="text-xs h-8 border-gray-200">
-                          <SelectValue placeholder="Choose a method..." />
+                        <SelectTrigger className="text-xs h-9 border-gray-200">
+                          <SelectValue placeholder="Select..." />
                         </SelectTrigger>
                         <SelectContent>
                           {MCDM_METHODS.map((m) => (
@@ -5849,12 +5846,9 @@ export default function MCDMCalculator() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <p className="text-[10px] text-gray-500">
-                        Method used to calculate rankings
-                      </p>
                     </div>
 
-                    <div className="pt-6">
+                    <div className="pt-0 md:pt-6 col-span-2 md:col-span-1">
                       <Button
                         type="button"
                         onClick={() => handleWeightSensitivityAnalysis()}
