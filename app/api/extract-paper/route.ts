@@ -4,7 +4,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // POST handler for Paper Extraction
 export async function POST(req: NextRequest) {
   try {
-    const { paperText, extractionType } = await req.json();
+    const { paperText, extractionType, userApiKey: providedKey } = await req.json();
 
     if (!paperText) {
       return NextResponse.json(
@@ -14,12 +14,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Get API keys
-    const keysString = process.env.GEMINI_API_KEY || "";
-    const apiKeys = keysString.split(",").map(k => k.trim()).filter(k => k.length > 0);
+    let apiKeys: string[] = [];
+    if (providedKey && providedKey.trim().length > 0) {
+      apiKeys = [providedKey.trim()];
+    } else {
+      const keysString = process.env.GEMINI_API_KEY || "";
+      apiKeys = keysString.split(",").map(k => k.trim()).filter(k => k.length > 0);
+    }
 
     if (apiKeys.length === 0) {
       return NextResponse.json(
-        { error: "Gemini API Keys are missing" },
+        { error: "Gemini API Keys are missing. Please add your own API key in settings." },
         { status: 500 }
       );
     }

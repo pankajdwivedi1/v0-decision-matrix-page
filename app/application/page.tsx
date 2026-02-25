@@ -43,7 +43,8 @@ import {
 import * as XLSX from "xlsx"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Upload, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, ArrowDown, Home, Download, LayoutGrid, Sparkles, FileText, Cpu, Bot, Pencil, Book, Settings, MessageCircle } from "lucide-react"
+import { ApiKeySettings } from "@/components/ApiKeySettings";
+import { Upload, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, ArrowDown, Home, Download, LayoutGrid, Sparkles, FileText, Cpu, Bot, Pencil, Book, Settings, MessageCircle, RefreshCw, Loader2, Check } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import PaperExtractor from "@/components/PaperExtractor"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar, PieChart, Pie, ReferenceLine } from "recharts"
@@ -130,6 +131,7 @@ export default function MCDMCalculator() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [comparisonChartType, setComparisonChartType] = useState<string>("composed")
   const comparisonChartRef = useRef<HTMLDivElement>(null)
+  const rankingComparisonTableRef = useRef<HTMLDivElement>(null)
   const weightChartRef = useRef<HTMLDivElement>(null)
   const sensitivityGraphicalVariationRef = useRef<HTMLDivElement>(null)
   const sensitivityChartRef = useRef<HTMLDivElement>(null)
@@ -1078,6 +1080,7 @@ export default function MCDMCalculator() {
         alternatives,
         criteria,
       )
+      setComparisonCriteria(weightedCriteria)
 
       const payloadAlternatives = alternatives
       let validationError: string | null = null;
@@ -1202,6 +1205,85 @@ export default function MCDMCalculator() {
       .catch((err) => {
         console.error("Error exporting chart", err)
       })
+  }
+
+  const downloadRankingComparisonTableAsJpeg = () => {
+    if (!rankingComparisonTableRef.current) return
+
+    const element = rankingComparisonTableRef.current
+    const width = element.scrollWidth
+    const height = element.scrollHeight
+
+    toJpeg(element, {
+      quality: 1.0,
+      backgroundColor: "#ffffff",
+      pixelRatio: 4,
+      width: width,
+      height: height,
+      style: {
+        overflow: 'visible',
+        maxHeight: 'none',
+        maxWidth: 'none',
+        width: `${width}px`,
+        height: `${height}px`
+      }
+    })
+      .then((dataUrl) => {
+        const link = document.createElement("a")
+        link.download = `ranking-comparison-table-${Date.now()}.jpg`
+        link.href = dataUrl
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      })
+      .catch((err) => {
+        console.error("Error exporting comparison table", err)
+      })
+  }
+
+  const exportRankingComparisonToExcel = async () => {
+    if (comparisonResults.length === 0) return
+
+    try {
+      const weightMethodLabel = WEIGHT_METHODS.find(w => w.value === comparisonWeightMethod)?.label || comparisonWeightMethod.toUpperCase()
+
+      const exportData = {
+        method: "Ranking Comparison",
+        weightMethod: weightMethodLabel,
+        isComparisonExport: true,
+        comparisonResults: comparisonResults,
+        alternatives,
+        criteria: comparisonCriteria.length > 0 ? comparisonCriteria : criteria,
+        resultsDecimalPlaces,
+        projectName: "MCDM Ranking Comparison",
+        userId: "User 1"
+      }
+
+      const response = await fetch("/api/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(exportData)
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to export to Excel")
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `Ranking_Comparison_${Date.now()}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error("Export error:", error)
+      alert("Failed to export comparison data to Excel")
+    }
   }
 
   const comparisonChartData = useMemo(() => {
@@ -3127,14 +3209,17 @@ export default function MCDMCalculator() {
               >
                 Sensitivity Analysis
               </Button>
-              <Button
-                variant="outline"
-                className={`w-full sm:w-auto col-span-2 text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100`}
-                onClick={() => setIsResearchContextDialogOpen(true)}
-              >
-                <Sparkles className="w-3 h-3 mr-1" />
-                Define Research Context (AI)
-              </Button>
+              <div className="w-full sm:w-auto col-span-2 flex flex-col sm:flex-row gap-2">
+                <ApiKeySettings />
+                <Button
+                  variant="outline"
+                  className={`flex-1 text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 items-center justify-center flex`}
+                  onClick={() => setIsResearchContextDialogOpen(true)}
+                >
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  Define Research Context (AI)
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -5286,65 +5371,88 @@ export default function MCDMCalculator() {
 
               {comparisonResults.length > 0 && (
                 <Card className="border-gray-200 bg-white shadow-none w-full mb-4">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm text-black">Ranking table</CardTitle>
-                    <CardDescription className="text-xs text-gray-700">
-                      Scores and rankings generated by the methods. Ranking depends on the method used.
-                    </CardDescription>
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle className="text-sm text-black">Ranking table</CardTitle>
+                      <CardDescription className="text-xs text-gray-700">
+                        Scores and rankings generated by the methods. Ranking depends on the method used.
+                      </CardDescription>
+                    </div>
+                    <Button onClick={exportRankingComparisonToExcel} variant="outline" size="sm" className="h-7 text-xs">
+                      <Download className="w-3 h-3 mr-1" /> Excel
+                    </Button>
                   </CardHeader>
                   <CardContent className="table-responsive">
-                    <table className="min-w-full text-xs border border-gray-200 rounded-lg overflow-x-auto">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th rowSpan={2} className="text-left px-3 py-2 border-b border-r border-gray-200 text-black font-semibold align-bottom">
-                            Alternative
-                          </th>
-                          {comparisonResults.map((result) => (
-                            <th
-                              key={result.method}
-                              colSpan={2}
-                              className="px-3 py-2 text-center border-b border-r border-gray-200 text-black font-semibold"
-                            >
-                              {result.label}
+                    <div ref={rankingComparisonTableRef} className="bg-white">
+                      <table className="min-w-full text-xs border border-gray-200 rounded-lg overflow-x-auto">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th rowSpan={2} className="relative bg-white text-black font-bold text-[9px] border-r border-gray-200 p-0 h-10 w-32 min-w-[128px]">
+                              <div className="flex flex-col items-center justify-center h-full leading-tight pr-6">
+                                <div className="text-[9px] font-bold py-0.5 border-b border-gray-200 w-full text-center flex items-center justify-center gap-1">
+                                  Methods <ArrowRight className="w-2 h-2 stroke-[3]" />
+                                </div>
+                                <div className="text-[9px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">
+                                  Alternatives <ArrowDown className="w-2 h-2 stroke-[3]" />
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-1 right-1 h-6 w-6 text-gray-400 hover:text-blue-600 p-0"
+                                onClick={downloadRankingComparisonTableAsJpeg}
+                                title="Download Table as JPG"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                              </Button>
                             </th>
-                          ))}
-                        </tr>
-                        <tr>
-                          {comparisonResults.map((result) => (
-                            <Fragment key={result.method}>
-                              <th key={`${result.method}-score`} className="px-2 py-1 text-center border-b border-gray-200 text-gray-600 font-medium text-[10px]">
-                                Score
+                            {comparisonResults.map((result) => (
+                              <th
+                                key={result.method}
+                                colSpan={2}
+                                className="px-3 py-2 text-center border-b border-r border-gray-200 text-black font-semibold"
+                              >
+                                {result.label}
                               </th>
-                              <th key={`${result.method}-rank`} className="px-2 py-1 text-center border-b border-r border-gray-200 text-gray-600 font-medium text-[10px]">
-                                Rank
-                              </th>
-                            </Fragment>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {comparisonResults[0]?.ranking?.map((item, altIndex) => (
-                          <tr key={item.alternativeName} className="border-b border-gray-200 hover:bg-gray-50">
-                            <td className="px-3 py-2 font-medium text-black whitespace-nowrap border-r border-gray-200">
-                              {item.alternativeName}
-                            </td>
-                            {comparisonResults.map((result) => {
-                              const altRanking = result.ranking?.find(r => r.alternativeName === item.alternativeName)
-                              return (
-                                <Fragment key={result.method}>
-                                  <td key={`${result.method}-${item.alternativeName}-score`} className="px-2 py-2 text-center text-black">
-                                    {altRanking?.score !== undefined ? Number(altRanking.score).toFixed(resultsDecimalPlaces) : "-"}
-                                  </td>
-                                  <td key={`${result.method}-${item.alternativeName}-rank`} className="px-2 py-2 text-center font-semibold text-black border-r border-gray-200">
-                                    {altRanking?.rank ?? "-"}
-                                  </td>
-                                </Fragment>
-                              )
-                            })}
+                            ))}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                          <tr>
+                            {comparisonResults.map((result) => (
+                              <Fragment key={result.method}>
+                                <th key={`${result.method}-score`} className="px-2 py-1 text-center border-b border-gray-200 text-gray-600 font-medium text-[10px]">
+                                  Score
+                                </th>
+                                <th key={`${result.method}-rank`} className="px-2 py-1 text-center border-b border-r border-gray-200 text-gray-600 font-medium text-[10px]">
+                                  Rank
+                                </th>
+                              </Fragment>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {comparisonResults[0]?.ranking?.map((item, altIndex) => (
+                            <tr key={item.alternativeName} className="border-b border-gray-200 hover:bg-gray-50">
+                              <td className="px-3 py-2 font-medium text-black whitespace-nowrap border-r border-gray-200">
+                                {item.alternativeName}
+                              </td>
+                              {comparisonResults.map((result) => {
+                                const altRanking = result.ranking?.find(r => r.alternativeName === item.alternativeName)
+                                return (
+                                  <Fragment key={result.method}>
+                                    <td key={`${result.method}-${item.alternativeName}-score`} className="px-2 py-2 text-center text-black">
+                                      {altRanking?.score !== undefined ? Number(altRanking.score).toFixed(resultsDecimalPlaces) : "-"}
+                                    </td>
+                                    <td key={`${result.method}-${item.alternativeName}-rank`} className="px-2 py-2 text-center font-semibold text-black border-r border-gray-200">
+                                      {altRanking?.rank ?? "-"}
+                                    </td>
+                                  </Fragment>
+                                )
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </CardContent>
                 </Card>
               )}

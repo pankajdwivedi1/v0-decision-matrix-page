@@ -137,11 +137,13 @@ export function AIResearchAssistant({
 
         try {
             const finalPrompt = customPrompt || currentTemplate.defaultPrompt;
+            const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
 
             const response = await fetch('/api/ai-analysis', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    userApiKey,
                     analysisType: 'custom_section',
                     sectionType: selectedSection,
                     customPrompt: finalPrompt,
@@ -182,11 +184,13 @@ export function AIResearchAssistant({
             for (let i = 0; i < sectionsToGenerate.length; i++) {
                 const section = sectionsToGenerate[i];
                 setFullProgress(Math.round(((i) / sectionsToGenerate.length) * 100));
+                const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
 
                 const response = await fetch('/api/ai-analysis', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        userApiKey,
                         analysisType: 'custom_section',
                         sectionType: section.id,
                         customPrompt: section.defaultPrompt + " This is part of a COMPLETE research paper. Ensure it flows correctly.",

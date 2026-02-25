@@ -161,6 +161,7 @@ export default function KSensitivityCalculator({
 
     try {
       // Compute ranking from K-sens results
+      const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
       const criterionName = data.criterionName;
       const baseResults = data.kSensData?.results?.['0'] || {};
       const ranking = Object.entries(baseResults).map(([altName, score]: [string, any]) => ({
@@ -173,6 +174,7 @@ export default function KSensitivityCalculator({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...data,
+          userApiKey,
           alternatives,
           criteria: workingCriteria,
           method: selectedRankingMethod,
@@ -196,6 +198,7 @@ export default function KSensitivityCalculator({
 
     try {
       // Compute ranking from K-sens results
+      const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
       const criterionName = data.criterionName;
       const baseResults = data.kSensData?.results?.['0'] || {};
       const ranking = Object.entries(baseResults).map(([altName, score]: [string, any]) => ({
@@ -208,6 +211,7 @@ export default function KSensitivityCalculator({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...data,
+          userApiKey,
           alternatives,
           criteria: workingCriteria,
           method: selectedRankingMethod,

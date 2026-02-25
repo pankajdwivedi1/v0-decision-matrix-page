@@ -28,15 +28,20 @@ function formatNumbersInObject(obj: any): any {
 export async function POST(req: NextRequest) {
     try {
         const reqContent = await req.json();
-        const { alternatives, criteria, ranking, method, analysisType } = reqContent;
+        const { alternatives, criteria, ranking, method, analysisType, userApiKey: providedKey } = reqContent;
 
         // 1. Get List of Keys
-        const keysString = process.env.GEMINI_API_KEY || "";
-        const apiKeys = keysString.split(",").map(k => k.trim()).filter(k => k.length > 0);
+        let apiKeys: string[] = [];
+        if (providedKey && providedKey.trim().length > 0) {
+            apiKeys = [providedKey.trim()];
+        } else {
+            const keysString = process.env.GEMINI_API_KEY || "";
+            apiKeys = keysString.split(",").map(k => k.trim()).filter(k => k.length > 0);
+        }
 
         if (apiKeys.length === 0) {
             return NextResponse.json(
-                { error: "Gemini API Keys are missing. Please add GEMINI_API_KEY to your env variables." },
+                { error: "Gemini API Keys are missing. Please add GEMINI_API_KEY to your env variables or provide your own API key." },
                 { status: 500 }
             );
         }

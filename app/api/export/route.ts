@@ -12,6 +12,8 @@ interface ExportRequest {
   resultsDecimalPlaces: number
   isWeightExport?: boolean
   weightMethod?: string
+  isComparisonExport?: boolean
+  comparisonResults?: any[]
   projectName?: string
   userId?: string
 }
@@ -19,7 +21,7 @@ interface ExportRequest {
 export async function POST(request: NextRequest) {
   try {
     const body: any = await request.json()
-    const { method, ranking, alternatives, criteria, metrics, resultsDecimalPlaces, isWeightExport, weightMethod } = body
+    const { method, ranking, alternatives, criteria, metrics, resultsDecimalPlaces, isWeightExport, weightMethod, isComparisonExport, comparisonResults } = body
 
     const methodLabel = method.toUpperCase()
     const now = new Date()
@@ -2881,12 +2883,62 @@ export async function POST(request: NextRequest) {
     } // End of if (metrics)
 
     // Ranking results at the end
-    if (!isWeightExport && ranking && ranking.length > 0) {
+    if (!isWeightExport && ranking && ranking.length > 0 && !isComparisonExport) {
       addRowWithBorder([`Table ${tableIndex}: Ranking Results`], false, { isBold: true, alignment: { horizontal: "left" } })
       worksheet.addRow([])
       addRowWithBorder(["Rank", "Alternative", "Score"], true, { isBold: true })
       ranking.forEach((item: any) => {
         addRowWithBorder([item.rank, item.alternativeName, item.score], true, { useNumFmt: true })
+      })
+      tableIndex++
+    }
+
+    // Comparison ranking results
+    if (isComparisonExport && comparisonResults && comparisonResults.length > 0) {
+      addRowWithBorder([`Table ${tableIndex}: Ranking Comparison Matrix`], false, { isBold: true, alignment: { horizontal: "left" } })
+      worksheet.addRow([])
+
+      // Multi-line header logic (similar to web UI)
+      const header1 = ["Alternative"]
+      const header2 = [""]
+
+      comparisonResults.forEach((res: any) => {
+        header1.push(res.label, "")
+        header2.push("Score", "Rank")
+      })
+
+      const hRow1 = worksheet.addRow(header1)
+      const hRow2 = worksheet.addRow(header2)
+
+      // Merge cells for method labels
+      let colIdx = 2
+      comparisonResults.forEach(() => {
+        worksheet.mergeCells(hRow1.number, colIdx, hRow1.number, colIdx + 1)
+        colIdx += 2
+      })
+
+      // Apply styles to headers
+      hRow1.eachCell((cell) => {
+        cell.font = boldFont
+        cell.border = borderStyle
+        cell.alignment = { horizontal: "center", vertical: "middle" }
+      })
+      hRow2.eachCell((cell) => {
+        cell.font = boldFont
+        cell.border = borderStyle
+        cell.alignment = { horizontal: "center", vertical: "middle" }
+      })
+
+      // Add data rows
+      // Use the first result as baseline for alternatives
+      const baselineRanking = comparisonResults[0].ranking
+      baselineRanking.forEach((item: any) => {
+        const rowData = [item.alternativeName]
+        comparisonResults.forEach((res: any) => {
+          const altRes = res.ranking.find((r: any) => r.alternativeName === item.alternativeName)
+          rowData.push(altRes?.score ?? 0, altRes?.rank ?? "-")
+        })
+        addRowWithBorder(rowData, true, { useNumFmt: true })
       })
     }
 

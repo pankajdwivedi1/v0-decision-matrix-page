@@ -97,10 +97,14 @@ export default function PaperExtractor({ onExtractComplete, onClose }: PaperExtr
 
     const extractFromText = async (text: string) => {
         try {
+            const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
             const response = await fetch('/api/extract-paper', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ paperText: text }),
+                body: JSON.stringify({
+                    paperText: text,
+                    userApiKey
+                }),
             });
 
             const result = await response.json();
