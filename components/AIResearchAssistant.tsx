@@ -17,6 +17,7 @@ interface AIResearchAssistantProps {
     alternatives: any[];
     criteria: any[];
     method: string;
+    assetLabels?: Record<string, string>;
     onClose?: () => void;
 }
 
@@ -27,63 +28,72 @@ const SECTION_TEMPLATES = [
         name: 'Abstract',
         icon: <FileText className="w-4 h-4" />,
         description: 'Concise summary of the entire study',
-        defaultPrompt: 'Write a high-quality academic abstract following this exact structure: 1. Context & Problem: Start by describing the real-world challenge and the research gap (why is this study needed?). 2. Solution: Introduce the specific MCDM methodology as a tool to solve this specific problem. 3. Methodology: Describe how the criteria and alternatives were established. 4. Findings: Summarize the final rankings and the stability discovered in the sensitivity analysis. 5. Significance: Conclude with the practical impact for decision-makers. Also, at the very end, provide exactly 5-6 professional "Keywords" related to the study.',
-        defaultWordCount: 300,
+        defaultPrompt: 'Write a high-quality academic abstract following this exact structure: 1. Context & Problem: Start by describing the real-world challenge and the research gap. 2. Solution: Introduce the specific MCDM methodology (Sum Weighted Information (SWI) or Sum Weighted Exponential Information (SWEI)). 3. Methodology: Describe criteria and alternatives. 4. Findings: Summarize final rankings and sensitivity (±30% variation range). 5. Significance: Practical impact. End with exactly 5-6 professional Keywords.',
+        defaultWordCount: 250,
         color: 'from-blue-600 to-cyan-600'
     },
     {
         id: 'introduction',
-        name: 'Introduction',
+        name: '1. Introduction',
         icon: <BookOpen className="w-4 h-4" />,
-        description: 'Background, research gap, and objectives',
-        defaultPrompt: 'Write a comprehensive scholarly introduction. Structure it to: 1. Background: Detail the significance of the decision-making problem in its specific field. 2. The Research Gap: Explain why current methods are insufficient or why a structured MCDM approach is necessary for this specific case. 3. Study Objective: State the goal of identifying the optimal choice through mathematical rigor. 4. Methodology Overview: Briefly justify the selection of the chosen weighting and ranking methods.',
-        defaultWordCount: 3500,
+        description: 'Context, research gap, and objectives',
+        defaultPrompt: 'Write a comprehensive scholarly introduction. Use hierarchical numbering for subsections (e.g., 1.1 Background, 1.2 Research Gap, 1.3 Objectives). Establish global context, narrow to the specific challenge, and justify the use of Sum Weighted Information (SWI) and Sum Weighted Exponential Information (SWEI).',
+        defaultWordCount: 1000,
         color: 'from-violet-600 to-purple-600'
     },
     {
         id: 'literature',
-        name: 'Literature Review',
+        name: '2. Literature Review',
         icon: <BookOpen className="w-4 h-4" />,
-        description: 'Review of relevant research and theories',
-        defaultPrompt: 'Write a comprehensive literature review (3000-5000 words) covering: MCDM methodologies, relevant applications, theoretical foundations, and research gaps. Include structured sections for different aspects.',
-        defaultWordCount: 4000,
+        description: 'Review of relevant research',
+        defaultPrompt: 'Write a comprehensive literature review. Use hierarchical numbering (e.g., 2.1 Theoretical Foundations, 2.2 MCDM Applications). Synthesize current research in the field and position this study using Sum Weighted Information (SWI) and Sum Weighted Exponential Information (SWEI).',
+        defaultWordCount: 1200,
         color: 'from-indigo-600 to-blue-600'
     },
     {
         id: 'methodology',
-        name: 'Methodology',
+        name: '3. Methodology',
         icon: <Target className="w-4 h-4" />,
-        description: 'Detailed research methods and procedures',
-        defaultPrompt: 'Write a detailed methodology section (2000-3000 words) explaining: research design, data collection, MCDM method implementation, criteria selection, sensitivity analysis approach, and validation procedures.',
-        defaultWordCount: 2500,
+        description: 'Research methods and procedures',
+        defaultPrompt: 'Write a technical methodology section. Use hierarchical numbering (e.g., 3.1 Framework, 3.2 Mathematical Steps of SWI/SWEI). Detail the procedural framework, criteria selection, and the stability validation approach (e.g., ±30% perturbation).',
+        defaultWordCount: 1500,
         color: 'from-emerald-600 to-teal-600'
     },
     {
         id: 'results',
-        name: 'Results & Analysis',
+        name: '4. Results & Analysis',
         icon: <TrendingUp className="w-4 h-4" />,
-        description: 'Presentation and interpretation of findings',
-        defaultPrompt: 'Write a comprehensive results section. You MUST follow these academic rules: 1. Refer to the final weights as "Table 1" and the ranking results as "Table 2". 2. Analyze specific numerical differences between alternatives. 3. Discuss any rank reversals observed during the sensitivity analysis (refer to this as "Figure 1"). 4. Use formal scholarly language (e.g., "The data indicates," "It is observed that"). 5. Discuss why the top alternative was chosen based on its performance across conflicting criteria.',
-        defaultWordCount: 2500,
+        description: 'Presentation of findings',
+        defaultPrompt: 'Write a comprehensive results section. Use hierarchical numbering (e.g., 4.1 Numerical Results, 4.2 Ranking Stability). Refer to final weights as Table 1 and rankings as Table 2. Discuss rank reversals observed during the ±30% variation (refer to as Figure 1).',
+        defaultWordCount: 1500,
         color: 'from-amber-600 to-orange-600'
     },
     {
         id: 'discussion',
-        name: 'Discussion',
+        name: '5. Discussion',
         icon: <Lightbulb className="w-4 h-4" />,
         description: 'Interpretation and implications',
-        defaultPrompt: 'Write an insightful discussion section (2000-3000 words) that: interprets the results, explains implications, compares with existing research, discusses practical applications, and highlights key insights.',
-        defaultWordCount: 2500,
+        defaultPrompt: 'Write an insightful discussion section. Use hierarchical numbering (e.g., 5.1 Comparative Insights, 5.2 Practical Implications). Interpret findings, compare with existing research using SWI and SWEI, and highlight key insights.',
+        defaultWordCount: 1500,
         color: 'from-pink-600 to-rose-600'
     },
     {
         id: 'conclusion',
-        name: 'Conclusion',
+        name: '6. Conclusion',
         icon: <FileText className="w-4 h-4" />,
         description: 'Summary and future directions',
-        defaultPrompt: 'Write a strong conclusion (600-800 words) that: summarizes key findings, states research contributions, discusses limitations, and suggests future research directions.',
+        defaultPrompt: 'Write a strong conclusion. Use hierarchical numbering (e.g., 6.1 Summary of Findings, 6.2 Future Research). Summarize contributions, state final recommendations, and suggest future directions.',
         defaultWordCount: 700,
         color: 'from-purple-600 to-pink-600'
+    },
+    {
+        id: 'references',
+        name: 'References',
+        icon: <BookOpen className="w-4 h-4" />,
+        description: 'APA style bibliography',
+        defaultPrompt: 'Generate a complete, alphabetically ordered References section in APA style based on the provided Scholarly References. List only the sources relevant to the study. Ensure professional formatting.',
+        defaultWordCount: 500,
+        color: 'from-slate-700 to-gray-800'
     },
     {
         id: 'custom',
@@ -103,6 +113,7 @@ export function AIResearchAssistant({
     alternatives,
     criteria,
     method,
+    assetLabels,
     onClose
 }: AIResearchAssistantProps) {
     const [selectedSection, setSelectedSection] = useState('abstract');
@@ -114,10 +125,33 @@ export function AIResearchAssistant({
     const [showResult, setShowResult] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
 
+    const [researchContext, setResearchContext] = useState<any>(null);
+
+    // Load research context from localStorage on mount
+    useEffect(() => {
+        try {
+            const topic = localStorage.getItem("ai_research_topic") || "";
+            const gap = localStorage.getItem("ai_research_gap") || "";
+            const refs = localStorage.getItem("ai_research_references") || "";
+            const defsRaw = localStorage.getItem("ai_criteria_defs");
+            const defs = defsRaw ? JSON.parse(defsRaw) : {};
+
+            setResearchContext({
+                topic,
+                researchGap: gap,
+                references: refs,
+                criteriaDefs: defs
+            });
+        } catch (e) {
+            console.error("Failed to load research context in AI assistant", e);
+        }
+    }, []);
+
     // Full Manuscript States
     const [isProcessingFull, setIsProcessingFull] = useState(false);
     const [fullProgress, setFullProgress] = useState(0);
     const [fullManuscriptData, setFullManuscriptData] = useState<Record<string, string>>({});
+    const [manuscriptTitle, setManuscriptTitle] = useState('');
 
     const currentTemplate = SECTION_TEMPLATES.find(t => t.id === selectedSection) || SECTION_TEMPLATES[0];
 
@@ -155,12 +189,15 @@ export function AIResearchAssistant({
                     alternatives: alternatives,
                     criteria: criteria,
                     method: method,
+                    assetLabels: assetLabels,
                     ranking: kSensData?.results?.['0']
                         ? Object.entries(kSensData.results['0']).map(([altName, score]: [string, any]) => ({
                             alternativeName: altName,
                             score: typeof score === 'number' ? score : 0
                         })).sort((a, b) => b.score - a.score)
-                        : []
+                        : [],
+                    researchContext: researchContext,
+                    isLastSection: selectedSection === 'references'
                 })
             });
 
@@ -176,15 +213,42 @@ export function AIResearchAssistant({
     const handleGenerateFullManuscript = async () => {
         setIsProcessingFull(true);
         setFullProgress(0);
+        setGeneratedContent('');
+        setManuscriptTitle('');
         const results: Record<string, string> = {};
 
         const sectionsToGenerate = SECTION_TEMPLATES.filter(s => s.id !== 'custom');
 
         try {
+            const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
+
+            // Step 0: Generate Title
+            setFullProgress(5);
+            const titleResponse = await fetch('/api/ai-analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userApiKey,
+                    analysisType: 'manuscript_title',
+                    alternatives,
+                    criteria,
+                    method,
+                    ranking: kSensData?.results?.['0']
+                        ? Object.entries(kSensData.results['0']).map(([altName, score]: [string, any]) => ({
+                            alternativeName: altName,
+                            score: typeof score === 'number' ? score : 0
+                        })).sort((a, b) => b.score - a.score)
+                        : [],
+                    researchContext: researchContext
+                })
+            });
+            const titleData = await titleResponse.json();
+            const generatedTitle = (titleData.markdown || "Technical Analysis of Decision Criteria").replace(/[#*]/g, '').trim();
+            setManuscriptTitle(generatedTitle);
+
             for (let i = 0; i < sectionsToGenerate.length; i++) {
                 const section = sectionsToGenerate[i];
-                setFullProgress(Math.round(((i) / sectionsToGenerate.length) * 100));
-                const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
+                setFullProgress(10 + Math.round((i / sectionsToGenerate.length) * 90));
 
                 const response = await fetch('/api/ai-analysis', {
                     method: 'POST',
@@ -193,7 +257,7 @@ export function AIResearchAssistant({
                         userApiKey,
                         analysisType: 'custom_section',
                         sectionType: section.id,
-                        customPrompt: section.defaultPrompt + " This is part of a COMPLETE research paper. Ensure it flows correctly.",
+                        customPrompt: section.defaultPrompt + " CRITICAL: Start writing technical content DIRECTLY. Do NOT include any section titles, numbers, or headings at the start of your response. This is part of a professional research paper; ensure it flows naturally without repeating headers. Use Sum Weighted Information (SWI) and Sum Weighted Exponential Information (SWEI).",
                         wordCount: section.defaultWordCount,
                         additionalContext: additionalContext + (i > 0 ? " Previous section context: " + results[sectionsToGenerate[i - 1].id]?.substring(0, 500) : ""),
                         kSensData,
@@ -202,12 +266,15 @@ export function AIResearchAssistant({
                         alternatives,
                         criteria,
                         method,
+                        assetLabels: assetLabels,
                         ranking: kSensData?.results?.['0']
                             ? Object.entries(kSensData.results['0']).map(([altName, score]: [string, any]) => ({
                                 alternativeName: altName,
                                 score: typeof score === 'number' ? score : 0
                             })).sort((a, b) => b.score - a.score)
-                            : []
+                            : [],
+                        researchContext: researchContext,
+                        isLastSection: i === sectionsToGenerate.length - 1
                     })
                 });
 
@@ -219,10 +286,14 @@ export function AIResearchAssistant({
             setFullProgress(100);
 
             // Auto-assemble the content for display
-            const assembled = sectionsToGenerate.map(s => `# ${s.name}\n\n${results[s.id]}`).join('\n\n---\n\n');
+            const assembled = [
+                `# ${generatedTitle}`,
+                ...sectionsToGenerate.map(s => `## ${s.name}\n\n${results[s.id]}`)
+            ].join('\n\n');
+
             setGeneratedContent(assembled);
             setShowResult(true);
-            setSelectedSection('abstract'); // Reset to a valid template for font/style
+            setSelectedSection('abstract');
         } catch (error) {
             console.error("Full manuscript error:", error);
             alert("An error occurred while generating the full manuscript. Please try again.");
@@ -264,23 +335,37 @@ export function AIResearchAssistant({
                             new Paragraph({
                                 children: [
                                     new TextRun({
-                                        text: (titleInput || currentTemplate.name).toUpperCase(),
+                                        text: (titleInput || manuscriptTitle || "RESEARCH MANUSCRIPT").toUpperCase(),
                                         bold: true,
-                                        size: 28,
+                                        size: 24, // 12pt
                                         font: "Times New Roman"
                                     }),
                                 ],
-                                heading: HeadingLevel.HEADING_1,
                                 alignment: AlignmentType.CENTER,
                                 spacing: { after: 400 },
                             }),
-                            ...content.split('\n').map(line => {
+                            ...content.split('\n').filter(line => line.trim() !== '---').map(line => {
                                 const cleanLine = line.trim();
                                 if (!cleanLine) return new Paragraph({ spacing: { after: 120 } });
 
+                                // Placeholder check
+                                if (cleanLine.startsWith('[Insert') && cleanLine.endsWith('here]')) {
+                                    return new Paragraph({
+                                        children: [new TextRun({
+                                            text: cleanLine,
+                                            italics: true,
+                                            size: 20, // 10pt
+                                            font: "Times New Roman",
+                                            color: "555555"
+                                        })],
+                                        alignment: AlignmentType.CENTER,
+                                        spacing: { before: 240, after: 240 }
+                                    });
+                                }
+
                                 if (cleanLine.startsWith('# ')) {
                                     return new Paragraph({
-                                        children: [new TextRun({ text: cleanLine.replace('# ', ''), bold: true, size: 26, font: "Times New Roman" })],
+                                        children: [new TextRun({ text: cleanLine.replace('# ', '').toUpperCase(), bold: true, size: 24, font: "Times New Roman" })],
                                         heading: HeadingLevel.HEADING_1,
                                         spacing: { before: 240, after: 120 }
                                     });
@@ -294,7 +379,7 @@ export function AIResearchAssistant({
                                 }
                                 if (cleanLine.startsWith('### ')) {
                                     return new Paragraph({
-                                        children: [new TextRun({ text: cleanLine.replace('### ', ''), bold: true, size: 22, font: "Times New Roman" })],
+                                        children: [new TextRun({ text: cleanLine.replace('### ', ''), bold: true, size: 24, font: "Times New Roman" })],
                                         heading: HeadingLevel.HEADING_3,
                                         spacing: { before: 160, after: 80 }
                                     });
@@ -391,12 +476,12 @@ export function AIResearchAssistant({
                             value={wordCount}
                             onChange={(e) => setWordCount(parseInt(e.target.value) || 0)}
                             min={100}
-                            max={8000}
+                            max={10000}
                             step={100}
                             className="w-32 h-10"
                         />
                         <span className="text-sm text-gray-600">
-                            words (100-8000)
+                            words (100-10000)
                         </span>
                     </div>
                 </div>
@@ -531,14 +616,30 @@ export function AIResearchAssistant({
                                 </Button>
                             </div>
                         </div>
-                        <div className="prose prose-sm max-w-none">
+                        <div className="prose prose-sm max-w-none bg-white p-8 rounded shadow-inner border border-gray-100"
+                            style={{
+                                fontFamily: "'Times New Roman', Times, serif",
+                                textAlign: 'justify'
+                            }}>
                             {isGenerating ? (
                                 <div className="flex items-center justify-center py-12">
                                     <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
                                 </div>
                             ) : (
-                                <div className="text-sm leading-relaxed text-gray-800">
-                                    <ReactMarkdown>
+                                <div className="text-[16px] leading-[1.6] text-black research-article-view font-['Times_New_Roman',serif]">
+                                    <ReactMarkdown components={{
+                                        p: ({ node, ...props }) => {
+                                            const content = Array.isArray(props.children) ? props.children.join('') : String(props.children);
+                                            if (content.startsWith('[Insert') && content.endsWith('here]')) {
+                                                return <div className="italic text-center text-blue-800 bg-blue-50/50 py-4 my-6 rounded-lg border-2 border-dashed border-blue-200 font-sans text-sm">{content}</div>;
+                                            }
+                                            return <p className="mb-6 leading-relaxed text-justify" {...props} />;
+                                        },
+                                        h1: ({ node, ...props }) => <h1 className="text-2xl font-bold text-center uppercase mb-8 mt-4 tracking-tight" {...props} />,
+                                        h2: ({ node, ...props }) => <h2 className="text-xl font-bold mb-5 mt-10 border-b border-gray-100 pb-2" {...props} />,
+                                        h3: ({ node, ...props }) => <h3 className="text-lg font-bold mb-4 mt-8" {...props} />,
+                                        strong: ({ node, ...props }) => <strong className="font-bold text-black" {...props} />,
+                                    }}>
                                         {generatedContent}
                                     </ReactMarkdown>
                                 </div>

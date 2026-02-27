@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo, Fragment, useEffect } from "react"
+import { useState, useRef, useMemo, Fragment, useEffect, useCallback } from "react"
 import { MCDMMethod, WeightMethod, PageStep, ComparisonResult, EntropyResult, CriticResult, AHPResult, PipreciaResult, MERECResult, SWARAResult, WensloResult, LopcowResult, DematelResult, SDResult, VarianceResult, MADResult, DBWResult, SVPResult, MDMResult, LSWResult, GPOWResult, LPWMResult, PCWMResult, RankingWeightResult, ROCResult, RRResult, Criterion, Alternative } from "@/types/mcdm"
 import { MCDM_METHODS, WEIGHT_METHODS, CHART_COLORS } from "@/constants/mcdm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -47,6 +47,7 @@ import { ApiKeySettings } from "@/components/ApiKeySettings";
 import { Upload, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, ArrowDown, Home, Download, LayoutGrid, Sparkles, FileText, Cpu, Bot, Pencil, Book, Settings, MessageCircle, RefreshCw, Loader2, Check } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import PaperExtractor from "@/components/PaperExtractor"
+import { AssetLabel } from "@/components/AssetLabel";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar, PieChart, Pie, ReferenceLine } from "recharts"
 import { toJpeg } from "html-to-image"
 import SWEIFormula from "@/components/SWEIFormula"
@@ -287,31 +288,60 @@ export default function MCDMCalculator() {
   const [showAiPanel, setShowAiPanel] = useState(false)
   const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
-  const [aiAnalysisType, setAiAnalysisType] = useState<"full_report" | "sensitivity" | "ranking_comparison" | "k_sensitivity" | "research_abstract" | "introduction" | "literature_review" | "methodology">("full_report")
+  const [aiAnalysisType, setAiAnalysisType] = useState<"full_report" | "sensitivity" | "ranking_comparison" | "k_sensitivity" | "research_abstract" | "introduction" | "literature_review" | "methodology">("full_report");
   const [aiResearchContext, setAiResearchContext] = useState<{
     topic: string,
     researchGap: string,
     criteriaDefs: Record<string, string>,
+    references: string,
     extractionMode: 'manual' | 'smart'
   }>({
     topic: "",
     researchGap: "",
     criteriaDefs: {},
+    references: "",
     extractionMode: 'manual'
   })
+
+  // Asset Labelling State
+  const [assetLabels, setAssetLabels] = useState<Record<string, string>>({
+    criteria_weights: "Table 1",
+    final_rankings: "Table 2",
+    ranking_comparison: "Table 3",
+    sensitivity_analysis: "Table 4",
+    radar_chart: "Figure 1",
+    sensitivity_chart: "Figure 2"
+  })
+
+  const handleAssetLabelChange = useCallback((key: string, label: string) => {
+    setAssetLabels(prev => {
+      if (prev[key] === label) return prev;
+      return { ...prev, [key]: label };
+    });
+  }, []);
 
   // Load research context and results from local storage on mount
   useEffect(() => {
     const savedTopic = localStorage.getItem("ai_research_topic") || ""
     const savedGap = localStorage.getItem("ai_research_gap") || ""
+    const savedReferences = localStorage.getItem("ai_research_references") || ""
     const savedDefs = localStorage.getItem("ai_criteria_defs")
     const savedApiResults = localStorage.getItem("mcdm_api_results")
     const savedAiAnalysis = localStorage.getItem("ai_analysis_result")
     const savedMethod = localStorage.getItem("mcdm_method")
 
+    // Load asset labels
+    const labels: Record<string, string> = { ...assetLabels };
+    ["criteria_weights", "final_rankings", "ranking_comparison", "sensitivity_analysis", "radar_chart", "sensitivity_chart"].forEach(key => {
+      const saved = localStorage.getItem(`asset_label_${key}`);
+      if (saved) labels[key] = saved;
+    });
+    setAssetLabels(labels);
+
     setAiResearchContext({
       topic: savedTopic,
       researchGap: savedGap,
+      references: savedReferences,
       criteriaDefs: savedDefs ? JSON.parse(savedDefs) : {},
       extractionMode: 'manual'
     })
@@ -416,6 +446,7 @@ export default function MCDMCalculator() {
   useEffect(() => {
     localStorage.setItem("ai_research_topic", aiResearchContext.topic)
     localStorage.setItem("ai_research_gap", aiResearchContext.researchGap)
+    localStorage.setItem("ai_research_references", aiResearchContext.references)
     localStorage.setItem("ai_criteria_defs", JSON.stringify(aiResearchContext.criteriaDefs))
   }, [aiResearchContext])
 
@@ -607,10 +638,11 @@ export default function MCDMCalculator() {
     // Clear saved Research Context and calculation results on new file upload
     localStorage.removeItem("ai_research_topic")
     localStorage.removeItem("ai_research_gap")
+    localStorage.removeItem("ai_research_references")
     localStorage.removeItem("ai_criteria_defs")
     localStorage.removeItem("extracted_paper_data")
     clearResultsData()
-    setAiResearchContext({ topic: "", researchGap: "", criteriaDefs: {}, extractionMode: 'manual' })
+    setAiResearchContext({ topic: "", researchGap: "", criteriaDefs: {}, references: "", extractionMode: 'manual' })
   }
 
   const parseComparisonExcelData = (data: any[][]) => {
@@ -3449,6 +3481,27 @@ export default function MCDMCalculator() {
                       <li>✅ <strong>Use Complete Sentences:</strong> A write properly for professional AI output</li>
                     </ul>
                   </div>
+
+                  {/* Cite Literature / References */}
+                  <div className="space-y-2">
+                    <Label htmlFor="research-references" className="text-sm font-semibold">Scholarly References (APA Style)</Label>
+                    <div className="bg-amber-50 border border-amber-200 rounded-md p-3 space-y-2 text-xs">
+                      <p className="font-semibold text-amber-900">💡 Reference Implementation Guide:</p>
+                      <ul className="list-disc list-inside space-y-1 text-amber-800">
+                        <li>The AI will use these sources to cite your **Literature Review** (Numerical [1], [2] tags).</li>
+                        <li>A formal **References** page in APA style will be generated at the end.</li>
+                        <li>If no references are provided, the AI will use high-quality generic academic citations.</li>
+                      </ul>
+                      <p className="text-amber-700 font-medium">✨ Paste your list of papers/references here (one per line).</p>
+                    </div>
+                    <Textarea
+                      id="research-references"
+                      placeholder="Paste your references here... e.g.&#10;Hwang, C. L., & Yoon, K. (1981). Multiple attribute decision making: Methods and applications.&#10;Li, J., et al. (2021). Sustainable MCDM frameworks for industry 4.0..."
+                      value={aiResearchContext.references}
+                      onChange={(e) => setAiResearchContext(prev => ({ ...prev, references: e.target.value }))}
+                      className="text-sm min-h-[120px] font-mono"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -3457,6 +3510,7 @@ export default function MCDMCalculator() {
                   // Save to Local Storage
                   localStorage.setItem("ai_research_topic", aiResearchContext.topic)
                   localStorage.setItem("ai_research_gap", aiResearchContext.researchGap)
+                  localStorage.setItem("ai_research_references", aiResearchContext.references)
                   localStorage.setItem("ai_criteria_defs", JSON.stringify(aiResearchContext.criteriaDefs))
 
                   setIsResearchContextDialogOpen(false)
@@ -6267,7 +6321,10 @@ export default function MCDMCalculator() {
                         <Card className="border-gray-200 bg-white shadow-none w-full">
                           <CardHeader className="pb-3 flex flex-row items-center justify-between">
                             <div>
-                              <CardTitle className="text-sm text-black">Comparison Results</CardTitle>
+                              <CardTitle className="text-sm text-black flex items-center">
+                                {assetLabels.ranking_comparison || "Comparison Results"}
+                                <AssetLabel assetKey="ranking_comparison" defaultLabel="Table 3" onLabelChange={handleAssetLabelChange} />
+                              </CardTitle>
                               <CardDescription className="text-xs text-gray-700">Ranking variations across weight methods</CardDescription>
                             </div>
                           </CardHeader>
@@ -6323,7 +6380,10 @@ export default function MCDMCalculator() {
                         <Card className="border-gray-200 bg-white shadow-none w-full">
                           <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                             <div>
-                              <CardTitle className="text-sm text-black">Graphical Variation</CardTitle>
+                              <CardTitle className="text-sm text-black flex items-center">
+                                {assetLabels.sensitivity_chart || "Graphical Variation"}
+                                <AssetLabel assetKey="sensitivity_chart" defaultLabel="Figure 2" onLabelChange={handleAssetLabelChange} />
+                              </CardTitle>
                               <CardDescription className="text-xs text-gray-700">Visualizing the impact of weight methods</CardDescription>
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
@@ -6637,7 +6697,8 @@ export default function MCDMCalculator() {
               <KSensitivityCalculator
                 criteria={criteria}
                 alternatives={alternatives}
-                weightMethod={criteria.some(c => c.weight > 0) ? "Applied" : "Not Set"}
+                weightMethod={weightMethod}
+                assetLabels={assetLabels}
                 onAiAnalysis={(data) => handleAiAnalysis("k_sensitivity", {
                   kSensData: data.kSensData,
                   criterionName: data.criterionName,
@@ -11309,7 +11370,10 @@ export default function MCDMCalculator() {
 
               <Card className="border-gray-200 bg-white shadow-none mb-6">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">{methodInfo?.label} Results</CardTitle>
+                  <CardTitle className="text-sm text-black flex items-center">
+                    {assetLabels.final_rankings || (methodInfo?.label + " Results")}: {methodInfo?.label} Analysis
+                    <AssetLabel assetKey="final_rankings" defaultLabel="Table 2" onLabelChange={handleAssetLabelChange} />
+                  </CardTitle>
                   <CardDescription className="text-xs text-gray-700">
                     Ranked alternatives based on {methodInfo?.description}
                   </CardDescription>
@@ -11476,7 +11540,10 @@ export default function MCDMCalculator() {
               {/* Criteria Weights Display */}
               <Card className="border-gray-200 bg-white shadow-none mb-6">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-bold text-black">Criteria Weights</CardTitle>
+                  <CardTitle className="text-sm font-bold text-black flex items-center">
+                    {assetLabels.criteria_weights || "Criteria Weights"}
+                    <AssetLabel assetKey="criteria_weights" defaultLabel="Table 1" onLabelChange={handleAssetLabelChange} />
+                  </CardTitle>
                   <CardDescription className="text-xs text-gray-700">
                     Weight Method: {WEIGHT_METHODS.find(w => w.value === weightMethod)?.label}
                   </CardDescription>

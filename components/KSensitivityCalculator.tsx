@@ -14,6 +14,8 @@ import { Check, ChevronRight, Download, RefreshCw, Loader2, Sparkles, Bot, FileT
 import ExcelJS from 'exceljs';
 import ReactMarkdown from 'react-markdown';
 import { AIResearchAssistant } from './AIResearchAssistant';
+import { AssetLabel } from './AssetLabel';
+import { Tag } from 'lucide-react';
 import { toJpeg } from 'html-to-image';
 
 
@@ -38,6 +40,7 @@ interface KSensitivityCalculatorProps {
   aiAnalysisResult?: string | null;
   isAiLoading?: boolean;
   showAiPanel?: boolean;
+  assetLabels?: Record<string, string>;
   onCloseAiPanel?: () => void;
 }
 
@@ -49,6 +52,7 @@ export default function KSensitivityCalculator({
   aiAnalysisResult,
   isAiLoading,
   showAiPanel,
+  assetLabels,
   onCloseAiPanel
 }: KSensitivityCalculatorProps) {
   const chartRef = useRef<HTMLDivElement>(null);
@@ -1144,7 +1148,7 @@ export default function KSensitivityCalculator({
 
       // Rows 3-8: Metadata section
       const metadataRows = [
-        [`K% Sensitivity Analysis Report - ${criterionName}`, `Date: ${date}`],
+        [`Perturbation Analysis Report - ${criterionName}`, `Date: ${date}`],
         ["Weight Method", selectedWeightMethod.toUpperCase()],
         ["Ranking Method", selectedRankingMethod.toUpperCase()],
         ["Number of Alternatives", alternatives.length.toString()],
@@ -1302,7 +1306,7 @@ export default function KSensitivityCalculator({
             </div>
           </div>
           <p className="processing-text">
-            {isAnalyzing ? "Running K% Sensitivity Analysis..." : "Calculating Weights..."}
+            {isAnalyzing ? "Running Perturbation Analysis..." : "Calculating Weights..."}
           </p>
         </div>
       )}
@@ -1391,7 +1395,10 @@ export default function KSensitivityCalculator({
       }} />
       <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
         <CardHeader className="pb-3 px-3 sm:px-6">
-          <CardTitle className="text-sm text-black">K% Sensitivity Analysis</CardTitle>
+          <CardTitle className="text-sm text-black flex items-center">
+            {assetLabels?.sensitivity_analysis || "Perturbation Analysis"}
+            <AssetLabel assetKey="sensitivity_analysis" defaultLabel="Table 4" />
+          </CardTitle>
           <CardDescription className="text-xs text-gray-700 flex flex-wrap items-center gap-1">
             <span>Step-by-step guided sensitivity analysis with customizable variation ranges</span>
             <a
@@ -1411,7 +1418,7 @@ export default function KSensitivityCalculator({
               <div className="p-4 space-y-4 border rounded-lg bg-gray-50">
                 {/* Step 1: General Formula */}
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="text-xs font-bold text-gray-900 mb-3">1. General Formula for sk% Sensitivity Analysis</h4>
+                  <h4 className="text-xs font-bold text-gray-900 mb-3">1. General Formula for Perturbation Sensitivity Analysis</h4>
                   <div className="space-y-3 text-xs text-gray-700">
                     <div>
                       <p className="font-semibold mb-2">Let:</p>
@@ -1426,7 +1433,7 @@ export default function KSensitivityCalculator({
                           <div className="bg-gray-50 rounded-lg p-2">
                             <strong>Suppose weight of criterion </strong>
                             <span className="latex" dangerouslySetInnerHTML={{ __html: `\\(C_p\\)` }} />
-                            <strong> is varied by ±k%</strong>
+                            <strong> is varied by ±{Math.abs(kSensVariationRange[0])}%</strong>
                           </div>
                         </div>
                       </div>
@@ -1562,7 +1569,7 @@ export default function KSensitivityCalculator({
                       <div className="w-10 h-10 sm:w-16 sm:h-16 bg-gradient-to-br from-green-600 to-green-700 rounded-lg flex items-center justify-center mb-1 sm:mb-2 shadow-md">
                         <span className="text-white text-sm sm:text-2xl">🔬</span>
                       </div>
-                      <span className="text-[10px] sm:text-xs font-semibold text-center text-gray-800 whitespace-nowrap">Run K% Sensitivity</span>
+                      <span className="text-[10px] sm:text-xs font-semibold text-center text-gray-800 whitespace-nowrap">Run Perturbation Analysis</span>
                     </div>
                   </div>
                 </div>
@@ -1727,7 +1734,7 @@ export default function KSensitivityCalculator({
 
                   {/* Criterion Selector for Variation */}
                   <div className="bg-white rounded-lg p-4 border border-gray-200 mt-4">
-                    <label className="block text-xs font-semibold mb-2 text-gray-700">Select Criterion to Vary</label>
+                    <label className="text-xs font-semibold text-gray-700 whitespace-nowrap">Perturbation (%)</label>
                     <Select value={selectedCriterionToVary} onValueChange={(value) => {
                       setSelectedCriterionToVary(value);
                       setKSensResults(null); // Reset results when criterion changes
@@ -1966,7 +1973,7 @@ export default function KSensitivityCalculator({
                           ) : (
                             <div className="flex items-center gap-2">
                               <span className="text-lg">🚀</span>
-                              <span>Run K% Sensitivity Analysis</span>
+                              <span>Run Perturbation Analysis</span>
                             </div>
                           )}
                         </Button>
@@ -1990,7 +1997,7 @@ export default function KSensitivityCalculator({
                 {isAnalyzing && (
                   <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg text-center">
                     <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                    <h3 className="text-lg font-semibold mb-2 text-black">Processing K% Sensitivity Analysis...</h3>
+                    <h3 className="text-lg font-semibold mb-2 text-black">Processing Perturbation Analysis...</h3>
                     <p className="text-sm text-gray-600">Please wait while we analyze your data</p>
                   </div>
                 )}
@@ -2156,6 +2163,7 @@ export default function KSensitivityCalculator({
                           alternatives={alternatives}
                           criteria={workingCriteria}
                           method={selectedRankingMethod}
+                          assetLabels={assetLabels}
                           onClose={() => setShowAIAssistant(false)}
                         />
                       </div>

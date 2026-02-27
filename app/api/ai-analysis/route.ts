@@ -28,7 +28,7 @@ function formatNumbersInObject(obj: any): any {
 export async function POST(req: NextRequest) {
     try {
         const reqContent = await req.json();
-        const { alternatives, criteria, ranking, method, analysisType, userApiKey: providedKey } = reqContent;
+        const { alternatives, criteria, ranking, method, analysisType, userApiKey: providedKey, assetLabels, isLastSection } = reqContent;
 
         // 1. Get List of Keys
         let apiKeys: string[] = [];
@@ -61,7 +61,9 @@ export async function POST(req: NextRequest) {
 
         let contextInjection = "";
         if (reqContent.researchContext) {
-            const { topic, researchGap, criteriaDefs } = reqContent.researchContext;
+            const { topic, researchGap, criteriaDefs, references } = reqContent.researchContext;
+            const referencesText = references ? references : "No specific references provided. Use high-quality generic academic citations if needed.";
+
             contextInjection = `
         **Research Context:**
         **Topic/Title:** ${topic}
@@ -71,6 +73,25 @@ export async function POST(req: NextRequest) {
                 const cName = criteria.find((c: any) => c.id === id)?.name || id;
                 return `- ${cName}: ${def}`;
             }).join("\n")}
+        
+        **Available Scholarly References:**
+        ${referencesText}
+        `;
+        }
+
+        let assetLabelsInjection = "";
+        if (assetLabels) {
+            assetLabelsInjection = `
+        **Mandatory Figure and Table Naming Convention:**
+        When writing the manuscript, you MUST use the following labels for tables and figures:
+        - Criteria Weights results: ${assetLabels.criteria_weights || "Table 1"}
+        - Final Rankings table: ${assetLabels.final_rankings || "Table 2"}
+        - Ranking Comparison table: ${assetLabels.ranking_comparison || "Table 3"}
+        - Sensitivity Analysis results: ${assetLabels.sensitivity_analysis || "Figure 1"}
+        - Weight Radar Chart: ${assetLabels.radar_chart || "Figure 2"}
+        - Perturbation Analysis results: ${assetLabels.sensitivity_chart || "Figure 3"}
+        
+        Example: Instead of saying "As shown in Table 1", check if the user assigned a different label for Criteria Weights and use that.
         `;
         }
 
@@ -123,7 +144,33 @@ export async function POST(req: NextRequest) {
 
         **4. Limitations & Future Directions** (~150-200 words)
         Critically evaluate the methodology. Acknowledge limitations of ${method} in this context. Suggest meaningful extensions (sensitivity analysis, fuzzy extensions, hybrid approaches, or integration with machine learning). Be specific, not generic.
+
+        **MANDATORY RULES:**
+        ${assetLabelsInjection}
+        - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
+        - Whenever you mention a Table (e.g., Table 1, Table 2) or Figure (e.g., Figure 1), immediately follow that sentence with a new line containing exactly the corresponding placeholder, for example:
+          **[Insert ${assetLabels?.criteria_weights || "Table 1"}: Detailed Criteria Weights here]**
+          **[Insert ${assetLabels?.final_rankings || "Table 2"}: Final Rankings here]**
+          **[Insert ${assetLabels?.sensitivity_analysis || "Figure 1"}: Perturbation Analysis results here]**
+        - Ensure all sections use hierarchical numbering (e.g., 4.1, 4.2).
+        - No "K%" terminology; use "Perturbation Analysis" or "+30% / -30% variation".
       `;
+        } else if (analysisType === "manuscript_title") {
+            prompt = `
+        You are an expert academic editor.
+        
+        ${contextInjection}
+        
+        **Research Parameters:**
+        - Method: ${method ? method.toUpperCase() : "MCDM"}
+        - Alternatives: ${alternatives.length} (listed: ${alternatives.map((a: any) => a.name).join(", ")})
+        - Research Focus: ${reqContent.researchContext?.topic || "Decision Intelligence"}
+        
+        **Your Task:**
+        Generate ONE professional, technically valid, high-impact research title for this manuscript. It should be descriptive, formal, and suitable for a Q1 journal.
+        
+        Format: Return ONLY the title text, nothing else.
+        `;
         } else if (analysisType === "sensitivity") {
             const sensitivityContext = reqContent.sensitivityData ?
                 `\n**Sensitivity Data (Weights across methods):**\n${JSON.stringify(reqContent.sensitivityData, null, 2)}` : "";
@@ -164,7 +211,7 @@ export async function POST(req: NextRequest) {
        `;
         } else if (analysisType === "k_sensitivity") {
             const kSensContext = reqContent.kSensData ?
-                `\n**K-Sensitivity Data (Perturbation Analysis):**\n${JSON.stringify(formatNumbersInObject(reqContent.kSensData), null, 2)}` : "";
+                `\n**Perturbation Analysis Data:**\n${JSON.stringify(formatNumbersInObject(reqContent.kSensData), null, 2)}` : "";
 
             prompt = `
         You are conducting a sophisticated One-at-a-Time (OAT) Sensitivity Analysis for an MCDM research study.
@@ -250,7 +297,7 @@ export async function POST(req: NextRequest) {
             const sensitivityContext = reqContent.sensitivityData ?
                 `\n**Sensitivity Analysis Results:**\n${JSON.stringify(formatNumbersInObject(reqContent.sensitivityData), null, 2)}` : "";
             const kSensContext = reqContent.kSensData ?
-                `\n**K% Sensitivity Analysis Results:**\n${JSON.stringify(formatNumbersInObject(reqContent.kSensData), null, 2)}` : "";
+                `\n**Perturbation Analysis Results (±30% Variation):**\n${JSON.stringify(formatNumbersInObject(reqContent.kSensData), null, 2)}` : "";
 
             const citationInfo = reqContent.extractedPaperData?.citation ?
                 `Based on the study by ${reqContent.extractedPaperData.citation.authors} (${reqContent.extractedPaperData.citation.year}) titled "${reqContent.extractedPaperData.citation.title}".` : "";
@@ -331,12 +378,13 @@ export async function POST(req: NextRequest) {
         1. **Evolution of the Domain**: How has decision-making evolved in this specific application area?
         2. **MCDM Methodology Trends**: Discuss the shift toward modern methods like ${method.toUpperCase()}.
         3. **Critical Synthesis**: Don't just list papers. Group them by theme (e.g., "Sustainability Factors", "Operational Efficiency").
-        4. **Positioning**: Locate the current study (your analysis) within this literature. Explain how your use of ${method.toUpperCase()} responds to limitations found in broader literature.
+        4. **Positioning**: Locate the current study (your analysis) within the context of the provided **Scholarly References**. Use these references specifically to justify the study.
         
         **Requirements**: 
         - Sophisticated synthesis, not a summary.
         - High-quality, publication-ready prose.
-        - Integrate the provided citation naturally as a key landmark in the field.
+        - You MUST cite at least 5-8 sources from the "Available Scholarly References" list using [1], [2] format.
+        - Ensure NO results of this study are mentioned here.
         `;
         } else if (analysisType === "methodology") {
             prompt = `
@@ -351,12 +399,12 @@ export async function POST(req: NextRequest) {
         1. **Conceptual Framework**: Why is ${method.toUpperCase()} appropriate for this specific problem? (Mention its strengths like compromise solution, distance from ideal, etc.)
         2. **Evaluation Setup**: List the ${alternatives.length} alternatives and ${criteria.length} criteria defined.
         3. **Mathematical Steps**: Describe the normalization, weighting (using your selected ${reqContent.weightMethod || 'weighting'} approach), and aggregation steps of ${method.toUpperCase()}.
-        4. **Validation Procedure**: Explain the rationale behind the sensitivity analysis and K% perturbation analysis performed.
+        4. **Validation Procedure**: Explain the rationale behind the sensitivity analysis and the specific robustness check performed (e.g., ±30% perturbation).
 
-        **Requirements**: 
-        - Technical precision.
-        - Academic clarity.
-        - Tailored specifically to the ${method.toUpperCase()} method.
+        **MANDATORY RULES:**
+        - Identify subsections using decimal numbering (e.g., 3.1, 3.2, 3.2.1).
+        - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
+        - Insert Table/Figure placeholders: **[Insert Table X here]** or **[Insert Figure X here]** on a new line after mention.
         `;
         } else if (analysisType === "custom_section") {
             // Custom section generation with user-defined prompts
@@ -398,20 +446,19 @@ export async function POST(req: NextRequest) {
         
         **Quality Standards:**
         - Every claim must be supported by data from the analysis results
-        - Use varied sentence structure for engaging reading
+        - Use hierarchical numbering for sections and subsections (e.g., 1., 1.1, 1.2, 2., etc.)
         - Integrate quantitative evidence naturally into narrative
         - Maintain logical flow and coherent argumentation
-        - Use transition phrases to connect ideas smoothly
+        - Use full terms: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**
         - Avoid generic statements - be specific to THIS analysis
         
         **Formatting Guidelines:**
-        - Use markdown format for headings (##, ###)
-        - Bold key terms and important concepts
+        - Use markdown format for headings (## for sections, ### for subsections)
+        - **PLACEHOLDER RULE (MANDATORY)**: Whenever you mention a Table (e.g., Table 1, Table 2) or Figure (e.g., Figure 1), immediately follow that sentence with a new line containing exactly: **[Insert Table X here]** or **[Insert Figure X here]**.
         - Organize content with clear paragraph breaks
-        - Include bulleted lists only where appropriate (not excessively)
         - Present complex ideas clearly and precisely
         
-        Generate high-quality academic content that directly addresses the prompt while utilizing all the MCDM analysis data provided.
+        Generate high-quality academic content that directly addresses the prompt.
        `;
         }
 
@@ -423,7 +470,7 @@ export async function POST(req: NextRequest) {
             try {
                 // Initialize AI with current key
                 const genAI = new GoogleGenerativeAI(key);
-                // Use gemini-2.5-flash (original working model)
+                // Use gemini-2.5-flash (as requested by user)
                 const model = genAI.getGenerativeModel({
                     model: "gemini-2.5-flash",
                     generationConfig: {
@@ -442,6 +489,13 @@ Your writing style:
 - Vary paragraph lengths and structure
 - Integrate numerical data smoothly into narrative discussion
 - Write as if explaining sophisticated concepts to knowledgeable colleagues
+- **CITATION RULES (CRITICAL)**:
+  1. If "Available Scholarly References" are provided in the prompt, you MUST use them for in-text citations.
+  2. Use numerical square brackets for in-text citations (e.g., [1], [2], [3]).
+  3. Ensure citations are used heavily in the **Introduction** and **Literature Review** sections.
+  4. **STRICT LIMITATION ON REFERENCES LIST**: Do NOT include a "References" list or bibliography at the end of your response UNLESS specifically instructed to do so (i.e., when generating the final References section). 
+  5. **STRICT LIMITATION ON TITLES**: Do NOT include the main section title (e.g., "1. Introduction") at the start of your response, as it is added by the system. Start directly with the technical content or subsection headers (e.g., 1.1).
+  6. DO NOT cite the same paper for results/discussion unless it's a comparison. Statistical results should be stated as findings of THIS study.
 
 Vocabulary constraints (CRITICAL - avoid these informal/inappropriate terms):
 - NEVER use "leader" or "leadership" → use "top-ranked alternative", "highest-scoring option", "optimal alternative", "first-ranked solution"
@@ -462,6 +516,10 @@ Quality standards:
 - Q1 journal quality reasoning and argumentation
 - Data-driven claims with specific numerical support
 - Critical thinking, not just description
+- **STRUCTURAL INTEGRITY (MANDATORY)**:
+  1. DO NOT include any numerical results, rankings, or findings of THIS study in the **Introduction** or **Literature Review** sections. These sections must focus on theoretical foundations, domain background, and existing work.
+  2. Reserve all empirical findings, rankings, and statistical data for the **Results**, **Discussion**, and **Sensitivity Analysis** sections.
+  3. Ensure hierarchical section numbering (e.g., 1.1, 2.1, 3.1).
 - Technical precision in terminology`
                 });
 
