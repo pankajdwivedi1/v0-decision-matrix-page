@@ -84,14 +84,17 @@ export async function POST(req: NextRequest) {
             assetLabelsInjection = `
         **Mandatory Figure and Table Naming Convention:**
         When writing the manuscript, you MUST use the following labels for tables and figures:
-        - Criteria Weights results: ${assetLabels.criteria_weights || "Table 1"}
-        - Final Rankings table: ${assetLabels.final_rankings || "Table 2"}
-        - Ranking Comparison table: ${assetLabels.ranking_comparison || "Table 3"}
-        - Sensitivity Analysis results: ${assetLabels.sensitivity_analysis || "Figure 1"}
-        - Weight Radar Chart: ${assetLabels.radar_chart || "Figure 2"}
-        - Perturbation Analysis results: ${assetLabels.sensitivity_chart || "Figure 3"}
+        - Decision Matrix: ${assetLabels.decision_matrix || "Table 1"}
+        - Normalized Weight Matrix: ${assetLabels.normalized_weight_matrix || "Table 2"}
+        - Criteria Weights results: ${assetLabels.criteria_weights || "Table 3"}
+        - Normalized Ranking Matrix: ${assetLabels.normalized_ranking_matrix || "Table 4"}
+        - Final Rankings table: ${assetLabels.final_rankings || "Table 5"}
+        - Ranking Comparison table: ${assetLabels.ranking_comparison || "Table 6"}
+        - Sensitivity Analysis results (step-by-step): ${assetLabels.sensitivity_analysis || "Table 7"}
+        - Weight Radar Chart: ${assetLabels.radar_chart || "Figure 1"}
+        - Graphical Variation/Sensitivity Chart: ${assetLabels.sensitivity_chart || "Figure 2"}
         
-        Example: Instead of saying "As shown in Table 1", check if the user assigned a different label for Criteria Weights and use that.
+        Example: Instead of saying "As shown in Table 1", check if the user assigned a different label for the intended table and use that.
         `;
         }
 
@@ -149,9 +152,12 @@ export async function POST(req: NextRequest) {
         ${assetLabelsInjection}
         - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
         - Whenever you mention a Table (e.g., Table 1, Table 2) or Figure (e.g., Figure 1), immediately follow that sentence with a new line containing exactly the corresponding placeholder, for example:
-          **[Insert ${assetLabels?.criteria_weights || "Table 1"}: Detailed Criteria Weights here]**
-          **[Insert ${assetLabels?.final_rankings || "Table 2"}: Final Rankings here]**
-          **[Insert ${assetLabels?.sensitivity_analysis || "Figure 1"}: Perturbation Analysis results here]**
+          **[Insert ${assetLabels?.decision_matrix || "Table 1"}: Decision Matrix here]**
+          **[Insert ${assetLabels?.criteria_weights || "Table 3"}: Detailed Criteria Weights here]**
+          **[Insert ${assetLabels?.final_rankings || "Table 5"}: Final Rankings here]**
+          **[Insert ${assetLabels?.sensitivity_analysis || "Table 7"}: Perturbation Analysis results here]**
+          **[Insert ${assetLabels?.radar_chart || "Figure 1"}: Weight Radar Chart here]**
+          **[Insert ${assetLabels?.sensitivity_chart || "Figure 2"}: Graphical Sensitivity Variation here]**
         - Ensure all sections use hierarchical numbering (e.g., 4.1, 4.2).
         - No "K%" terminology; use "Perturbation Analysis" or "+30% / -30% variation".
       `;
@@ -191,6 +197,11 @@ export async function POST(req: NextRequest) {
         **Task:**
         Write a detailed, publishable Sensitivity Analysis section.
         
+        **MANDATORY RULES:**
+        ${assetLabelsInjection}
+        - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
+        - Whenever you mention a Table (e.g., Table 1, Table 2) or Figure (e.g., Figure 1), immediately follow that sentence with a new line containing exactly the corresponding placeholder (e.g., [Insert Table 7 here]).
+        
         **Requirements:**
         - 700-900 words
         - Natural academic prose with varied sentence patterns
@@ -225,7 +236,12 @@ export async function POST(req: NextRequest) {
         ${kSensContext}
 
         **Task:**
-        Produce a research-grade sensitivity analysis discussion suitable for publication.
+        Produce a research-grade sensitivity analysis discussion (Perturbation Analysis) suitable for publication.
+        
+        **MANDATORY RULES:**
+        ${assetLabelsInjection}
+        - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
+        - Whenever you mention a Table (e.g., Table 7) or Figure (e.g., Figure 2), immediately follow that sentence with a new line containing exactly the corresponding placeholder.
         
         **Requirements:**
         - 800-1000 words
@@ -273,6 +289,11 @@ export async function POST(req: NextRequest) {
 
         **Task:**
         Write a Comparative Methodological Analysis suitable for publication.
+        
+        **MANDATORY RULES:**
+        ${assetLabelsInjection}
+        - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
+        - Whenever you mention Table 6 (Comparison) or other tables, immediately follow that sentence with a new line containing exactly the corresponding placeholder.
         
         **Requirements:**
         - 600-800 words
@@ -324,6 +345,9 @@ export async function POST(req: NextRequest) {
         **Task:**
         Generate a structured, publication-ready Research Abstract (300-400 words).
         
+        **MANDATORY RULES:**
+        ${assetLabelsInjection}
+        
         **Key Goal:**
         If this is a comparative study based on a previously extracted paper, acknowledge the foundation but emphasize how the **${method.toUpperCase()}** analysis provides new insights or validates previous findings.
         
@@ -356,6 +380,7 @@ export async function POST(req: NextRequest) {
         5. **Objectives**: Outline the scope of this particular study.
 
         **Requirements**: 
+        ${assetLabelsInjection}
         - Use professional academic language.
         - Flow naturally from general background to the specific research gap.
         - Ensure it reads as a "different way" of looking at the same problem, with higher quality synthesis.
@@ -381,6 +406,7 @@ export async function POST(req: NextRequest) {
         4. **Positioning**: Locate the current study (your analysis) within the context of the provided **Scholarly References**. Use these references specifically to justify the study.
         
         **Requirements**: 
+        ${assetLabelsInjection}
         - Sophisticated synthesis, not a summary.
         - High-quality, publication-ready prose.
         - You MUST cite at least 5-8 sources from the "Available Scholarly References" list using [1], [2] format.
@@ -402,6 +428,7 @@ export async function POST(req: NextRequest) {
         4. **Validation Procedure**: Explain the rationale behind the sensitivity analysis and the specific robustness check performed (e.g., ±30% perturbation).
 
         **MANDATORY RULES:**
+        ${assetLabelsInjection}
         - Identify subsections using decimal numbering (e.g., 3.1, 3.2, 3.2.1).
         - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
         - Insert Table/Figure placeholders: **[Insert Table X here]** or **[Insert Figure X here]** on a new line after mention.
@@ -442,6 +469,7 @@ export async function POST(req: NextRequest) {
         - Evidence-Based: Reference specific numerical results from the analysis
         - Structure: Use appropriate headings and subheadings for readability
         - Citations: If the researcher provides citations in additional context, integrate them appropriately
+        ${assetLabelsInjection}
         - Objectivity: Maintain scholarly objectivity while providing insightful analysis
         
         **Quality Standards:**

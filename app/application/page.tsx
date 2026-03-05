@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useState, useRef, useMemo, Fragment, useEffect, useCallback } from "react"
+import { useState, useRef, useMemo, Fragment, useEffect } from "react"
 import { MCDMMethod, WeightMethod, PageStep, ComparisonResult, EntropyResult, CriticResult, AHPResult, PipreciaResult, MERECResult, SWARAResult, WensloResult, LopcowResult, DematelResult, SDResult, VarianceResult, MADResult, DBWResult, SVPResult, MDMResult, LSWResult, GPOWResult, LPWMResult, PCWMResult, RankingWeightResult, ROCResult, RRResult, Criterion, Alternative } from "@/types/mcdm"
 import { MCDM_METHODS, WEIGHT_METHODS, CHART_COLORS } from "@/constants/mcdm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -47,7 +47,6 @@ import { ApiKeySettings } from "@/components/ApiKeySettings";
 import { Upload, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, ArrowDown, Home, Download, LayoutGrid, Sparkles, FileText, Cpu, Bot, Pencil, Book, Settings, MessageCircle, RefreshCw, Loader2, Check } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import PaperExtractor from "@/components/PaperExtractor"
-import { AssetLabel } from "@/components/AssetLabel";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar, PieChart, Pie, ReferenceLine } from "recharts"
 import { toJpeg } from "html-to-image"
 import SWEIFormula from "@/components/SWEIFormula"
@@ -102,6 +101,8 @@ import GRAFormula from "@/components/GRAFormula"
 import ARASFormula from "@/components/ARASFormula"
 import ColorSwitcher from "@/components/ColorSwitcher"
 import KSensitivityCalculator from "@/components/KSensitivityCalculator"
+import { AIResearchAssistant } from "@/components/AIResearchAssistant"
+import { ResearchAssetHeader } from "@/components/ResearchAssetHeader"
 
 declare global {
   interface Window {
@@ -116,7 +117,7 @@ export default function MCDMCalculator() {
   const [method, setMethod] = useState<MCDMMethod>("topsis")
   const [weightMethod, setWeightMethod] = useState<WeightMethod>("equal")
   const [activeFormulaType, setActiveFormulaType] = useState<"method" | "weight">("method")
-  const [homeTab, setHomeTab] = useState<"rankingMethods" | "weightMethods" | "rankingComparison" | "sensitivityAnalysis">("rankingMethods")
+  const [homeTab, setHomeTab] = useState<"rankingMethods" | "weightMethods" | "rankingComparison" | "sensitivityAnalysis" | "aiResearch">("rankingMethods")
   const [comparisonAlternatives, setComparisonAlternatives] = useState<Alternative[]>([])
   const [comparisonCriteria, setComparisonCriteria] = useState<Criterion[]>([])
   const [selectedRankingMethods, setSelectedRankingMethods] = useState<MCDMMethod[]>(["topsis"])
@@ -288,60 +289,70 @@ export default function MCDMCalculator() {
   const [showAiPanel, setShowAiPanel] = useState(false)
   const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
-  const [aiAnalysisType, setAiAnalysisType] = useState<"full_report" | "sensitivity" | "ranking_comparison" | "k_sensitivity" | "research_abstract" | "introduction" | "literature_review" | "methodology">("full_report");
+  const [aiAnalysisType, setAiAnalysisType] = useState<"full_report" | "sensitivity" | "ranking_comparison" | "k_sensitivity" | "research_abstract" | "introduction" | "literature_review" | "methodology">("full_report")
   const [aiResearchContext, setAiResearchContext] = useState<{
     topic: string,
     researchGap: string,
     criteriaDefs: Record<string, string>,
-    references: string,
     extractionMode: 'manual' | 'smart'
   }>({
     topic: "",
     researchGap: "",
     criteriaDefs: {},
-    references: "",
     extractionMode: 'manual'
   })
+  const [selectedAiAssets, setSelectedAiAssets] = useState<Set<string>>(new Set())
 
-  // Asset Labelling State
-  const [assetLabels, setAssetLabels] = useState<Record<string, string>>({
-    criteria_weights: "Table 1",
-    final_rankings: "Table 2",
-    ranking_comparison: "Table 3",
-    sensitivity_analysis: "Table 4",
-    radar_chart: "Figure 1",
-    sensitivity_chart: "Figure 2"
-  })
+  const handleIncludeChange = (key: string, included: boolean) => {
+    setSelectedAiAssets((prev) => {
+      const updated = new Set(prev)
+      if (included) {
+        updated.add(key)
+      } else {
+        updated.delete(key)
+      }
+      // Persist selection for AI assets
+      try {
+        localStorage.setItem("ai_selected_assets", JSON.stringify(Array.from(updated)))
+      } catch (e) {
+        console.error("Failed to save AI asset selection", e)
+      }
+      return updated
+    })
+  }
 
-  const handleAssetLabelChange = useCallback((key: string, label: string) => {
-    setAssetLabels(prev => {
-      if (prev[key] === label) return prev;
-      return { ...prev, [key]: label };
-    });
-  }, []);
+  const handleAssetLabelChange = (key: string, label: string) => {
+    // Optional hook for future usage; labels are already stored inside ResearchAssetHeader
+    // We keep this to satisfy the prop contract and allow additional behavior later if needed.
+    try {
+      localStorage.setItem(`asset_label_${key}`, label)
+    } catch (e) {
+      console.error("Failed to save asset label", e)
+    }
+  }
 
   // Load research context and results from local storage on mount
   useEffect(() => {
+    try {
+      const savedSelected = localStorage.getItem("ai_selected_assets")
+      if (savedSelected) {
+        const parsed: string[] = JSON.parse(savedSelected)
+        setSelectedAiAssets(new Set(parsed))
+      }
+    } catch (e) {
+      console.error("Failed to load AI asset selection", e)
+    }
+
     const savedTopic = localStorage.getItem("ai_research_topic") || ""
     const savedGap = localStorage.getItem("ai_research_gap") || ""
-    const savedReferences = localStorage.getItem("ai_research_references") || ""
     const savedDefs = localStorage.getItem("ai_criteria_defs")
     const savedApiResults = localStorage.getItem("mcdm_api_results")
     const savedAiAnalysis = localStorage.getItem("ai_analysis_result")
     const savedMethod = localStorage.getItem("mcdm_method")
 
-    // Load asset labels
-    const labels: Record<string, string> = { ...assetLabels };
-    ["criteria_weights", "final_rankings", "ranking_comparison", "sensitivity_analysis", "radar_chart", "sensitivity_chart"].forEach(key => {
-      const saved = localStorage.getItem(`asset_label_${key}`);
-      if (saved) labels[key] = saved;
-    });
-    setAssetLabels(labels);
-
     setAiResearchContext({
       topic: savedTopic,
       researchGap: savedGap,
-      references: savedReferences,
       criteriaDefs: savedDefs ? JSON.parse(savedDefs) : {},
       extractionMode: 'manual'
     })
@@ -446,7 +457,6 @@ export default function MCDMCalculator() {
   useEffect(() => {
     localStorage.setItem("ai_research_topic", aiResearchContext.topic)
     localStorage.setItem("ai_research_gap", aiResearchContext.researchGap)
-    localStorage.setItem("ai_research_references", aiResearchContext.references)
     localStorage.setItem("ai_criteria_defs", JSON.stringify(aiResearchContext.criteriaDefs))
   }, [aiResearchContext])
 
@@ -496,6 +506,12 @@ export default function MCDMCalculator() {
       });
     }
   }, [homeTab])
+
+  // Helper to generate sequential table labels (Table 1, Table 2, ...)
+  // This runs fresh on every render so only visible tables are numbered,
+  // ensuring there are no gaps or duplicate numbers on the current view.
+  let tableCounter = 1
+  const getNextTableLabel = () => `Table ${tableCounter++}`
 
 
 
@@ -638,11 +654,10 @@ export default function MCDMCalculator() {
     // Clear saved Research Context and calculation results on new file upload
     localStorage.removeItem("ai_research_topic")
     localStorage.removeItem("ai_research_gap")
-    localStorage.removeItem("ai_research_references")
     localStorage.removeItem("ai_criteria_defs")
     localStorage.removeItem("extracted_paper_data")
     clearResultsData()
-    setAiResearchContext({ topic: "", researchGap: "", criteriaDefs: {}, references: "", extractionMode: 'manual' })
+    setAiResearchContext({ topic: "", researchGap: "", criteriaDefs: {}, extractionMode: 'manual' })
   }
 
   const parseComparisonExcelData = (data: any[][]) => {
@@ -3241,6 +3256,13 @@ export default function MCDMCalculator() {
               >
                 Sensitivity Analysis
               </Button>
+              <Button
+                variant="outline"
+                className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "aiResearch" ? "bg-violet-100 border-violet-200 text-violet-700 hover:bg-violet-200" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+                onClick={() => setHomeTab("aiResearch")}
+              >
+                AI Research
+              </Button>
               <div className="w-full sm:w-auto col-span-2 flex flex-col sm:flex-row gap-2">
                 <ApiKeySettings />
                 <Button
@@ -3250,6 +3272,13 @@ export default function MCDMCalculator() {
                 >
                   <Sparkles className="w-3 h-3 mr-1" />
                   Define Research Context (AI)
+                </Button>
+                <Button
+                  onClick={() => setHomeTab("aiResearch")}
+                  className={`w-full sm:w-auto bg-gradient-to-r ${homeTab === 'aiResearch' ? 'from-violet-700 via-purple-700 to-pink-700' : 'from-violet-600 via-purple-600 to-pink-600'} text-white hover:from-violet-700 hover:via-purple-700 hover:to-pink-700 border-none h-8 text-[14px] sm:text-xs gap-1.5 shadow-lg px-3 flex items-center justify-center`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  AI Research
                 </Button>
               </div>
             </div>
@@ -3481,27 +3510,6 @@ export default function MCDMCalculator() {
                       <li>✅ <strong>Use Complete Sentences:</strong> A write properly for professional AI output</li>
                     </ul>
                   </div>
-
-                  {/* Cite Literature / References */}
-                  <div className="space-y-2">
-                    <Label htmlFor="research-references" className="text-sm font-semibold">Scholarly References (APA Style)</Label>
-                    <div className="bg-amber-50 border border-amber-200 rounded-md p-3 space-y-2 text-xs">
-                      <p className="font-semibold text-amber-900">💡 Reference Implementation Guide:</p>
-                      <ul className="list-disc list-inside space-y-1 text-amber-800">
-                        <li>The AI will use these sources to cite your **Literature Review** (Numerical [1], [2] tags).</li>
-                        <li>A formal **References** page in APA style will be generated at the end.</li>
-                        <li>If no references are provided, the AI will use high-quality generic academic citations.</li>
-                      </ul>
-                      <p className="text-amber-700 font-medium">✨ Paste your list of papers/references here (one per line).</p>
-                    </div>
-                    <Textarea
-                      id="research-references"
-                      placeholder="Paste your references here... e.g.&#10;Hwang, C. L., & Yoon, K. (1981). Multiple attribute decision making: Methods and applications.&#10;Li, J., et al. (2021). Sustainable MCDM frameworks for industry 4.0..."
-                      value={aiResearchContext.references}
-                      onChange={(e) => setAiResearchContext(prev => ({ ...prev, references: e.target.value }))}
-                      className="text-sm min-h-[120px] font-mono"
-                    />
-                  </div>
                 </div>
               )}
 
@@ -3510,7 +3518,6 @@ export default function MCDMCalculator() {
                   // Save to Local Storage
                   localStorage.setItem("ai_research_topic", aiResearchContext.topic)
                   localStorage.setItem("ai_research_gap", aiResearchContext.researchGap)
-                  localStorage.setItem("ai_research_references", aiResearchContext.references)
                   localStorage.setItem("ai_criteria_defs", JSON.stringify(aiResearchContext.criteriaDefs))
 
                   setIsResearchContextDialogOpen(false)
@@ -3519,199 +3526,69 @@ export default function MCDMCalculator() {
             </DialogContent>
           </Dialog>
 
-          {(homeTab === "rankingMethods" || homeTab === "weightMethods") && (
-            <Card className="border-gray-200 bg-white shadow-none w-full mb-6 rounded-none sm:rounded-xl">
-              <CardHeader className="pb-3 px-4 sm:px-6">
-                <CardTitle className="text-sm text-black">Construct the Decision Matrix</CardTitle>
-                <CardDescription className="text-xs text-gray-700">
-                  Create a decision matrix by adding alternatives and criteria
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button
-                  onClick={() => {
-                    setReturnToTab(homeTab === "weightMethods" ? "weightMethods" : "rankingMethods")
-                    setCurrentStep("input")
-                  }}
-                  className="w-full bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
-                >
-                  + Add Alternative & Criteria
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {homeTab === "rankingMethods" && (
-            <>
-              {!isFullyDataFilled && (
-                <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded mb-6">
-                  <p className="font-semibold">⚠️ No data available</p>
-                  <p className="mt-1">
-                    Please add alternatives and criteria using the "Get Started" section above.
-                  </p>
-                </div>
-              )}
-              {isFullyDataFilled && (
-                <Card className="border-gray-200 bg-white shadow-none w-full mb-6 rounded-none sm:rounded-xl">
-                  <CardHeader className="pb-3 px-4 sm:px-6">
-                    <CardTitle className="text-sm text-black">Ranking Methods</CardTitle>
-                    <CardDescription className="text-xs text-gray-700">
-                      Review and edit the decision matrix before calculation
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
-                      <p className="font-semibold">✓ Data has uploaded</p>
-                      <p className="mt-1">
-                        {alternatives.length} alternatives × {criteria.length} criteria
-                      </p>
-                    </div>
-
-                    <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
-                      <Table className="border-collapse w-full" style={{ width: `${80 + (criteria.length * 60)}px`, minWidth: '100%' }}>
-                        <TableHeader>
-                          <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
-                            <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
-                              <div className="flex flex-col items-center justify-center h-full leading-tight">
-                                <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center flex items-center justify-center gap-1">Criteria <ArrowRight className="w-2.5 h-2.5 stroke-[3]" /></div>
-                                <div className="text-[10px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">Alternatives <ArrowDown className="w-2.5 h-2.5 stroke-[3]" /></div>
-                              </div>
-                            </TableHead>
-                            {criteria.map((crit) => (
-                              <TableHead key={crit.id} className="text-black font-bold text-center text-[10px] border-r border-gray-300 px-1 py-0.5" style={{ width: '60px', minWidth: '60px' }}>
-                                <div className="flex flex-col items-center py-0.5">
-                                  <div className="flex items-center gap-0.5">
-                                    <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
-                                    <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"} aria-hidden>
-                                      {crit.type === "beneficial" ? "▲" : "▼"}
-                                    </span>
-                                  </div>
-                                  <div className="text-gray-600 font-semibold text-[9px]">
-                                    {crit.type === "beneficial" ? "Max" : "Min"}
-                                  </div>
-                                </div>
-                              </TableHead>
-                            ))}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {alternatives.map((alt) => (
-                            <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
-                              <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5 text-center">{alt.name}</TableCell>
-                              {criteria.map((crit) => (
-                                <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
-                                  <Input
-                                    type="number"
-                                    step="any"
-                                    min="0"
-                                    value={alt.scores[crit.id] ?? ""}
-                                    onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
-                                    onKeyDown={handleKeyDown}
-                                    className="text-center text-[10px] h-7 border-gray-100 text-black w-full shadow-none bg-white rounded-md p-1 focus:ring-1 focus:ring-blue-400"
-                                  />
-                                </TableCell>
-                              ))}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {isFullyDataFilled && (
-                <div className="mb-6">
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      handleCalculate()
-                    }}
-                    className="w-full bg-blue-600 text-white hover:bg-blue-700 text-sm h-10 shadow-sm"
-                  >
-                    Calculate ranking
-                  </Button>
-                </div>
-              )}
-              <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                <CardHeader className="pb-3 text-center sm:text-left">
-                  <CardTitle className="text-[15px] text-gray-900 font-bold font-serif italic uppercase flex items-center gap-2">
-                    Ranking Methods
-                    <div className="h-1 w-1 rounded-full bg-blue-500"></div>
-                  </CardTitle>
-                  <CardDescription className="text-xs text-gray-500 font-medium">
-                    Select a ranking method to use in your calculations, and view the Mathematical formula
-                  </CardDescription>
+          {
+            (homeTab === "rankingMethods" || homeTab === "weightMethods") && (
+              <Card className="border-gray-200 bg-white shadow-none w-full mb-6 rounded-none sm:rounded-xl">
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold text-gray-900">Construct the Decision Matrix</CardTitle>
+                  <CardDescription className="text-xs text-gray-500">Create a decision matrix by adding alternatives and criteria</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {(showAllRankingMethods ? MCDM_METHODS : MCDM_METHODS.slice(0, itemsPerPage)).map((m) => (
-                      <div
-                        key={m.value}
-                        onClick={() => {
-                          setMethod(m.value)
-                          setActiveFormulaType("method")
-                          setIsDialogOpen(true)
-                        }}
-                        className={`group relative flex flex-col justify-between p-3 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden h-[100px] w-full ${method === m.value
-                          ? "border-blue-500 bg-blue-50 shadow-sm"
-                          : "border-blue-400/40 bg-white hover:border-blue-500 hover:bg-blue-50/30 hover:shadow-sm"
-                          }`}
-                      >
-                        <div className="absolute top-2 right-2 opacity-30 group-hover:opacity-100 transition-opacity">
-                          <div className="text-blue-500 border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic font-bold">i</div>
-                        </div>
-
-                        <div className="pr-4 flex-1 flex flex-col justify-center">
-                          <h4 className={`text-[13px] font-bold font-serif mb-1 transition-colors ${method === m.value ? 'text-blue-800' : 'text-gray-900 group-hover:text-blue-600'}`}>
-                            {m.label}
-                          </h4>
-                          <div className={`text-[10px] font-mono leading-relaxed line-clamp-3 ${method === m.value ? 'text-blue-700' : 'text-gray-500 font-medium'}`}>
-                            {m.formula}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex justify-center pt-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowAllRankingMethods(!showAllRankingMethods)}
-                      className="text-xs font-bold text-gray-800 hover:bg-white gap-1.5 transition-all h-8 px-4 rounded-full border border-blue-200 hover:border-blue-400"
-                    >
-                      {showAllRankingMethods ? "See less methods" : "See more methods"}
-                      <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${showAllRankingMethods ? "rotate-180" : ""}`} />
-                    </Button>
-                  </div>
+                <CardContent className="space-y-2">
+                  <Button
+                    onClick={() => {
+                      setReturnToTab(homeTab === "weightMethods" ? "weightMethods" : "rankingMethods")
+                      setCurrentStep("input")
+                    }}
+                    className="w-full bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
+                  >
+                    + Add Alternative & Criteria
+                  </Button>
                 </CardContent>
               </Card>
+            )
+          }
 
+          {
+            homeTab === "aiResearch" && (
+              <div className="w-full mb-6">
+                <AIResearchAssistant
+                  kSensData={apiResults ? { results: { '0': Object.fromEntries(apiResults.ranking.map((r: any) => [r.alternativeName, r.score])) } } : null}
+                  criterionName=""
+                  variationRange="±30%"
+                  alternatives={alternatives}
+                  criteria={criteria}
+                  method={method}
+                  weightMethod={weightMethod}
+                  comparisonMethods={selectedRankingMethods}
+                  comparisonWeightMethod={comparisonWeightMethod}
+                  sensitivityMethod={sensitivityMethod}
+                  sensitivityWeightMethods={sensitivityWeightMethods}
+                  markedAssets={selectedAiAssets}
+                  onClose={() => setHomeTab("rankingMethods")}
+                />
+              </div>
+            )
+          }
 
-            </>
-          )}
-          {homeTab === "weightMethods" && (
-            <>
-              {!isFullyDataFilled && (
-                <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded mb-6">
-                  <p className="font-semibold">⚠️ No data available</p>
-                  <p className="mt-1">
-                    Please add alternatives and criteria using the "Get Started" section above.
-                  </p>
-                </div>
-              )}
-              {isFullyDataFilled && (
-                <>
-                  <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Weight Methods</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Review and edit the decision matrix before weight calculation
-                      </CardDescription>
+          {
+            homeTab === "rankingMethods" && (
+              <>
+                {!isFullyDataFilled && (
+                  <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded mb-6">
+                    <p className="font-semibold">⚠️ No data available</p>
+                    <p className="mt-1">
+                      Please add alternatives and criteria using the "Get Started" section above.
+                    </p>
+                  </div>
+                )}
+                {isFullyDataFilled && (
+                  <Card className="border-gray-200 bg-white shadow-none w-full mb-6 rounded-none sm:rounded-xl">
+                    <CardHeader>
+                      <CardTitle className="text-sm font-semibold text-gray-900">Ranking Methods</CardTitle>
+                      <CardDescription className="text-xs text-gray-500">Review and edit the decision matrix before calculation</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded mx-3 sm:mx-0">
+                      <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
                         <p className="font-semibold">✓ Data has uploaded</p>
                         <p className="mt-1">
                           {alternatives.length} alternatives × {criteria.length} criteria
@@ -3731,7 +3608,7 @@ export default function MCDMCalculator() {
                               {criteria.map((crit) => (
                                 <TableHead key={crit.id} className="text-black font-bold text-center text-[10px] border-r border-gray-300 px-1 py-0.5" style={{ width: '60px', minWidth: '60px' }}>
                                   <div className="flex flex-col items-center py-0.5">
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex items-center gap-0.5">
                                       <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
                                       <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"} aria-hidden>
                                         {crit.type === "beneficial" ? "▲" : "▼"}
@@ -3769,335 +3646,2458 @@ export default function MCDMCalculator() {
                       </div>
                     </CardContent>
                   </Card>
+                )}
 
-                  <div className="mt-4 mb-2">
+                {isFullyDataFilled && (
+                  <div className="mb-6">
                     <Button
                       type="button"
-                      onClick={async () => {
-                        const methodToUse = weightMethod || "equal"
-                        if (["roc", "rr"].includes(methodToUse)) {
-                          setIsRanksDialogOpen(true)
-                          return
-                        }
-                        if (methodToUse === "custom") {
-                          setIsMainCustomWeightsDialogOpen(true)
-                          return
-                        }
-                        // Calculate weights and update state (entropyResult etc.)
-                        await calculateWeights(methodToUse)
-                        // Navigate to Matrix step where sidebar shows Weight Methods
-                        setCurrentStep("matrix")
+                      onClick={() => {
+                        handleCalculate()
                       }}
                       className="w-full bg-blue-600 text-white hover:bg-blue-700 text-sm h-10 shadow-sm"
                     >
-                      Calculate weight
+                      Calculate ranking
                     </Button>
-
-                    {/* --- Ranks Dialog (Weight Methods Tab) --- */}
-                    <Dialog open={isRanksDialogOpen} onOpenChange={setIsRanksDialogOpen}>
-                      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto w-full">
-                        <DialogHeader>
-                          <DialogTitle>Enter Criteria Ranks</DialogTitle>
-                          <DialogDescription className="text-xs">
-                            Enter the rank for each criterion. 1 is the most important, 2 is second, etc.
-                          </DialogDescription>
-                        </DialogHeader>
-
-                        <div className="space-y-4 mt-4">
-                          <div className="border border-gray-200 rounded-lg overflow-x-auto">
-                            <Table>
-                              <TableHeader>
-                                <TableRow className="bg-gray-50">
-                                  <TableHead className="text-xs font-semibold">Criterion</TableHead>
-                                  <TableHead className="text-xs font-semibold text-center w-24">Rank</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {criteria.map((crit) => (
-                                  <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                                    <TableCell className="py-2 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
-                                    <TableCell className="text-center py-2 px-4 text-xs text-black">
-                                      <Input
-                                        type="number"
-                                        min="1"
-                                        max={criteria.length}
-                                        className="w-16 h-7 text-xs text-center mx-auto"
-                                        value={criteriaRanks[crit.id] || ""}
-                                        onChange={(e) => setCriteriaRanks(prev => ({ ...prev, [crit.id]: e.target.value }))}
-                                        onKeyDown={handleKeyDown}
-                                      />
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <p className="text-xs text-blue-900 leading-tight">
-                              <strong>Note:</strong> Ranks should be between 1 and {criteria.length}. Different criteria can have the same rank if they are equally important.
-                            </p>
-                          </div>
-                        </div>
-
-                        <DialogFooter className="mt-4">
-                          <Button
-                            variant="outline"
-                            onClick={() => setIsRanksDialogOpen(false)}
-                            className="text-xs h-8"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              setIsRanksDialogOpen(false)
-                              // await calculateWeights(weightMethod) // This will be called by the main button
-                              // setCurrentStep("matrix") // This will be called by the main button
-                            }}
-                            className="bg-black text-white hover:bg-gray-800 text-xs h-8"
-                          >
-                            Save Ranks
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-
-                    {/* --- Custom Weights Dialog (Main Weight Methods Tab) --- */}
-                    <Dialog open={isMainCustomWeightsDialogOpen} onOpenChange={setIsMainCustomWeightsDialogOpen}>
-                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-full">
-                        <DialogHeader>
-                          <DialogTitle>Enter Custom Weights</DialogTitle>
-                          <DialogDescription className="text-xs">
-                            Enter a weight for each criterion. Weights will be automatically normalized to sum to 1.0.
-                          </DialogDescription>
-                        </DialogHeader>
-
-                        <div className="space-y-4 mt-4">
-                          <div className="border border-gray-200 rounded-lg overflow-x-auto">
-                            <Table>
-                              <TableHeader>
-                                <TableRow className="bg-gray-50">
-                                  <TableHead className="text-xs font-semibold">Criterion</TableHead>
-                                  <TableHead className="text-xs font-semibold text-center">Weight</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {criteria.map((crit) => (
-                                  <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                                    <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
-                                    <TableCell className="text-center py-3 px-4 text-xs text-black">
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={customWeights[crit.id] || ""}
-                                        onChange={(e) => setCustomWeights({
-                                          ...customWeights,
-                                          [crit.id]: e.target.value,
-                                        })}
-                                        onKeyDown={handleKeyDown}
-                                        className="w-24 h-7 text-xs text-center"
-                                        placeholder="0.00"
-                                      />
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <p className="text-xs text-blue-900">
-                              <strong>Note:</strong> You can enter any positive numbers. The weights will be automatically normalized
-                              to sum to 1.0. For example, if you enter 3, 2, and 1, they will be normalized to 0.5, 0.33, and 0.17.
-                            </p>
-                          </div>
-                        </div>
-
-                        <DialogFooter className="mt-4">
-                          <Button
-                            variant="outline"
-                            onClick={() => setIsMainCustomWeightsDialogOpen(false)}
-                            className="text-xs"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              try {
-                                const weights: Record<string, number> = {}
-                                let sum = 0
-
-                                // Parse and sum all weights
-                                criteria.forEach((crit) => {
-                                  const value = parseFloat(customWeights[crit.id]) || 0
-                                  if (value < 0) {
-                                    throw new Error("Weights must be non-negative")
-                                  }
-                                  weights[crit.id] = value
-                                  sum += value
-                                })
-
-                                if (sum === 0) {
-                                  throw new Error("At least one weight must be greater than zero")
-                                }
-
-                                // Normalize weights to sum to 1.0
-                                const normalizedWeights: Record<string, number> = {}
-                                criteria.forEach((crit) => {
-                                  normalizedWeights[crit.id] = weights[crit.id] / sum
-                                })
-
-                                setCustomWeightsCalculated(normalizedWeights)
-                                setIsMainCustomWeightsDialogOpen(false)
-
-                                // Update criteria with new weights
-                                const updatedCriteria = criteria.map(c => ({
-                                  ...c,
-                                  weight: normalizedWeights[c.id] || 0
-                                }))
-
-                                setCriteria(updatedCriteria)
-                                setWeightMethod("custom")
-                                setCurrentStep("matrix") // Navigate to Matrix step after applying custom weights
-                              } catch (error: any) {
-                                alert(error?.message || "Error calculating custom weights")
-                              }
-                            }}
-                            className="bg-black text-white hover:bg-gray-800 text-xs"
-                          >
-                            Apply Weights
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
                   </div>
-                </>
-              )}
-              <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                <CardHeader className="pb-3 text-center sm:text-left">
-                  <CardTitle className="text-[15px] text-gray-900 font-bold font-serif italic uppercase flex items-center gap-2">
-                    Weight Methods Reference
-                    <div className="h-1 w-1 rounded-full bg-emerald-500"></div>
-                  </CardTitle>
-                  <CardDescription className="text-xs text-gray-500 font-medium">
-                    Click on a method to view its formula and description
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {(showAllWeightMethods ? WEIGHT_METHODS : WEIGHT_METHODS.slice(0, itemsPerPage)).map((w) => (
-                      <div
-                        key={w.value}
-                        onClick={() => {
-                          setWeightMethod(w.value)
-                          setActiveFormulaType("weight")
-                          setIsDialogOpen(true)
-                        }}
-                        className={`group relative flex flex-col justify-between p-3 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden h-[90px] w-full ${weightMethod === w.value
-                          ? "border-emerald-500 bg-emerald-50 shadow-sm"
-                          : "border-emerald-400/40 bg-white hover:border-emerald-500 hover:bg-emerald-50/30 hover:shadow-sm"
-                          }`}
+                )}
+                <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
+                  <CardHeader>
+                    <CardTitle className="text-[11px] font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5 italic">
+                      RANKING METHODS
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    </CardTitle>
+                    <CardDescription className="text-xs text-gray-500">Select a ranking method to use in your calculations, and view the Mathematical formula</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {(showAllRankingMethods ? MCDM_METHODS : MCDM_METHODS.slice(0, itemsPerPage)).map((m) => (
+                        <div
+                          key={m.value}
+                          onClick={() => {
+                            setMethod(m.value)
+                            setActiveFormulaType("method")
+                            setIsDialogOpen(true)
+                          }}
+                          className={`group relative flex flex-col justify-between p-3 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden h-[100px] w-full ${method === m.value
+                            ? "border-blue-500 bg-blue-50 shadow-sm"
+                            : "border-blue-400/40 bg-white hover:border-blue-500 hover:bg-blue-50/30 hover:shadow-sm"
+                            }`}
+                        >
+                          <div className="absolute top-2 right-2 opacity-30 group-hover:opacity-100 transition-opacity">
+                            <div className="text-blue-500 border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic font-bold">i</div>
+                          </div>
+
+                          <div className="pr-4 flex-1 flex flex-col justify-center">
+                            <h4 className={`text-[13px] font-bold font-serif mb-1 transition-colors ${method === m.value ? 'text-blue-800' : 'text-gray-900 group-hover:text-blue-600'}`}>
+                              {m.label}
+                            </h4>
+                            <div className={`text-[10px] font-mono leading-relaxed line-clamp-3 ${method === m.value ? 'text-blue-700' : 'text-gray-500 font-medium'}`}>
+                              {m.formula}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex justify-center pt-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAllRankingMethods(!showAllRankingMethods)}
+                        className="text-xs font-bold text-gray-800 hover:bg-white gap-1.5 transition-all h-8 px-4 rounded-full border border-blue-200 hover:border-blue-400"
                       >
-                        <div className="absolute top-2 right-2 opacity-30 group-hover:opacity-100 transition-opacity">
-                          <div className="text-emerald-500 border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic font-bold">i</div>
+                        {showAllRankingMethods ? "See less methods" : "See more methods"}
+                        <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${showAllRankingMethods ? "rotate-180" : ""}`} />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+
+              </>
+            )
+          }
+          {
+            homeTab === "weightMethods" && (
+              <>
+                {!isFullyDataFilled && (
+                  <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded mb-6">
+                    <p className="font-semibold">⚠️ No data available</p>
+                    <p className="mt-1">
+                      Please add alternatives and criteria using the "Get Started" section above.
+                    </p>
+                  </div>
+                )}
+                {isFullyDataFilled && (
+                  <>
+                    <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm text-black">Weight Methods</CardTitle>
+                        <CardDescription className="text-xs text-gray-700">
+                          Review and edit the decision matrix before weight calculation
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded mx-3 sm:mx-0">
+                          <p className="font-semibold">✓ Data has uploaded</p>
+                          <p className="mt-1">
+                            {alternatives.length} alternatives × {criteria.length} criteria
+                          </p>
                         </div>
 
-                        <div className="pr-4 flex-1 flex flex-col justify-center">
-                          <h4 className={`text-[13px] font-bold font-serif mb-1 transition-colors ${weightMethod === w.value ? 'text-emerald-800' : 'text-gray-900 group-hover:text-emerald-600'}`}>
-                            {w.label}
-                          </h4>
-                          <div className={`text-[10px] leading-snug line-clamp-3 ${weightMethod === w.value ? 'text-emerald-700' : 'text-gray-500 font-medium'}`}>
-                            {w.description}
+                        <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
+                          <Table className="border-collapse w-full" style={{ width: `${80 + (criteria.length * 60)}px`, minWidth: '100%' }}>
+                            <TableHeader>
+                              <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
+                                <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
+                                  <div className="flex flex-col items-center justify-center h-full leading-tight">
+                                    <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center flex items-center justify-center gap-1">Criteria <ArrowRight className="w-2.5 h-2.5 stroke-[3]" /></div>
+                                    <div className="text-[10px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">Alternatives <ArrowDown className="w-2.5 h-2.5 stroke-[3]" /></div>
+                                  </div>
+                                </TableHead>
+                                {criteria.map((crit) => (
+                                  <TableHead key={crit.id} className="text-black font-bold text-center text-[10px] border-r border-gray-300 px-1 py-0.5" style={{ width: '60px', minWidth: '60px' }}>
+                                    <div className="flex flex-col items-center py-0.5">
+                                      <div className="flex items-center gap-1">
+                                        <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
+                                        <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"} aria-hidden>
+                                          {crit.type === "beneficial" ? "▲" : "▼"}
+                                        </span>
+                                      </div>
+                                      <div className="text-gray-600 font-semibold text-[9px]">
+                                        {crit.type === "beneficial" ? "Max" : "Min"}
+                                      </div>
+                                    </div>
+                                  </TableHead>
+                                ))}
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {alternatives.map((alt) => (
+                                <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
+                                  <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5 text-center">{alt.name}</TableCell>
+                                  {criteria.map((crit) => (
+                                    <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
+                                      <Input
+                                        type="number"
+                                        step="any"
+                                        min="0"
+                                        value={alt.scores[crit.id] ?? ""}
+                                        onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        className="text-center text-[10px] h-7 border-gray-100 text-black w-full shadow-none bg-white rounded-md p-1 focus:ring-1 focus:ring-blue-400"
+                                      />
+                                    </TableCell>
+                                  ))}
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <div className="mt-4 mb-2">
+                      <Button
+                        type="button"
+                        onClick={async () => {
+                          const methodToUse = weightMethod || "equal"
+                          if (["roc", "rr"].includes(methodToUse)) {
+                            setIsRanksDialogOpen(true)
+                            return
+                          }
+                          if (methodToUse === "custom") {
+                            setIsMainCustomWeightsDialogOpen(true)
+                            return
+                          }
+                          // Calculate weights and update state (entropyResult etc.)
+                          await calculateWeights(methodToUse)
+                          // Navigate to Matrix step where sidebar shows Weight Methods
+                          setCurrentStep("matrix")
+                        }}
+                        className="w-full bg-blue-600 text-white hover:bg-blue-700 text-sm h-10 shadow-sm"
+                      >
+                        Calculate weight
+                      </Button>
+
+                      {/* --- Ranks Dialog (Weight Methods Tab) --- */}
+                      <Dialog open={isRanksDialogOpen} onOpenChange={setIsRanksDialogOpen}>
+                        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto w-full">
+                          <DialogHeader>
+                            <DialogTitle>Enter Criteria Ranks</DialogTitle>
+                            <DialogDescription className="text-xs">
+                              Enter the rank for each criterion. 1 is the most important, 2 is second, etc.
+                            </DialogDescription>
+                          </DialogHeader>
+
+                          <div className="space-y-4 mt-4">
+                            <div className="border border-gray-200 rounded-lg overflow-x-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow className="bg-gray-50">
+                                    <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                                    <TableHead className="text-xs font-semibold text-center w-24">Rank</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {criteria.map((crit) => (
+                                    <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                      <TableCell className="py-2 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                                      <TableCell className="text-center py-2 px-4 text-xs text-black">
+                                        <Input
+                                          type="number"
+                                          min="1"
+                                          max={criteria.length}
+                                          className="w-16 h-7 text-xs text-center mx-auto"
+                                          value={criteriaRanks[crit.id] || ""}
+                                          onChange={(e) => setCriteriaRanks(prev => ({ ...prev, [crit.id]: e.target.value }))}
+                                          onKeyDown={handleKeyDown}
+                                        />
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <p className="text-xs text-blue-900 leading-tight">
+                                <strong>Note:</strong> Ranks should be between 1 and {criteria.length}. Different criteria can have the same rank if they are equally important.
+                              </p>
+                            </div>
+                          </div>
+
+                          <DialogFooter className="mt-4">
+                            <Button
+                              variant="outline"
+                              onClick={() => setIsRanksDialogOpen(false)}
+                              className="text-xs h-8"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                setIsRanksDialogOpen(false)
+                                // await calculateWeights(weightMethod) // This will be called by the main button
+                                // setCurrentStep("matrix") // This will be called by the main button
+                              }}
+                              className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                            >
+                              Save Ranks
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+
+                      {/* --- Custom Weights Dialog (Main Weight Methods Tab) --- */}
+                      <Dialog open={isMainCustomWeightsDialogOpen} onOpenChange={setIsMainCustomWeightsDialogOpen}>
+                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-full">
+                          <DialogHeader>
+                            <DialogTitle>Enter Custom Weights</DialogTitle>
+                            <DialogDescription className="text-xs">
+                              Enter a weight for each criterion. Weights will be automatically normalized to sum to 1.0.
+                            </DialogDescription>
+                          </DialogHeader>
+
+                          <div className="space-y-4 mt-4">
+                            <div className="border border-gray-200 rounded-lg overflow-x-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow className="bg-gray-50">
+                                    <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                                    <TableHead className="text-xs font-semibold text-center">Weight</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {criteria.map((crit) => (
+                                    <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                      <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                                      <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          value={customWeights[crit.id] || ""}
+                                          onChange={(e) => setCustomWeights({
+                                            ...customWeights,
+                                            [crit.id]: e.target.value,
+                                          })}
+                                          onKeyDown={handleKeyDown}
+                                          className="w-24 h-7 text-xs text-center"
+                                          placeholder="0.00"
+                                        />
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <p className="text-xs text-blue-900">
+                                <strong>Note:</strong> You can enter any positive numbers. The weights will be automatically normalized
+                                to sum to 1.0. For example, if you enter 3, 2, and 1, they will be normalized to 0.5, 0.33, and 0.17.
+                              </p>
+                            </div>
+                          </div>
+
+                          <DialogFooter className="mt-4">
+                            <Button
+                              variant="outline"
+                              onClick={() => setIsMainCustomWeightsDialogOpen(false)}
+                              className="text-xs"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                try {
+                                  const weights: Record<string, number> = {}
+                                  let sum = 0
+
+                                  // Parse and sum all weights
+                                  criteria.forEach((crit) => {
+                                    const value = parseFloat(customWeights[crit.id]) || 0
+                                    if (value < 0) {
+                                      throw new Error("Weights must be non-negative")
+                                    }
+                                    weights[crit.id] = value
+                                    sum += value
+                                  })
+
+                                  if (sum === 0) {
+                                    throw new Error("At least one weight must be greater than zero")
+                                  }
+
+                                  // Normalize weights to sum to 1.0
+                                  const normalizedWeights: Record<string, number> = {}
+                                  criteria.forEach((crit) => {
+                                    normalizedWeights[crit.id] = weights[crit.id] / sum
+                                  })
+
+                                  setCustomWeightsCalculated(normalizedWeights)
+                                  setIsMainCustomWeightsDialogOpen(false)
+
+                                  // Update criteria with new weights
+                                  const updatedCriteria = criteria.map(c => ({
+                                    ...c,
+                                    weight: normalizedWeights[c.id] || 0
+                                  }))
+
+                                  setCriteria(updatedCriteria)
+                                  setWeightMethod("custom")
+                                  setCurrentStep("matrix") // Navigate to Matrix step after applying custom weights
+                                } catch (error: any) {
+                                  alert(error?.message || "Error calculating custom weights")
+                                }
+                              }}
+                              className="bg-black text-white hover:bg-gray-800 text-xs"
+                            >
+                              Apply Weights
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </>
+                )}
+                <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
+                  <CardHeader className="pb-3 text-center sm:text-left">
+                    <CardTitle className="text-[15px] text-gray-900 font-bold font-serif italic uppercase flex items-center gap-2">
+                      Weight Methods Reference
+                      <div className="h-1 w-1 rounded-full bg-emerald-500"></div>
+                    </CardTitle>
+                    <CardDescription className="text-xs text-gray-500 font-medium">
+                      Click on a method to view its formula and description
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {(showAllWeightMethods ? WEIGHT_METHODS : WEIGHT_METHODS.slice(0, itemsPerPage)).map((w) => (
+                        <div
+                          key={w.value}
+                          onClick={() => {
+                            setWeightMethod(w.value)
+                            setActiveFormulaType("weight")
+                            setIsDialogOpen(true)
+                          }}
+                          className={`group relative flex flex-col justify-between p-3 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden h-[90px] w-full ${weightMethod === w.value
+                            ? "border-emerald-500 bg-emerald-50 shadow-sm"
+                            : "border-emerald-400/40 bg-white hover:border-emerald-500 hover:bg-emerald-50/30 hover:shadow-sm"
+                            }`}
+                        >
+                          <div className="absolute top-2 right-2 opacity-30 group-hover:opacity-100 transition-opacity">
+                            <div className="text-emerald-500 border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic font-bold">i</div>
+                          </div>
+
+                          <div className="pr-4 flex-1 flex flex-col justify-center">
+                            <h4 className={`text-[13px] font-bold font-serif mb-1 transition-colors ${weightMethod === w.value ? 'text-emerald-800' : 'text-gray-900 group-hover:text-emerald-600'}`}>
+                              {w.label}
+                            </h4>
+                            <div className={`text-[10px] leading-snug line-clamp-3 ${weightMethod === w.value ? 'text-emerald-700' : 'text-gray-500 font-medium'}`}>
+                              {w.description}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
 
-                  <div className="flex justify-center pt-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowAllWeightMethods(!showAllWeightMethods)}
-                      className="text-xs font-bold text-gray-800 hover:bg-white gap-1.5 transition-all h-8 px-4 rounded-full border border-emerald-200 hover:border-emerald-400"
-                    >
-                      {showAllWeightMethods ? "See less methods" : "See more methods"}
-                      <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${showAllWeightMethods ? "rotate-180" : ""}`} />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                    <div className="flex justify-center pt-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAllWeightMethods(!showAllWeightMethods)}
+                        className="text-xs font-bold text-gray-800 hover:bg-white gap-1.5 transition-all h-8 px-4 rounded-full border border-emerald-200 hover:border-emerald-400"
+                      >
+                        {showAllWeightMethods ? "See less methods" : "See more methods"}
+                        <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${showAllWeightMethods ? "rotate-180" : ""}`} />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">Weight Comparison Analysis</CardTitle>
-                  <CardDescription className="text-xs text-gray-700">
-                    Select methods to calculate and compare criteria weights
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-black">Select Methods to Compare:</p>
-                    <div className="max-h-[130px] overflow-y-auto pr-2 custom-scrollbar">
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                        {WEIGHT_METHODS.map((w) => (
-                          <label key={w.value} className="flex items-center gap-3 cursor-pointer group">
+                <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm text-black">Weight Comparison Analysis</CardTitle>
+                    <CardDescription className="text-xs text-gray-700">
+                      Select methods to calculate and compare criteria weights
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-black">Select Methods to Compare:</p>
+                      <div className="max-h-[130px] overflow-y-auto pr-2 custom-scrollbar">
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                          {WEIGHT_METHODS.map((w) => (
+                            <label key={w.value} className="flex items-center gap-3 cursor-pointer group">
+                              <input
+                                type="checkbox"
+                                checked={sensitivityWeightMethods.includes(w.value)}
+                                onChange={() => {
+                                  if (!hasValidDataForWeightCalculation()) {
+                                    setShowWeightDataWarning(true)
+                                    setTimeout(() => setShowWeightDataWarning(false), 3000)
+                                    return
+                                  }
+                                  if (w.value === "piprecia" && !sensitivityWeightMethods.includes("piprecia")) {
+                                    setIsPipreciaDialogOpen(true)
+                                  }
+                                  if (w.value === "ahp" && !sensitivityWeightMethods.includes("ahp")) {
+                                    setIsAhpDialogOpen(true)
+                                  }
+                                  if (w.value === "swara" && !sensitivityWeightMethods.includes("swara")) {
+                                    setIsSwaraDialogOpen(true)
+                                  }
+                                  if (["roc", "rr"].includes(w.value) && !sensitivityWeightMethods.includes(w.value)) {
+                                    setIsSensitivityRanksDialogOpen(true)
+                                  }
+                                  if (w.value === "custom" && !sensitivityWeightMethods.includes("custom")) {
+                                    setIsCustomWeightsDialogOpen(true)
+                                  }
+                                  toggleSensitivityWeightMethod(w.value)
+                                }}
+                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all"
+                              />
+                              <span className="text-xs font-semibold text-black group-hover:text-blue-600 transition-colors truncate">
+                                {w.label}
+                              </span>
+                            </label>
+                          ))}
+                          <label className="flex items-center gap-3 cursor-pointer group">
                             <input
                               type="checkbox"
-                              checked={sensitivityWeightMethods.includes(w.value)}
-                              onChange={() => {
+                              checked={sensitivityWeightMethods.includes("custom")}
+                              onChange={(e) => {
                                 if (!hasValidDataForWeightCalculation()) {
                                   setShowWeightDataWarning(true)
                                   setTimeout(() => setShowWeightDataWarning(false), 3000)
                                   return
                                 }
-                                if (w.value === "piprecia" && !sensitivityWeightMethods.includes("piprecia")) {
-                                  setIsPipreciaDialogOpen(true)
-                                }
-                                if (w.value === "ahp" && !sensitivityWeightMethods.includes("ahp")) {
-                                  setIsAhpDialogOpen(true)
-                                }
-                                if (w.value === "swara" && !sensitivityWeightMethods.includes("swara")) {
-                                  setIsSwaraDialogOpen(true)
-                                }
-                                if (["roc", "rr"].includes(w.value) && !sensitivityWeightMethods.includes(w.value)) {
-                                  setIsSensitivityRanksDialogOpen(true)
-                                }
-                                if (w.value === "custom" && !sensitivityWeightMethods.includes("custom")) {
-                                  setIsCustomWeightsDialogOpen(true)
-                                }
-                                toggleSensitivityWeightMethod(w.value)
+                                toggleSensitivityWeightMethod("custom")
+                                if (e.target.checked) setIsCustomWeightsDialogOpen(true)
                               }}
                               className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all"
                             />
                             <span className="text-xs font-semibold text-black group-hover:text-blue-600 transition-colors truncate">
-                              {w.label}
+                              Enter own weight
                             </span>
                           </label>
-                        ))}
-                        <label className="flex items-center gap-3 cursor-pointer group">
-                          <input
-                            type="checkbox"
-                            checked={sensitivityWeightMethods.includes("custom")}
-                            onChange={(e) => {
-                              if (!hasValidDataForWeightCalculation()) {
-                                setShowWeightDataWarning(true)
-                                setTimeout(() => setShowWeightDataWarning(false), 3000)
-                                return
-                              }
-                              toggleSensitivityWeightMethod("custom")
-                              if (e.target.checked) setIsCustomWeightsDialogOpen(true)
-                            }}
-                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all"
-                          />
-                          <span className="text-xs font-semibold text-black group-hover:text-blue-600 transition-colors truncate">
-                            Enter own weight
-                          </span>
-                        </label>
+                        </div>
                       </div>
+
+                      <Dialog open={isCustomWeightsDialogOpen} onOpenChange={setIsCustomWeightsDialogOpen}>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Enter Custom Weights</DialogTitle>
+                            <DialogDescription>Sum must equal 1</DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                            {criteria.map((crit) => (
+                              <div key={crit.id} className="grid grid-cols-4 items-center gap-4">
+                                <label className="text-right text-xs col-span-2">{crit.name}</label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  className="col-span-2 h-8 text-xs"
+                                  value={sensitivityCustomWeights[crit.id] || ""}
+                                  onChange={(e) => setSensitivityCustomWeights(prev => ({ ...prev, [crit.id]: parseFloat(e.target.value) }))}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <div className="text-xs flex items-center mr-auto">
+                              Total: {Object.values(sensitivityCustomWeights).reduce((a, b) => a + (b || 0), 0).toFixed(2)}
+                            </div>
+                            <Button onClick={() => setIsCustomWeightsDialogOpen(false)} size="sm">Save</Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+
+                      {/* --- PIPRECIA Dialog (Weight Methods Tab) --- */}
+                      <Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen}>
+                        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+                          <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
+                          <PIPRECIAFormula
+                            criteria={criteria}
+                            initialScores={pipreciaScores}
+                            onScoresChange={setPipreciaScores}
+                            onWeightsChange={(weights) => {
+                              setPipreciaCalculatedWeights(weights)
+                              // Automatically trigger analysis update with new weights
+                              handleWeightSensitivityAnalysis(weights)
+                            }}
+                            onWeightsCalculated={(weights) => {
+                              setPipreciaCalculatedWeights(weights)
+                              setIsPipreciaDialogOpen(false)
+                              // Automatically trigger analysis update with new weights
+                              handleWeightSensitivityAnalysis(weights)
+                            }}
+                          />
+                        </DialogContent>
+                      </Dialog>
+
+                      {/* --- AHP Dialog (Weight Methods Tab) --- */}
+                      <Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen}>
+                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
+                          <DialogTitle>AHP Weight Calculator</DialogTitle>
+                          <AHPFormula
+                            criteria={criteria}
+                            initialMatrix={ahpMatrix}
+                            onMatrixChange={setAhpMatrix}
+                            onWeightsCalculated={(weights) => {
+                              setAhpCalculatedWeights(weights)
+                              setIsAhpDialogOpen(false)
+                              // Automatically trigger analysis update with new weights
+                              handleWeightSensitivityAnalysis()
+                            }}
+                          />
+                        </DialogContent>
+                      </Dialog>
+
+                      {/* --- SWARA Dialog (Weight Methods Tab) --- */}
+                      <Dialog open={isSwaraDialogOpen} onOpenChange={setIsSwaraDialogOpen}>
+                        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+                          <DialogHeader>
+                            <DialogTitle>SWARA Weight Calculator</DialogTitle>
+                            <DialogDescription className="text-xs">
+                              Enter comparative importance coefficients (s<sub>j</sub>) for each criterion.
+                              The first criterion is most important (s<sub>1</sub> = 0).
+                              Higher values indicate larger importance differences.
+                            </DialogDescription>
+                          </DialogHeader>
+
+                          <div className="space-y-4 mt-4">
+                            <div className="border border-gray-200 rounded-lg overflow-x-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow className="bg-gray-50">
+                                    <TableHead className="text-xs font-semibold">Rank</TableHead>
+                                    <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                                    <TableHead className="text-xs font-semibold text-center">
+                                      Coefficient (s<sub>j</sub>)
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {criteria.map((crit, index) => (
+                                    <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                      <TableCell className="py-3 px-4 font-medium text-black text-xs">{index + 1}</TableCell>
+                                      <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                                      <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                        {index === 0 ? (
+                                          <span className="text-xs text-gray-500">0 (most important)</span>
+                                        ) : (
+                                          <Input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={swaraCoefficients[crit.id] || ""}
+                                            onChange={(e) => setSwaraCoefficients({
+                                              ...swaraCoefficients,
+                                              [crit.id]: e.target.value,
+                                            })}
+                                            className="w-24 h-7 text-xs text-center"
+                                            placeholder="0.00"
+                                          />
+                                        )}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <p className="text-xs text-blue-900">
+                                <strong>Note:</strong> Criteria are ordered by importance (top = most important).
+                                For each criterion j, enter how much less important it is compared to the previous criterion (j-1).
+                              </p>
+                            </div>
+                          </div>
+
+                          <DialogFooter className="mt-4">
+                            <Button
+                              variant="outline"
+                              onClick={() => setIsSwaraDialogOpen(false)}
+                              className="text-xs"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  const coeffs: Record<string, number> = {}
+                                  criteria.forEach((crit, index) => {
+                                    if (index === 0) {
+                                      coeffs[crit.id] = 0
+                                    } else {
+                                      coeffs[crit.id] = parseFloat(swaraCoefficients[crit.id]) || 0
+                                    }
+                                  })
+
+                                  const response = await fetch("/api/swara-weights", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ criteria, coefficients: coeffs }),
+                                  })
+
+                                  if (!response.ok) throw new Error("Failed to calculate SWARA weights")
+
+                                  const data: SWARAResult = await response.json()
+                                  setSwaraResult(data)
+                                  setSwaraCalculatedWeights(data.weights)
+                                  setIsSwaraDialogOpen(false)
+
+                                  // Trigger analysis update
+                                  handleWeightSensitivityAnalysis(undefined, data.weights)
+                                } catch (error) {
+                                  console.error("SWARA calculation error:", error)
+                                  alert("Error calculating SWARA weights")
+                                }
+                              }}
+                              className="bg-black text-white hover:bg-gray-800 text-xs"
+                            >
+                              Calculate Weights
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+
+                    </div>
+
+                    {sensitivityError && (
+                      <div className="text-xs text-red-600 border border-red-200 bg-red-50 p-2 rounded">
+                        {sensitivityError}
+                      </div>
+                    )}
+
+                    <Button
+                      type="button"
+                      onClick={() => handleWeightSensitivityAnalysis()}
+                      disabled={sensitivityLoading}
+                      className="w-full sm:w-auto bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
+                    >
+                      {sensitivityLoading ? "Calculating..." : "Calculate Weights & Compare"}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {sensitivityCriteriaWeights.length > 0 && (
+                  <>
+
+                    <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
+                      <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                          <CardTitle className="text-sm text-black">Weight Variation Chart</CardTitle>
+                          <CardDescription className="text-xs text-gray-700">Visualizing weights across different methods</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Select value={weightChartType} onValueChange={setWeightChartType}>
+                            <SelectTrigger className="w-28 sm:w-32 h-7 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="bar">Bar Chart</SelectItem>
+                              <SelectItem value="stackedBar">Stacked Bar</SelectItem>
+                              <SelectItem value="line">Line Chart</SelectItem>
+                              <SelectItem value="area">Area Chart</SelectItem>
+                              <SelectItem value="radar">Radar Chart</SelectItem>
+                              <SelectItem value="scatter">Scatter Plot</SelectItem>
+                              <SelectItem value="boxPlot">Box Plot</SelectItem>
+                              <SelectItem value="radial">Radial Bar</SelectItem>
+                              <SelectItem value="parallel">Parallel Coordinates</SelectItem>
+                              <SelectItem value="violin">Violin Plot</SelectItem>
+                              <SelectItem value="ridgeline">Ridgeline (Density)</SelectItem>
+                              <SelectItem value="ecdf">Empirical CDF</SelectItem>
+                              <SelectItem value="kde">KDE Density</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          <Button onClick={() => downloadChartAsJpeg(weightChartRef, 'weight-analysis')} variant="outline" size="sm" className="h-7 text-xs"><Download className="w-3 h-3 mr-1" /> JPG</Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div ref={weightChartRef} className="h-[350px] sm:h-[500px] w-full mt-4">
+                          <ResponsiveContainer width="100%" height="100%">
+                            {weightChartType === 'radar' ? (
+                              <RadarChart cx="50%" cy="50%" outerRadius="80%" data={sensitivityCriteriaWeights}>
+                                <PolarGrid />
+                                <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                <PolarRadiusAxis />
+                                <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                <Tooltip />
+                                {sensitivityWeightComparisonResults.map((res, i) => (
+                                  <Radar
+                                    key={res.weightLabel}
+                                    name={res.weightLabel}
+                                    dataKey={res.weightLabel}
+                                    stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                                    fill={CHART_COLORS[i % CHART_COLORS.length]}
+                                    fillOpacity={0.1}
+                                  />
+                                ))}
+                              </RadarChart>
+                            ) : weightChartType === 'bar' ? (
+                              <BarChart data={sensitivityCriteriaWeights}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                <YAxis label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
+                                <Tooltip />
+                                <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                {sensitivityWeightComparisonResults.map((res, i) => (
+                                  <Bar key={res.weightLabel} dataKey={res.weightLabel} fill={CHART_COLORS[i % CHART_COLORS.length]} name={res.weightLabel} />
+                                ))}
+                              </BarChart>
+                            ) : weightChartType === 'stackedBar' ? (
+                              <BarChart data={sensitivityCriteriaWeights}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                <YAxis label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
+                                <Tooltip />
+                                <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                {sensitivityWeightComparisonResults.map((res, i) => (
+                                  <Bar key={res.weightLabel} stackId="a" dataKey={res.weightLabel} fill={CHART_COLORS[i % CHART_COLORS.length]} name={res.weightLabel} />
+                                ))}
+                              </BarChart>
+                            ) : weightChartType === 'line' ? (
+                              <LineChart data={sensitivityCriteriaWeights}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                <YAxis label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
+                                <Tooltip />
+                                <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                {sensitivityWeightComparisonResults.map((res, i) => (
+                                  <Line key={res.weightLabel} type="monotone" dataKey={res.weightLabel} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2} name={res.weightLabel} />
+                                ))}
+                              </LineChart>
+                            ) : weightChartType === 'area' ? (
+                              <AreaChart data={sensitivityCriteriaWeights}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                <YAxis label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
+                                <Tooltip />
+                                <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                {sensitivityWeightComparisonResults.map((res, i) => (
+                                  <Area key={res.weightLabel} type="monotone" dataKey={res.weightLabel} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={res.weightLabel} />
+                                ))}
+                              </AreaChart>
+                            ) : weightChartType === 'boxPlot' ? (
+                              (() => {
+                                const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel);
+                                const data = sensitivityCriteriaWeights.map(row => {
+                                  const values = methods.map(m => (row[m] !== undefined ? Number(row[m]) : 0));
+                                  const sorted = [...values].sort((a, b) => a - b);
+                                  const q = (arr: number[], p: number) => {
+                                    if (arr.length === 0) return 0;
+                                    const pos = (arr.length - 1) * p;
+                                    const base = Math.floor(pos);
+                                    const rest = pos - base;
+                                    if (arr[base + 1] !== undefined) return arr[base] + rest * (arr[base + 1] - arr[base]);
+                                    return arr[base];
+                                  };
+                                  const min = sorted[0] ?? 0;
+                                  const max = sorted[sorted.length - 1] ?? 0;
+                                  const q1 = q(sorted, 0.25);
+                                  const q2 = q(sorted, 0.5);
+                                  const q3 = q(sorted, 0.75);
+                                  return { name: row.name, values, min, q1, q2, q3, max };
+                                });
+
+                                const width = 800;
+                                const height = 420;
+                                const padding = { left: 60, right: 20, top: 20, bottom: 60 };
+                                const innerW = width - padding.left - padding.right;
+                                const innerH = height - padding.top - padding.bottom;
+
+                                const allVals = data.flatMap(d => d.values);
+                                const gMin = Math.min(...allVals, 0);
+                                const gMax = Math.max(...allVals, 1);
+                                const yScale = (v: number) => padding.top + innerH - ((v - gMin) / (gMax - gMin || 1)) * innerH;
+
+                                const boxWidth = Math.min(60, innerW / (data.length * 1.2));
+
+                                const gaussian = (u: number) => Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI);
+                                const kde = (values: number[], bw = 0.04, samples = 50) => {
+                                  const xs = Array.from({ length: samples }, (_, i) => gMin + (i / (samples - 1)) * (gMax - gMin));
+                                  const dens = xs.map(x => {
+                                    const s = values.reduce((acc, v) => acc + gaussian((x - v) / bw), 0);
+                                    return s / (values.length * bw);
+                                  });
+                                  const max = Math.max(...dens) || 1;
+                                  return xs.map((x, i) => ({ x, y: dens[i] / max }));
+                                };
+
+                                return (
+                                  <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" style={{ fontFamily: 'sans-serif' }}>
+                                    {/* Y-axis and grid */}
+                                    {Array.from({ length: 6 }).map((_, i) => {
+                                      const yVal = gMin + (i / 5) * (gMax - gMin);
+                                      const y = yScale(yVal);
+                                      return (
+                                        <g key={i}>
+                                          <line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke="#e5e7eb" />
+                                          <text x={padding.left - 8} y={y + 4} fontSize={10} textAnchor="end" fill="#6b7280">{yVal.toFixed(2)}</text>
+                                        </g>
+                                      );
+                                    })}
+                                    <text x={padding.left / 2} y={padding.top + innerH / 2} transform={`rotate(-90, ${padding.left / 2}, ${padding.top + innerH / 2})`} textAnchor="middle" fontSize="12" fill="#374151">Weight</text>
+
+                                    {data.map((d, i) => {
+                                      const cx = padding.left + (i + 0.5) * (innerW / data.length);
+                                      const color = CHART_COLORS[i % CHART_COLORS.length];
+                                      const dens = kde(d.values);
+                                      const violinWidth = boxWidth * 0.8;
+
+                                      const pathD = dens.map((pt, idx) => {
+                                        const x = cx + pt.y * violinWidth;
+                                        const y = yScale(pt.x);
+                                        return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
+                                      }).join(' ') + ` L ${cx} ${yScale(gMax)} L ${cx} ${yScale(gMin)} Z`;
+
+                                      return (
+                                        <g key={d.name}>
+                                          {/* Half-violin */}
+                                          <path d={pathD} fill={color} stroke={color} fillOpacity={0.2} strokeWidth={1.5} />
+
+                                          {/* Box plot part */}
+                                          <line x1={cx - 10} x2={cx - 10} y1={yScale(d.q1)} y2={yScale(d.q3)} stroke="#374151" strokeWidth={3} />
+                                          <line x1={cx - 15} x2={cx - 5} y1={yScale(d.q2)} y2={yScale(d.q2)} stroke="#374151" strokeWidth={2} />
+                                          <line x1={cx - 10} x2={cx - 10} y1={yScale(d.min)} y2={yScale(d.q1)} stroke="#6b7280" strokeWidth={1} strokeDasharray="3 3" />
+                                          <line x1={cx - 10} x2={cx - 10} y1={yScale(d.q3)} y2={yScale(d.max)} stroke="#6b7280" strokeWidth={1} strokeDasharray="3 3" />
+
+                                          {/* Jittered points */}
+                                          {d.values.map((val, j) => (
+                                            <circle
+                                              key={j}
+                                              cx={cx - 30 + (Math.random() - 0.5) * 20}
+                                              cy={yScale(val)}
+                                              r={3}
+                                              fill={color}
+                                              fillOpacity={0.6}
+                                              stroke="#fff"
+                                              strokeWidth={0.5}
+                                            >
+                                              <title>{`${d.name}: ${val.toFixed(resultsDecimalPlaces)}`}</title>
+                                            </circle>
+                                          ))}
+
+                                          <text x={cx} y={padding.top + innerH + 18} fontSize={12} textAnchor="middle" fill="#0f172a">{d.name}</text>
+                                        </g>
+                                      );
+                                    })}
+                                  </svg>
+                                );
+                              })()
+                            ) : weightChartType === 'scatter' ? (
+                              <ScatterChart>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} />
+                                <YAxis dataKey="weight" name="Weight" label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
+                                <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                                <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                {sensitivityWeightComparisonResults.map((res, i) => (
+                                  <Scatter key={res.weightLabel} name={res.weightLabel} data={sensitivityCriteriaWeights.map(d => ({ name: d.name, weight: d[res.weightLabel] }))} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                                ))}
+                              </ScatterChart>
+                            ) : weightChartType === 'parallel' ? (
+                              (() => {
+                                const criteriaNames = sensitivityCriteriaWeights.map(d => d.name)
+                                const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
+                                const series = methods.map((m) => ({
+                                  name: m,
+                                  values: criteriaNames.map(cn => {
+                                    const row = sensitivityCriteriaWeights.find(r => r.name === cn)
+                                    return row && row[m] !== undefined ? Number(row[m]) : 0
+                                  })
+                                }))
+
+                                const width = 800
+                                const height = 420
+                                const padding = { left: 50, right: 20, top: 20, bottom: 40 }
+                                const innerW = width - padding.left - padding.right
+                                const innerH = height - padding.top - padding.bottom
+
+                                const xScale = (i: number) => padding.left + (i / Math.max(1, criteriaNames.length - 1)) * innerW
+                                const yScale = (v: number) => padding.top + innerH - v * innerH
+
+                                return (
+                                  <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+                                    {criteriaNames.map((cn, i) => (
+                                      <g key={cn} transform={`translate(${xScale(i)},0)`}>
+                                        <line x1={0} x2={0} y1={padding.top} y2={height - padding.bottom} stroke="#e5e7eb" />
+                                        <text x={0} y={height - padding.bottom + 14} fontSize={11} textAnchor="middle" fill="#111827">{cn}</text>
+                                      </g>
+                                    ))}
+
+                                    {series.map((s, si) => (
+                                      <path key={s.name}
+                                        d={s.values.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(v)}`).join(' ')}
+                                        fill="none"
+                                        stroke={CHART_COLORS[si % CHART_COLORS.length]}
+                                        strokeWidth={1.6}
+                                        opacity={0.85}
+                                      />
+                                    ))}
+
+                                    {series.map((s, si) => (
+                                      <g key={s.name} transform={`translate(${width - padding.right - 120}, ${padding.top + si * 18})`}>
+                                        <rect width={10} height={10} fill={CHART_COLORS[si % CHART_COLORS.length]} />
+                                        <text x={14} y={9} fontSize={11} fill="#111827">{s.name}</text>
+                                      </g>
+                                    ))}
+                                  </svg>
+                                )
+                              })()
+                            ) : weightChartType === 'violin' ? (
+                              (() => {
+                                const criteriaNames = sensitivityCriteriaWeights.map(d => d.name)
+                                const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
+                                const width = 800
+                                const height = 420
+                                const padding = { left: 60, right: 160, top: 20, bottom: 60 }
+                                const innerW = width - padding.left - padding.right
+                                const innerH = height - padding.top - padding.bottom
+
+                                const gaussian = (u: number) => Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI)
+                                const kde = (values: number[], bw = 0.05, samples = 40) => {
+                                  const xs = Array.from({ length: samples }, (_, i) => i / (samples - 1))
+                                  const dens = xs.map(x => {
+                                    const s = values.reduce((acc, v) => acc + gaussian((x - v) / bw), 0)
+                                    return s / (values.length * bw)
+                                  })
+                                  const max = Math.max(...dens) || 1
+                                  return xs.map((x, i) => ({ x, y: dens[i] / max }))
+                                }
+
+                                return (
+                                  <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+                                    {criteriaNames.map((cn, i) => {
+                                      const weights = methods.map(m => {
+                                        const row = sensitivityCriteriaWeights.find(r => r.name === cn)
+                                        return row && row[m] !== undefined ? Number(row[m]) : 0
+                                      })
+                                      const dens = kde(weights, 0.06, 60)
+                                      const xCenter = padding.left + (i / Math.max(1, criteriaNames.length - 1)) * innerW
+                                      const maxWidth = Math.min(60, innerW / (criteriaNames.length * 0.9))
+
+                                      const pathD = dens.map((pt, idx) => {
+                                        const x = xCenter + pt.y * maxWidth
+                                        const y = padding.top + (1 - pt.x) * innerH
+                                        return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`
+                                      }).join(' ') + ' ' + dens.slice().reverse().map((pt, idx) => {
+                                        const x = xCenter - pt.y * maxWidth
+                                        const y = padding.top + (1 - pt.x) * innerH
+                                        return `L ${x} ${y}`
+                                      }).join(' ') + ' Z'
+
+                                      return (
+                                        <g key={cn}>
+                                          <path d={pathD} fill="#eef2ff" stroke="#4338ca" opacity={0.9} />
+                                          <line x1={xCenter - maxWidth} x2={xCenter + maxWidth} y1={padding.top + innerH + 6} y2={padding.top + innerH + 6} stroke="#111827" />
+                                          <text x={xCenter} y={padding.top + innerH + 22} fontSize={11} textAnchor="middle" fill="#111827">{cn}</text>
+                                          {weights.map((w, wi) => (
+                                            <circle
+                                              key={wi}
+                                              cx={xCenter + (Math.random() - 0.5) * 15}
+                                              cy={padding.top + (1 - w) * innerH}
+                                              r={3}
+                                              fill={CHART_COLORS[wi % CHART_COLORS.length]}
+                                              stroke="white"
+                                              strokeWidth={1}
+                                              opacity={0.8}
+                                            />
+                                          ))}
+                                        </g>
+                                      )
+                                    })}
+
+                                    <g transform={`translate(${width - 150}, ${padding.top})`}>
+                                      <text x={0} y={0} fontSize={12} fontWeight={600} fill="#111827">Methods</text>
+                                      {methods.map((m, mi) => (
+                                        <g key={m} transform={`translate(0, ${16 + mi * 16})`}>
+                                          <rect width={10} height={10} fill={CHART_COLORS[mi % CHART_COLORS.length]} />
+                                          <text x={14} y={9} fontSize={11} fill="#111827">{m}</text>
+                                        </g>
+                                      ))}
+                                    </g>
+                                  </svg>
+                                )
+                              })()
+                            ) : weightChartType === 'ridgeline' ? (
+                              (() => {
+                                const criteriaNames = sensitivityCriteriaWeights.map(d => d.name)
+                                const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
+                                const width = 800
+                                const height = 420
+                                const padding = { left: 80, right: 20, top: 30, bottom: 40 }
+                                const innerW = width - padding.left - padding.right
+
+                                const gaussian = (u: number) => Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI)
+                                const kde = (values: number[], bw = 0.06, samples = 60) => {
+                                  const xs = Array.from({ length: samples }, (_, i) => i / (samples - 1))
+                                  const dens = xs.map(x => {
+                                    const s = values.reduce((acc, v) => acc + gaussian((x - v) / bw), 0)
+                                    return s / (values.length * bw)
+                                  })
+                                  const max = Math.max(...dens) || 1
+                                  return xs.map((x, i) => ({ x, y: dens[i] / max }))
+                                }
+
+                                return (
+                                  <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+                                    {criteriaNames.map((cn, idx) => {
+                                      const weights = methods.map(m => {
+                                        const row = sensitivityCriteriaWeights.find(r => r.name === cn)
+                                        return row && row[m] !== undefined ? Number(row[m]) : 0
+                                      })
+                                      const dens = kde(weights, 0.06, 60)
+                                      const offsetY = padding.top + idx * ((height - padding.top - padding.bottom) / Math.max(1, criteriaNames.length))
+                                      const scaleX = (x: number) => padding.left + x * (innerW)
+                                      const scaleY = (v: number) => offsetY + (1 - v) * 40
+
+                                      const pathTop = dens.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(pt.x)} ${scaleY(pt.y)}`).join(' ')
+                                      const pathBottom = dens.slice().reverse().map((pt, i) => `L ${scaleX(pt.x)} ${offsetY + 4}`).join(' ')
+
+                                      return (
+                                        <g key={cn}>
+                                          <path d={`${pathTop} ${pathBottom} Z`} fill="#eef2ff" stroke="#4338ca" opacity={0.9} />
+                                          <text x={10} y={offsetY + 6} fontSize={11} fill="#111827">{cn}</text>
+                                        </g>
+                                      )
+                                    })}
+                                  </svg>
+                                )
+                              })()
+                            ) : weightChartType === 'ecdf' ? (
+                              (() => {
+                                const first = sensitivityCriteriaWeights[0]
+                                if (!first) return <div className="text-xs">No data</div>
+                                const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
+                                const vals = methods.map(m => first[m] !== undefined ? Number(first[m]) : 0).sort((a, b) => a - b)
+                                const width = 700
+                                const height = 420
+                                const padding = { left: 60, right: 20, top: 20, bottom: 60 }
+                                const innerW = width - padding.left - padding.right
+                                const innerH = height - padding.top - padding.bottom
+                                const points = vals.map((v, i) => ({ x: padding.left + (i / (vals.length - 1 || 1)) * innerW, y: padding.top + innerH - ((i + 1) / vals.length) * innerH, v }))
+
+                                const lineD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+
+                                return (
+                                  <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+                                    <line x1={padding.left} x2={padding.left} y1={padding.top} y2={padding.top + innerH} stroke="#e5e7eb" />
+                                    <line x1={padding.left} x2={padding.left + innerW} y1={padding.top + innerH} y2={padding.top + innerH} stroke="#e5e7eb" />
+                                    <path d={lineD} stroke="#2563eb" fill="none" strokeWidth={2} />
+                                    {points.map((p, i) => (<circle key={i} cx={p.x} cy={p.y} r={3} fill="#2563eb" />))}
+                                    <text x={padding.left + innerW / 2} y={height - 20} textAnchor="middle" fontSize={12}>{first.name} - ECDF</text>
+                                  </svg>
+                                )
+                              })()
+                            ) : weightChartType === 'kde' ? (
+                              (() => {
+                                const first = sensitivityCriteriaWeights[0]
+                                if (!first) return <div className="text-xs">No data</div>
+                                const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
+                                const vals = methods.map(m => first[m] !== undefined ? Number(first[m]) : 0)
+                                const gaussian = (u: number) => Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI)
+                                const kde = (values: number[], bw = 0.06, samples = 150) => {
+                                  const xs = Array.from({ length: samples }, (_, i) => i / (samples - 1))
+                                  const dens = xs.map(x => {
+                                    const s = values.reduce((acc, v) => acc + gaussian((x - v) / bw), 0)
+                                    return s / (values.length * bw)
+                                  })
+                                  const max = Math.max(...dens) || 1
+                                  return xs.map((x, i) => ({ x, y: dens[i] / max }))
+                                }
+
+                                const dens = kde(vals, 0.06, 150)
+                                const width = 700
+                                const height = 420
+                                const padding = { left: 60, right: 20, top: 20, bottom: 60 }
+                                const innerW = width - padding.left - padding.right
+                                const innerH = height - padding.top - padding.bottom
+
+                                const pathD = dens.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${padding.left + pt.x * innerW} ${padding.top + innerH - pt.y * (innerH * 0.8)}`).join(' ')
+
+                                return (
+                                  <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+                                    <line x1={padding.left} x2={padding.left} y1={padding.top} y2={padding.top + innerH} stroke="#e5e7eb" />
+                                    <path d={pathD} stroke="#ef4444" fill="none" strokeWidth={2} />
+                                    <text x={padding.left + innerW / 2} y={height - 20} textAnchor="middle" fontSize={12}>{first.name} - KDE</text>
+                                  </svg>
+                                )
+                              })()
+                            ) : (
+
+                              sensitivityWeightComparisonResults.length > 0 ? (
+                                <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" barSize={10} data={sensitivityCriteriaWeights}>
+                                  <RadialBar
+                                    label={{ position: 'insideStart', fill: '#fff' }}
+                                    background
+                                    dataKey={sensitivityWeightComparisonResults[0]?.weightLabel}
+                                  />
+                                  <Legend iconSize={10} wrapperStyle={{ fontSize: "10px" }} />
+                                  {sensitivityWeightComparisonResults.map((res, i) => (
+                                    <RadialBar key={res.weightLabel} name={res.weightLabel} dataKey={res.weightLabel} fill={CHART_COLORS[i % CHART_COLORS.length]} background />
+                                  ))}
+                                  <Tooltip />
+                                </RadialBarChart>
+                              ) : (
+                                <div className="flex items-center justify-center h-full text-xs text-gray-400 italic">
+                                  Run analysis to view weight distribution
+                                </div>
+                              )
+
+                            )}
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
+                      <div className="px-6 pt-4">
+                        <ResearchAssetHeader
+                          assetKey="pcwm_weights"
+                          defaultLabel={getNextTableLabel()}
+                          title="WEIGHT VALUES TABLE"
+                          included={selectedAiAssets.has("pcwm_weights")}
+                          onIncludeChange={handleIncludeChange}
+                          onLabelChange={handleAssetLabelChange}
+                        />
+                      </div>
+                      <CardContent className="table-responsive">
+                        <table className="min-w-full text-xs border border-gray-200 rounded-lg">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-3 py-2 text-left border-b border-r text-black font-semibold">Criterion</th>
+                              {sensitivityWeightComparisonResults.map((res, i) => (
+                                <th key={i} className="px-3 py-2 text-center border-b border-l text-black font-semibold">
+                                  {res.weightLabel}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sensitivityCriteriaWeights.map((row, i) => (
+                              <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
+                                <td className="px-3 py-2 font-medium text-black border-r border-gray-200">{row.name}</td>
+                                {sensitivityWeightComparisonResults.map((res, k) => (
+                                  <td key={k} className="px-3 py-2 text-center text-black border-l border-gray-200">
+                                    {row[res.weightLabel] !== undefined ? Number(row[res.weightLabel]).toFixed(resultsDecimalPlaces) : "-"}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
+
+
+
+
+
+
+              </>
+            )
+          }
+
+          {
+            homeTab === "rankingComparison" && (
+              <>
+                <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-bold">Construct the Decision Matrix</CardTitle>
+                    <CardDescription className="text-[11px]">Create a decision matrix by adding alternatives and criteria</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <Button
+                      onClick={() => {
+                        setReturnToTab("rankingComparison")
+                        setCurrentStep("input")
+                      }}
+                      className="w-full bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
+                    >
+                      + Add Alternative & Criteria
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-gray-200 bg-white shadow-none w-full mb-4">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-bold">Ranking comparison</CardTitle>
+                    <CardDescription className="text-[11px]">Choose one weight method, pick ranking methods to compare, then view rankings and chart.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {isFullyDataFilled ? (
+                      <div className="space-y-3">
+                        <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded mx-3 sm:mx-0">
+                          <p className="font-semibold">✓ Data has uploaded</p>
+                          <p className="mt-1">
+                            {alternatives.length} alternatives × {criteria.length} criteria
+                          </p>
+                        </div>
+
+                        {/* Editable Decision Matrix Table */}
+                        <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
+                          <Table className="border-collapse w-full" style={{ width: `${80 + (criteria.length * 60)}px`, minWidth: '100%' }}>
+                            <TableHeader>
+                              <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
+                                <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
+                                  <div className="flex flex-col items-center justify-center h-full leading-tight">
+                                    <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center flex items-center justify-center gap-1">Criteria <ArrowRight className="w-2.5 h-2.5 stroke-[3]" /></div>
+                                    <div className="text-[10px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">Alternatives <ArrowDown className="w-2.5 h-2.5 stroke-[3]" /></div>
+                                  </div>
+                                </TableHead>
+                                {criteria.map((crit) => (
+                                  <TableHead key={crit.id} className="text-black font-bold text-center text-[10px] border-r border-gray-300 px-1 py-0.5" style={{ width: '60px', minWidth: '60px' }}>
+                                    <div className="flex flex-col items-center py-0.5">
+                                      <div className="flex items-center gap-1">
+                                        <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
+                                        <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"} aria-hidden>
+                                          {crit.type === "beneficial" ? "▲" : "▼"}
+                                        </span>
+                                      </div>
+                                      <div className="text-gray-600 font-semibold text-[9px]">
+                                        {crit.type === "beneficial" ? "Max" : "Min"}
+                                      </div>
+                                    </div>
+                                  </TableHead>
+                                ))}
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {alternatives.map((alt) => (
+                                <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
+                                  <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5 text-center">{alt.name}</TableCell>
+                                  {criteria.map((crit) => (
+                                    <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
+                                      <Input
+                                        type="number"
+                                        step="any"
+                                        min="0"
+                                        value={alt.scores[crit.id] ?? ""}
+                                        onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        className="text-center text-[10px] h-7 border-gray-100 text-black w-full shadow-none bg-white rounded-md p-1 focus:ring-1 focus:ring-blue-400"
+                                      />
+                                    </TableCell>
+                                  ))}
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded">
+                        <p className="font-semibold">⚠️ No data available</p>
+                        <p className="mt-1">
+                          Please add alternatives and criteria using the "Get Started" section above.
+                        </p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="border border-gray-200 rounded-lg p-3">
+                        <button
+                          type="button"
+                          onClick={() => setComparisonWeightOpen((prev) => !prev)}
+                          className="flex w-full items-center justify-between mb-2"
+                        >
+                          <p className="text-[10px] font-semibold text-black">Weight method (choose one)</p>
+                          {comparisonWeightOpen ? (
+                            <ChevronDown className="w-4 h-4 text-black" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-black" />
+                          )}
+                        </button>
+                        {comparisonWeightOpen && (
+                          <div className="grid grid-cols-2 gap-2 mt-2 max-h-[200px] overflow-y-auto">
+                            {WEIGHT_METHODS.map((w) => (
+                              <label key={w.value} className="flex items-start gap-2 text-[10px] text-black cursor-pointer hover:bg-gray-50 p-1 rounded leading-none">
+                                <input
+                                  type="checkbox"
+                                  checked={comparisonWeightMethod === w.value}
+                                  onChange={() => {
+                                    if (w.value === "piprecia") {
+                                      setIsPipreciaDialogOpen(true)
+                                    }
+                                    if (w.value === "ahp") {
+                                      setIsAhpDialogOpen(true)
+                                    }
+                                    if (w.value === "swara") {
+                                      setIsComparisonSwaraDialogOpen(true)
+                                    }
+                                    if (w.value === "roc" || w.value === "rr") {
+                                      setIsComparisonRanksDialogOpen(true)
+                                    }
+                                    if (w.value === "custom") {
+                                      setIsComparisonCustomWeightsDialogOpen(true)
+                                    }
+                                    setComparisonWeightMethod(w.value)
+                                  }}
+                                  disabled={comparisonLoading}
+                                  className="mt-0.5"
+                                />
+                                <span>
+                                  <span className="font-normal">{w.label}</span>
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="border border-gray-200 rounded-lg p-3">
+                        <button
+                          type="button"
+                          onClick={() => setComparisonRankingOpen((prev) => !prev)}
+                          className="flex w-full items-center justify-between mb-2"
+                        >
+                          <p className="text-[10px] font-semibold text-black">
+                            Ranking methods Reference ({selectedRankingMethods.length} selected)
+                          </p>
+                          {comparisonRankingOpen ? (
+                            <ChevronDown className="w-4 h-4 text-black" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-black" />
+                          )}
+                        </button>
+                        {comparisonRankingOpen && (
+                          <div className="grid grid-cols-2 gap-2 mt-2 max-h-[200px] overflow-y-auto">
+                            {MCDM_METHODS.map((m) => (
+                              <label key={m.value} className="flex items-start gap-2 text-[10px] text-black cursor-pointer hover:bg-gray-50 p-1 rounded leading-none">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedRankingMethods.includes(m.value)}
+                                  onChange={() => toggleRankingMethodSelection(m.value)}
+                                  disabled={comparisonLoading}
+                                  className="mt-0.5"
+                                />
+                                <span>
+                                  <span className="font-normal">{m.label}</span>
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {selectedRankingMethods.includes("vikor") && (
+                      <div className="border border-teal-200 bg-teal-50 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-xs font-semibold text-teal-900">VIKOR v-value (Compromise):</label>
+                            <p className="text-[10px] text-teal-700">Weight of "majority of criteria" (v) vs "individual regret" (1-v)</p>
+                          </div>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="1"
+                            value={vikorVValue}
+                            onChange={(e) => setVikorVValue(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            onBlur={handleComparisonCalculate}
+                            placeholder="0.5"
+                            className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedRankingMethods.includes("waspas") && (
+                      <div className="border border-teal-200 bg-teal-50 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-xs font-semibold text-teal-900">WASPAS lambda:</label>
+                            <p className="text-[10px] text-teal-700">Weight of WSM (λ) vs WPM (1-λ)</p>
+                          </div>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="1"
+                            value={waspasLambdaValue}
+                            onChange={(e) => setWpasLambdaValue(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            onBlur={handleComparisonCalculate}
+                            placeholder="0.5"
+                            className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedRankingMethods.includes("codas") && (
+                      <div className="border border-teal-200 bg-teal-50 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-xs font-semibold text-teal-900">CODAS tau-value:</label>
+                            <p className="text-[10px] text-teal-700">Threshold parameter (typically 0.01-0.05)</p>
+                          </div>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="1"
+                            value={codasTauValue}
+                            onChange={(e) => setCodasTauValue(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            onBlur={handleComparisonCalculate}
+                            placeholder="0.02"
+                            className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {comparisonError && (
+                      <div className="text-xs text-red-600 border border-red-200 bg-red-50 p-2 rounded">
+                        {comparisonError}
+                      </div>
+                    )}
+
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        onClick={handleComparisonCalculate}
+                        className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
+                        disabled={comparisonLoading}
+                      >
+                        {comparisonLoading ? "Calculating..." : "Calculate comparison"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* --- PIPRECIA Dialog (Ranking Comparison Tab) --- */}
+                <Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen}>
+                  <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+                    <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
+                    <PIPRECIAFormula
+                      criteria={comparisonCriteria.length > 0 ? comparisonCriteria : criteria}
+                      initialScores={pipreciaScores}
+                      onScoresChange={setPipreciaScores}
+                      onWeightsCalculated={(weights) => {
+                        setPipreciaCalculatedWeights(weights)
+                        setIsPipreciaDialogOpen(false)
+
+                        // Update criteria with new weights
+                        const targetCriteria = comparisonCriteria.length > 0 ? comparisonCriteria : criteria
+                        const updatedCriteria = targetCriteria.map(c => ({
+                          ...c,
+                          weight: weights[c.id] || 0
+                        }))
+
+                        if (comparisonCriteria.length > 0) {
+                          setComparisonCriteria(updatedCriteria)
+                        } else {
+                          setCriteria(updatedCriteria)
+                        }
+
+                        // Set weight method to PIPRECIA
+                        setComparisonWeightMethod("piprecia")
+
+                        // Do not auto-trigger - let user click Calculate button
+                      }}
+                    />
+                  </DialogContent>
+                </Dialog>
+
+                {/* --- AHP Dialog (Ranking Comparison Tab) --- */}
+                <Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen}>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
+                    <DialogTitle>AHP Weight Calculator</DialogTitle>
+                    <AHPFormula
+                      criteria={comparisonCriteria.length > 0 ? comparisonCriteria : criteria}
+                      initialMatrix={ahpMatrix}
+                      onMatrixChange={setAhpMatrix}
+                      onWeightsCalculated={(weights) => {
+                        setAhpCalculatedWeights(weights)
+                        setIsAhpDialogOpen(false)
+
+                        // Update criteria with new weights
+                        const targetCriteria = comparisonCriteria.length > 0 ? comparisonCriteria : criteria
+                        const updatedCriteria = targetCriteria.map(c => ({
+                          ...c,
+                          weight: weights[c.id] || 0
+                        }))
+
+                        if (comparisonCriteria.length > 0) {
+                          setComparisonCriteria(updatedCriteria)
+                        } else {
+                          setCriteria(updatedCriteria)
+                        }
+
+                        // Set weight method to AHP
+                        setComparisonWeightMethod("ahp")
+
+                        // Do not auto-trigger - let user click Calculate button
+                      }}
+                    />
+                  </DialogContent>
+                </Dialog>
+
+                {/* --- SWARA Dialog (Ranking Comparison Tab) --- */}
+                <Dialog open={isComparisonSwaraDialogOpen} onOpenChange={setIsComparisonSwaraDialogOpen}>
+                  <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
+                    <DialogHeader>
+                      <DialogTitle>SWARA Weight Calculator</DialogTitle>
+                      <DialogDescription className="text-xs">
+                        Enter comparative importance coefficients (s<sub>j</sub>) for each criterion.
+                        The first criterion is most important (s<sub>1</sub> = 0).
+                        Higher values indicate larger importance differences.
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 mt-4">
+                      <div className="border border-gray-200 rounded-lg overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50">
+                              <TableHead className="text-xs font-semibold">Rank</TableHead>
+                              <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                              <TableHead className="text-xs font-semibold text-center">
+                                Coefficient (s<sub>j</sub>)
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(comparisonCriteria.length > 0 ? comparisonCriteria : criteria).map((crit, index) => (
+                              <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{index + 1}</TableCell>
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  {index === 0 ? (
+                                    <span className="text-xs text-gray-500">0 (most important)</span>
+                                  ) : (
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={swaraCoefficients[crit.id] || ""}
+                                      onChange={(e) => setSwaraCoefficients({
+                                        ...swaraCoefficients,
+                                        [crit.id]: e.target.value,
+                                      })}
+                                      onKeyDown={handleKeyDown}
+                                      className="w-24 h-7 text-xs text-center"
+                                      placeholder="0.00"
+                                    />
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-xs text-blue-900">
+                          <strong>Note:</strong> Criteria are ordered by importance (top = most important).
+                          For each criterion j, enter how much less important it is compared to the previous criterion (j-1).
+                        </p>
+                      </div>
+                    </div>
+
+                    <DialogFooter className="mt-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsComparisonSwaraDialogOpen(false)}
+                        className="text-xs"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const targetCriteria = comparisonCriteria.length > 0 ? comparisonCriteria : criteria
+                            const coeffs: Record<string, number> = {}
+                            targetCriteria.forEach((crit, index) => {
+                              if (index === 0) {
+                                coeffs[crit.id] = 0
+                              } else {
+                                coeffs[crit.id] = parseFloat(swaraCoefficients[crit.id]) || 0
+                              }
+                            })
+
+                            const response = await fetch("/api/swara-weights", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ criteria: targetCriteria, coefficients: coeffs }),
+                            })
+
+                            if (!response.ok) throw new Error("Failed to calculate SWARA weights")
+
+                            const data: SWARAResult = await response.json()
+                            setSwaraResult(data)
+                            setSwaraCalculatedWeights(data.weights)
+                            setIsComparisonSwaraDialogOpen(false)
+
+                            // Update criteria with new weights
+                            const updatedCriteria = targetCriteria.map(c => ({
+                              ...c,
+                              weight: data.weights[c.id] || 0
+                            }))
+
+                            if (comparisonCriteria.length > 0) {
+                              setComparisonCriteria(updatedCriteria)
+                            } else {
+                              setCriteria(updatedCriteria)
+                            }
+
+                            setComparisonWeightMethod("swara")
+
+                            // Do not auto-trigger - user will click Calculate button manually
+                          } catch (error) {
+                            console.error("SWARA calculation error:", error)
+                            alert("Error calculating SWARA weights")
+                          }
+                        }}
+                        className="bg-black text-white hover:bg-gray-800 text-xs"
+                      >
+                        Calculate Weights
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                {/* --- Ranks Dialog (Ranking Comparison Tab) --- */}
+                <Dialog open={isComparisonRanksDialogOpen} onOpenChange={setIsComparisonRanksDialogOpen}>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Enter Criteria Ranks</DialogTitle>
+                      <DialogDescription>1 = Most Important, Higher numbers = Less Important</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      {(comparisonCriteria.length > 0 ? comparisonCriteria : criteria).map((crit) => (
+                        <div key={crit.id} className="flex items-center justify-between">
+                          <label className="text-sm font-medium">{crit.name}</label>
+                          <Input
+                            type="number"
+                            min="1"
+                            className="w-20 h-8 text-xs"
+                            value={criteriaRanks[crit.id] || ""}
+                            onChange={(e) => setCriteriaRanks(prev => ({ ...prev, [crit.id]: e.target.value }))}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <DialogFooter>
+                      <Button onClick={() => setIsComparisonRanksDialogOpen(false)}>Save Ranks</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                {/* --- Custom Weights Dialog (Ranking Comparison Tab) --- */}
+                <Dialog open={isComparisonCustomWeightsDialogOpen} onOpenChange={setIsComparisonCustomWeightsDialogOpen}>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-full">
+                    <DialogHeader>
+                      <DialogTitle>Enter Custom Weights</DialogTitle>
+                      <DialogDescription className="text-xs">
+                        Enter a weight for each criterion. Weights will be automatically normalized to sum to 1.0.
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 mt-4">
+                      <div className="border border-gray-200 rounded-lg overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50">
+                              <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                              <TableHead className="text-xs font-semibold text-center">Weight</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(comparisonCriteria.length > 0 ? comparisonCriteria : criteria).map((crit) => (
+                              <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                                <TableCell className="text-center py-3 px-4 text-xs text-black">
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={customWeights[crit.id] || ""}
+                                    onChange={(e) => setCustomWeights({
+                                      ...customWeights,
+                                      [crit.id]: e.target.value,
+                                    })}
+                                    onKeyDown={handleKeyDown}
+                                    className="w-24 h-7 text-xs text-center"
+                                    placeholder="0.00"
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-xs text-blue-900">
+                          <strong>Note:</strong> You can enter any positive numbers. The weights will be automatically normalized
+                          to sum to 1.0. For example, if you enter 3, 2, and 1, they will be normalized to 0.5, 0.33, and 0.17.
+                        </p>
+                      </div>
+                    </div>
+
+                    <DialogFooter className="mt-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsComparisonCustomWeightsDialogOpen(false)}
+                        className="text-xs"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          try {
+                            const targetCriteria = comparisonCriteria.length > 0 ? comparisonCriteria : criteria
+                            const weights: Record<string, number> = {}
+                            let sum = 0
+
+                            // Parse and sum all weights
+                            targetCriteria.forEach((crit) => {
+                              const value = parseFloat(customWeights[crit.id]) || 0
+                              if (value < 0) {
+                                throw new Error("Weights must be non-negative")
+                              }
+                              weights[crit.id] = value
+                              sum += value
+                            })
+
+                            if (sum === 0) {
+                              throw new Error("At least one weight must be greater than zero")
+                            }
+
+                            // Normalize weights to sum to 1.0
+                            const normalizedWeights: Record<string, number> = {}
+                            targetCriteria.forEach((crit) => {
+                              normalizedWeights[crit.id] = weights[crit.id] / sum
+                            })
+
+                            setCustomWeightsCalculated(normalizedWeights)
+                            setIsComparisonCustomWeightsDialogOpen(false)
+
+                            // Update criteria with new weights
+                            const updatedCriteria = targetCriteria.map(c => ({
+                              ...c,
+                              weight: normalizedWeights[c.id] || 0
+                            }))
+
+                            if (comparisonCriteria.length > 0) {
+                              setComparisonCriteria(updatedCriteria)
+                            } else {
+                              setCriteria(updatedCriteria)
+                            }
+
+                            setComparisonWeightMethod("custom")
+                          } catch (error: any) {
+                            alert(error?.message || "Error calculating custom weights")
+                          }
+                        }}
+                        className="bg-black text-white hover:bg-gray-800 text-xs"
+                      >
+                        Apply Weights
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                {comparisonResults.length > 0 && (
+                  <Card className="border-gray-200 bg-white shadow-none w-full mb-4">
+                    <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle className="text-sm text-black">Ranking table</CardTitle>
+                        <CardDescription className="text-xs text-gray-700">
+                          Scores and rankings generated by the methods. Ranking depends on the method used.
+                        </CardDescription>
+                      </div>
+                      <Button onClick={exportRankingComparisonToExcel} variant="outline" size="sm" className="h-7 text-xs">
+                        <Download className="w-3 h-3 mr-1" /> Excel
+                      </Button>
+                    </CardHeader>
+                    <CardContent className="table-responsive">
+                      <div ref={rankingComparisonTableRef} className="bg-white">
+                        <table className="min-w-full text-xs border border-gray-200 rounded-lg overflow-x-auto">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th rowSpan={2} className="relative bg-white text-black font-bold text-[9px] border-r border-gray-200 p-0 h-10 w-32 min-w-[128px]">
+                                <div className="flex flex-col items-center justify-center h-full leading-tight pr-6">
+                                  <div className="text-[9px] font-bold py-0.5 border-b border-gray-200 w-full text-center flex items-center justify-center gap-1">
+                                    Methods <ArrowRight className="w-2 h-2 stroke-[3]" />
+                                  </div>
+                                  <div className="text-[9px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">
+                                    Alternatives <ArrowDown className="w-2 h-2 stroke-[3]" />
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-1 right-1 h-6 w-6 text-gray-400 hover:text-blue-600 p-0"
+                                  onClick={downloadRankingComparisonTableAsJpeg}
+                                  title="Download Table as JPG"
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                </Button>
+                              </th>
+                              {comparisonResults.map((result) => (
+                                <th
+                                  key={result.method}
+                                  colSpan={2}
+                                  className="px-3 py-2 text-center border-b border-r border-gray-200 text-black font-semibold"
+                                >
+                                  {result.label}
+                                </th>
+                              ))}
+                            </tr>
+                            <tr>
+                              {comparisonResults.map((result) => (
+                                <Fragment key={result.method}>
+                                  <th key={`${result.method}-score`} className="px-2 py-1 text-center border-b border-gray-200 text-gray-600 font-medium text-[10px]">
+                                    Score
+                                  </th>
+                                  <th key={`${result.method}-rank`} className="px-2 py-1 text-center border-b border-r border-gray-200 text-gray-600 font-medium text-[10px]">
+                                    Rank
+                                  </th>
+                                </Fragment>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {comparisonResults[0]?.ranking?.map((item, altIndex) => (
+                              <tr key={item.alternativeName} className="border-b border-gray-200 hover:bg-gray-50">
+                                <td className="px-3 py-2 font-medium text-black whitespace-nowrap border-r border-gray-200">
+                                  {item.alternativeName}
+                                </td>
+                                {comparisonResults.map((result) => {
+                                  const altRanking = result.ranking?.find(r => r.alternativeName === item.alternativeName)
+                                  return (
+                                    <Fragment key={result.method}>
+                                      <td key={`${result.method}-${item.alternativeName}-score`} className="px-2 py-2 text-center text-black">
+                                        {altRanking?.score !== undefined ? Number(altRanking.score).toFixed(resultsDecimalPlaces) : "-"}
+                                      </td>
+                                      <td key={`${result.method}-${item.alternativeName}-rank`} className="px-2 py-2 text-center font-semibold text-black border-r border-gray-200">
+                                        {altRanking?.rank ?? "-"}
+                                      </td>
+                                    </Fragment>
+                                  )
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {comparisonResults.length > 0 && comparisonChartData.length > 0 && (
+                  <>
+                    {/* AI Ranking Comparison Panel */}
+                    {showAiPanel && aiAnalysisType === "ranking_comparison" && (
+                      <Card className="border-indigo-100 bg-indigo-50/50 mb-6 overflow-hidden transition-all duration-300">
+                        <CardHeader className="border-b border-indigo-100 pb-3 bg-white/50">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2 text-sm text-indigo-900 font-bold">
+                              <Sparkles className="w-4 h-4 text-indigo-600" />
+                              AI Ranking Comparison
+                            </CardTitle>
+                            <Button variant="ghost" size="sm" onClick={() => setShowAiPanel(false)} className="h-6 w-6 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"><span className="sr-only">Close</span><span className="text-lg">×</span></Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                          {!aiAnalysisResult ? (
+                            <div className="p-8 text-center space-y-5 bg-white/40">
+                              <div className="mx-auto w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm border border-indigo-50">
+                                <Bot className={`w-7 h-7 text-indigo-600 ${aiLoading ? 'animate-pulse' : ''}`} />
+                              </div>
+                              <p className="text-xs text-gray-600">{aiLoading ? "Comparing methodologies..." : "Ready to analyze rankings."}</p>
+                            </div>
+                          ) : (
+                            <div className="prose prose-sm max-w-none p-6 bg-white text-gray-800">
+                              <ReactMarkdown
+                                components={{
+                                  h1: ({ node, ...props }) => <h1 className="text-lg font-bold text-indigo-900 mb-3 mt-2 border-b-2 border-indigo-100 pb-2" {...props} />,
+                                  h2: ({ node, ...props }) => <h2 className="text-sm font-bold text-gray-900 mb-2 mt-4 uppercase tracking-wide" {...props} />,
+                                  p: ({ node, ...props }) => <p className="text-xs leading-relaxed text-gray-600 mb-3 text-justify" {...props} />,
+                                  ul: ({ node, ...props }) => <ul className="list-disc list-outside text-xs text-gray-600 mb-3 ml-4 space-y-1" {...props} />,
+                                  li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                                  strong: ({ node, ...props }) => <strong className="font-bold text-indigo-900" {...props} />,
+                                }}
+                              >
+                                {aiAnalysisResult}
+                              </ReactMarkdown>
+                              <div className="mt-6 flex justify-end border-t border-gray-100 pt-3">
+                                <Button onClick={() => handleAiAnalysis("ranking_comparison", { comparisonData: comparisonResults })} variant="outline" size="sm" className="text-xs h-7 gap-1"><Sparkles className="w-3 h-3" /> Regenerate</Button>
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+                    <Card className="border-gray-200 bg-white shadow-none w-full">
+                      <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                          <CardTitle className="text-sm text-black">Ranking variation</CardTitle>
+                          <CardDescription className="text-xs text-gray-700">
+                            {comparisonChartType === "composed"
+                              ? "Deviation from average rank - bars extending left are better than average."
+                              : "Chart comparing alternative ranks across selected methods."}
+                          </CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Select value={comparisonChartType} onValueChange={setComparisonChartType}>
+                            <SelectTrigger className="w-28 sm:w-40 h-7 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="line">Line Chart</SelectItem>
+                              <SelectItem value="step">Step Line Chart</SelectItem>
+                              <SelectItem value="bar">Bar Chart</SelectItem>
+                              <SelectItem value="stackedBar">Stacked Bar Chart</SelectItem>
+                              <SelectItem value="area">Area Chart</SelectItem>
+                              <SelectItem value="stackedArea">Stacked Area Chart</SelectItem>
+                              <SelectItem value="scatter">Scatter Plot</SelectItem>
+                              <SelectItem value="composed">Diverging Bar Chart</SelectItem>
+                              <SelectItem value="radar">Radar Chart</SelectItem>
+                              <SelectItem value="heatmap">Heatmap</SelectItem>
+                              <SelectItem value="boxPlot">Box Plot</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button onClick={() => handleAiAnalysis("ranking_comparison", { comparisonData: comparisonResults })} variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700 h-7 text-xs gap-1"><Sparkles className="w-3 h-3" /> AI Analysis</Button>
+                          <Button onClick={downloadComparisonChartAsJpeg} variant="outline" size="sm" className="h-7 text-xs">
+                            <Download className="w-3 h-3 mr-1" /> JPG
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className={`${comparisonChartType === "heatmap" ? "h-auto" : "h-[500px] sm:h-[500px]"} p-0 sm:p-6 mt-4`}>
+                        {(() => {
+                          if (comparisonChartType === "heatmap") {
+                            return (
+                              <div ref={comparisonChartRef} className="w-full h-full flex flex-col overflow-x-auto">
+                                <div className="flex-1 flex flex-col min-w-[max-content]">
+                                  <div className="flex text-xs font-semibold border-b">
+                                    <div className="w-24 sm:w-32 p-2 border-r bg-gray-50 flex-shrink-0">Method</div>
+                                    <div className="flex flex-1">
+                                      {comparisonChartAlternatives.map((alt) => (
+                                        <div key={alt} className="flex-1 min-w-[100px] p-2 border-r text-center bg-gray-50 truncate">
+                                          {alt}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  {comparisonChartData.map((row, idx) => (
+                                    <div key={idx} className="flex border-b">
+                                      <div className="w-24 sm:w-32 p-2 border-r text-xs font-medium bg-gray-50 flex-shrink-0 truncate">
+                                        {row.method}
+                                      </div>
+                                      <div className="flex flex-1">
+                                        {comparisonChartAlternatives.map((alt, altIdx) => {
+                                          const value = row[alt]
+                                          const minVal = 1
+                                          const maxVal = Math.max(...comparisonChartData.flatMap((r) => comparisonChartAlternatives.map((a) => r[a])).filter((v) => v != null))
+                                          const normalized = (value - minVal || 1) / (maxVal - minVal || 1)
+                                          const hue = (1 - normalized) * 120
+                                          const bgColor = `hsl(${hue}, 70%, 60%)`
+                                          return (
+                                            <div
+                                              key={alt}
+                                              className="flex-1 min-w-[100px] p-3 border-r flex items-center justify-center text-xs font-medium text-white"
+                                              style={{ backgroundColor: bgColor }}
+                                            >
+                                              {value}
+                                            </div>
+                                          )
+                                        })}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="flex items-center justify-center gap-4 text-xs" style={{ paddingTop: "8px" }}>
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(120, 70%, 60%)" }}></div>
+                                    <span>Better Alternative (Rank)</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(0, 70%, 60%)" }}></div>
+                                    <span>Worse Alternative (Rank)</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          }
+
+                          return (
+                            <div ref={comparisonChartRef} className="w-full h-full">
+                              <ResponsiveContainer width="100%" height="100%">
+                                {(() => {
+                                  switch (comparisonChartType) {
+                                    case "radar":
+                                      return (
+                                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
+                                          <PolarGrid />
+                                          <PolarAngleAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                          <PolarRadiusAxis />
+                                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                          <Tooltip />
+                                          {comparisonChartAlternatives.map((alt, idx) => (
+                                            <Radar key={alt} name={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.1} />
+                                          ))}
+                                        </RadarChart>
+                                      );
+                                    case "bar":
+                                      return (
+                                        <BarChart data={comparisonChartData}>
+                                          <CartesianGrid strokeDasharray="3 3" />
+                                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                          <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
+                                          <Tooltip />
+                                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                          {comparisonChartAlternatives.map((alt, idx) => (
+                                            <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
+                                          ))}
+                                        </BarChart>
+                                      );
+                                    case "stackedBar":
+                                      return (
+                                        <BarChart data={comparisonChartData}>
+                                          <CartesianGrid strokeDasharray="3 3" />
+                                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                          <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
+                                          <Tooltip />
+                                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                          {comparisonChartAlternatives.map((alt, idx) => (
+                                            <Bar key={alt} stackId="a" dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
+                                          ))}
+                                        </BarChart>
+                                      );
+                                    case "area":
+                                      return (
+                                        <AreaChart data={comparisonChartData}>
+                                          <CartesianGrid strokeDasharray="3 3" />
+                                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                          <YAxis />
+                                          <Tooltip />
+                                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                          {comparisonChartAlternatives.map((alt, idx) => (
+                                            <Area type="monotone" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
+                                          ))}
+                                        </AreaChart>
+                                      );
+                                    case "stackedArea":
+                                      return (
+                                        <AreaChart data={comparisonChartData}>
+                                          <CartesianGrid strokeDasharray="3 3" />
+                                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                          <YAxis />
+                                          <Tooltip />
+                                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                          {comparisonChartAlternatives.map((alt, idx) => (
+                                            <Area type="monotone" stackId="1" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
+                                          ))}
+                                        </AreaChart>
+                                      );
+                                    case "composed":
+                                      const composedData = comparisonChartData.map(d => {
+                                        const avgRank = comparisonChartAlternatives.reduce((sum, alt) => sum + (d[alt] || 0), 0) / comparisonChartAlternatives.length;
+                                        const divergingData: any = { method: d.method };
+                                        comparisonChartAlternatives.forEach(alt => {
+                                          const rank = d[alt] || 0;
+                                          divergingData[alt] = rank - avgRank;
+                                        });
+                                        return divergingData;
+                                      });
+                                      return (
+                                        <BarChart data={composedData} layout="vertical" margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
+                                          <CartesianGrid strokeDasharray="3 3" />
+                                          <XAxis type="number" label={{ value: "Deviation from Average Rank", position: "insideBottom", offset: -10 }} tick={{ fontSize: 10 }} />
+                                          <YAxis type="category" dataKey="method" tick={{ fontSize: 10 }} width={90} />
+                                          <Tooltip formatter={(value: any, name: string) => [`${parseFloat(value) > 0 ? '+' : ''}${parseFloat(value).toFixed(2)} (${parseFloat(value) < 0 ? 'Better' : 'Worse'} than avg)`, name]} />
+                                          <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "20px" }} layout="horizontal" align="center" verticalAlign="bottom" iconType="square" />
+                                          <ReferenceLine x={0} stroke="#666" strokeWidth={2} />
+                                          {comparisonChartAlternatives.map((alt, idx) => (
+                                            <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} stackId="stack" />
+                                          ))}
+                                        </BarChart>
+                                      );
+                                    case "scatter":
+                                      return (
+                                        <ScatterChart>
+                                          <CartesianGrid strokeDasharray="3 3" />
+                                          <XAxis dataKey="x" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} name="Method" />
+                                          <YAxis dataKey="y" type="number" name="Rank" label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
+                                          <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+                                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                          {comparisonChartAlternatives.map((alt, idx) => (
+                                            <Scatter key={alt} name={alt} data={comparisonChartData.map((d) => ({ x: d.method, y: d[alt] }))} fill={CHART_COLORS[idx % CHART_COLORS.length]} shape={["circle", "cross", "diamond", "square", "star", "triangle", "wye"][idx % 7] as any} line />
+                                          ))}
+                                        </ScatterChart>
+                                      );
+                                    case "boxPlot":
+                                      const boxData = comparisonChartAlternatives.map((alt) => {
+                                        const values = comparisonChartData.map((r) => r[alt]).filter((v) => v != null).sort((a, b) => a - b)
+                                        if (values.length === 0) return null
+                                        const q1 = values[Math.floor(values.length * 0.25)]
+                                        const median = values[Math.floor(values.length * 0.5)]
+                                        const q3 = values[Math.floor(values.length * 0.75)]
+                                        const min = Math.min(...values)
+                                        const max = Math.max(...values)
+                                        const iqr = q3 - q1
+                                        const whiskerLow = Math.max(min, q1 - 1.5 * iqr)
+                                        const whiskerHigh = Math.min(max, q3 + 1.5 * iqr)
+                                        return { alt, min, q1, median, q3, max, whiskerLow, whiskerHigh, n: values.length }
+                                      }).filter((d): d is any => d !== null)
+
+                                      if (boxData.length === 0) return <></>
+                                      const allVals = boxData.flatMap(d => [d.whiskerLow, d.whiskerHigh])
+                                      const minV = Math.min(...allVals)
+                                      const maxV = Math.max(...allVals)
+                                      const yR = maxV - minV || 1
+                                      const pad = { top: 30, right: 30, bottom: 50, left: 50 }
+                                      const cW = 800 - pad.left - pad.right
+                                      const cH = 400 - pad.top - pad.bottom
+                                      const bW = Math.max(15, (cW / boxData.length) * 0.6)
+                                      const sp = cW / boxData.length
+                                      const gY = (v: number) => pad.top + cH - ((v - minV) / yR) * cH
+                                      const gX = (idx: number) => pad.left + (idx + 0.5) * sp
+
+                                      return (
+                                        <svg viewBox="0 0 800 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+                                          <line x1={pad.left} y1={pad.top} x2={pad.left} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
+                                          <line x1={pad.left} y1={pad.top + cH} x2={800 - pad.right} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
+                                          {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
+                                            <g key={`ylabel-${pct}`}>
+                                              <line x1={pad.left - 5} y1={gY(minV + pct * yR)} x2={pad.left} y2={gY(minV + pct * yR)} stroke="#999" strokeWidth="1" />
+                                              <text x={pad.left - 10} y={gY(minV + pct * yR) + 4} fontSize="11" textAnchor="end" fill="#666">{(minV + pct * yR).toFixed(1)}</text>
+                                              <line x1={pad.left} y1={gY(minV + pct * yR)} x2={800 - pad.right} y2={gY(minV + pct * yR)} stroke="#eee" strokeWidth="1" strokeDasharray="2,2" />
+                                            </g>
+                                          ))}
+                                          {boxData.map((data, idx) => {
+                                            const x = gX(idx)
+                                            const color = CHART_COLORS[idx % CHART_COLORS.length]
+                                            return (
+                                              <g key={`box-${data.alt}`}>
+                                                <line x1={x} y1={gY(data.whiskerLow)} x2={x} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2" opacity="0.8" />
+                                                <line x1={x - bW / 3} y1={gY(data.whiskerLow)} x2={x + bW / 3} y2={gY(data.whiskerLow)} stroke={color} strokeWidth="2.5" opacity="0.8" />
+                                                <line x1={x - bW / 3} y1={gY(data.whiskerHigh)} x2={x + bW / 3} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2.5" opacity="0.8" />
+                                                <rect x={x - bW / 2} y={gY(data.q3)} width={bW} height={Math.max(1, gY(data.q1) - gY(data.q3))} fill={color} fillOpacity="0.4" stroke={color} strokeWidth="2" />
+                                                <line x1={x - bW / 2} y1={gY(data.median)} x2={x + bW / 2} y2={gY(data.median)} stroke="#ff3333" strokeWidth="3" />
+                                                <circle cx={x} cy={gY(data.min)} r="3" fill={color} opacity="0.6" />
+                                                <circle cx={x} cy={gY(data.max)} r="3" fill={color} opacity="0.6" />
+                                                <text x={x} y={pad.top + cH + 25} fontSize="12" textAnchor="middle" fill="#333" fontWeight="500">{data.alt.substring(0, 8)}</text>
+                                              </g>
+                                            )
+                                          })}
+                                          <text x={25} y={15} fontSize="12" fontWeight="600" fill="#333">Rank</text>
+                                          <text x={750} y={pad.top + cH + 40} fontSize="12" fontWeight="600" fill="#333">Alts</text>
+                                        </svg>
+                                      );
+                                    default:
+                                      return (
+                                        <LineChart data={comparisonChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                          <CartesianGrid strokeDasharray="3 3" />
+                                          <XAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                          <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                                          <Tooltip />
+                                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                          {comparisonChartAlternatives.map((alt, idx) => (
+                                            <Line key={alt} type={comparisonChartType === "step" ? "step" : "monotone"} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2} strokeDasharray={["0", "5 5", "3 3", "10 5", "2 2", "15 5"][idx % 6]} activeDot={{ r: 6 }} dot={{ r: 4, strokeWidth: 1, fill: "white", stroke: CHART_COLORS[idx % CHART_COLORS.length] }} />
+                                          ))}
+                                        </LineChart>
+                                      );
+                                  }
+                                })()}
+                              </ResponsiveContainer>
+                            </div>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
+              </>
+            )
+          }
+
+          {
+            homeTab === "sensitivityAnalysis" && (
+              <>
+                <Card className="border-gray-200 bg-white shadow-none w-full mb-6 rounded-none sm:rounded-xl">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-bold">Construct the Decision Matrix</CardTitle>
+                    <CardDescription className="text-[11px]">Create a decision matrix by adding alternatives and criteria</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <Button
+                      onClick={() => {
+                        setReturnToTab("sensitivityAnalysis")
+                        setCurrentStep("input")
+                      }}
+                      className="w-full bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
+                    >
+                      + Add Alternative & Criteria
+                    </Button>
+                  </CardContent>
+                </Card>
+
+
+                <Card className="border-gray-200 bg-white shadow-none w-full mb-6 rounded-none sm:rounded-xl">
+                  <CardHeader className="pb-3 px-4 sm:px-6">
+                    <CardTitle className="text-sm text-black">Sensitivity Analysis Configuration</CardTitle>
+                    <CardDescription className="text-xs text-gray-700">
+                      Analyze how changing the weight of a specific criterion affects the ranking of alternatives
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {isFullyDataFilled ? (
+                      <>
+                        <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
+                          <p className="font-semibold">✓ Data has uploaded</p>
+                          <p className="mt-1">
+                            {alternatives.length} alternatives × {criteria.length} criteria
+                          </p>
+                        </div>
+
+                        {/* Editable Decision Matrix Table */}
+                        <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
+                          <Table className="border-collapse w-full" style={{ width: `${80 + (criteria.length * 60)}px`, minWidth: '100%' }}>
+                            <TableHeader>
+                              <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
+                                <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
+                                  <div className="flex flex-col items-center justify-center h-full leading-tight">
+                                    <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center flex items-center justify-center gap-1">Criteria <ArrowRight className="w-2.5 h-2.5 stroke-[3]" /></div>
+                                    <div className="text-[10px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">Alternatives <ArrowDown className="w-2.5 h-2.5 stroke-[3]" /></div>
+                                  </div>
+                                </TableHead>
+                                {criteria.map((crit) => (
+                                  <TableHead key={crit.id} className="text-black font-bold text-center text-[10px] border-r border-gray-300 px-1 py-0.5" style={{ width: '60px', minWidth: '60px' }}>
+                                    <div className="flex flex-col items-center py-0.5">
+                                      <div className="flex items-center gap-1">
+                                        <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
+                                        <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"} aria-hidden>
+                                          {crit.type === "beneficial" ? "▲" : "▼"}
+                                        </span>
+                                      </div>
+                                      <div className="text-gray-600 font-semibold text-[9px]">
+                                        {crit.type === "beneficial" ? "Max" : "Min"}
+                                      </div>
+                                    </div>
+                                  </TableHead>
+                                ))}
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {alternatives.map((alt) => (
+                                <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
+                                  <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5 text-center">{alt.name}</TableCell>
+                                  {criteria.map((crit) => (
+                                    <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
+                                      <Input
+                                        type="number"
+                                        step="any"
+                                        min="0"
+                                        value={alt.scores[crit.id] ?? ""}
+                                        onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        className="text-center text-[10px] h-7 border-gray-100 text-black w-full shadow-none bg-white rounded-md p-1 focus:ring-1 focus:ring-blue-400"
+                                      />
+                                    </TableCell>
+                                  ))}
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded">
+                        <p className="font-semibold">⚠️ No data available</p>
+                        <p className="mt-1">
+                          Please add alternatives and criteria using the "Get Started" section above.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 items-start">
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] sm:text-xs font-bold text-black uppercase">WEIGHT METHOD</label>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setIsWeightSelectorOpen(!isWeightSelectorOpen)}
+                            className="w-full flex items-center justify-between text-xs h-9 border border-gray-200 rounded px-2 sm:px-3 bg-white"
+                          >
+                            <span className="truncate">{sensitivityWeightMethods.length > 0 ? `${sensitivityWeightMethods.length} selected` : "Select..."}</span>
+                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                          </button>
+                          {isWeightSelectorOpen && (
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-60 overflow-y-auto p-2">
+                              {WEIGHT_METHODS.map((w) => (
+                                <label key={w.value} className="flex items-center gap-2 text-[10px] p-1 hover:bg-gray-50 cursor-pointer text-black font-normal">
+                                  <input
+                                    type="checkbox"
+                                    checked={sensitivityWeightMethods.includes(w.value)}
+                                    onChange={() => {
+                                      if (w.value === "piprecia" && !sensitivityWeightMethods.includes("piprecia")) {
+                                        setIsPipreciaDialogOpen(true)
+                                      }
+                                      if (w.value === "ahp" && !sensitivityWeightMethods.includes("ahp")) {
+                                        setIsAhpDialogOpen(true)
+                                      }
+                                      if (w.value === "swara" && !sensitivityWeightMethods.includes("swara")) {
+                                        setIsSensitivitySwaraDialogOpen(true)
+                                      }
+                                      if (["roc", "rs", "rr"].includes(w.value) && !sensitivityWeightMethods.includes(w.value)) {
+                                        setIsSensitivityRanksDialogOpen(true)
+                                      }
+                                      toggleSensitivityWeightMethod(w.value)
+                                    }}
+                                  />
+                                  {w.label}
+                                </label>
+                              ))}
+                              <div className="border-t my-1"></div>
+                              <label className="flex items-center gap-2 text-[10px] p-1 hover:bg-gray-50 cursor-pointer text-black font-normal">
+                                <input
+                                  type="checkbox"
+                                  checked={sensitivityWeightMethods.includes("custom")}
+                                  onChange={(e) => {
+                                    toggleSensitivityWeightMethod("custom")
+                                    if (e.target.checked) setIsCustomWeightsDialogOpen(true)
+                                  }}
+                                />
+                                Enter own weight
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] sm:text-xs font-bold text-black uppercase">RANKING METHOD</label>
+                        <Select value={sensitivityMethod} onValueChange={(value) => setSensitivityMethod(value as MCDMMethod)}>
+                          <SelectTrigger className="text-xs h-9 border-gray-200">
+                            <SelectValue placeholder="Select..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {MCDM_METHODS.map((m) => (
+                              <SelectItem key={m.value} value={m.value} className="text-xs">
+                                {m.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="pt-0 md:pt-6 col-span-2 md:col-span-1">
+                        <Button
+                          type="button"
+                          onClick={() => handleWeightSensitivityAnalysis()}
+                          className="w-full bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
+                          disabled={sensitivityLoading}
+                        >
+                          {sensitivityLoading ? "Calculating..." : "Calculate Sensitivity"}
+                        </Button>
+                      </div>
+
+                      {waspasLambdaValue !== undefined && sensitivityMethod === "waspas" && (
+                        <div className="border border-teal-200 bg-teal-50 rounded-lg p-3 md:col-span-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="text-xs font-semibold text-teal-900">WASPAS lambda:</label>
+                              <p className="text-[10px] text-teal-700">Weight of WSM (λ) vs WPM (1-λ)</p>
+                            </div>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="1"
+                              value={waspasLambdaValue}
+                              onChange={(e) => setWpasLambdaValue(e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              onBlur={() => handleWeightSensitivityAnalysis()}
+                              placeholder="0.5"
+                              className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {codasTauValue !== undefined && sensitivityMethod === "codas" && (
+                        <div className="border border-teal-200 bg-teal-50 rounded-lg p-3 md:col-span-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="text-xs font-semibold text-teal-900">CODAS tau-value:</label>
+                              <p className="text-[10px] text-teal-700">Threshold parameter (typically 0.01-0.05)</p>
+                            </div>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max="1"
+                              value={codasTauValue}
+                              onChange={(e) => setCodasTauValue(e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              onBlur={() => handleWeightSensitivityAnalysis()}
+                              placeholder="0.02"
+                              className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <Dialog open={isCustomWeightsDialogOpen} onOpenChange={setIsCustomWeightsDialogOpen}>
@@ -4129,7 +6129,9 @@ export default function MCDMCalculator() {
                       </DialogContent>
                     </Dialog>
 
-                    {/* --- PIPRECIA Dialog (Weight Methods Tab) --- */}
+
+
+                    {/* --- PIPRECIA Dialog --- */}
                     <Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen}>
                       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
                         <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
@@ -4137,11 +6139,6 @@ export default function MCDMCalculator() {
                           criteria={criteria}
                           initialScores={pipreciaScores}
                           onScoresChange={setPipreciaScores}
-                          onWeightsChange={(weights) => {
-                            setPipreciaCalculatedWeights(weights)
-                            // Automatically trigger analysis update with new weights
-                            handleWeightSensitivityAnalysis(weights)
-                          }}
                           onWeightsCalculated={(weights) => {
                             setPipreciaCalculatedWeights(weights)
                             setIsPipreciaDialogOpen(false)
@@ -4152,7 +6149,7 @@ export default function MCDMCalculator() {
                       </DialogContent>
                     </Dialog>
 
-                    {/* --- AHP Dialog (Weight Methods Tab) --- */}
+                    {/* --- AHP Dialog (Sensitivity Analysis Tab) --- */}
                     <Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen}>
                       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
                         <DialogTitle>AHP Weight Calculator</DialogTitle>
@@ -4170,8 +6167,8 @@ export default function MCDMCalculator() {
                       </DialogContent>
                     </Dialog>
 
-                    {/* --- SWARA Dialog (Weight Methods Tab) --- */}
-                    <Dialog open={isSwaraDialogOpen} onOpenChange={setIsSwaraDialogOpen}>
+                    {/* --- SWARA Dialog (Sensitivity Analysis Tab) --- */}
+                    <Dialog open={isSensitivitySwaraDialogOpen} onOpenChange={setIsSensitivitySwaraDialogOpen}>
                       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
                         <DialogHeader>
                           <DialogTitle>SWARA Weight Calculator</DialogTitle>
@@ -4212,6 +6209,7 @@ export default function MCDMCalculator() {
                                             ...swaraCoefficients,
                                             [crit.id]: e.target.value,
                                           })}
+                                          onKeyDown={handleKeyDown}
                                           className="w-24 h-7 text-xs text-center"
                                           placeholder="0.00"
                                         />
@@ -4234,13 +6232,12 @@ export default function MCDMCalculator() {
                         <DialogFooter className="mt-4">
                           <Button
                             variant="outline"
-                            onClick={() => setIsSwaraDialogOpen(false)}
+                            onClick={() => setIsSensitivitySwaraDialogOpen(false)}
                             className="text-xs"
                           >
                             Cancel
                           </Button>
                           <Button
-                            type="button"
                             onClick={async () => {
                               try {
                                 const coeffs: Record<string, number> = {}
@@ -4263,7 +6260,7 @@ export default function MCDMCalculator() {
                                 const data: SWARAResult = await response.json()
                                 setSwaraResult(data)
                                 setSwaraCalculatedWeights(data.weights)
-                                setIsSwaraDialogOpen(false)
+                                setIsSensitivitySwaraDialogOpen(false)
 
                                 // Trigger analysis update
                                 handleWeightSensitivityAnalysis(undefined, data.weights)
@@ -4280,2506 +6277,536 @@ export default function MCDMCalculator() {
                       </DialogContent>
                     </Dialog>
 
-                  </div>
-
-                  {sensitivityError && (
-                    <div className="text-xs text-red-600 border border-red-200 bg-red-50 p-2 rounded">
-                      {sensitivityError}
-                    </div>
-                  )}
-
-                  <Button
-                    type="button"
-                    onClick={() => handleWeightSensitivityAnalysis()}
-                    disabled={sensitivityLoading}
-                    className="w-full sm:w-auto bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
-                  >
-                    {sensitivityLoading ? "Calculating..." : "Calculate Weights & Compare"}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {sensitivityCriteriaWeights.length > 0 && (
-                <>
-
-                  <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                    <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <div>
-                        <CardTitle className="text-sm text-black">Weight Variation Chart</CardTitle>
-                        <CardDescription className="text-xs text-gray-700">Visualizing weights across different methods</CardDescription>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Select value={weightChartType} onValueChange={setWeightChartType}>
-                          <SelectTrigger className="w-28 sm:w-32 h-7 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="bar">Bar Chart</SelectItem>
-                            <SelectItem value="stackedBar">Stacked Bar</SelectItem>
-                            <SelectItem value="line">Line Chart</SelectItem>
-                            <SelectItem value="area">Area Chart</SelectItem>
-                            <SelectItem value="radar">Radar Chart</SelectItem>
-                            <SelectItem value="scatter">Scatter Plot</SelectItem>
-                            <SelectItem value="boxPlot">Box Plot</SelectItem>
-                            <SelectItem value="radial">Radial Bar</SelectItem>
-                            <SelectItem value="parallel">Parallel Coordinates</SelectItem>
-                            <SelectItem value="violin">Violin Plot</SelectItem>
-                            <SelectItem value="ridgeline">Ridgeline (Density)</SelectItem>
-                            <SelectItem value="ecdf">Empirical CDF</SelectItem>
-                            <SelectItem value="kde">KDE Density</SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        <Button onClick={() => downloadChartAsJpeg(weightChartRef, 'weight-analysis')} variant="outline" size="sm" className="h-7 text-xs"><Download className="w-3 h-3 mr-1" /> JPG</Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div ref={weightChartRef} className="h-[350px] sm:h-[500px] w-full mt-4">
-                        <ResponsiveContainer width="100%" height="100%">
-                          {weightChartType === 'radar' ? (
-                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={sensitivityCriteriaWeights}>
-                              <PolarGrid />
-                              <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
-                              <PolarRadiusAxis />
-                              <Legend wrapperStyle={{ fontSize: "10px" }} />
-                              <Tooltip />
-                              {sensitivityWeightComparisonResults.map((res, i) => (
-                                <Radar
-                                  key={res.weightLabel}
-                                  name={res.weightLabel}
-                                  dataKey={res.weightLabel}
-                                  stroke={CHART_COLORS[i % CHART_COLORS.length]}
-                                  fill={CHART_COLORS[i % CHART_COLORS.length]}
-                                  fillOpacity={0.1}
-                                />
-                              ))}
-                            </RadarChart>
-                          ) : weightChartType === 'bar' ? (
-                            <BarChart data={sensitivityCriteriaWeights}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                              <YAxis label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
-                              <Tooltip />
-                              <Legend wrapperStyle={{ fontSize: "10px" }} />
-                              {sensitivityWeightComparisonResults.map((res, i) => (
-                                <Bar key={res.weightLabel} dataKey={res.weightLabel} fill={CHART_COLORS[i % CHART_COLORS.length]} name={res.weightLabel} />
-                              ))}
-                            </BarChart>
-                          ) : weightChartType === 'stackedBar' ? (
-                            <BarChart data={sensitivityCriteriaWeights}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                              <YAxis label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
-                              <Tooltip />
-                              <Legend wrapperStyle={{ fontSize: "10px" }} />
-                              {sensitivityWeightComparisonResults.map((res, i) => (
-                                <Bar key={res.weightLabel} stackId="a" dataKey={res.weightLabel} fill={CHART_COLORS[i % CHART_COLORS.length]} name={res.weightLabel} />
-                              ))}
-                            </BarChart>
-                          ) : weightChartType === 'line' ? (
-                            <LineChart data={sensitivityCriteriaWeights}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                              <YAxis label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
-                              <Tooltip />
-                              <Legend wrapperStyle={{ fontSize: "10px" }} />
-                              {sensitivityWeightComparisonResults.map((res, i) => (
-                                <Line key={res.weightLabel} type="monotone" dataKey={res.weightLabel} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2} name={res.weightLabel} />
-                              ))}
-                            </LineChart>
-                          ) : weightChartType === 'area' ? (
-                            <AreaChart data={sensitivityCriteriaWeights}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                              <YAxis label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
-                              <Tooltip />
-                              <Legend wrapperStyle={{ fontSize: "10px" }} />
-                              {sensitivityWeightComparisonResults.map((res, i) => (
-                                <Area key={res.weightLabel} type="monotone" dataKey={res.weightLabel} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={res.weightLabel} />
-                              ))}
-                            </AreaChart>
-                          ) : weightChartType === 'boxPlot' ? (
-                            (() => {
-                              const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel);
-                              const data = sensitivityCriteriaWeights.map(row => {
-                                const values = methods.map(m => (row[m] !== undefined ? Number(row[m]) : 0));
-                                const sorted = [...values].sort((a, b) => a - b);
-                                const q = (arr: number[], p: number) => {
-                                  if (arr.length === 0) return 0;
-                                  const pos = (arr.length - 1) * p;
-                                  const base = Math.floor(pos);
-                                  const rest = pos - base;
-                                  if (arr[base + 1] !== undefined) return arr[base] + rest * (arr[base + 1] - arr[base]);
-                                  return arr[base];
-                                };
-                                const min = sorted[0] ?? 0;
-                                const max = sorted[sorted.length - 1] ?? 0;
-                                const q1 = q(sorted, 0.25);
-                                const q2 = q(sorted, 0.5);
-                                const q3 = q(sorted, 0.75);
-                                return { name: row.name, values, min, q1, q2, q3, max };
-                              });
-
-                              const width = 800;
-                              const height = 420;
-                              const padding = { left: 60, right: 20, top: 20, bottom: 60 };
-                              const innerW = width - padding.left - padding.right;
-                              const innerH = height - padding.top - padding.bottom;
-
-                              const allVals = data.flatMap(d => d.values);
-                              const gMin = Math.min(...allVals, 0);
-                              const gMax = Math.max(...allVals, 1);
-                              const yScale = (v: number) => padding.top + innerH - ((v - gMin) / (gMax - gMin || 1)) * innerH;
-
-                              const boxWidth = Math.min(60, innerW / (data.length * 1.2));
-
-                              const gaussian = (u: number) => Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI);
-                              const kde = (values: number[], bw = 0.04, samples = 50) => {
-                                const xs = Array.from({ length: samples }, (_, i) => gMin + (i / (samples - 1)) * (gMax - gMin));
-                                const dens = xs.map(x => {
-                                  const s = values.reduce((acc, v) => acc + gaussian((x - v) / bw), 0);
-                                  return s / (values.length * bw);
-                                });
-                                const max = Math.max(...dens) || 1;
-                                return xs.map((x, i) => ({ x, y: dens[i] / max }));
-                              };
-
-                              return (
-                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" style={{ fontFamily: 'sans-serif' }}>
-                                  {/* Y-axis and grid */}
-                                  {Array.from({ length: 6 }).map((_, i) => {
-                                    const yVal = gMin + (i / 5) * (gMax - gMin);
-                                    const y = yScale(yVal);
-                                    return (
-                                      <g key={i}>
-                                        <line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke="#e5e7eb" />
-                                        <text x={padding.left - 8} y={y + 4} fontSize={10} textAnchor="end" fill="#6b7280">{yVal.toFixed(2)}</text>
-                                      </g>
-                                    );
-                                  })}
-                                  <text x={padding.left / 2} y={padding.top + innerH / 2} transform={`rotate(-90, ${padding.left / 2}, ${padding.top + innerH / 2})`} textAnchor="middle" fontSize="12" fill="#374151">Weight</text>
-
-                                  {data.map((d, i) => {
-                                    const cx = padding.left + (i + 0.5) * (innerW / data.length);
-                                    const color = CHART_COLORS[i % CHART_COLORS.length];
-                                    const dens = kde(d.values);
-                                    const violinWidth = boxWidth * 0.8;
-
-                                    const pathD = dens.map((pt, idx) => {
-                                      const x = cx + pt.y * violinWidth;
-                                      const y = yScale(pt.x);
-                                      return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
-                                    }).join(' ') + ` L ${cx} ${yScale(gMax)} L ${cx} ${yScale(gMin)} Z`;
-
-                                    return (
-                                      <g key={d.name}>
-                                        {/* Half-violin */}
-                                        <path d={pathD} fill={color} stroke={color} fillOpacity={0.2} strokeWidth={1.5} />
-
-                                        {/* Box plot part */}
-                                        <line x1={cx - 10} x2={cx - 10} y1={yScale(d.q1)} y2={yScale(d.q3)} stroke="#374151" strokeWidth={3} />
-                                        <line x1={cx - 15} x2={cx - 5} y1={yScale(d.q2)} y2={yScale(d.q2)} stroke="#374151" strokeWidth={2} />
-                                        <line x1={cx - 10} x2={cx - 10} y1={yScale(d.min)} y2={yScale(d.q1)} stroke="#6b7280" strokeWidth={1} strokeDasharray="3 3" />
-                                        <line x1={cx - 10} x2={cx - 10} y1={yScale(d.q3)} y2={yScale(d.max)} stroke="#6b7280" strokeWidth={1} strokeDasharray="3 3" />
-
-                                        {/* Jittered points */}
-                                        {d.values.map((val, j) => (
-                                          <circle
-                                            key={j}
-                                            cx={cx - 30 + (Math.random() - 0.5) * 20}
-                                            cy={yScale(val)}
-                                            r={3}
-                                            fill={color}
-                                            fillOpacity={0.6}
-                                            stroke="#fff"
-                                            strokeWidth={0.5}
-                                          >
-                                            <title>{`${d.name}: ${val.toFixed(resultsDecimalPlaces)}`}</title>
-                                          </circle>
-                                        ))}
-
-                                        <text x={cx} y={padding.top + innerH + 18} fontSize={12} textAnchor="middle" fill="#0f172a">{d.name}</text>
-                                      </g>
-                                    );
-                                  })}
-                                </svg>
-                              );
-                            })()
-                          ) : weightChartType === 'scatter' ? (
-                            <ScatterChart>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} />
-                              <YAxis dataKey="weight" name="Weight" label={{ value: 'Weight', angle: -90, position: 'insideLeft' }} />
-                              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                              <Legend wrapperStyle={{ fontSize: "10px" }} />
-                              {sensitivityWeightComparisonResults.map((res, i) => (
-                                <Scatter key={res.weightLabel} name={res.weightLabel} data={sensitivityCriteriaWeights.map(d => ({ name: d.name, weight: d[res.weightLabel] }))} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                              ))}
-                            </ScatterChart>
-                          ) : weightChartType === 'parallel' ? (
-                            (() => {
-                              const criteriaNames = sensitivityCriteriaWeights.map(d => d.name)
-                              const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
-                              const series = methods.map((m) => ({
-                                name: m,
-                                values: criteriaNames.map(cn => {
-                                  const row = sensitivityCriteriaWeights.find(r => r.name === cn)
-                                  return row && row[m] !== undefined ? Number(row[m]) : 0
-                                })
-                              }))
-
-                              const width = 800
-                              const height = 420
-                              const padding = { left: 50, right: 20, top: 20, bottom: 40 }
-                              const innerW = width - padding.left - padding.right
-                              const innerH = height - padding.top - padding.bottom
-
-                              const xScale = (i: number) => padding.left + (i / Math.max(1, criteriaNames.length - 1)) * innerW
-                              const yScale = (v: number) => padding.top + innerH - v * innerH
-
-                              return (
-                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
-                                  {criteriaNames.map((cn, i) => (
-                                    <g key={cn} transform={`translate(${xScale(i)},0)`}>
-                                      <line x1={0} x2={0} y1={padding.top} y2={height - padding.bottom} stroke="#e5e7eb" />
-                                      <text x={0} y={height - padding.bottom + 14} fontSize={11} textAnchor="middle" fill="#111827">{cn}</text>
-                                    </g>
-                                  ))}
-
-                                  {series.map((s, si) => (
-                                    <path key={s.name}
-                                      d={s.values.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(v)}`).join(' ')}
-                                      fill="none"
-                                      stroke={CHART_COLORS[si % CHART_COLORS.length]}
-                                      strokeWidth={1.6}
-                                      opacity={0.85}
-                                    />
-                                  ))}
-
-                                  {series.map((s, si) => (
-                                    <g key={s.name} transform={`translate(${width - padding.right - 120}, ${padding.top + si * 18})`}>
-                                      <rect width={10} height={10} fill={CHART_COLORS[si % CHART_COLORS.length]} />
-                                      <text x={14} y={9} fontSize={11} fill="#111827">{s.name}</text>
-                                    </g>
-                                  ))}
-                                </svg>
-                              )
-                            })()
-                          ) : weightChartType === 'violin' ? (
-                            (() => {
-                              const criteriaNames = sensitivityCriteriaWeights.map(d => d.name)
-                              const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
-                              const width = 800
-                              const height = 420
-                              const padding = { left: 60, right: 160, top: 20, bottom: 60 }
-                              const innerW = width - padding.left - padding.right
-                              const innerH = height - padding.top - padding.bottom
-
-                              const gaussian = (u: number) => Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI)
-                              const kde = (values: number[], bw = 0.05, samples = 40) => {
-                                const xs = Array.from({ length: samples }, (_, i) => i / (samples - 1))
-                                const dens = xs.map(x => {
-                                  const s = values.reduce((acc, v) => acc + gaussian((x - v) / bw), 0)
-                                  return s / (values.length * bw)
-                                })
-                                const max = Math.max(...dens) || 1
-                                return xs.map((x, i) => ({ x, y: dens[i] / max }))
-                              }
-
-                              return (
-                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
-                                  {criteriaNames.map((cn, i) => {
-                                    const weights = methods.map(m => {
-                                      const row = sensitivityCriteriaWeights.find(r => r.name === cn)
-                                      return row && row[m] !== undefined ? Number(row[m]) : 0
-                                    })
-                                    const dens = kde(weights, 0.06, 60)
-                                    const xCenter = padding.left + (i / Math.max(1, criteriaNames.length - 1)) * innerW
-                                    const maxWidth = Math.min(60, innerW / (criteriaNames.length * 0.9))
-
-                                    const pathD = dens.map((pt, idx) => {
-                                      const x = xCenter + pt.y * maxWidth
-                                      const y = padding.top + (1 - pt.x) * innerH
-                                      return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`
-                                    }).join(' ') + ' ' + dens.slice().reverse().map((pt, idx) => {
-                                      const x = xCenter - pt.y * maxWidth
-                                      const y = padding.top + (1 - pt.x) * innerH
-                                      return `L ${x} ${y}`
-                                    }).join(' ') + ' Z'
-
-                                    return (
-                                      <g key={cn}>
-                                        <path d={pathD} fill="#eef2ff" stroke="#4338ca" opacity={0.9} />
-                                        <line x1={xCenter - maxWidth} x2={xCenter + maxWidth} y1={padding.top + innerH + 6} y2={padding.top + innerH + 6} stroke="#111827" />
-                                        <text x={xCenter} y={padding.top + innerH + 22} fontSize={11} textAnchor="middle" fill="#111827">{cn}</text>
-                                        {weights.map((w, wi) => (
-                                          <circle
-                                            key={wi}
-                                            cx={xCenter + (Math.random() - 0.5) * 15}
-                                            cy={padding.top + (1 - w) * innerH}
-                                            r={3}
-                                            fill={CHART_COLORS[wi % CHART_COLORS.length]}
-                                            stroke="white"
-                                            strokeWidth={1}
-                                            opacity={0.8}
-                                          />
-                                        ))}
-                                      </g>
-                                    )
-                                  })}
-
-                                  <g transform={`translate(${width - 150}, ${padding.top})`}>
-                                    <text x={0} y={0} fontSize={12} fontWeight={600} fill="#111827">Methods</text>
-                                    {methods.map((m, mi) => (
-                                      <g key={m} transform={`translate(0, ${16 + mi * 16})`}>
-                                        <rect width={10} height={10} fill={CHART_COLORS[mi % CHART_COLORS.length]} />
-                                        <text x={14} y={9} fontSize={11} fill="#111827">{m}</text>
-                                      </g>
-                                    ))}
-                                  </g>
-                                </svg>
-                              )
-                            })()
-                          ) : weightChartType === 'ridgeline' ? (
-                            (() => {
-                              const criteriaNames = sensitivityCriteriaWeights.map(d => d.name)
-                              const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
-                              const width = 800
-                              const height = 420
-                              const padding = { left: 80, right: 20, top: 30, bottom: 40 }
-                              const innerW = width - padding.left - padding.right
-
-                              const gaussian = (u: number) => Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI)
-                              const kde = (values: number[], bw = 0.06, samples = 60) => {
-                                const xs = Array.from({ length: samples }, (_, i) => i / (samples - 1))
-                                const dens = xs.map(x => {
-                                  const s = values.reduce((acc, v) => acc + gaussian((x - v) / bw), 0)
-                                  return s / (values.length * bw)
-                                })
-                                const max = Math.max(...dens) || 1
-                                return xs.map((x, i) => ({ x, y: dens[i] / max }))
-                              }
-
-                              return (
-                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
-                                  {criteriaNames.map((cn, idx) => {
-                                    const weights = methods.map(m => {
-                                      const row = sensitivityCriteriaWeights.find(r => r.name === cn)
-                                      return row && row[m] !== undefined ? Number(row[m]) : 0
-                                    })
-                                    const dens = kde(weights, 0.06, 60)
-                                    const offsetY = padding.top + idx * ((height - padding.top - padding.bottom) / Math.max(1, criteriaNames.length))
-                                    const scaleX = (x: number) => padding.left + x * (innerW)
-                                    const scaleY = (v: number) => offsetY + (1 - v) * 40
-
-                                    const pathTop = dens.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(pt.x)} ${scaleY(pt.y)}`).join(' ')
-                                    const pathBottom = dens.slice().reverse().map((pt, i) => `L ${scaleX(pt.x)} ${offsetY + 4}`).join(' ')
-
-                                    return (
-                                      <g key={cn}>
-                                        <path d={`${pathTop} ${pathBottom} Z`} fill="#eef2ff" stroke="#4338ca" opacity={0.9} />
-                                        <text x={10} y={offsetY + 6} fontSize={11} fill="#111827">{cn}</text>
-                                      </g>
-                                    )
-                                  })}
-                                </svg>
-                              )
-                            })()
-                          ) : weightChartType === 'ecdf' ? (
-                            (() => {
-                              const first = sensitivityCriteriaWeights[0]
-                              if (!first) return <div className="text-xs">No data</div>
-                              const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
-                              const vals = methods.map(m => first[m] !== undefined ? Number(first[m]) : 0).sort((a, b) => a - b)
-                              const width = 700
-                              const height = 420
-                              const padding = { left: 60, right: 20, top: 20, bottom: 60 }
-                              const innerW = width - padding.left - padding.right
-                              const innerH = height - padding.top - padding.bottom
-                              const points = vals.map((v, i) => ({ x: padding.left + (i / (vals.length - 1 || 1)) * innerW, y: padding.top + innerH - ((i + 1) / vals.length) * innerH, v }))
-
-                              const lineD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
-
-                              return (
-                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
-                                  <line x1={padding.left} x2={padding.left} y1={padding.top} y2={padding.top + innerH} stroke="#e5e7eb" />
-                                  <line x1={padding.left} x2={padding.left + innerW} y1={padding.top + innerH} y2={padding.top + innerH} stroke="#e5e7eb" />
-                                  <path d={lineD} stroke="#2563eb" fill="none" strokeWidth={2} />
-                                  {points.map((p, i) => (<circle key={i} cx={p.x} cy={p.y} r={3} fill="#2563eb" />))}
-                                  <text x={padding.left + innerW / 2} y={height - 20} textAnchor="middle" fontSize={12}>{first.name} - ECDF</text>
-                                </svg>
-                              )
-                            })()
-                          ) : weightChartType === 'kde' ? (
-                            (() => {
-                              const first = sensitivityCriteriaWeights[0]
-                              if (!first) return <div className="text-xs">No data</div>
-                              const methods = sensitivityWeightComparisonResults.map(r => r.weightLabel)
-                              const vals = methods.map(m => first[m] !== undefined ? Number(first[m]) : 0)
-                              const gaussian = (u: number) => Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI)
-                              const kde = (values: number[], bw = 0.06, samples = 150) => {
-                                const xs = Array.from({ length: samples }, (_, i) => i / (samples - 1))
-                                const dens = xs.map(x => {
-                                  const s = values.reduce((acc, v) => acc + gaussian((x - v) / bw), 0)
-                                  return s / (values.length * bw)
-                                })
-                                const max = Math.max(...dens) || 1
-                                return xs.map((x, i) => ({ x, y: dens[i] / max }))
-                              }
-
-                              const dens = kde(vals, 0.06, 150)
-                              const width = 700
-                              const height = 420
-                              const padding = { left: 60, right: 20, top: 20, bottom: 60 }
-                              const innerW = width - padding.left - padding.right
-                              const innerH = height - padding.top - padding.bottom
-
-                              const pathD = dens.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${padding.left + pt.x * innerW} ${padding.top + innerH - pt.y * (innerH * 0.8)}`).join(' ')
-
-                              return (
-                                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
-                                  <line x1={padding.left} x2={padding.left} y1={padding.top} y2={padding.top + innerH} stroke="#e5e7eb" />
-                                  <path d={pathD} stroke="#ef4444" fill="none" strokeWidth={2} />
-                                  <text x={padding.left + innerW / 2} y={height - 20} textAnchor="middle" fontSize={12}>{first.name} - KDE</text>
-                                </svg>
-                              )
-                            })()
-                          ) : (
-
-                            sensitivityWeightComparisonResults.length > 0 ? (
-                              <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" barSize={10} data={sensitivityCriteriaWeights}>
-                                <RadialBar
-                                  label={{ position: 'insideStart', fill: '#fff' }}
-                                  background
-                                  dataKey={sensitivityWeightComparisonResults[0]?.weightLabel}
-                                />
-                                <Legend iconSize={10} wrapperStyle={{ fontSize: "10px" }} />
-                                {sensitivityWeightComparisonResults.map((res, i) => (
-                                  <RadialBar key={res.weightLabel} name={res.weightLabel} dataKey={res.weightLabel} fill={CHART_COLORS[i % CHART_COLORS.length]} background />
-                                ))}
-                                <Tooltip />
-                              </RadialBarChart>
-                            ) : (
-                              <div className="flex items-center justify-center h-full text-xs text-gray-400 italic">
-                                Run analysis to view weight distribution
-                              </div>
-                            )
-
-                          )}
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Weight Values Table</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">Detailed numerical weights for each criterion</CardDescription>
-                    </CardHeader>
-                    <CardContent className="table-responsive">
-                      <table className="min-w-full text-xs border border-gray-200 rounded-lg">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-3 py-2 text-left border-b border-r text-black font-semibold">Criterion</th>
-                            {sensitivityWeightComparisonResults.map((res, i) => (
-                              <th key={i} className="px-3 py-2 text-center border-b border-l text-black font-semibold">
-                                {res.weightLabel}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sensitivityCriteriaWeights.map((row, i) => (
-                            <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
-                              <td className="px-3 py-2 font-medium text-black border-r border-gray-200">{row.name}</td>
-                              {sensitivityWeightComparisonResults.map((res, k) => (
-                                <td key={k} className="px-3 py-2 text-center text-black border-l border-gray-200">
-                                  {row[res.weightLabel] !== undefined ? Number(row[res.weightLabel]).toFixed(resultsDecimalPlaces) : "-"}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </CardContent>
-                  </Card>
-                </>
-              )}
-
-
-
-
-
-
-            </>
-          )}
-
-          {homeTab === "rankingComparison" && (
-            <>
-              <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">Construct the Decision Matrix</CardTitle>
-                  <CardDescription className="text-xs text-gray-700">
-                    Create a decision matrix by adding alternatives and criteria
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Button
-                    onClick={() => {
-                      setReturnToTab("rankingComparison")
-                      setCurrentStep("input")
-                    }}
-                    className="w-full bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
-                  >
-                    + Add Alternative & Criteria
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="border-gray-200 bg-white shadow-none w-full mb-4">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">Ranking comparison</CardTitle>
-                  <CardDescription className="text-xs text-gray-700">
-                    Choose one weight method, pick ranking methods to compare, then view rankings and chart.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {isFullyDataFilled ? (
-                    <div className="space-y-3">
-                      <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded mx-3 sm:mx-0">
-                        <p className="font-semibold">✓ Data has uploaded</p>
-                        <p className="mt-1">
-                          {alternatives.length} alternatives × {criteria.length} criteria
-                        </p>
-                      </div>
-
-                      {/* Editable Decision Matrix Table */}
-                      <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
-                        <Table className="border-collapse w-full" style={{ width: `${80 + (criteria.length * 60)}px`, minWidth: '100%' }}>
-                          <TableHeader>
-                            <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
-                              <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
-                                <div className="flex flex-col items-center justify-center h-full leading-tight">
-                                  <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center flex items-center justify-center gap-1">Criteria <ArrowRight className="w-2.5 h-2.5 stroke-[3]" /></div>
-                                  <div className="text-[10px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">Alternatives <ArrowDown className="w-2.5 h-2.5 stroke-[3]" /></div>
-                                </div>
-                              </TableHead>
-                              {criteria.map((crit) => (
-                                <TableHead key={crit.id} className="text-black font-bold text-center text-[10px] border-r border-gray-300 px-1 py-0.5" style={{ width: '60px', minWidth: '60px' }}>
-                                  <div className="flex flex-col items-center py-0.5">
-                                    <div className="flex items-center gap-1">
-                                      <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
-                                      <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"} aria-hidden>
-                                        {crit.type === "beneficial" ? "▲" : "▼"}
-                                      </span>
-                                    </div>
-                                    <div className="text-gray-600 font-semibold text-[9px]">
-                                      {crit.type === "beneficial" ? "Max" : "Min"}
-                                    </div>
-                                  </div>
-                                </TableHead>
-                              ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {alternatives.map((alt) => (
-                              <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
-                                <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5 text-center">{alt.name}</TableCell>
-                                {criteria.map((crit) => (
-                                  <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
-                                    <Input
-                                      type="number"
-                                      step="any"
-                                      min="0"
-                                      value={alt.scores[crit.id] ?? ""}
-                                      onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
-                                      onKeyDown={handleKeyDown}
-                                      className="text-center text-[10px] h-7 border-gray-100 text-black w-full shadow-none bg-white rounded-md p-1 focus:ring-1 focus:ring-blue-400"
-                                    />
-                                  </TableCell>
-                                ))}
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded">
-                      <p className="font-semibold">⚠️ No data available</p>
-                      <p className="mt-1">
-                        Please add alternatives and criteria using the "Get Started" section above.
-                      </p>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="border border-gray-200 rounded-lg p-3">
-                      <button
-                        type="button"
-                        onClick={() => setComparisonWeightOpen((prev) => !prev)}
-                        className="flex w-full items-center justify-between mb-2"
-                      >
-                        <p className="text-[10px] font-semibold text-black">Weight method (choose one)</p>
-                        {comparisonWeightOpen ? (
-                          <ChevronDown className="w-4 h-4 text-black" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4 text-black" />
-                        )}
-                      </button>
-                      {comparisonWeightOpen && (
-                        <div className="grid grid-cols-2 gap-2 mt-2 max-h-[200px] overflow-y-auto">
-                          {WEIGHT_METHODS.map((w) => (
-                            <label key={w.value} className="flex items-start gap-2 text-[10px] text-black cursor-pointer hover:bg-gray-50 p-1 rounded leading-none">
-                              <input
-                                type="checkbox"
-                                checked={comparisonWeightMethod === w.value}
-                                onChange={() => {
-                                  if (w.value === "piprecia") {
-                                    setIsPipreciaDialogOpen(true)
-                                  }
-                                  if (w.value === "ahp") {
-                                    setIsAhpDialogOpen(true)
-                                  }
-                                  if (w.value === "swara") {
-                                    setIsComparisonSwaraDialogOpen(true)
-                                  }
-                                  if (w.value === "roc" || w.value === "rr") {
-                                    setIsComparisonRanksDialogOpen(true)
-                                  }
-                                  if (w.value === "custom") {
-                                    setIsComparisonCustomWeightsDialogOpen(true)
-                                  }
-                                  setComparisonWeightMethod(w.value)
-                                }}
-                                disabled={comparisonLoading}
-                                className="mt-0.5"
+                    {/* --- Ranks Dialog (Sensitivity Analysis Tab) --- */}
+                    <Dialog open={isSensitivityRanksDialogOpen} onOpenChange={setIsSensitivityRanksDialogOpen}>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Enter Criteria Ranks</DialogTitle>
+                          <DialogDescription>1 = Most Important, Higher numbers = Less Important</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          {criteria.map((crit) => (
+                            <div key={crit.id} className="flex items-center justify-between">
+                              <label className="text-sm font-medium">{crit.name}</label>
+                              <Input
+                                type="number"
+                                min="1"
+                                className="w-20 h-8 text-xs"
+                                value={criteriaRanks[crit.id] || ""}
+                                onChange={(e) => setCriteriaRanks(prev => ({ ...prev, [crit.id]: e.target.value }))}
                               />
-                              <span>
-                                <span className="font-normal">{w.label}</span>
-                              </span>
-                            </label>
+                            </div>
                           ))}
                         </div>
-                      )}
-                    </div>
+                        <DialogFooter>
+                          <Button onClick={() => setIsSensitivityRanksDialogOpen(false)}>Save Ranks</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
 
-                    <div className="border border-gray-200 rounded-lg p-3">
-                      <button
-                        type="button"
-                        onClick={() => setComparisonRankingOpen((prev) => !prev)}
-                        className="flex w-full items-center justify-between mb-2"
-                      >
-                        <p className="text-[10px] font-semibold text-black">
-                          Ranking methods Reference ({selectedRankingMethods.length} selected)
-                        </p>
-                        {comparisonRankingOpen ? (
-                          <ChevronDown className="w-4 h-4 text-black" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4 text-black" />
-                        )}
-                      </button>
-                      {comparisonRankingOpen && (
-                        <div className="grid grid-cols-2 gap-2 mt-2 max-h-[200px] overflow-y-auto">
-                          {MCDM_METHODS.map((m) => (
-                            <label key={m.value} className="flex items-start gap-2 text-[10px] text-black cursor-pointer hover:bg-gray-50 p-1 rounded leading-none">
-                              <input
-                                type="checkbox"
-                                checked={selectedRankingMethods.includes(m.value)}
-                                onChange={() => toggleRankingMethodSelection(m.value)}
-                                disabled={comparisonLoading}
-                                className="mt-0.5"
-                              />
-                              <span>
-                                <span className="font-normal">{m.label}</span>
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {selectedRankingMethods.includes("vikor") && (
-                    <div className="border border-teal-200 bg-teal-50 rounded-lg p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <label className="text-xs font-semibold text-teal-900">VIKOR v-value (Compromise):</label>
-                          <p className="text-[10px] text-teal-700">Weight of "majority of criteria" (v) vs "individual regret" (1-v)</p>
-                        </div>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="1"
-                          value={vikorVValue}
-                          onChange={(e) => setVikorVValue(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                          onBlur={handleComparisonCalculate}
-                          placeholder="0.5"
-                          className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedRankingMethods.includes("waspas") && (
-                    <div className="border border-teal-200 bg-teal-50 rounded-lg p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <label className="text-xs font-semibold text-teal-900">WASPAS lambda:</label>
-                          <p className="text-[10px] text-teal-700">Weight of WSM (λ) vs WPM (1-λ)</p>
-                        </div>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="1"
-                          value={waspasLambdaValue}
-                          onChange={(e) => setWpasLambdaValue(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                          onBlur={handleComparisonCalculate}
-                          placeholder="0.5"
-                          className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedRankingMethods.includes("codas") && (
-                    <div className="border border-teal-200 bg-teal-50 rounded-lg p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <label className="text-xs font-semibold text-teal-900">CODAS tau-value:</label>
-                          <p className="text-[10px] text-teal-700">Threshold parameter (typically 0.01-0.05)</p>
-                        </div>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          max="1"
-                          value={codasTauValue}
-                          onChange={(e) => setCodasTauValue(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                          onBlur={handleComparisonCalculate}
-                          placeholder="0.02"
-                          className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {comparisonError && (
-                    <div className="text-xs text-red-600 border border-red-200 bg-red-50 p-2 rounded">
-                      {comparisonError}
-                    </div>
-                  )}
-
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      onClick={handleComparisonCalculate}
-                      className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
-                      disabled={comparisonLoading}
-                    >
-                      {comparisonLoading ? "Calculating..." : "Calculate comparison"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* --- PIPRECIA Dialog (Ranking Comparison Tab) --- */}
-              <Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen}>
-                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
-                  <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
-                  <PIPRECIAFormula
-                    criteria={comparisonCriteria.length > 0 ? comparisonCriteria : criteria}
-                    initialScores={pipreciaScores}
-                    onScoresChange={setPipreciaScores}
-                    onWeightsCalculated={(weights) => {
-                      setPipreciaCalculatedWeights(weights)
-                      setIsPipreciaDialogOpen(false)
-
-                      // Update criteria with new weights
-                      const targetCriteria = comparisonCriteria.length > 0 ? comparisonCriteria : criteria
-                      const updatedCriteria = targetCriteria.map(c => ({
-                        ...c,
-                        weight: weights[c.id] || 0
-                      }))
-
-                      if (comparisonCriteria.length > 0) {
-                        setComparisonCriteria(updatedCriteria)
-                      } else {
-                        setCriteria(updatedCriteria)
-                      }
-
-                      // Set weight method to PIPRECIA
-                      setComparisonWeightMethod("piprecia")
-
-                      // Do not auto-trigger - let user click Calculate button
-                    }}
-                  />
-                </DialogContent>
-              </Dialog>
-
-              {/* --- AHP Dialog (Ranking Comparison Tab) --- */}
-              <Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
-                  <DialogTitle>AHP Weight Calculator</DialogTitle>
-                  <AHPFormula
-                    criteria={comparisonCriteria.length > 0 ? comparisonCriteria : criteria}
-                    initialMatrix={ahpMatrix}
-                    onMatrixChange={setAhpMatrix}
-                    onWeightsCalculated={(weights) => {
-                      setAhpCalculatedWeights(weights)
-                      setIsAhpDialogOpen(false)
-
-                      // Update criteria with new weights
-                      const targetCriteria = comparisonCriteria.length > 0 ? comparisonCriteria : criteria
-                      const updatedCriteria = targetCriteria.map(c => ({
-                        ...c,
-                        weight: weights[c.id] || 0
-                      }))
-
-                      if (comparisonCriteria.length > 0) {
-                        setComparisonCriteria(updatedCriteria)
-                      } else {
-                        setCriteria(updatedCriteria)
-                      }
-
-                      // Set weight method to AHP
-                      setComparisonWeightMethod("ahp")
-
-                      // Do not auto-trigger - let user click Calculate button
-                    }}
-                  />
-                </DialogContent>
-              </Dialog>
-
-              {/* --- SWARA Dialog (Ranking Comparison Tab) --- */}
-              <Dialog open={isComparisonSwaraDialogOpen} onOpenChange={setIsComparisonSwaraDialogOpen}>
-                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
-                  <DialogHeader>
-                    <DialogTitle>SWARA Weight Calculator</DialogTitle>
-                    <DialogDescription className="text-xs">
-                      Enter comparative importance coefficients (s<sub>j</sub>) for each criterion.
-                      The first criterion is most important (s<sub>1</sub> = 0).
-                      Higher values indicate larger importance differences.
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div className="space-y-4 mt-4">
-                    <div className="border border-gray-200 rounded-lg overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50">
-                            <TableHead className="text-xs font-semibold">Rank</TableHead>
-                            <TableHead className="text-xs font-semibold">Criterion</TableHead>
-                            <TableHead className="text-xs font-semibold text-center">
-                              Coefficient (s<sub>j</sub>)
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {(comparisonCriteria.length > 0 ? comparisonCriteria : criteria).map((crit, index) => (
-                            <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                              <TableCell className="py-3 px-4 font-medium text-black text-xs">{index + 1}</TableCell>
-                              <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
-                              <TableCell className="text-center py-3 px-4 text-xs text-black">
-                                {index === 0 ? (
-                                  <span className="text-xs text-gray-500">0 (most important)</span>
-                                ) : (
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={swaraCoefficients[crit.id] || ""}
-                                    onChange={(e) => setSwaraCoefficients({
-                                      ...swaraCoefficients,
-                                      [crit.id]: e.target.value,
-                                    })}
-                                    onKeyDown={handleKeyDown}
-                                    className="w-24 h-7 text-xs text-center"
-                                    placeholder="0.00"
-                                  />
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-xs text-blue-900">
-                        <strong>Note:</strong> Criteria are ordered by importance (top = most important).
-                        For each criterion j, enter how much less important it is compared to the previous criterion (j-1).
-                      </p>
-                    </div>
-                  </div>
-
-                  <DialogFooter className="mt-4">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsComparisonSwaraDialogOpen(false)}
-                      className="text-xs"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          const targetCriteria = comparisonCriteria.length > 0 ? comparisonCriteria : criteria
-                          const coeffs: Record<string, number> = {}
-                          targetCriteria.forEach((crit, index) => {
-                            if (index === 0) {
-                              coeffs[crit.id] = 0
-                            } else {
-                              coeffs[crit.id] = parseFloat(swaraCoefficients[crit.id]) || 0
-                            }
-                          })
-
-                          const response = await fetch("/api/swara-weights", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ criteria: targetCriteria, coefficients: coeffs }),
-                          })
-
-                          if (!response.ok) throw new Error("Failed to calculate SWARA weights")
-
-                          const data: SWARAResult = await response.json()
-                          setSwaraResult(data)
-                          setSwaraCalculatedWeights(data.weights)
-                          setIsComparisonSwaraDialogOpen(false)
-
-                          // Update criteria with new weights
-                          const updatedCriteria = targetCriteria.map(c => ({
-                            ...c,
-                            weight: data.weights[c.id] || 0
-                          }))
-
-                          if (comparisonCriteria.length > 0) {
-                            setComparisonCriteria(updatedCriteria)
-                          } else {
-                            setCriteria(updatedCriteria)
-                          }
-
-                          setComparisonWeightMethod("swara")
-
-                          // Do not auto-trigger - user will click Calculate button manually
-                        } catch (error) {
-                          console.error("SWARA calculation error:", error)
-                          alert("Error calculating SWARA weights")
-                        }
-                      }}
-                      className="bg-black text-white hover:bg-gray-800 text-xs"
-                    >
-                      Calculate Weights
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
-              {/* --- Ranks Dialog (Ranking Comparison Tab) --- */}
-              <Dialog open={isComparisonRanksDialogOpen} onOpenChange={setIsComparisonRanksDialogOpen}>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Enter Criteria Ranks</DialogTitle>
-                    <DialogDescription>1 = Most Important, Higher numbers = Less Important</DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    {(comparisonCriteria.length > 0 ? comparisonCriteria : criteria).map((crit) => (
-                      <div key={crit.id} className="flex items-center justify-between">
-                        <label className="text-sm font-medium">{crit.name}</label>
-                        <Input
-                          type="number"
-                          min="1"
-                          className="w-20 h-8 text-xs"
-                          value={criteriaRanks[crit.id] || ""}
-                          onChange={(e) => setCriteriaRanks(prev => ({ ...prev, [crit.id]: e.target.value }))}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <DialogFooter>
-                    <Button onClick={() => setIsComparisonRanksDialogOpen(false)}>Save Ranks</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
-              {/* --- Custom Weights Dialog (Ranking Comparison Tab) --- */}
-              <Dialog open={isComparisonCustomWeightsDialogOpen} onOpenChange={setIsComparisonCustomWeightsDialogOpen}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-full">
-                  <DialogHeader>
-                    <DialogTitle>Enter Custom Weights</DialogTitle>
-                    <DialogDescription className="text-xs">
-                      Enter a weight for each criterion. Weights will be automatically normalized to sum to 1.0.
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div className="space-y-4 mt-4">
-                    <div className="border border-gray-200 rounded-lg overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50">
-                            <TableHead className="text-xs font-semibold">Criterion</TableHead>
-                            <TableHead className="text-xs font-semibold text-center">Weight</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {(comparisonCriteria.length > 0 ? comparisonCriteria : criteria).map((crit) => (
-                            <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                              <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
-                              <TableCell className="text-center py-3 px-4 text-xs text-black">
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  value={customWeights[crit.id] || ""}
-                                  onChange={(e) => setCustomWeights({
-                                    ...customWeights,
-                                    [crit.id]: e.target.value,
-                                  })}
-                                  onKeyDown={handleKeyDown}
-                                  className="w-24 h-7 text-xs text-center"
-                                  placeholder="0.00"
-                                />
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-xs text-blue-900">
-                        <strong>Note:</strong> You can enter any positive numbers. The weights will be automatically normalized
-                        to sum to 1.0. For example, if you enter 3, 2, and 1, they will be normalized to 0.5, 0.33, and 0.17.
-                      </p>
-                    </div>
-                  </div>
-
-                  <DialogFooter className="mt-4">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsComparisonCustomWeightsDialogOpen(false)}
-                      className="text-xs"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        try {
-                          const targetCriteria = comparisonCriteria.length > 0 ? comparisonCriteria : criteria
-                          const weights: Record<string, number> = {}
-                          let sum = 0
-
-                          // Parse and sum all weights
-                          targetCriteria.forEach((crit) => {
-                            const value = parseFloat(customWeights[crit.id]) || 0
-                            if (value < 0) {
-                              throw new Error("Weights must be non-negative")
-                            }
-                            weights[crit.id] = value
-                            sum += value
-                          })
-
-                          if (sum === 0) {
-                            throw new Error("At least one weight must be greater than zero")
-                          }
-
-                          // Normalize weights to sum to 1.0
-                          const normalizedWeights: Record<string, number> = {}
-                          targetCriteria.forEach((crit) => {
-                            normalizedWeights[crit.id] = weights[crit.id] / sum
-                          })
-
-                          setCustomWeightsCalculated(normalizedWeights)
-                          setIsComparisonCustomWeightsDialogOpen(false)
-
-                          // Update criteria with new weights
-                          const updatedCriteria = targetCriteria.map(c => ({
-                            ...c,
-                            weight: normalizedWeights[c.id] || 0
-                          }))
-
-                          if (comparisonCriteria.length > 0) {
-                            setComparisonCriteria(updatedCriteria)
-                          } else {
-                            setCriteria(updatedCriteria)
-                          }
-
-                          setComparisonWeightMethod("custom")
-                        } catch (error: any) {
-                          alert(error?.message || "Error calculating custom weights")
-                        }
-                      }}
-                      className="bg-black text-white hover:bg-gray-800 text-xs"
-                    >
-                      Apply Weights
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
-              {comparisonResults.length > 0 && (
-                <Card className="border-gray-200 bg-white shadow-none w-full mb-4">
-                  <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                    <div>
-                      <CardTitle className="text-sm text-black">Ranking table</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Scores and rankings generated by the methods. Ranking depends on the method used.
-                      </CardDescription>
-                    </div>
-                    <Button onClick={exportRankingComparisonToExcel} variant="outline" size="sm" className="h-7 text-xs">
-                      <Download className="w-3 h-3 mr-1" /> Excel
-                    </Button>
-                  </CardHeader>
-                  <CardContent className="table-responsive">
-                    <div ref={rankingComparisonTableRef} className="bg-white">
-                      <table className="min-w-full text-xs border border-gray-200 rounded-lg overflow-x-auto">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th rowSpan={2} className="relative bg-white text-black font-bold text-[9px] border-r border-gray-200 p-0 h-10 w-32 min-w-[128px]">
-                              <div className="flex flex-col items-center justify-center h-full leading-tight pr-6">
-                                <div className="text-[9px] font-bold py-0.5 border-b border-gray-200 w-full text-center flex items-center justify-center gap-1">
-                                  Methods <ArrowRight className="w-2 h-2 stroke-[3]" />
-                                </div>
-                                <div className="text-[9px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">
-                                  Alternatives <ArrowDown className="w-2 h-2 stroke-[3]" />
-                                </div>
+                    {sensitivityWeightComparisonResults.length > 0 && (
+                      <>
+                        {/* AI Sensitivity Panel */}
+                        {showAiPanel && aiAnalysisType === "sensitivity" && (
+                          <Card className="border-indigo-100 bg-indigo-50/50 mb-6 overflow-hidden transition-all duration-300">
+                            <CardHeader className="border-b border-indigo-100 pb-3 bg-white/50">
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="flex items-center gap-2 text-sm text-indigo-900 font-bold">
+                                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                                  AI Sensitivity Insights
+                                </CardTitle>
+                                <Button variant="ghost" size="sm" onClick={() => setShowAiPanel(false)} className="h-6 w-6 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"><span className="sr-only">Close</span><span className="text-lg">×</span></Button>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="absolute top-1 right-1 h-6 w-6 text-gray-400 hover:text-blue-600 p-0"
-                                onClick={downloadRankingComparisonTableAsJpeg}
-                                title="Download Table as JPG"
-                              >
-                                <Download className="h-3.5 w-3.5" />
-                              </Button>
-                            </th>
-                            {comparisonResults.map((result) => (
-                              <th
-                                key={result.method}
-                                colSpan={2}
-                                className="px-3 py-2 text-center border-b border-r border-gray-200 text-black font-semibold"
-                              >
-                                {result.label}
-                              </th>
-                            ))}
-                          </tr>
-                          <tr>
-                            {comparisonResults.map((result) => (
-                              <Fragment key={result.method}>
-                                <th key={`${result.method}-score`} className="px-2 py-1 text-center border-b border-gray-200 text-gray-600 font-medium text-[10px]">
-                                  Score
-                                </th>
-                                <th key={`${result.method}-rank`} className="px-2 py-1 text-center border-b border-r border-gray-200 text-gray-600 font-medium text-[10px]">
-                                  Rank
-                                </th>
-                              </Fragment>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {comparisonResults[0]?.ranking?.map((item, altIndex) => (
-                            <tr key={item.alternativeName} className="border-b border-gray-200 hover:bg-gray-50">
-                              <td className="px-3 py-2 font-medium text-black whitespace-nowrap border-r border-gray-200">
-                                {item.alternativeName}
-                              </td>
-                              {comparisonResults.map((result) => {
-                                const altRanking = result.ranking?.find(r => r.alternativeName === item.alternativeName)
-                                return (
-                                  <Fragment key={result.method}>
-                                    <td key={`${result.method}-${item.alternativeName}-score`} className="px-2 py-2 text-center text-black">
-                                      {altRanking?.score !== undefined ? Number(altRanking.score).toFixed(resultsDecimalPlaces) : "-"}
-                                    </td>
-                                    <td key={`${result.method}-${item.alternativeName}-rank`} className="px-2 py-2 text-center font-semibold text-black border-r border-gray-200">
-                                      {altRanking?.rank ?? "-"}
-                                    </td>
-                                  </Fragment>
-                                )
-                              })}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {comparisonResults.length > 0 && comparisonChartData.length > 0 && (
-                <>
-                  {/* AI Ranking Comparison Panel */}
-                  {showAiPanel && aiAnalysisType === "ranking_comparison" && (
-                    <Card className="border-indigo-100 bg-indigo-50/50 mb-6 overflow-hidden transition-all duration-300">
-                      <CardHeader className="border-b border-indigo-100 pb-3 bg-white/50">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="flex items-center gap-2 text-sm text-indigo-900 font-bold">
-                            <Sparkles className="w-4 h-4 text-indigo-600" />
-                            AI Ranking Comparison
-                          </CardTitle>
-                          <Button variant="ghost" size="sm" onClick={() => setShowAiPanel(false)} className="h-6 w-6 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"><span className="sr-only">Close</span><span className="text-lg">×</span></Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="p-0">
-                        {!aiAnalysisResult ? (
-                          <div className="p-8 text-center space-y-5 bg-white/40">
-                            <div className="mx-auto w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm border border-indigo-50">
-                              <Bot className={`w-7 h-7 text-indigo-600 ${aiLoading ? 'animate-pulse' : ''}`} />
-                            </div>
-                            <p className="text-xs text-gray-600">{aiLoading ? "Comparing methodologies..." : "Ready to analyze rankings."}</p>
-                          </div>
-                        ) : (
-                          <div className="prose prose-sm max-w-none p-6 bg-white text-gray-800">
-                            <ReactMarkdown
-                              components={{
-                                h1: ({ node, ...props }) => <h1 className="text-lg font-bold text-indigo-900 mb-3 mt-2 border-b-2 border-indigo-100 pb-2" {...props} />,
-                                h2: ({ node, ...props }) => <h2 className="text-sm font-bold text-gray-900 mb-2 mt-4 uppercase tracking-wide" {...props} />,
-                                p: ({ node, ...props }) => <p className="text-xs leading-relaxed text-gray-600 mb-3 text-justify" {...props} />,
-                                ul: ({ node, ...props }) => <ul className="list-disc list-outside text-xs text-gray-600 mb-3 ml-4 space-y-1" {...props} />,
-                                li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-                                strong: ({ node, ...props }) => <strong className="font-bold text-indigo-900" {...props} />,
-                              }}
-                            >
-                              {aiAnalysisResult}
-                            </ReactMarkdown>
-                            <div className="mt-6 flex justify-end border-t border-gray-100 pt-3">
-                              <Button onClick={() => handleAiAnalysis("ranking_comparison", { comparisonData: comparisonResults })} variant="outline" size="sm" className="text-xs h-7 gap-1"><Sparkles className="w-3 h-3" /> Regenerate</Button>
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
-                  <Card className="border-gray-200 bg-white shadow-none w-full">
-                    <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <div>
-                        <CardTitle className="text-sm text-black">Ranking variation</CardTitle>
-                        <CardDescription className="text-xs text-gray-700">
-                          {comparisonChartType === "composed"
-                            ? "Deviation from average rank - bars extending left are better than average."
-                            : "Chart comparing alternative ranks across selected methods."}
-                        </CardDescription>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Select value={comparisonChartType} onValueChange={setComparisonChartType}>
-                          <SelectTrigger className="w-28 sm:w-40 h-7 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="line">Line Chart</SelectItem>
-                            <SelectItem value="step">Step Line Chart</SelectItem>
-                            <SelectItem value="bar">Bar Chart</SelectItem>
-                            <SelectItem value="stackedBar">Stacked Bar Chart</SelectItem>
-                            <SelectItem value="area">Area Chart</SelectItem>
-                            <SelectItem value="stackedArea">Stacked Area Chart</SelectItem>
-                            <SelectItem value="scatter">Scatter Plot</SelectItem>
-                            <SelectItem value="composed">Diverging Bar Chart</SelectItem>
-                            <SelectItem value="radar">Radar Chart</SelectItem>
-                            <SelectItem value="heatmap">Heatmap</SelectItem>
-                            <SelectItem value="boxPlot">Box Plot</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button onClick={() => handleAiAnalysis("ranking_comparison", { comparisonData: comparisonResults })} variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700 h-7 text-xs gap-1"><Sparkles className="w-3 h-3" /> AI Analysis</Button>
-                        <Button onClick={downloadComparisonChartAsJpeg} variant="outline" size="sm" className="h-7 text-xs">
-                          <Download className="w-3 h-3 mr-1" /> JPG
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className={`${comparisonChartType === "heatmap" ? "h-auto" : "h-[500px] sm:h-[500px]"} p-0 sm:p-6 mt-4`}>
-                      {(() => {
-                        if (comparisonChartType === "heatmap") {
-                          return (
-                            <div ref={comparisonChartRef} className="w-full h-full flex flex-col overflow-x-auto">
-                              <div className="flex-1 flex flex-col min-w-[max-content]">
-                                <div className="flex text-xs font-semibold border-b">
-                                  <div className="w-24 sm:w-32 p-2 border-r bg-gray-50 flex-shrink-0">Method</div>
-                                  <div className="flex flex-1">
-                                    {comparisonChartAlternatives.map((alt) => (
-                                      <div key={alt} className="flex-1 min-w-[100px] p-2 border-r text-center bg-gray-50 truncate">
-                                        {alt}
-                                      </div>
-                                    ))}
+                            </CardHeader>
+                            <CardContent className="p-0">
+                              {!aiAnalysisResult ? (
+                                <div className="p-8 text-center space-y-5 bg-white/40">
+                                  <div className="mx-auto w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm border border-indigo-50">
+                                    <Bot className={`w-7 h-7 text-indigo-600 ${aiLoading ? 'animate-pulse' : ''}`} />
+                                  </div>
+                                  <p className="text-xs text-gray-600">{aiLoading ? "Analyzing weight stability..." : "Ready to analyze."}</p>
+                                </div>
+                              ) : (
+                                <div className="prose prose-sm max-w-none p-6 bg-white text-gray-800">
+                                  <ReactMarkdown
+                                    components={{
+                                      h1: ({ node, ...props }) => <h1 className="text-lg font-bold text-indigo-900 mb-3 mt-2 border-b-2 border-indigo-100 pb-2" {...props} />,
+                                      h2: ({ node, ...props }) => <h2 className="text-sm font-bold text-gray-900 mb-2 mt-4 uppercase tracking-wide" {...props} />,
+                                      p: ({ node, ...props }) => <p className="text-xs leading-relaxed text-gray-600 mb-3 text-justify" {...props} />,
+                                      ul: ({ node, ...props }) => <ul className="list-disc list-outside text-xs text-gray-600 mb-3 ml-4 space-y-1" {...props} />,
+                                      li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                                      strong: ({ node, ...props }) => <strong className="font-bold text-indigo-900" {...props} />,
+                                    }}
+                                  >
+                                    {aiAnalysisResult}
+                                  </ReactMarkdown>
+                                  <div className="mt-6 flex justify-end border-t border-gray-100 pt-3">
+                                    <Button onClick={() => handleAiAnalysis("sensitivity", { sensitivityData: sensitivityCriteriaWeights })} variant="outline" size="sm" className="text-xs h-7 gap-1"><Sparkles className="w-3 h-3" /> Regenerate</Button>
                                   </div>
                                 </div>
-                                {comparisonChartData.map((row, idx) => (
-                                  <div key={idx} className="flex border-b">
-                                    <div className="w-24 sm:w-32 p-2 border-r text-xs font-medium bg-gray-50 flex-shrink-0 truncate">
-                                      {row.method}
-                                    </div>
-                                    <div className="flex flex-1">
-                                      {comparisonChartAlternatives.map((alt, altIdx) => {
-                                        const value = row[alt]
-                                        const minVal = 1
-                                        const maxVal = Math.max(...comparisonChartData.flatMap((r) => comparisonChartAlternatives.map((a) => r[a])).filter((v) => v != null))
-                                        const normalized = (value - minVal || 1) / (maxVal - minVal || 1)
-                                        const hue = (1 - normalized) * 120
-                                        const bgColor = `hsl(${hue}, 70%, 60%)`
-                                        return (
-                                          <div
-                                            key={alt}
-                                            className="flex-1 min-w-[100px] p-3 border-r flex items-center justify-center text-xs font-medium text-white"
-                                            style={{ backgroundColor: bgColor }}
-                                          >
-                                            {value}
-                                          </div>
-                                        )
-                                      })}
-                                    </div>
-                                  </div>
-                                ))}
+                              )}
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        <div className="space-y-6 animate-in fade-in duration-500">
+                          <Card className="border-gray-200 bg-white shadow-none w-full">
+                            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                              <div>
+                                <CardTitle className="text-sm text-black">Comparison Results</CardTitle>
+                                <CardDescription className="text-xs text-gray-700">Ranking variations across weight methods</CardDescription>
                               </div>
-                              <div className="flex items-center justify-center gap-4 text-xs" style={{ paddingTop: "8px" }}>
-                                <div className="flex items-center gap-1.5">
-                                  <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(120, 70%, 60%)" }}></div>
-                                  <span>Better Alternative (Rank)</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(0, 70%, 60%)" }}></div>
-                                  <span>Worse Alternative (Rank)</span>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        }
-
-                        return (
-                          <div ref={comparisonChartRef} className="w-full h-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                              {(() => {
-                                switch (comparisonChartType) {
-                                  case "radar":
-                                    return (
-                                      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
-                                        <PolarGrid />
-                                        <PolarAngleAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                        <PolarRadiusAxis />
-                                        <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                        <Tooltip />
-                                        {comparisonChartAlternatives.map((alt, idx) => (
-                                          <Radar key={alt} name={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.1} />
-                                        ))}
-                                      </RadarChart>
-                                    );
-                                  case "bar":
-                                    return (
-                                      <BarChart data={comparisonChartData}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                        <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
-                                        <Tooltip />
-                                        <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                        {comparisonChartAlternatives.map((alt, idx) => (
-                                          <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
-                                        ))}
-                                      </BarChart>
-                                    );
-                                  case "stackedBar":
-                                    return (
-                                      <BarChart data={comparisonChartData}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                        <YAxis label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
-                                        <Tooltip />
-                                        <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                        {comparisonChartAlternatives.map((alt, idx) => (
-                                          <Bar key={alt} stackId="a" dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
-                                        ))}
-                                      </BarChart>
-                                    );
-                                  case "area":
-                                    return (
-                                      <AreaChart data={comparisonChartData}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                        <YAxis />
-                                        <Tooltip />
-                                        <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                        {comparisonChartAlternatives.map((alt, idx) => (
-                                          <Area type="monotone" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
-                                        ))}
-                                      </AreaChart>
-                                    );
-                                  case "stackedArea":
-                                    return (
-                                      <AreaChart data={comparisonChartData}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                        <YAxis />
-                                        <Tooltip />
-                                        <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                        {comparisonChartAlternatives.map((alt, idx) => (
-                                          <Area type="monotone" stackId="1" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
-                                        ))}
-                                      </AreaChart>
-                                    );
-                                  case "composed":
-                                    const composedData = comparisonChartData.map(d => {
-                                      const avgRank = comparisonChartAlternatives.reduce((sum, alt) => sum + (d[alt] || 0), 0) / comparisonChartAlternatives.length;
-                                      const divergingData: any = { method: d.method };
-                                      comparisonChartAlternatives.forEach(alt => {
-                                        const rank = d[alt] || 0;
-                                        divergingData[alt] = rank - avgRank;
-                                      });
-                                      return divergingData;
-                                    });
-                                    return (
-                                      <BarChart data={composedData} layout="vertical" margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis type="number" label={{ value: "Deviation from Average Rank", position: "insideBottom", offset: -10 }} tick={{ fontSize: 10 }} />
-                                        <YAxis type="category" dataKey="method" tick={{ fontSize: 10 }} width={90} />
-                                        <Tooltip formatter={(value: any, name: string) => [`${parseFloat(value) > 0 ? '+' : ''}${parseFloat(value).toFixed(2)} (${parseFloat(value) < 0 ? 'Better' : 'Worse'} than avg)`, name]} />
-                                        <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "20px" }} layout="horizontal" align="center" verticalAlign="bottom" iconType="square" />
-                                        <ReferenceLine x={0} stroke="#666" strokeWidth={2} />
-                                        {comparisonChartAlternatives.map((alt, idx) => (
-                                          <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} stackId="stack" />
-                                        ))}
-                                      </BarChart>
-                                    );
-                                  case "scatter":
-                                    return (
-                                      <ScatterChart>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="x" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} name="Method" />
-                                        <YAxis dataKey="y" type="number" name="Rank" label={{ value: "Rank", angle: -90, position: "insideLeft" }} />
-                                        <Tooltip cursor={{ strokeDasharray: "3 3" }} />
-                                        <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                        {comparisonChartAlternatives.map((alt, idx) => (
-                                          <Scatter key={alt} name={alt} data={comparisonChartData.map((d) => ({ x: d.method, y: d[alt] }))} fill={CHART_COLORS[idx % CHART_COLORS.length]} shape={["circle", "cross", "diamond", "square", "star", "triangle", "wye"][idx % 7] as any} line />
-                                        ))}
-                                      </ScatterChart>
-                                    );
-                                  case "boxPlot":
-                                    const boxData = comparisonChartAlternatives.map((alt) => {
-                                      const values = comparisonChartData.map((r) => r[alt]).filter((v) => v != null).sort((a, b) => a - b)
-                                      if (values.length === 0) return null
-                                      const q1 = values[Math.floor(values.length * 0.25)]
-                                      const median = values[Math.floor(values.length * 0.5)]
-                                      const q3 = values[Math.floor(values.length * 0.75)]
-                                      const min = Math.min(...values)
-                                      const max = Math.max(...values)
-                                      const iqr = q3 - q1
-                                      const whiskerLow = Math.max(min, q1 - 1.5 * iqr)
-                                      const whiskerHigh = Math.min(max, q3 + 1.5 * iqr)
-                                      return { alt, min, q1, median, q3, max, whiskerLow, whiskerHigh, n: values.length }
-                                    }).filter((d): d is any => d !== null)
-
-                                    if (boxData.length === 0) return <></>
-                                    const allVals = boxData.flatMap(d => [d.whiskerLow, d.whiskerHigh])
-                                    const minV = Math.min(...allVals)
-                                    const maxV = Math.max(...allVals)
-                                    const yR = maxV - minV || 1
-                                    const pad = { top: 30, right: 30, bottom: 50, left: 50 }
-                                    const cW = 800 - pad.left - pad.right
-                                    const cH = 400 - pad.top - pad.bottom
-                                    const bW = Math.max(15, (cW / boxData.length) * 0.6)
-                                    const sp = cW / boxData.length
-                                    const gY = (v: number) => pad.top + cH - ((v - minV) / yR) * cH
-                                    const gX = (idx: number) => pad.left + (idx + 0.5) * sp
-
-                                    return (
-                                      <svg viewBox="0 0 800 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-                                        <line x1={pad.left} y1={pad.top} x2={pad.left} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
-                                        <line x1={pad.left} y1={pad.top + cH} x2={800 - pad.right} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
-                                        {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
-                                          <g key={`ylabel-${pct}`}>
-                                            <line x1={pad.left - 5} y1={gY(minV + pct * yR)} x2={pad.left} y2={gY(minV + pct * yR)} stroke="#999" strokeWidth="1" />
-                                            <text x={pad.left - 10} y={gY(minV + pct * yR) + 4} fontSize="11" textAnchor="end" fill="#666">{(minV + pct * yR).toFixed(1)}</text>
-                                            <line x1={pad.left} y1={gY(minV + pct * yR)} x2={800 - pad.right} y2={gY(minV + pct * yR)} stroke="#eee" strokeWidth="1" strokeDasharray="2,2" />
-                                          </g>
-                                        ))}
-                                        {boxData.map((data, idx) => {
-                                          const x = gX(idx)
-                                          const color = CHART_COLORS[idx % CHART_COLORS.length]
+                            </CardHeader>
+                            <CardContent>
+                              <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
+                                <table className="min-w-full text-[9px] border-collapse bg-white">
+                                  <thead className="bg-gray-50">
+                                    <tr>
+                                      <th className="px-1.5 py-1 text-left border-b border-r border-gray-200 text-black font-bold sticky left-0 bg-gray-50 z-10 w-20">Alternative</th>
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Fragment key={i}>
+                                          <th className="px-1 py-1 text-center border-b border-r border-gray-200 text-black font-bold bg-[#FFD966]" colSpan={2}>
+                                            {res.weightLabel} ({res.method})
+                                          </th>
+                                        </Fragment>
+                                      ))}
+                                    </tr>
+                                    <tr>
+                                      <th className="border-b border-r border-gray-200 sticky left-0 bg-gray-50 z-10"></th>
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Fragment key={i}>
+                                          <th className="px-1 py-0.5 text-center border-b border-r border-gray-200 text-gray-600 font-semibold text-[8px]">Score</th>
+                                          <th className="px-1 py-0.5 text-center border-b border-r border-gray-200 text-gray-600 font-semibold text-[8px]">Rank</th>
+                                        </Fragment>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {alternatives.map((alt) => (
+                                      <tr key={alt.id} className="hover:bg-gray-50 border-b last:border-0 border-gray-100">
+                                        <td className="px-1.5 py-1 text-black font-bold border-r border-gray-200 bg-[#F4B084] sticky left-0 z-10 text-center">{alt.name}</td>
+                                        {sensitivityWeightComparisonResults.map((res, i) => {
+                                          const item = res.ranking.find((r: any) => r.alternativeName === alt.name)
                                           return (
-                                            <g key={`box-${data.alt}`}>
-                                              <line x1={x} y1={gY(data.whiskerLow)} x2={x} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2" opacity="0.8" />
-                                              <line x1={x - bW / 3} y1={gY(data.whiskerLow)} x2={x + bW / 3} y2={gY(data.whiskerLow)} stroke={color} strokeWidth="2.5" opacity="0.8" />
-                                              <line x1={x - bW / 3} y1={gY(data.whiskerHigh)} x2={x + bW / 3} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2.5" opacity="0.8" />
-                                              <rect x={x - bW / 2} y={gY(data.q3)} width={bW} height={Math.max(1, gY(data.q1) - gY(data.q3))} fill={color} fillOpacity="0.4" stroke={color} strokeWidth="2" />
-                                              <line x1={x - bW / 2} y1={gY(data.median)} x2={x + bW / 2} y2={gY(data.median)} stroke="#ff3333" strokeWidth="3" />
-                                              <circle cx={x} cy={gY(data.min)} r="3" fill={color} opacity="0.6" />
-                                              <circle cx={x} cy={gY(data.max)} r="3" fill={color} opacity="0.6" />
-                                              <text x={x} y={pad.top + cH + 25} fontSize="12" textAnchor="middle" fill="#333" fontWeight="500">{data.alt.substring(0, 8)}</text>
-                                            </g>
+                                            <Fragment key={i}>
+                                              <td className="px-1 py-1 text-center text-black border-r border-gray-200">
+                                                {item?.score !== undefined ? Number(item.score).toFixed(resultsDecimalPlaces) : "-"}
+                                              </td>
+                                              <td className="px-1 py-1 text-center text-black font-bold border-r border-gray-200">
+                                                {item?.rank}
+                                              </td>
+                                            </Fragment>
                                           )
                                         })}
-                                        <text x={25} y={15} fontSize="12" fontWeight="600" fill="#333">Rank</text>
-                                        <text x={750} y={pad.top + cH + 40} fontSize="12" fontWeight="600" fill="#333">Alts</text>
-                                      </svg>
-                                    );
-                                  default:
-                                    return (
-                                      <LineChart data={comparisonChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                        <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                                        <Tooltip />
-                                        <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                        {comparisonChartAlternatives.map((alt, idx) => (
-                                          <Line key={alt} type={comparisonChartType === "step" ? "step" : "monotone"} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2} strokeDasharray={["0", "5 5", "3 3", "10 5", "2 2", "15 5"][idx % 6]} activeDot={{ r: 6 }} dot={{ r: 4, strokeWidth: 1, fill: "white", stroke: CHART_COLORS[idx % CHART_COLORS.length] }} />
-                                        ))}
-                                      </LineChart>
-                                    );
-                                }
-                              })()}
-                            </ResponsiveContainer>
-                          </div>
-                        );
-                      })()}
-                    </CardContent>
-                  </Card>
-                </>
-              )}
-            </>
-          )}
-
-          {homeTab === "sensitivityAnalysis" && (
-            <>
-              <Card className="border-gray-200 bg-white shadow-none w-full mb-6 rounded-none sm:rounded-xl">
-                <CardHeader className="pb-3 px-4 sm:px-6">
-                  <CardTitle className="text-sm text-black">Construct the Decision Matrix</CardTitle>
-                  <CardDescription className="text-xs text-gray-700">
-                    Create a decision matrix by adding alternatives and criteria
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Button
-                    onClick={() => {
-                      setReturnToTab("sensitivityAnalysis")
-                      setCurrentStep("input")
-                    }}
-                    className="w-full bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
-                  >
-                    + Add Alternative & Criteria
-                  </Button>
-                </CardContent>
-              </Card>
-
-
-              <Card className="border-gray-200 bg-white shadow-none w-full mb-6 rounded-none sm:rounded-xl">
-                <CardHeader className="pb-3 px-4 sm:px-6">
-                  <CardTitle className="text-sm text-black">Sensitivity Analysis Configuration</CardTitle>
-                  <CardDescription className="text-xs text-gray-700">
-                    Analyze how changing the weight of a specific criterion affects the ranking of alternatives
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {isFullyDataFilled ? (
-                    <>
-                      <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
-                        <p className="font-semibold">✓ Data has uploaded</p>
-                        <p className="mt-1">
-                          {alternatives.length} alternatives × {criteria.length} criteria
-                        </p>
-                      </div>
-
-                      {/* Editable Decision Matrix Table */}
-                      <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
-                        <Table className="border-collapse w-full" style={{ width: `${80 + (criteria.length * 60)}px`, minWidth: '100%' }}>
-                          <TableHeader>
-                            <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
-                              <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
-                                <div className="flex flex-col items-center justify-center h-full leading-tight">
-                                  <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center flex items-center justify-center gap-1">Criteria <ArrowRight className="w-2.5 h-2.5 stroke-[3]" /></div>
-                                  <div className="text-[10px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">Alternatives <ArrowDown className="w-2.5 h-2.5 stroke-[3]" /></div>
-                                </div>
-                              </TableHead>
-                              {criteria.map((crit) => (
-                                <TableHead key={crit.id} className="text-black font-bold text-center text-[10px] border-r border-gray-300 px-1 py-0.5" style={{ width: '60px', minWidth: '60px' }}>
-                                  <div className="flex flex-col items-center py-0.5">
-                                    <div className="flex items-center gap-1">
-                                      <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
-                                      <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"} aria-hidden>
-                                        {crit.type === "beneficial" ? "▲" : "▼"}
-                                      </span>
-                                    </div>
-                                    <div className="text-gray-600 font-semibold text-[9px]">
-                                      {crit.type === "beneficial" ? "Max" : "Min"}
-                                    </div>
-                                  </div>
-                                </TableHead>
-                              ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {alternatives.map((alt) => (
-                              <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
-                                <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5 text-center">{alt.name}</TableCell>
-                                {criteria.map((crit) => (
-                                  <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
-                                    <Input
-                                      type="number"
-                                      step="any"
-                                      min="0"
-                                      value={alt.scores[crit.id] ?? ""}
-                                      onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
-                                      onKeyDown={handleKeyDown}
-                                      className="text-center text-[10px] h-7 border-gray-100 text-black w-full shadow-none bg-white rounded-md p-1 focus:ring-1 focus:ring-blue-400"
-                                    />
-                                  </TableCell>
-                                ))}
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded">
-                      <p className="font-semibold">⚠️ No data available</p>
-                      <p className="mt-1">
-                        Please add alternatives and criteria using the "Get Started" section above.
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 items-start">
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] sm:text-xs font-bold text-black uppercase">WEIGHT METHOD</label>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => setIsWeightSelectorOpen(!isWeightSelectorOpen)}
-                          className="w-full flex items-center justify-between text-xs h-9 border border-gray-200 rounded px-2 sm:px-3 bg-white"
-                        >
-                          <span className="truncate">{sensitivityWeightMethods.length > 0 ? `${sensitivityWeightMethods.length} selected` : "Select..."}</span>
-                          <ChevronDown className="w-4 h-4 text-gray-400" />
-                        </button>
-                        {isWeightSelectorOpen && (
-                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-60 overflow-y-auto p-2">
-                            {WEIGHT_METHODS.map((w) => (
-                              <label key={w.value} className="flex items-center gap-2 text-[10px] p-1 hover:bg-gray-50 cursor-pointer text-black font-normal">
-                                <input
-                                  type="checkbox"
-                                  checked={sensitivityWeightMethods.includes(w.value)}
-                                  onChange={() => {
-                                    if (w.value === "piprecia" && !sensitivityWeightMethods.includes("piprecia")) {
-                                      setIsPipreciaDialogOpen(true)
-                                    }
-                                    if (w.value === "ahp" && !sensitivityWeightMethods.includes("ahp")) {
-                                      setIsAhpDialogOpen(true)
-                                    }
-                                    if (w.value === "swara" && !sensitivityWeightMethods.includes("swara")) {
-                                      setIsSensitivitySwaraDialogOpen(true)
-                                    }
-                                    if (["roc", "rs", "rr"].includes(w.value) && !sensitivityWeightMethods.includes(w.value)) {
-                                      setIsSensitivityRanksDialogOpen(true)
-                                    }
-                                    toggleSensitivityWeightMethod(w.value)
-                                  }}
-                                />
-                                {w.label}
-                              </label>
-                            ))}
-                            <div className="border-t my-1"></div>
-                            <label className="flex items-center gap-2 text-[10px] p-1 hover:bg-gray-50 cursor-pointer text-black font-normal">
-                              <input
-                                type="checkbox"
-                                checked={sensitivityWeightMethods.includes("custom")}
-                                onChange={(e) => {
-                                  toggleSensitivityWeightMethod("custom")
-                                  if (e.target.checked) setIsCustomWeightsDialogOpen(true)
-                                }}
-                              />
-                              Enter own weight
-                            </label>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] sm:text-xs font-bold text-black uppercase">RANKING METHOD</label>
-                      <Select value={sensitivityMethod} onValueChange={(value) => setSensitivityMethod(value as MCDMMethod)}>
-                        <SelectTrigger className="text-xs h-9 border-gray-200">
-                          <SelectValue placeholder="Select..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {MCDM_METHODS.map((m) => (
-                            <SelectItem key={m.value} value={m.value} className="text-xs">
-                              {m.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="pt-0 md:pt-6 col-span-2 md:col-span-1">
-                      <Button
-                        type="button"
-                        onClick={() => handleWeightSensitivityAnalysis()}
-                        className="w-full bg-blue-600 text-white hover:bg-blue-700 text-xs h-8"
-                        disabled={sensitivityLoading}
-                      >
-                        {sensitivityLoading ? "Calculating..." : "Calculate Sensitivity"}
-                      </Button>
-                    </div>
-
-                    {waspasLambdaValue !== undefined && sensitivityMethod === "waspas" && (
-                      <div className="border border-teal-200 bg-teal-50 rounded-lg p-3 md:col-span-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <label className="text-xs font-semibold text-teal-900">WASPAS lambda:</label>
-                            <p className="text-[10px] text-teal-700">Weight of WSM (λ) vs WPM (1-λ)</p>
-                          </div>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            max="1"
-                            value={waspasLambdaValue}
-                            onChange={(e) => setWpasLambdaValue(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            onBlur={() => handleWeightSensitivityAnalysis()}
-                            placeholder="0.5"
-                            className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {codasTauValue !== undefined && sensitivityMethod === "codas" && (
-                      <div className="border border-teal-200 bg-teal-50 rounded-lg p-3 md:col-span-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <label className="text-xs font-semibold text-teal-900">CODAS tau-value:</label>
-                            <p className="text-[10px] text-teal-700">Threshold parameter (typically 0.01-0.05)</p>
-                          </div>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max="1"
-                            value={codasTauValue}
-                            onChange={(e) => setCodasTauValue(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            onBlur={() => handleWeightSensitivityAnalysis()}
-                            placeholder="0.02"
-                            className="w-16 h-8 text-xs text-center border-teal-300 bg-white text-black"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <Dialog open={isCustomWeightsDialogOpen} onOpenChange={setIsCustomWeightsDialogOpen}>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Enter Custom Weights</DialogTitle>
-                        <DialogDescription>Sum must equal 1</DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
-                        {criteria.map((crit) => (
-                          <div key={crit.id} className="grid grid-cols-4 items-center gap-4">
-                            <label className="text-right text-xs col-span-2">{crit.name}</label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              className="col-span-2 h-8 text-xs"
-                              value={sensitivityCustomWeights[crit.id] || ""}
-                              onChange={(e) => setSensitivityCustomWeights(prev => ({ ...prev, [crit.id]: parseFloat(e.target.value) }))}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <div className="text-xs flex items-center mr-auto">
-                          Total: {Object.values(sensitivityCustomWeights).reduce((a, b) => a + (b || 0), 0).toFixed(2)}
-                        </div>
-                        <Button onClick={() => setIsCustomWeightsDialogOpen(false)} size="sm">Save</Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-
-
-
-                  {/* --- PIPRECIA Dialog --- */}
-                  <Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen}>
-                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
-                      <DialogTitle>PIPRECIA Weight Calculator</DialogTitle>
-                      <PIPRECIAFormula
-                        criteria={criteria}
-                        initialScores={pipreciaScores}
-                        onScoresChange={setPipreciaScores}
-                        onWeightsCalculated={(weights) => {
-                          setPipreciaCalculatedWeights(weights)
-                          setIsPipreciaDialogOpen(false)
-                          // Automatically trigger analysis update with new weights
-                          handleWeightSensitivityAnalysis(weights)
-                        }}
-                      />
-                    </DialogContent>
-                  </Dialog>
-
-                  {/* --- AHP Dialog (Sensitivity Analysis Tab) --- */}
-                  <Dialog open={isAhpDialogOpen} onOpenChange={setIsAhpDialogOpen}>
-                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
-                      <DialogTitle>AHP Weight Calculator</DialogTitle>
-                      <AHPFormula
-                        criteria={criteria}
-                        initialMatrix={ahpMatrix}
-                        onMatrixChange={setAhpMatrix}
-                        onWeightsCalculated={(weights) => {
-                          setAhpCalculatedWeights(weights)
-                          setIsAhpDialogOpen(false)
-                          // Automatically trigger analysis update with new weights
-                          handleWeightSensitivityAnalysis()
-                        }}
-                      />
-                    </DialogContent>
-                  </Dialog>
-
-                  {/* --- SWARA Dialog (Sensitivity Analysis Tab) --- */}
-                  <Dialog open={isSensitivitySwaraDialogOpen} onOpenChange={setIsSensitivitySwaraDialogOpen}>
-                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
-                      <DialogHeader>
-                        <DialogTitle>SWARA Weight Calculator</DialogTitle>
-                        <DialogDescription className="text-xs">
-                          Enter comparative importance coefficients (s<sub>j</sub>) for each criterion.
-                          The first criterion is most important (s<sub>1</sub> = 0).
-                          Higher values indicate larger importance differences.
-                        </DialogDescription>
-                      </DialogHeader>
-
-                      <div className="space-y-4 mt-4">
-                        <div className="border border-gray-200 rounded-lg overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="bg-gray-50">
-                                <TableHead className="text-xs font-semibold">Rank</TableHead>
-                                <TableHead className="text-xs font-semibold">Criterion</TableHead>
-                                <TableHead className="text-xs font-semibold text-center">
-                                  Coefficient (s<sub>j</sub>)
-                                </TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {criteria.map((crit, index) => (
-                                <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
-                                  <TableCell className="py-3 px-4 font-medium text-black text-xs">{index + 1}</TableCell>
-                                  <TableCell className="py-3 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
-                                  <TableCell className="text-center py-3 px-4 text-xs text-black">
-                                    {index === 0 ? (
-                                      <span className="text-xs text-gray-500">0 (most important)</span>
-                                    ) : (
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={swaraCoefficients[crit.id] || ""}
-                                        onChange={(e) => setSwaraCoefficients({
-                                          ...swaraCoefficients,
-                                          [crit.id]: e.target.value,
-                                        })}
-                                        onKeyDown={handleKeyDown}
-                                        className="w-24 h-7 text-xs text-center"
-                                        placeholder="0.00"
-                                      />
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <p className="text-xs text-blue-900">
-                            <strong>Note:</strong> Criteria are ordered by importance (top = most important).
-                            For each criterion j, enter how much less important it is compared to the previous criterion (j-1).
-                          </p>
-                        </div>
-                      </div>
-
-                      <DialogFooter className="mt-4">
-                        <Button
-                          variant="outline"
-                          onClick={() => setIsSensitivitySwaraDialogOpen(false)}
-                          className="text-xs"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={async () => {
-                            try {
-                              const coeffs: Record<string, number> = {}
-                              criteria.forEach((crit, index) => {
-                                if (index === 0) {
-                                  coeffs[crit.id] = 0
-                                } else {
-                                  coeffs[crit.id] = parseFloat(swaraCoefficients[crit.id]) || 0
-                                }
-                              })
-
-                              const response = await fetch("/api/swara-weights", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ criteria, coefficients: coeffs }),
-                              })
-
-                              if (!response.ok) throw new Error("Failed to calculate SWARA weights")
-
-                              const data: SWARAResult = await response.json()
-                              setSwaraResult(data)
-                              setSwaraCalculatedWeights(data.weights)
-                              setIsSensitivitySwaraDialogOpen(false)
-
-                              // Trigger analysis update
-                              handleWeightSensitivityAnalysis(undefined, data.weights)
-                            } catch (error) {
-                              console.error("SWARA calculation error:", error)
-                              alert("Error calculating SWARA weights")
-                            }
-                          }}
-                          className="bg-black text-white hover:bg-gray-800 text-xs"
-                        >
-                          Calculate Weights
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-
-                  {/* --- Ranks Dialog (Sensitivity Analysis Tab) --- */}
-                  <Dialog open={isSensitivityRanksDialogOpen} onOpenChange={setIsSensitivityRanksDialogOpen}>
-                    <DialogContent className="max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Enter Criteria Ranks</DialogTitle>
-                        <DialogDescription>1 = Most Important, Higher numbers = Less Important</DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        {criteria.map((crit) => (
-                          <div key={crit.id} className="flex items-center justify-between">
-                            <label className="text-sm font-medium">{crit.name}</label>
-                            <Input
-                              type="number"
-                              min="1"
-                              className="w-20 h-8 text-xs"
-                              value={criteriaRanks[crit.id] || ""}
-                              onChange={(e) => setCriteriaRanks(prev => ({ ...prev, [crit.id]: e.target.value }))}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                      <DialogFooter>
-                        <Button onClick={() => setIsSensitivityRanksDialogOpen(false)}>Save Ranks</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-
-                  {sensitivityWeightComparisonResults.length > 0 && (
-                    <>
-                      {/* AI Sensitivity Panel */}
-                      {showAiPanel && aiAnalysisType === "sensitivity" && (
-                        <Card className="border-indigo-100 bg-indigo-50/50 mb-6 overflow-hidden transition-all duration-300">
-                          <CardHeader className="border-b border-indigo-100 pb-3 bg-white/50">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="flex items-center gap-2 text-sm text-indigo-900 font-bold">
-                                <Sparkles className="w-4 h-4 text-indigo-600" />
-                                AI Sensitivity Insights
-                              </CardTitle>
-                              <Button variant="ghost" size="sm" onClick={() => setShowAiPanel(false)} className="h-6 w-6 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"><span className="sr-only">Close</span><span className="text-lg">×</span></Button>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="p-0">
-                            {!aiAnalysisResult ? (
-                              <div className="p-8 text-center space-y-5 bg-white/40">
-                                <div className="mx-auto w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm border border-indigo-50">
-                                  <Bot className={`w-7 h-7 text-indigo-600 ${aiLoading ? 'animate-pulse' : ''}`} />
-                                </div>
-                                <p className="text-xs text-gray-600">{aiLoading ? "Analyzing weight stability..." : "Ready to analyze."}</p>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
                               </div>
-                            ) : (
-                              <div className="prose prose-sm max-w-none p-6 bg-white text-gray-800">
-                                <ReactMarkdown
-                                  components={{
-                                    h1: ({ node, ...props }) => <h1 className="text-lg font-bold text-indigo-900 mb-3 mt-2 border-b-2 border-indigo-100 pb-2" {...props} />,
-                                    h2: ({ node, ...props }) => <h2 className="text-sm font-bold text-gray-900 mb-2 mt-4 uppercase tracking-wide" {...props} />,
-                                    p: ({ node, ...props }) => <p className="text-xs leading-relaxed text-gray-600 mb-3 text-justify" {...props} />,
-                                    ul: ({ node, ...props }) => <ul className="list-disc list-outside text-xs text-gray-600 mb-3 ml-4 space-y-1" {...props} />,
-                                    li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-                                    strong: ({ node, ...props }) => <strong className="font-bold text-indigo-900" {...props} />,
-                                  }}
-                                >
-                                  {aiAnalysisResult}
-                                </ReactMarkdown>
-                                <div className="mt-6 flex justify-end border-t border-gray-100 pt-3">
-                                  <Button onClick={() => handleAiAnalysis("sensitivity", { sensitivityData: sensitivityCriteriaWeights })} variant="outline" size="sm" className="text-xs h-7 gap-1"><Sparkles className="w-3 h-3" /> Regenerate</Button>
-                                </div>
+                            </CardContent>
+                          </Card>
+
+                          <Card className="border-gray-200 bg-white shadow-none w-full">
+                            <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                              <div>
+                                <CardTitle className="text-sm text-black">Graphical Variation</CardTitle>
+                                <CardDescription className="text-xs text-gray-700">Visualizing the impact of weight methods</CardDescription>
                               </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      <div className="space-y-6 animate-in fade-in duration-500">
-                        <Card className="border-gray-200 bg-white shadow-none w-full">
-                          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                            <div>
-                              <CardTitle className="text-sm text-black flex items-center">
-                                {assetLabels.ranking_comparison || "Comparison Results"}
-                                <AssetLabel assetKey="ranking_comparison" defaultLabel="Table 3" onLabelChange={handleAssetLabelChange} />
-                              </CardTitle>
-                              <CardDescription className="text-xs text-gray-700">Ranking variations across weight methods</CardDescription>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
-                              <table className="min-w-full text-[9px] border-collapse bg-white">
-                                <thead className="bg-gray-50">
-                                  <tr>
-                                    <th className="px-1.5 py-1 text-left border-b border-r border-gray-200 text-black font-bold sticky left-0 bg-gray-50 z-10 w-20">Alternative</th>
-                                    {sensitivityWeightComparisonResults.map((res, i) => (
-                                      <Fragment key={i}>
-                                        <th className="px-1 py-1 text-center border-b border-r border-gray-200 text-black font-bold bg-[#FFD966]" colSpan={2}>
-                                          {res.weightLabel} ({res.method})
-                                        </th>
-                                      </Fragment>
-                                    ))}
-                                  </tr>
-                                  <tr>
-                                    <th className="border-b border-r border-gray-200 sticky left-0 bg-gray-50 z-10"></th>
-                                    {sensitivityWeightComparisonResults.map((res, i) => (
-                                      <Fragment key={i}>
-                                        <th className="px-1 py-0.5 text-center border-b border-r border-gray-200 text-gray-600 font-semibold text-[8px]">Score</th>
-                                        <th className="px-1 py-0.5 text-center border-b border-r border-gray-200 text-gray-600 font-semibold text-[8px]">Rank</th>
-                                      </Fragment>
-                                    ))}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {alternatives.map((alt) => (
-                                    <tr key={alt.id} className="hover:bg-gray-50 border-b last:border-0 border-gray-100">
-                                      <td className="px-1.5 py-1 text-black font-bold border-r border-gray-200 bg-[#F4B084] sticky left-0 z-10 text-center">{alt.name}</td>
-                                      {sensitivityWeightComparisonResults.map((res, i) => {
-                                        const item = res.ranking.find((r: any) => r.alternativeName === alt.name)
-                                        return (
-                                          <Fragment key={i}>
-                                            <td className="px-1 py-1 text-center text-black border-r border-gray-200">
-                                              {item?.score !== undefined ? Number(item.score).toFixed(resultsDecimalPlaces) : "-"}
-                                            </td>
-                                            <td className="px-1 py-1 text-center text-black font-bold border-r border-gray-200">
-                                              {item?.rank}
-                                            </td>
-                                          </Fragment>
-                                        )
-                                      })}
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        <Card className="border-gray-200 bg-white shadow-none w-full">
-                          <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                            <div>
-                              <CardTitle className="text-sm text-black flex items-center">
-                                {assetLabels.sensitivity_chart || "Graphical Variation"}
-                                <AssetLabel assetKey="sensitivity_chart" defaultLabel="Figure 2" onLabelChange={handleAssetLabelChange} />
-                              </CardTitle>
-                              <CardDescription className="text-xs text-gray-700">Visualizing the impact of weight methods</CardDescription>
-                            </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Select value={sensitivityChartType} onValueChange={setSensitivityChartType}>
-                                <SelectTrigger className="w-28 sm:w-32 h-7 text-xs">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="line">Line Chart</SelectItem>
-                                  <SelectItem value="step">Step Line Chart</SelectItem>
-                                  <SelectItem value="bar">Bar Chart</SelectItem>
-                                  <SelectItem value="stackedBar">Stacked Bar Chart</SelectItem>
-                                  <SelectItem value="area">Area Chart</SelectItem>
-                                  <SelectItem value="stackedArea">Stacked Area Chart</SelectItem>
-                                  <SelectItem value="scatter">Scatter Plot</SelectItem>
-                                  <SelectItem value="composed">Gantt Chart (Range)</SelectItem>
-                                  <SelectItem value="radar">Radar Chart</SelectItem>
-                                  <SelectItem value="radial">Radial Bar Chart</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Button onClick={() => handleAiAnalysis("sensitivity", { sensitivityData: sensitivityCriteriaWeights })} variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700 h-7 text-xs gap-1"><Sparkles className="w-3 h-3" /> AI Analysis</Button>
-                              <Button onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation")} variant="outline" size="sm" className="h-7 text-xs"><Download className="w-3 h-3 mr-1" /> JPG</Button>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="chart-container" ref={sensitivityGraphicalVariationRef}>
-                              <ResponsiveContainer width="100%" height="100%">
-                                {sensitivityChartType === 'radar' ? (
-                                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={sensitivityWeightChartData}>
-                                    <PolarGrid />
-                                    <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                    <PolarRadiusAxis />
-                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                    <Tooltip />
-                                    {sensitivityWeightComparisonResults.map((res, i) => (
-                                      <Radar
-                                        key={res.weightLabel}
-                                        name={`${res.weightLabel} Rank`}
-                                        dataKey={`${res.weightLabel} Rank`}
-                                        stroke={CHART_COLORS[i % CHART_COLORS.length]}
-                                        fill={CHART_COLORS[i % CHART_COLORS.length]}
-                                        fillOpacity={0.1}
-                                      />
-                                    ))}
-                                  </RadarChart>
-                                ) : sensitivityChartType === "bar" ? (
-                                  <BarChart data={sensitivityWeightChartData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                    <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
-                                    <Tooltip />
-                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                    {sensitivityWeightComparisonResults.map((res, i) => (
-                                      <Bar key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} name={`${res.weightLabel} Rank`} />
-                                    ))}
-                                  </BarChart>
-                                ) : sensitivityChartType === "stackedBar" ? (
-                                  <BarChart data={sensitivityWeightChartData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                    <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
-                                    <Tooltip />
-                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                    {sensitivityWeightComparisonResults.map((res, i) => (
-                                      <Bar key={res.weightLabel} stackId="a" dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} name={`${res.weightLabel} Rank`} />
-                                    ))}
-                                  </BarChart>
-                                ) : sensitivityChartType === "area" ? (
-                                  <AreaChart data={sensitivityWeightChartData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                    <YAxis interval={0} domain={[0, 'dataMax']} />
-                                    <Tooltip />
-                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                    {sensitivityWeightComparisonResults.map((res, i) => (
-                                      <Area type="monotone" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={`${res.weightLabel} Rank`} />
-                                    ))}
-                                  </AreaChart>
-                                ) : sensitivityChartType === "stackedArea" ? (
-                                  <AreaChart data={sensitivityWeightChartData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                    <YAxis interval={0} domain={[0, 'dataMax']} />
-                                    <Tooltip />
-                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                    {sensitivityWeightComparisonResults.map((res, i) => (
-                                      <Area type="monotone" stackId="1" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={`${res.weightLabel} Rank`} />
-                                    ))}
-                                  </AreaChart>
-                                ) : sensitivityChartType === "composed" ? (
-                                  <BarChart
-                                    data={sensitivityWeightComparisonResults.map((res, idx) => {
-                                      // Get all ranks for this weight method across alternatives
-                                      const ranks = sensitivityWeightChartData.map(d => d[`${res.weightLabel} Rank`] || 0);
-                                      const minRank = Math.min(...ranks);
-                                      const maxRank = Math.max(...ranks);
-                                      const avgRank = ranks.reduce((a, b) => a + b, 0) / ranks.length;
-
-                                      return {
-                                        method: res.weightLabel,
-                                        start: minRank,
-                                        range: maxRank - minRank,
-                                        avg: avgRank,
-                                        min: minRank,
-                                        max: maxRank
-                                      };
-                                    })}
-                                    layout="vertical"
-                                    margin={{ top: 20, right: 30, left: 10, bottom: 60 }}
-                                  >
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis
-                                      type="number"
-                                      domain={[0, 'dataMax']}
-                                      label={{
-                                        value: "Rank Range (Best to Worst)",
-                                        position: "insideBottom",
-                                        offset: -45,
-                                        style: { fontSize: 11, fontWeight: 500 }
-                                      }}
-                                      tick={{ fontSize: 10 }}
-                                      interval={0}
-                                      allowDecimals={false}
-                                      height={60}
-                                    />
-                                    <YAxis
-                                      type="category"
-                                      dataKey="method"
-                                      tick={{ fontSize: 10 }}
-                                      width={130}
-                                    />
-                                    <Tooltip
-                                      content={({ active, payload }) => {
-                                        if (active && payload && payload.length > 0) {
-                                          const data = payload[0].payload;
-                                          return (
-                                            <div className="bg-white border border-gray-300 rounded-lg p-3 shadow-lg text-xs">
-                                              <p className="font-semibold text-black mb-1">{data.method}</p>
-                                              <p className="text-gray-700">Best Rank: <span className="font-medium text-black">{data.min}</span></p>
-                                              <p className="text-gray-700">Worst Rank: <span className="font-medium text-black">{data.max}</span></p>
-                                              <p className="text-gray-700">Range: <span className="font-medium text-black">{data.range}</span></p>
-                                              <p className="text-gray-700">Avg Rank: <span className="font-medium text-black">{data.avg.toFixed(2)}</span></p>
-                                            </div>
-                                          );
-                                        }
-                                        return null;
-                                      }}
-                                    />
-                                    <Legend
-                                      wrapperStyle={{ fontSize: "10px", paddingTop: "10px" }}
-                                      iconType="rect"
-                                    />
-                                    {/* Base bar showing starting position */}
-                                    <Bar
-                                      dataKey="start"
-                                      stackId="a"
-                                      fill="transparent"
-                                      name=""
-                                      legendType="none"
-                                    />
-                                    {/* Range bar showing the spread */}
-                                    <Bar
-                                      dataKey="range"
-                                      stackId="a"
-                                      name="Rank Range"
-                                      radius={[0, 4, 4, 0]}
-                                    >
-                                      {sensitivityWeightComparisonResults.map((res, index) => (
-                                        <Cell
-                                          key={`cell-${index}`}
-                                          fill={CHART_COLORS[index % CHART_COLORS.length]}
-                                          opacity={0.75}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Select value={sensitivityChartType} onValueChange={setSensitivityChartType}>
+                                  <SelectTrigger className="w-28 sm:w-32 h-7 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="line">Line Chart</SelectItem>
+                                    <SelectItem value="step">Step Line Chart</SelectItem>
+                                    <SelectItem value="bar">Bar Chart</SelectItem>
+                                    <SelectItem value="stackedBar">Stacked Bar Chart</SelectItem>
+                                    <SelectItem value="area">Area Chart</SelectItem>
+                                    <SelectItem value="stackedArea">Stacked Area Chart</SelectItem>
+                                    <SelectItem value="scatter">Scatter Plot</SelectItem>
+                                    <SelectItem value="composed">Gantt Chart (Range)</SelectItem>
+                                    <SelectItem value="radar">Radar Chart</SelectItem>
+                                    <SelectItem value="radial">Radial Bar Chart</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Button onClick={() => handleAiAnalysis("sensitivity", { sensitivityData: sensitivityCriteriaWeights })} variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700 h-7 text-xs gap-1"><Sparkles className="w-3 h-3" /> AI Analysis</Button>
+                                <Button onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation")} variant="outline" size="sm" className="h-7 text-xs"><Download className="w-3 h-3 mr-1" /> JPG</Button>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="chart-container" ref={sensitivityGraphicalVariationRef}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                  {sensitivityChartType === 'radar' ? (
+                                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={sensitivityWeightChartData}>
+                                      <PolarGrid />
+                                      <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                      <PolarRadiusAxis />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      <Tooltip />
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Radar
+                                          key={res.weightLabel}
+                                          name={`${res.weightLabel} Rank`}
+                                          dataKey={`${res.weightLabel} Rank`}
+                                          stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                                          fill={CHART_COLORS[i % CHART_COLORS.length]}
+                                          fillOpacity={0.1}
                                         />
                                       ))}
-                                    </Bar>
-                                    {/* Markers for average */}
-                                    <Scatter
-                                      dataKey="avg"
-                                      fill="#1a1a1a"
-                                      shape="diamond"
-                                      name="Average Rank"
-                                    />
-                                  </BarChart>
-                                ) : sensitivityChartType === "scatter" ? (
-                                  <ScatterChart>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} />
-                                    <YAxis type="number" dataKey="rank" name="Rank" label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
-                                    <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                    {sensitivityWeightComparisonResults.map((res, i) => (
-                                      <Scatter key={res.weightLabel} name={`${res.weightLabel} Rank`} data={sensitivityWeightChartData.map(d => ({ name: d.name, rank: d[`${res.weightLabel} Rank`] }))} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                                    ))}
-                                  </ScatterChart>
-                                ) : sensitivityChartType === "radial" ? (
-                                  (() => {
-                                    if (sensitivityWeightComparisonResults.length === 0) return <div />;
+                                    </RadarChart>
+                                  ) : sensitivityChartType === "bar" ? (
+                                    <BarChart data={sensitivityWeightChartData}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                      <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
+                                      <Tooltip />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Bar key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} name={`${res.weightLabel} Rank`} />
+                                      ))}
+                                    </BarChart>
+                                  ) : sensitivityChartType === "stackedBar" ? (
+                                    <BarChart data={sensitivityWeightChartData}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                      <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
+                                      <Tooltip />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Bar key={res.weightLabel} stackId="a" dataKey={`${res.weightLabel} Rank`} fill={CHART_COLORS[i % CHART_COLORS.length]} name={`${res.weightLabel} Rank`} />
+                                      ))}
+                                    </BarChart>
+                                  ) : sensitivityChartType === "area" ? (
+                                    <AreaChart data={sensitivityWeightChartData}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                      <YAxis interval={0} domain={[0, 'dataMax']} />
+                                      <Tooltip />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Area type="monotone" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={`${res.weightLabel} Rank`} />
+                                      ))}
+                                    </AreaChart>
+                                  ) : sensitivityChartType === "stackedArea" ? (
+                                    <AreaChart data={sensitivityWeightChartData}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                      <YAxis interval={0} domain={[0, 'dataMax']} />
+                                      <Tooltip />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Area type="monotone" stackId="1" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.3} name={`${res.weightLabel} Rank`} />
+                                      ))}
+                                    </AreaChart>
+                                  ) : sensitivityChartType === "composed" ? (
+                                    <BarChart
+                                      data={sensitivityWeightComparisonResults.map((res, idx) => {
+                                        // Get all ranks for this weight method across alternatives
+                                        const ranks = sensitivityWeightChartData.map(d => d[`${res.weightLabel} Rank`] || 0);
+                                        const minRank = Math.min(...ranks);
+                                        const maxRank = Math.max(...ranks);
+                                        const avgRank = ranks.reduce((a, b) => a + b, 0) / ranks.length;
 
-                                    const firstMethod = sensitivityWeightComparisonResults[0];
-                                    const labelKey = firstMethod.weightLabel;
-                                    const rankKey = `${labelKey} Rank`;
-                                    const scoreKey = `${labelKey} Score`;
-
-                                    // Prepare data for the radial bar chart to match screenshot style
-                                    // We show each alternative as a bar
-                                    const maxRank = Math.max(...sensitivityWeightChartData.map(d => d[rankKey] || 0));
-
-                                    const transformedData = sensitivityWeightChartData.map((d, idx) => ({
-                                      name: d.name,
-                                      // Map rank to a value for bar length: maxRank - rank + 1
-                                      // This makes Rank 1 the longest bar
-                                      value: d[rankKey] ? (maxRank - d[rankKey] + 1) : 0,
-                                      actualRank: d[rankKey],
-                                      actualScore: d[scoreKey],
-                                      fill: CHART_COLORS[idx % CHART_COLORS.length]
-                                    })).sort((a, b) => b.value - a.value);
-
-                                    return (
-                                      <RadialBarChart
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius="15%"
-                                        outerRadius="90%"
-                                        barSize={12}
-                                        data={transformedData}
-                                        startAngle={90}
-                                        endAngle={-270}
+                                        return {
+                                          method: res.weightLabel,
+                                          start: minRank,
+                                          range: maxRank - minRank,
+                                          avg: avgRank,
+                                          min: minRank,
+                                          max: maxRank
+                                        };
+                                      })}
+                                      layout="vertical"
+                                      margin={{ top: 20, right: 30, left: 10, bottom: 60 }}
+                                    >
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis
+                                        type="number"
+                                        domain={[0, 'dataMax']}
+                                        label={{
+                                          value: "Rank Range (Best to Worst)",
+                                          position: "insideBottom",
+                                          offset: -45,
+                                          style: { fontSize: 11, fontWeight: 500 }
+                                        }}
+                                        tick={{ fontSize: 10 }}
+                                        interval={0}
+                                        allowDecimals={false}
+                                        height={60}
+                                      />
+                                      <YAxis
+                                        type="category"
+                                        dataKey="method"
+                                        tick={{ fontSize: 10 }}
+                                        width={130}
+                                      />
+                                      <Tooltip
+                                        content={({ active, payload }) => {
+                                          if (active && payload && payload.length > 0) {
+                                            const data = payload[0].payload;
+                                            return (
+                                              <div className="bg-white border border-gray-300 rounded-lg p-3 shadow-lg text-xs">
+                                                <p className="font-semibold text-black mb-1">{data.method}</p>
+                                                <p className="text-gray-700">Best Rank: <span className="font-medium text-black">{data.min}</span></p>
+                                                <p className="text-gray-700">Worst Rank: <span className="font-medium text-black">{data.max}</span></p>
+                                                <p className="text-gray-700">Range: <span className="font-medium text-black">{data.range}</span></p>
+                                                <p className="text-gray-700">Avg Rank: <span className="font-medium text-black">{data.avg.toFixed(2)}</span></p>
+                                              </div>
+                                            );
+                                          }
+                                          return null;
+                                        }}
+                                      />
+                                      <Legend
+                                        wrapperStyle={{ fontSize: "10px", paddingTop: "10px" }}
+                                        iconType="rect"
+                                      />
+                                      {/* Base bar showing starting position */}
+                                      <Bar
+                                        dataKey="start"
+                                        stackId="a"
+                                        fill="transparent"
+                                        name=""
+                                        legendType="none"
+                                      />
+                                      {/* Range bar showing the spread */}
+                                      <Bar
+                                        dataKey="range"
+                                        stackId="a"
+                                        name="Rank Range"
+                                        radius={[0, 4, 4, 0]}
                                       >
-                                        <RadialBar
-                                          label={{
-                                            position: 'insideStart',
-                                            fill: '#fff',
-                                            fontSize: 9,
-                                            fontWeight: 'bold',
-                                            formatter: (value: any, name: any, entry: any, index: number) => {
-                                              const item = entry?.payload || (transformedData && typeof index === 'number' ? transformedData[index] : null);
-                                              if (!item) return "";
-                                              return `${item.name || ""} (${item.actualRank || ""})`;
-                                            }
-                                          }}
-                                          background={{ fill: '#f3f4f6' }}
-                                          dataKey="value"
-                                        />
-                                        <Legend
-                                          iconSize={10}
-                                          layout="vertical"
-                                          verticalAlign="middle"
-                                          align="right"
-                                          wrapperStyle={{ fontSize: '10px', paddingLeft: '10px' }}
-                                        />
-                                        <Tooltip
-                                          content={({ active, payload }) => {
-                                            if (active && payload && payload.length) {
-                                              const data = payload[0].payload;
-                                              return (
-                                                <div className="bg-white border border-gray-200 p-2 rounded shadow-md text-[10px] text-black">
-                                                  <p className="font-bold border-b pb-1 mb-1">{data.name}</p>
-                                                  <p><span className="text-gray-500 font-medium">Rank:</span> <span className="font-bold">{data.actualRank}</span></p>
-                                                  <p><span className="text-gray-500 font-medium">Score:</span> {typeof data.actualScore === 'number' ? data.actualScore.toFixed(4) : data.actualScore}</p>
-                                                  <p className="mt-1 text-[8px] text-gray-400 capitalize">{labelKey} method</p>
-                                                </div>
-                                              );
-                                            }
-                                            return null;
-                                          }}
-                                        />
-                                        {/* Center "Total" text to match screenshot style */}
-                                        <text
-                                          x="50%"
-                                          y="50%"
-                                          textAnchor="middle"
-                                          dominantBaseline="middle"
-                                          className="fill-black font-bold text-[10px]"
+                                        {sensitivityWeightComparisonResults.map((res, index) => (
+                                          <Cell
+                                            key={`cell-${index}`}
+                                            fill={CHART_COLORS[index % CHART_COLORS.length]}
+                                            opacity={0.75}
+                                          />
+                                        ))}
+                                      </Bar>
+                                      {/* Markers for average */}
+                                      <Scatter
+                                        dataKey="avg"
+                                        fill="#1a1a1a"
+                                        shape="diamond"
+                                        name="Average Rank"
+                                      />
+                                    </BarChart>
+                                  ) : sensitivityChartType === "scatter" ? (
+                                    <ScatterChart>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="name" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10 }} />
+                                      <YAxis type="number" dataKey="rank" name="Rank" label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
+                                      <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Scatter key={res.weightLabel} name={`${res.weightLabel} Rank`} data={sensitivityWeightChartData.map(d => ({ name: d.name, rank: d[`${res.weightLabel} Rank`] }))} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                                      ))}
+                                    </ScatterChart>
+                                  ) : sensitivityChartType === "radial" ? (
+                                    (() => {
+                                      if (sensitivityWeightComparisonResults.length === 0) return <div />;
+
+                                      const firstMethod = sensitivityWeightComparisonResults[0];
+                                      const labelKey = firstMethod.weightLabel;
+                                      const rankKey = `${labelKey} Rank`;
+                                      const scoreKey = `${labelKey} Score`;
+
+                                      // Prepare data for the radial bar chart to match screenshot style
+                                      // We show each alternative as a bar
+                                      const maxRank = Math.max(...sensitivityWeightChartData.map(d => d[rankKey] || 0));
+
+                                      const transformedData = sensitivityWeightChartData.map((d, idx) => ({
+                                        name: d.name,
+                                        // Map rank to a value for bar length: maxRank - rank + 1
+                                        // This makes Rank 1 the longest bar
+                                        value: d[rankKey] ? (maxRank - d[rankKey] + 1) : 0,
+                                        actualRank: d[rankKey],
+                                        actualScore: d[scoreKey],
+                                        fill: CHART_COLORS[idx % CHART_COLORS.length]
+                                      })).sort((a, b) => b.value - a.value);
+
+                                      return (
+                                        <RadialBarChart
+                                          cx="50%"
+                                          cy="50%"
+                                          innerRadius="15%"
+                                          outerRadius="90%"
+                                          barSize={12}
+                                          data={transformedData}
+                                          startAngle={90}
+                                          endAngle={-270}
                                         >
-                                          Total ({transformedData.length})
-                                        </text>
-                                      </RadialBarChart>
-                                    );
-                                  })()
-                                ) : (
-                                  <LineChart data={sensitivityWeightChartData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                    <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
-                                    <Tooltip />
-                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                    {sensitivityWeightComparisonResults.map((res, i) => (
-                                      <Line type={sensitivityChartType === "step" ? "step" : "monotone"} key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2} name={`${res.weightLabel} Rank`} />
-                                    ))}
-                                  </LineChart>
-                                )}
-                              </ResponsiveContainer>
-                            </div>
-                          </CardContent>
-                        </Card>
+                                          <RadialBar
+                                            label={{
+                                              position: 'insideStart',
+                                              fill: '#fff',
+                                              fontSize: 9,
+                                              fontWeight: 'bold',
+                                              formatter: (value: any, name: any, entry: any, index: number) => {
+                                                const item = entry?.payload || (transformedData && typeof index === 'number' ? transformedData[index] : null);
+                                                if (!item) return "";
+                                                return `${item.name || ""} (${item.actualRank || ""})`;
+                                              }
+                                            }}
+                                            background={{ fill: '#f3f4f6' }}
+                                            dataKey="value"
+                                          />
+                                          <Legend
+                                            iconSize={10}
+                                            layout="vertical"
+                                            verticalAlign="middle"
+                                            align="right"
+                                            wrapperStyle={{ fontSize: '10px', paddingLeft: '10px' }}
+                                          />
+                                          <Tooltip
+                                            content={({ active, payload }) => {
+                                              if (active && payload && payload.length) {
+                                                const data = payload[0].payload;
+                                                return (
+                                                  <div className="bg-white border border-gray-200 p-2 rounded shadow-md text-[10px] text-black">
+                                                    <p className="font-bold border-b pb-1 mb-1">{data.name}</p>
+                                                    <p><span className="text-gray-500 font-medium">Rank:</span> <span className="font-bold">{data.actualRank}</span></p>
+                                                    <p><span className="text-gray-500 font-medium">Score:</span> {typeof data.actualScore === 'number' ? data.actualScore.toFixed(4) : data.actualScore}</p>
+                                                    <p className="mt-1 text-[8px] text-gray-400 capitalize">{labelKey} method</p>
+                                                  </div>
+                                                );
+                                              }
+                                              return null;
+                                            }}
+                                          />
+                                          {/* Center "Total" text to match screenshot style */}
+                                          <text
+                                            x="50%"
+                                            y="50%"
+                                            textAnchor="middle"
+                                            dominantBaseline="middle"
+                                            className="fill-black font-bold text-[10px]"
+                                          >
+                                            Total ({transformedData.length})
+                                          </text>
+                                        </RadialBarChart>
+                                      );
+                                    })()
+                                  ) : (
+                                    <LineChart data={sensitivityWeightChartData}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                      <YAxis label={{ value: 'Rank', angle: -90, position: 'insideLeft' }} interval={0} domain={[0, 'dataMax']} />
+                                      <Tooltip />
+                                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                      {sensitivityWeightComparisonResults.map((res, i) => (
+                                        <Line type={sensitivityChartType === "step" ? "step" : "monotone"} key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2} name={`${res.weightLabel} Rank`} />
+                                      ))}
+                                    </LineChart>
+                                  )}
+                                </ResponsiveContainer>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </>
+                    )}
+
+                    {sensitivityError && (
+                      <div className="text-xs text-red-600 border border-red-200 bg-red-50 p-2 rounded">
+                        {sensitivityError}
                       </div>
-                    </>
-                  )}
+                    )}
 
-                  {sensitivityError && (
-                    <div className="text-xs text-red-600 border border-red-200 bg-red-50 p-2 rounded">
-                      {sensitivityError}
-                    </div>
-                  )}
-
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
 
-              {/* K% Sensitivity Analysis - Panel is now internal to the calculator */}
-              <KSensitivityCalculator
-                criteria={criteria}
-                alternatives={alternatives}
-                weightMethod={weightMethod}
-                assetLabels={assetLabels}
-                onAiAnalysis={(data) => handleAiAnalysis("k_sensitivity", {
-                  kSensData: data.kSensData,
-                  criterionName: data.criterionName,
-                  variationRange: data.variationRange
-                })}
-                aiAnalysisResult={aiAnalysisResult}
-                isAiLoading={aiLoading}
-                showAiPanel={showAiPanel && aiAnalysisType === "k_sensitivity"}
-                onCloseAiPanel={() => setShowAiPanel(false)}
-              />
-            </>
-          )}
-        </div >
+                {/* K% Sensitivity Analysis - Panel is now internal to the calculator */}
+                <KSensitivityCalculator
+                  criteria={criteria}
+                  alternatives={alternatives}
+                  weightMethod={criteria.some(c => c.weight > 0) ? "Applied" : "Not Set"}
+                  onAiAnalysis={(data) => handleAiAnalysis("k_sensitivity", {
+                    kSensData: data.kSensData,
+                    criterionName: data.criterionName,
+                    variationRange: data.variationRange
+                  })}
+                  aiAnalysisResult={aiAnalysisResult}
+                  isAiLoading={aiLoading}
+                  showAiPanel={showAiPanel && aiAnalysisType === "k_sensitivity"}
+                  onCloseAiPanel={() => setShowAiPanel(false)}
+                />
+              </>
+            )
+          }
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="w-[95vw] sm:w-[85vw] md:w-[70vw] h-[90vh] sm:h-screen max-w-none rounded-lg sm:rounded-none border sm:border-0 flex flex-col p-3 sm:p-6">
-            <DialogHeader>
-              <DialogTitle className="text-base sm:text-lg">{cardTitle}</DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm">{cardDescription}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 pt-4 flex-1 overflow-y-auto" key={method + activeFormulaType}>
-              {activeFormulaType === "method" ? (
-                <>
-                  {method === "wsm" && <WSMFormula />}
-                  {method === "wpm" && <WPMFormula />}
-                  {method === "swei" && <SWEIFormula />}
-                  {method === "swi" && <SWIFormula />}
-                  {method === "topsis" && <TOPSISFormula />}
-                  {method === "waspas" && <WASPASFormula />}
-                  {method === "vikor" && <VIKORFormula />}
-                  {method === "edas" && <EDASFormula />}
-                  {method === "copras" && <COPRASFormula />}
-                  {method === "moora" && <MOORAFormula />}
-                  {method === "multimoora" && <MULTIMOORAFormula />}
-                  {method === "todim" && <TODIMFormula />}
-                  {method === "codas" && <CODASFormula />}
-                  {method === "moosra" && <MOOSRAFormula />}
-                  {method === "mairca" && <MAIRCAFormula />}
-                  {method === "marcos" && <MARCOSFormula />}
-                  {method === "promethee" && <PROMETHEEFormula />}
-                  {method === "promethee1" && <PROMETHEE1Formula />}
-                  {method === "promethee2" && <PROMETHEE2Formula />}
-                  {method === "electre" && <ELECTREFormula />}
-                  {method === "electre1" && <ELECTRE1Formula />}
-                  {method === "electre2" && <ELECTRE2Formula />}
-                  {method === "mabac" && <MABACFormula />}
-                  {method === "cocoso" && <COCOSOFormula />}
-                  {method === "gra" && <GRAFormula />}
-                  {method === "aras" && <ARASFormula />}
-                </>
-              ) : (
-                <>
-                  {weightMethod === "entropy" && <EntropyFormula />}
-                  {weightMethod === "critic" && <CRITICFormula />}
-                  {weightMethod === "ahp" && <AHPFormula />}
-                  {weightMethod === "piprecia" && <PIPRECIAFormula />}
-                  {weightMethod === "equal" && <EqualWeightsFormula />}
-                  {weightMethod === "merec" && <MERECFormula />}
-                  {weightMethod === "swara" && <SWARAFormula />}
-                  {weightMethod === "wenslo" && <WENSLOFormula />}
-                  {weightMethod === "lopcow" && <LOPCOWFormula />}
-                  {weightMethod === "dematel" && <DEMATELFormula />}
-                  {weightMethod === "sd" && <SDFormula />}
-                  {weightMethod === "variance" && <VarianceFormula />}
-                  {weightMethod === "mad" && <MADFormula />}
+          {/* Formula Dialog */}
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogContent className="w-[95vw] sm:w-[85vw] md:w-[70vw] h-[90vh] sm:h-screen max-w-none rounded-lg sm:rounded-none border sm:border-0 flex flex-col p-3 sm:p-6">
+              <DialogHeader>
+                <DialogTitle className="text-base sm:text-lg">{cardTitle}</DialogTitle>
+                <DialogDescription className="text-xs sm:text-sm">{cardDescription}</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-4 flex-1 overflow-y-auto" key={method + activeFormulaType}>
+                {activeFormulaType === "method" ? (
+                  <>
+                    {method === "wsm" && <WSMFormula />}
+                    {method === "wpm" && <WPMFormula />}
+                    {method === "swei" && <SWEIFormula />}
+                    {method === "swi" && <SWIFormula />}
+                    {method === "topsis" && <TOPSISFormula />}
+                    {method === "waspas" && <WASPASFormula />}
+                    {method === "vikor" && <VIKORFormula />}
+                    {method === "edas" && <EDASFormula />}
+                    {method === "copras" && <COPRASFormula />}
+                    {method === "moora" && <MOORAFormula />}
+                    {method === "multimoora" && <MULTIMOORAFormula />}
+                    {method === "todim" && <TODIMFormula />}
+                    {method === "codas" && <CODASFormula />}
+                    {method === "moosra" && <MOOSRAFormula />}
+                    {method === "mairca" && <MAIRCAFormula />}
+                    {method === "marcos" && <MARCOSFormula />}
+                    {method === "promethee" && <PROMETHEEFormula />}
+                    {method === "promethee1" && <PROMETHEE1Formula />}
+                    {method === "promethee2" && <PROMETHEE2Formula />}
+                    {method === "electre" && <ELECTREFormula />}
+                    {method === "electre1" && <ELECTRE1Formula />}
+                    {method === "electre2" && <ELECTRE2Formula />}
+                    {method === "mabac" && <MABACFormula />}
+                    {method === "cocoso" && <COCOSOFormula />}
+                    {method === "gra" && <GRAFormula />}
+                    {method === "aras" && <ARASFormula />}
+                  </>
+                ) : (
+                  <>
+                    {weightMethod === "entropy" && <EntropyFormula />}
+                    {weightMethod === "critic" && <CRITICFormula />}
+                    {weightMethod === "ahp" && <AHPFormula />}
+                    {weightMethod === "piprecia" && <PIPRECIAFormula />}
+                    {weightMethod === "equal" && <EqualWeightsFormula />}
+                    {weightMethod === "merec" && <MERECFormula />}
+                    {weightMethod === "swara" && <SWARAFormula />}
+                    {weightMethod === "wenslo" && <WENSLOFormula />}
+                    {weightMethod === "lopcow" && <LOPCOWFormula />}
+                    {weightMethod === "dematel" && <DEMATELFormula />}
+                    {weightMethod === "sd" && <SDFormula />}
+                    {weightMethod === "variance" && <VarianceFormula />}
+                    {weightMethod === "mad" && <MADFormula />}
 
-                  {weightMethod === "dbw" && <DBWFormula />}
-                  {weightMethod === "svp" && <SVPFormula />}
-                  {weightMethod === "mdm" && <MDMFormula />}
-                  {weightMethod === "lsw" && <LSWFormula />}
-                  {weightMethod === "gpow" && <GPOWFormula />}
-                  {weightMethod === "lpwm" && <LPWMFormula />}
-                  {weightMethod === "pcwm" && <PCWMFormula />}
-                  {weightMethod === "roc" && <ROCFormula />}
-                  {weightMethod === "rr" && <RRFormula />}
-                </>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      </main >
+                    {weightMethod === "dbw" && <DBWFormula />}
+                    {weightMethod === "svp" && <SVPFormula />}
+                    {weightMethod === "mdm" && <MDMFormula />}
+                    {weightMethod === "lsw" && <LSWFormula />}
+                    {weightMethod === "gpow" && <GPOWFormula />}
+                    {weightMethod === "lpwm" && <LPWMFormula />}
+                    {weightMethod === "pcwm" && <PCWMFormula />}
+                    {weightMethod === "roc" && <ROCFormula />}
+                    {weightMethod === "rr" && <RRFormula />}
+                  </>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </main>
     )
   }
 
@@ -7191,12 +7218,16 @@ export default function MCDMCalculator() {
 
 
               <Card className="border-gray-200 bg-white shadow-none">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">Decision Matrix</CardTitle>
-                  <CardDescription className="text-xs text-gray-700">
-                    Define alternatives (rows) and criteria (columns) with their values
-                  </CardDescription>
-                </CardHeader>
+                <div className="px-6 pt-4">
+                  <ResearchAssetHeader
+                    assetKey="rr_decision_matrix"
+                    defaultLabel={getNextTableLabel()}
+                    title="DECISION MATRIX"
+                    included={selectedAiAssets.has("rr_decision_matrix")}
+                    onIncludeChange={handleIncludeChange}
+                    onLabelChange={handleAssetLabelChange}
+                  />
+                </div>
                 <CardContent className="pt-3">
                   <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                     <Table>
@@ -7512,6 +7543,7 @@ export default function MCDMCalculator() {
   }
 
   if (currentStep === "matrix") {
+    tableCounter = 1;
     return (
       <>
         <div className="min-h-screen bg-gray-50/50 pb-20">
@@ -7745,11 +7777,9 @@ export default function MCDMCalculator() {
               )}
               {/* Evaluation Matrix */}
               <Card className="border-gray-200 bg-white shadow-none mb-3">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black">Evaluation Matrix</CardTitle>
-                  <CardDescription className="text-xs text-gray-700">
-                    Review your decision matrix before calculation
-                  </CardDescription>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-bold">Evaluation Matrix</CardTitle>
+                  <CardDescription className="text-[10px]">Review your decision matrix before calculation</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-3">
                   <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
@@ -7813,12 +7843,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="entropy_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("entropy_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -7852,12 +7886,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 2: Normalized Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (p_ij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized values using sum normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="entropy_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX (P_IJ)"
+                        included={selectedAiAssets.has("entropy_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -7891,12 +7929,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Entropy Values */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Entropy for Attributes (- (p_ij * log2(p_ij)) / log2(m))</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Intermediate entropy calculation values
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="entropy_entropy_for_attributes_p_ij_log2_p_ij_log2_m"
+                        defaultLabel={getNextTableLabel()}
+                        title="ENTROPY FOR ATTRIBUTES (- (P_IJ * LOG2(P_IJ)) / LOG2(M))"
+                        included={selectedAiAssets.has("entropy_entropy_for_attributes_p_ij_log2_p_ij_log2_m")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -7938,12 +7980,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: Diversity Degree */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Diversity Degree (dj)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Degree of divergence (1 - Ej)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="entropy_diversity_degree_dj"
+                        defaultLabel={getNextTableLabel()}
+                        title="DIVERSITY DEGREE (DJ)"
+                        included={selectedAiAssets.has("entropy_diversity_degree_dj")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -7973,12 +8019,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 5: Final Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 5: Final Weights (Wj)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="entropy_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (WJ)"
+                        included={selectedAiAssets.has("entropy_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8012,12 +8062,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Step 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="critic_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("critic_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8051,12 +8105,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 2: Normalization */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalization (r_ij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized decision matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="critic_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZATION (R_IJ)"
+                        included={selectedAiAssets.has("critic_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8090,12 +8148,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 3: Standard Deviation (Contrast) */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Standard Deviation (σ_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Contrast intensity of each criterion
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="critic_standard_deviation_j"
+                        defaultLabel={getNextTableLabel()}
+                        title="STANDARD DEVIATION (Σ_J)"
+                        included={selectedAiAssets.has("critic_standard_deviation_j")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8125,12 +8187,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 4: Correlation Matrix (Conflict) */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Correlation Matrix (r_jk)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Conflict between criteria
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="critic_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="CORRELATION MATRIX (R_JK)"
+                        included={selectedAiAssets.has("critic_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8164,12 +8230,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 5: Information Measure */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 5: Information Measure (Cj)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Amount of information contained in each criterion
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="critic_information_measure_cj"
+                        defaultLabel={getNextTableLabel()}
+                        title="INFORMATION MEASURE (CJ)"
+                        included={selectedAiAssets.has("critic_information_measure_cj")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8199,12 +8269,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 6: Final Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 6: Final Weights (Wj)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated CRITIC weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="critic_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (WJ)"
+                        included={selectedAiAssets.has("critic_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8236,12 +8310,16 @@ export default function MCDMCalculator() {
 
               {ahpResult && weightMethod === "ahp" && (
                 <Card className="border-gray-200 bg-white shadow-none mb-6">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm text-black">AHP Weight Calculation Results</CardTitle>
-                    <CardDescription className="text-xs text-gray-700">
-                      λmax = {ahpResult.lambdaMax.toFixed(weightsDecimalPlaces)} | CI = {ahpResult.consistencyIndex.toFixed(weightsDecimalPlaces)} | CR = {ahpResult.consistencyRatio.toFixed(weightsDecimalPlaces)}
-                    </CardDescription>
-                  </CardHeader>
+                  <div className="px-6 pt-4">
+                    <ResearchAssetHeader
+                      assetKey="ahp_weights"
+                      defaultLabel={getNextTableLabel()}
+                      title="AHP WEIGHT CALCULATION RESULTS"
+                      included={selectedAiAssets.has("ahp_weights")}
+                      onIncludeChange={handleIncludeChange}
+                      onLabelChange={handleAssetLabelChange}
+                    />
+                  </div>
                   <CardContent className="pt-3">
                     <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                       <Table>
@@ -8283,9 +8361,16 @@ export default function MCDMCalculator() {
 
               {pipreciaResult && weightMethod === "piprecia" && (
                 <Card className="border-gray-200 bg-white shadow-none mb-6">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm text-black">PIPRECIA Weight Calculation Results</CardTitle>
-                  </CardHeader>
+                  <div className="px-6 pt-4">
+                    <ResearchAssetHeader
+                      assetKey="piprecia_weights"
+                      defaultLabel={getNextTableLabel()}
+                      title="PIPRECIA WEIGHT CALCULATION RESULTS"
+                      included={selectedAiAssets.has("piprecia_weights")}
+                      onIncludeChange={handleIncludeChange}
+                      onLabelChange={handleAssetLabelChange}
+                    />
+                  </div>
                   <CardContent className="pt-3">
                     <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                       <Table>
@@ -8327,12 +8412,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Step 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="merec_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("merec_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8366,12 +8455,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 2: Normalize the decision matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalize the decision matrix (r_ij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized values based on criteria type
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="merec_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZE THE DECISION MATRIX (R_IJ)"
+                        included={selectedAiAssets.has("merec_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8405,12 +8498,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 3: Calculate overall performance of alternatives */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Overall performance of alternatives (S_i)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Performance score with all criteria
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="merec_overall_performance_of_alternatives_s_i"
+                        defaultLabel={getNextTableLabel()}
+                        title="OVERALL PERFORMANCE OF ALTERNATIVES (S_I)"
+                        included={selectedAiAssets.has("merec_overall_performance_of_alternatives_s_i")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8437,12 +8534,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 4: Calculation of performance with removing each criterion */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Performance with removing each criterion (S_i<sup>(-k)</sup>)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Scores calculated by removing one criterion at a time
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="merec_performance_with_removing_each_criterion_s_i_k"
+                        defaultLabel={getNextTableLabel()}
+                        title="PERFORMANCE WITH REMOVING EACH CRITERION (S_I(-K))"
+                        included={selectedAiAssets.has("merec_performance_with_removing_each_criterion_s_i_k")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8476,12 +8577,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 5: Calculation of the removal effect */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 5: Removal effect of each criterion (E_k)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Sum of absolute deviations
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="merec_removal_effect_of_each_criterion_e_k"
+                        defaultLabel={getNextTableLabel()}
+                        title="REMOVAL EFFECT OF EACH CRITERION (E_K)"
+                        included={selectedAiAssets.has("merec_removal_effect_of_each_criterion_e_k")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8511,12 +8616,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 6: Calculation of objective weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 6: Final Weights (w_k)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated MEREC Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="merec_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (W_K)"
+                        included={selectedAiAssets.has("merec_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8549,9 +8658,16 @@ export default function MCDMCalculator() {
               {
                 swaraResult && weightMethod === "swara" && (
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">SWARA Weight Calculation Results</CardTitle>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="swara_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="SWARA WEIGHT CALCULATION RESULTS"
+                        included={selectedAiAssets.has("swara_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg mb-4">
                         <Table>
@@ -8594,12 +8710,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Step 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="wenslo_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("wenslo_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8633,12 +8753,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 2: Normalize the decision matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalize the decision matrix (r_ij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized values (Min-Max)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="wenslo_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZE THE DECISION MATRIX (R_IJ)"
+                        included={selectedAiAssets.has("wenslo_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8672,12 +8796,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 3: Criterion Statistical Score */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Criterion Statistical Score (S_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Sum of normalized scores per criterion
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="wenslo_criterion_statistical_score_s_j"
+                        defaultLabel={getNextTableLabel()}
+                        title="CRITERION STATISTICAL SCORE (S_J)"
+                        included={selectedAiAssets.has("wenslo_criterion_statistical_score_s_j")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8707,12 +8835,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 4: Final Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated WENSLO Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="wenslo_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (W_J)"
+                        included={selectedAiAssets.has("wenslo_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8746,12 +8878,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Step 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="lopcow_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("lopcow_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8785,12 +8921,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 2: Normalize the decision matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalize the decision matrix (r_ij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Vector normalization results
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="lopcow_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZE THE DECISION MATRIX (R_IJ)"
+                        included={selectedAiAssets.has("lopcow_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8824,12 +8964,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 3: Geometric Mean */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Geometric Mean (GM_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Combined performance scores
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="lopcow_geometric_mean_gm_j"
+                        defaultLabel={getNextTableLabel()}
+                        title="GEOMETRIC MEAN (GM_J)"
+                        included={selectedAiAssets.has("lopcow_geometric_mean_gm_j")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8859,12 +9003,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 4: Logarithmic Percentage Change */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Logarithmic Percentage Change (L_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Diversification intensity results
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="lopcow_logarithmic_percentage_change_l_j"
+                        defaultLabel={getNextTableLabel()}
+                        title="LOGARITHMIC PERCENTAGE CHANGE (L_J)"
+                        included={selectedAiAssets.has("lopcow_logarithmic_percentage_change_l_j")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8894,12 +9042,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 5: Final Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 5: Final Weights (w_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated LOPCOW Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="lopcow_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (W_J)"
+                        included={selectedAiAssets.has("lopcow_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8933,12 +9085,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Step 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="dematel_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("dematel_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -8972,12 +9128,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 2: Normalized Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized for relationship analysis
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="dematel_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("dematel_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9011,12 +9171,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 3: Direct Relation Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Direct Relation Matrix (A)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Absolute correlation intensities between criteria
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="dematel_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DIRECT RELATION MATRIX (A)"
+                        included={selectedAiAssets.has("dematel_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9050,12 +9214,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 4: Total Relation Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Total Relation Matrix (T)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Full impact propagation matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="dematel_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="TOTAL RELATION MATRIX (T)"
+                        included={selectedAiAssets.has("dematel_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9089,12 +9257,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 5: Influence (D) and Dependence (R) */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 5: Influence (D) and Dependence (R)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Sum of influence/dependence per criterion
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="dematel_influence_d_and_dependence_r"
+                        defaultLabel={getNextTableLabel()}
+                        title="INFLUENCE (D) AND DEPENDENCE (R)"
+                        included={selectedAiAssets.has("dematel_influence_d_and_dependence_r")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9125,12 +9297,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 6: Prominence (P) and Relation (E) */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 6: Prominence (P) and Relation (E)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Causal analysis: P = D + R, E = D - R
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="dematel_prominence_p_and_relation_e"
+                        defaultLabel={getNextTableLabel()}
+                        title="PROMINENCE (P) AND RELATION (E)"
+                        included={selectedAiAssets.has("dematel_prominence_p_and_relation_e")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9161,12 +9337,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 7: Final Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 7: Final Weights (w_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated DEMATEL Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="dematel_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (W_J)"
+                        included={selectedAiAssets.has("dematel_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9199,12 +9379,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Step 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="sd_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("sd_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9238,12 +9422,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (r_ij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized values using Min-Max normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="sd_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX (R_IJ)"
+                        included={selectedAiAssets.has("sd_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9277,12 +9465,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 3: Standard Deviations */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Standard Deviation per Criterion (σ_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated standard deviation of normalized scores
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="sd_standard_deviation_per_criterion_j"
+                        defaultLabel={getNextTableLabel()}
+                        title="STANDARD DEVIATION PER CRITERION (Σ_J)"
+                        included={selectedAiAssets.has("sd_standard_deviation_per_criterion_j")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9312,12 +9504,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 4: Final Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated SD Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="sd_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (W_J)"
+                        included={selectedAiAssets.has("sd_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9350,12 +9546,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Step 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="variance_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("variance_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9389,12 +9589,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (r_ij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized values using Min-Max normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="variance_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX (R_IJ)"
+                        included={selectedAiAssets.has("variance_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9428,12 +9632,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 3: Variances */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Statistical Variance per Criterion (σ²_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated variance of normalized scores
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="variance_statistical_variance_per_criterion_j"
+                        defaultLabel={getNextTableLabel()}
+                        title="STATISTICAL VARIANCE PER CRITERION (Σ²_J)"
+                        included={selectedAiAssets.has("variance_statistical_variance_per_criterion_j")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9463,12 +9671,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 4: Final Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated Variance Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="variance_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (W_J)"
+                        included={selectedAiAssets.has("variance_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9501,12 +9713,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Step 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mad_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("mad_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9540,12 +9756,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (r_ij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized values using Min-Max normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mad_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX (R_IJ)"
+                        included={selectedAiAssets.has("mad_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9579,12 +9799,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 3: Mean Absolute Deviations */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Mean Absolute Deviation per Criterion (MAD_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated average absolute deviation from the mean of normalized scores
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mad_mean_absolute_deviation_per_criterion_mad_j"
+                        defaultLabel={getNextTableLabel()}
+                        title="MEAN ABSOLUTE DEVIATION PER CRITERION (MAD_J)"
+                        included={selectedAiAssets.has("mad_mean_absolute_deviation_per_criterion_mad_j")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9614,12 +9838,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 4: Final Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated MAD Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mad_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (W_J)"
+                        included={selectedAiAssets.has("mad_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9654,12 +9882,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Step 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="dbw_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("dbw_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9693,12 +9925,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (r_ij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized values using Sum normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="dbw_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX (R_IJ)"
+                        included={selectedAiAssets.has("dbw_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9732,12 +9968,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 3: Distance Sums */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Distance Sum per Criterion (D_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Sum of pairwise differences between alternative scores
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="dbw_distance_sum_per_criterion_d_j"
+                        defaultLabel={getNextTableLabel()}
+                        title="DISTANCE SUM PER CRITERION (D_J)"
+                        included={selectedAiAssets.has("dbw_distance_sum_per_criterion_d_j")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9767,12 +10007,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 4: Final Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated DBW Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="dbw_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (W_J)"
+                        included={selectedAiAssets.has("dbw_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9805,12 +10049,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Step 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="svp_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("svp_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9844,12 +10092,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (r_ij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized values using Min-Max normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="svp_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX (R_IJ)"
+                        included={selectedAiAssets.has("svp_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9883,12 +10135,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 3: Statistical Variances */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Statistical Variance per Criterion (SVP_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated statistical variance on Min-Max normalized data
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="svp_statistical_variance_per_criterion_svp_j"
+                        defaultLabel={getNextTableLabel()}
+                        title="STATISTICAL VARIANCE PER CRITERION (SVP_J)"
+                        included={selectedAiAssets.has("svp_statistical_variance_per_criterion_svp_j")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9918,12 +10174,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 4: Final Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated SVP Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="svp_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (W_J)"
+                        included={selectedAiAssets.has("svp_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9957,12 +10217,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Step 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mdm_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("mdm_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -9996,12 +10260,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (n_ij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized values using Vector normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mdm_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX (N_IJ)"
+                        included={selectedAiAssets.has("mdm_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10035,12 +10303,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 3: Deviation Values */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Total Deviation per Criterion (D_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Combined absolute differences between all alternatives
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mdm_total_deviation_per_criterion_d_j"
+                        defaultLabel={getNextTableLabel()}
+                        title="TOTAL DEVIATION PER CRITERION (D_J)"
+                        included={selectedAiAssets.has("mdm_total_deviation_per_criterion_d_j")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10070,12 +10342,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 4: Final Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated MDM Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mdm_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (W_J)"
+                        included={selectedAiAssets.has("mdm_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10109,12 +10385,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Step 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="lsw_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("lsw_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10148,12 +10428,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (n_ij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized values using Vector normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="lsw_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX (N_IJ)"
+                        included={selectedAiAssets.has("lsw_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10187,12 +10471,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 3: Ideal Solution and Least Squares Values */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Ideal Solution (A*) and Least Squares Values (LS_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Ideal points and sum of squared deviations
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="lsw_ideal_solution_a_and_least_squares_values_ls_j"
+                        defaultLabel={getNextTableLabel()}
+                        title="IDEAL SOLUTION (A*) AND LEAST SQUARES VALUES (LS_J)"
+                        included={selectedAiAssets.has("lsw_ideal_solution_a_and_least_squares_values_ls_j")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10232,12 +10520,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 4: Final Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated LSW Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="lsw_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (W_J)"
+                        included={selectedAiAssets.has("lsw_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10271,12 +10563,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Step 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="gpow_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("gpow_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10310,12 +10606,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (n_ij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized values using Vector normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="gpow_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX (N_IJ)"
+                        included={selectedAiAssets.has("gpow_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10349,12 +10649,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 3: Goal Values and Deviations */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Goal Values (G_j) and Deviations (D_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Target goals and absolute deviations
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="gpow_goal_values_g_j_and_deviations_d_j"
+                        defaultLabel={getNextTableLabel()}
+                        title="GOAL VALUES (G_J) AND DEVIATIONS (D_J)"
+                        included={selectedAiAssets.has("gpow_goal_values_g_j_and_deviations_d_j")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10394,12 +10698,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 4: Final Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated GPOW Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="gpow_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (W_J)"
+                        included={selectedAiAssets.has("gpow_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10433,12 +10741,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Step 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="lpwm_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("lpwm_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10472,12 +10784,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (n_ij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized values using Vector normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="lpwm_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX (N_IJ)"
+                        included={selectedAiAssets.has("lpwm_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10511,12 +10827,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 3: Anti-Ideal Values and Deviations */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Anti-Ideal Values (A⁻) and Lower Deviations (LD_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Anti-ideal reference points and deviations
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="lpwm_anti_ideal_values_a_and_lower_deviations_ld_j"
+                        defaultLabel={getNextTableLabel()}
+                        title="ANTI-IDEAL VALUES (A⁻) AND LOWER DEVIATIONS (LD_J)"
+                        included={selectedAiAssets.has("lpwm_anti_ideal_values_a_and_lower_deviations_ld_j")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10556,12 +10876,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 4: Final Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated LPWM Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="lpwm_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (W_J)"
+                        included={selectedAiAssets.has("lpwm_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10595,12 +10919,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Step 1: Decision Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 1: Decision Matrix (X)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Original Decision Matrix
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="pcwm_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DECISION MATRIX (X)"
+                        included={selectedAiAssets.has("pcwm_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10634,12 +10962,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix (n_ij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized values using Vector normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="pcwm_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX (N_IJ)"
+                        included={selectedAiAssets.has("pcwm_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10673,12 +11005,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 3: Correlation Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Pearson Correlation Matrix (R)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Correlation between criteria
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="pcwm_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="PEARSON CORRELATION MATRIX (R)"
+                        included={selectedAiAssets.has("pcwm_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10711,12 +11047,16 @@ export default function MCDMCalculator() {
 
                   {/* Step 4: Final Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Final Weights (w_j)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Calculated PCWM Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="pcwm_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="FINAL WEIGHTS (W_J)"
+                        included={selectedAiAssets.has("pcwm_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10749,12 +11089,16 @@ export default function MCDMCalculator() {
               {rocResult && weightMethod === "roc" && (
                 <>
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table: ROC Weight Results</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Weights calculated using Rank Order Centroid (ROC) method based on entered ranks.
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="roc_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="TABLE: ROC WEIGHT RESULTS"
+                        included={selectedAiAssets.has("roc_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -10788,12 +11132,16 @@ export default function MCDMCalculator() {
               {rrResult && weightMethod === "rr" && (
                 <>
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table: RR Weight Results</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Weights calculated using Rank Reciprocal (RR) method based on entered ranks.
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="rr_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="TABLE: RR WEIGHT RESULTS"
+                        included={selectedAiAssets.has("rr_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent className="pt-3">
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -11077,6 +11425,7 @@ export default function MCDMCalculator() {
 
   // Results view after calculation
   if (currentStep === "calculate") {
+    tableCounter = 1 // RESET TABLE COUNTER FOR RESULTS VIEW
     return (
       <div className="min-h-screen bg-gray-50/50 pb-20">
 
@@ -11369,15 +11718,16 @@ export default function MCDMCalculator() {
               )}
 
               <Card className="border-gray-200 bg-white shadow-none mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-black flex items-center">
-                    {assetLabels.final_rankings || (methodInfo?.label + " Results")}: {methodInfo?.label} Analysis
-                    <AssetLabel assetKey="final_rankings" defaultLabel="Table 2" onLabelChange={handleAssetLabelChange} />
-                  </CardTitle>
-                  <CardDescription className="text-xs text-gray-700">
-                    Ranked alternatives based on {methodInfo?.description}
-                  </CardDescription>
-                </CardHeader>
+                <div className="px-6 pt-4">
+                  <ResearchAssetHeader
+                    assetKey="roc_methodinfo_label_results"
+                    defaultLabel={getNextTableLabel()}
+                    title={`${methodInfo?.label?.toUpperCase() || ''} RESULTS`}
+                    included={selectedAiAssets.has("roc_methodinfo_label_results")}
+                    onIncludeChange={handleIncludeChange}
+                    onLabelChange={handleAssetLabelChange}
+                  />
+                </div>
                 <CardContent className="space-y-4">
                   {/* Method Info and Controls */}
                   <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-3 mb-6 p-3 md:p-2 bg-white border border-gray-200 rounded-lg">
@@ -11539,15 +11889,16 @@ export default function MCDMCalculator() {
 
               {/* Criteria Weights Display */}
               <Card className="border-gray-200 bg-white shadow-none mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-bold text-black flex items-center">
-                    {assetLabels.criteria_weights || "Criteria Weights"}
-                    <AssetLabel assetKey="criteria_weights" defaultLabel="Table 1" onLabelChange={handleAssetLabelChange} />
-                  </CardTitle>
-                  <CardDescription className="text-xs text-gray-700">
-                    Weight Method: {WEIGHT_METHODS.find(w => w.value === weightMethod)?.label}
-                  </CardDescription>
-                </CardHeader>
+                <div className="px-6 pt-4">
+                  <ResearchAssetHeader
+                    assetKey="codas_weights"
+                    defaultLabel={getNextTableLabel()}
+                    title="CRITERIA WEIGHTS"
+                    included={selectedAiAssets.has("codas_weights")}
+                    onIncludeChange={handleIncludeChange}
+                    onLabelChange={handleAssetLabelChange}
+                  />
+                </div>
                 <CardContent>
                   <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
                     <Table>
@@ -11583,14 +11934,18 @@ export default function MCDMCalculator() {
 
               {method === "wsm" && apiResults?.metrics?.wsmNormalizedMatrix && (
                 <>
-                  {/* Table 2: Normalized Matrix */}
+                  {/* TOPSIS Table 1: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Linear Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="wsm_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("wsm_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -11624,12 +11979,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Weighted Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Weighted Normalized Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Values * Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="wsm_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="WEIGHTED NORMALIZED MATRIX"
+                        included={selectedAiAssets.has("wsm_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -11667,12 +12026,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Linear Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="wpm_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("wpm_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -11706,12 +12069,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Weighted Terms */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Weighted Terms</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Values ^ Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="wpm_weighted_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="WEIGHTED TERMS"
+                        included={selectedAiAssets.has("wpm_weighted_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -11747,14 +12114,18 @@ export default function MCDMCalculator() {
 
               {method === "swei" && apiResults?.metrics?.sweiNormalizedMatrix && (
                 <>
-                  {/* Table 2: Normalization Values */}
+                  {/* SWEI Table 3: Normalization Values */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalization Values</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized Decision Matrix (IDM) using Equation (2) for Benefit and Equation (3) for Non-Benefit criteria
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="swei_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZATION VALUES"
+                        included={selectedAiAssets.has("swei_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -11786,14 +12157,18 @@ export default function MCDMCalculator() {
                     </CardContent>
                   </Card>
 
-                  {/* Table 3: Information Score */}
+                  {/* SWEI Table 4: Information Score */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Information Score</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Information Score Matrix using Equation (4): log2(1/IDM)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="swei_information_score"
+                        defaultLabel={getNextTableLabel()}
+                        title="INFORMATION SCORE"
+                        included={selectedAiAssets.has("swei_information_score")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -11825,14 +12200,18 @@ export default function MCDMCalculator() {
                     </CardContent>
                   </Card>
 
-                  {/* Table 4: Weighted Exponential Information */}
+                  {/* SWEI Table 5: Weighted Exponential Information */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Weighted Exponential Information</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Weighted information for each attribute: (Info)^weight
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="swei_weighted_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="WEIGHTED EXPONENTIAL INFORMATION"
+                        included={selectedAiAssets.has("swei_weighted_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -11870,12 +12249,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Compromise Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="cocoso_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("cocoso_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -11909,12 +12292,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: WSM and WPM */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: WSM and WPM Scores</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Weighted Sum (Si) and Weighted Power (Pi) Scores
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="cocoso_wsm_and_wpm_scores"
+                        defaultLabel={getNextTableLabel()}
+                        title="WSM AND WPM SCORES"
+                        included={selectedAiAssets.has("cocoso_wsm_and_wpm_scores")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -11945,12 +12332,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: Appraisal Scores */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Compromise Appraisal Scores</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Relative appraisal scores: kia, kib, kic
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="cocoso_compromise_appraisal_scores"
+                        defaultLabel={getNextTableLabel()}
+                        title="COMPROMISE APPRAISAL SCORES"
+                        included={selectedAiAssets.has("cocoso_compromise_appraisal_scores")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -11989,12 +12380,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized by column sums
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="copras_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("copras_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12028,12 +12423,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Weighted Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Weighted Normalized Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Weighted normalized values
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="copras_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="WEIGHTED NORMALIZED MATRIX"
+                        included={selectedAiAssets.has("copras_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12067,12 +12466,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: S+, S- and Qi values */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Significance and Priority</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Sum of beneficial (S+) and non-beneficial (S-) criteria values, and final priority score (Qi)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="copras_significance_and_priority"
+                        defaultLabel={getNextTableLabel()}
+                        title="SIGNIFICANCE AND PRIORITY"
+                        included={selectedAiAssets.has("copras_significance_and_priority")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12111,12 +12514,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Vector Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="promethee_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("promethee_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12150,12 +12557,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Preference Flows */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Preference Flows</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Positive (φ+), Negative (φ-), and Net (φ) flows for each alternative.
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="promethee_preference_flows"
+                        defaultLabel={getNextTableLabel()}
+                        title="PREFERENCE FLOWS"
+                        included={selectedAiAssets.has("promethee_preference_flows")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12194,12 +12605,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Vector Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="promethee1_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("promethee1_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12233,9 +12648,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Aggregated Preference Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Aggregated Preference Matrix</CardTitle>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="promethee1_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="AGGREGATED PREFERENCE MATRIX"
+                        included={selectedAiAssets.has("promethee1_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12268,12 +12690,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: Preference Flows */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Preference Flows</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Positive (φ+) and Negative (φ-) flows for each alternative.
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="promethee1_preference_flows"
+                        defaultLabel={getNextTableLabel()}
+                        title="PREFERENCE FLOWS"
+                        included={selectedAiAssets.has("promethee1_preference_flows")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12304,9 +12730,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 5: Outranking Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 5: Outranking Matrix</CardTitle>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="promethee1_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="OUTRANKING MATRIX"
+                        included={selectedAiAssets.has("promethee1_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12343,12 +12776,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Vector Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="promethee2_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("promethee2_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12382,9 +12819,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Aggregated Preference Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Aggregated Preference Matrix</CardTitle>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="promethee2_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="AGGREGATED PREFERENCE MATRIX"
+                        included={selectedAiAssets.has("promethee2_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12417,12 +12861,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: Preference Flows */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Preference Flows</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Positive (φ+), Negative (φ-), and Net (φ) flows.
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="promethee2_preference_flows"
+                        defaultLabel={getNextTableLabel()}
+                        title="PREFERENCE FLOWS"
+                        included={selectedAiAssets.has("promethee2_preference_flows")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12467,12 +12915,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Vector Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="electre1_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("electre1_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12506,9 +12958,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Concordance Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Concordance Matrix</CardTitle>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="electre1_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="CONCORDANCE MATRIX"
+                        included={selectedAiAssets.has("electre1_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12541,9 +13000,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: Discordance Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Discordance Matrix</CardTitle>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="electre1_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DISCORDANCE MATRIX"
+                        included={selectedAiAssets.has("electre1_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12576,9 +13042,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 5: Outranking Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 5: Outranking Matrix</CardTitle>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="electre1_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="OUTRANKING MATRIX"
+                        included={selectedAiAssets.has("electre1_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12615,12 +13088,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Vector Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="electre2_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("electre2_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12654,9 +13131,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Concordance Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Concordance Matrix</CardTitle>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="electre2_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="CONCORDANCE MATRIX"
+                        included={selectedAiAssets.has("electre2_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12689,9 +13173,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: Discordance Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Discordance Matrix</CardTitle>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="electre2_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DISCORDANCE MATRIX"
+                        included={selectedAiAssets.has("electre2_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12724,9 +13215,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 5: Strong Outranking Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 5: Strong Outranking Matrix</CardTitle>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="electre2_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="STRONG OUTRANKING MATRIX"
+                        included={selectedAiAssets.has("electre2_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12759,9 +13257,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 6: Weak Outranking Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 6: Weak Outranking Matrix</CardTitle>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="electre2_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="WEAK OUTRANKING MATRIX"
+                        included={selectedAiAssets.has("electre2_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12798,12 +13303,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalization Values */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalization Values</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized Decision Matrix (IDM) using Equation (2) for Benefit and Equation (3) for Non-Benefit criteria
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="swi_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZATION VALUES"
+                        included={selectedAiAssets.has("swi_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12837,12 +13346,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Information Score */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Information Score</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Information Score Matrix using Equation (4): log2(1/IDM)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="swi_information_score"
+                        defaultLabel={getNextTableLabel()}
+                        title="INFORMATION SCORE"
+                        included={selectedAiAssets.has("swi_information_score")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12876,12 +13389,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: Weighted Information */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Weighted Information</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Weighted information for each attribute: weight * Info
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="swi_weighted_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="WEIGHTED INFORMATION"
+                        included={selectedAiAssets.has("swi_weighted_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12919,12 +13436,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Vector Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="topsis_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("topsis_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12956,14 +13477,18 @@ export default function MCDMCalculator() {
                     </CardContent>
                   </Card>
 
-                  {/* Table 3: Weighted Normalized Matrix */}
+                  {/* TOPSIS Table 2: Weighted Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Weighted Normalized Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized matrix * weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="topsis_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="WEIGHTED NORMALIZED MATRIX"
+                        included={selectedAiAssets.has("topsis_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -12995,14 +13520,18 @@ export default function MCDMCalculator() {
                     </CardContent>
                   </Card>
 
-                  {/* Table 4: Ideal Solutions */}
+                  {/* TOPSIS Table 3: Ideal Solutions */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Ideal Solutions</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Positive Ideal (PIS) and Negative Ideal (NIS) Solutions
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="topsis_ideal_solutions"
+                        defaultLabel={getNextTableLabel()}
+                        title="IDEAL SOLUTIONS"
+                        included={selectedAiAssets.has("topsis_ideal_solutions")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13040,14 +13569,18 @@ export default function MCDMCalculator() {
                     </CardContent>
                   </Card>
 
-                  {/* Table 5: Separation Measures */}
+                  {/* TOPSIS Table 4: Separation Measures */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 5: Separation Measures</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Distances to Positive (D+) and Negative (D-) Ideal Solutions
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="topsis_separation_measures"
+                        defaultLabel={getNextTableLabel()}
+                        title="SEPARATION MEASURES"
+                        included={selectedAiAssets.has("topsis_separation_measures")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
@@ -13081,10 +13614,16 @@ export default function MCDMCalculator() {
               {method === "gra" && apiResults?.metrics?.graNormalizedMatrix && (
                 <>
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">Grey Relational Normalization</CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="gra_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("gra_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13116,10 +13655,16 @@ export default function MCDMCalculator() {
                   </Card>
 
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Deviation Sequence (Δij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">Absolute difference from reference sequence</CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="gra_deviation_sequence_ij"
+                        defaultLabel={getNextTableLabel()}
+                        title="DEVIATION SEQUENCE (ΔIJ)"
+                        included={selectedAiAssets.has("gra_deviation_sequence_ij")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13151,10 +13696,16 @@ export default function MCDMCalculator() {
                   </Card>
 
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Grey Relational Coefficients (ξij)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">Correlation measure (ζ = 0.5)</CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="gra_grey_relational_coefficients_ij"
+                        defaultLabel={getNextTableLabel()}
+                        title="GREY RELATIONAL COEFFICIENTS (ΞIJ)"
+                        included={selectedAiAssets.has("gra_grey_relational_coefficients_ij")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13190,10 +13741,16 @@ export default function MCDMCalculator() {
               {method === "aras" && apiResults?.metrics?.arasNormalizedMatrix && (
                 <>
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">Detailed normalized values (including optimal alternative)</CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="aras_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("aras_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13251,10 +13808,16 @@ export default function MCDMCalculator() {
                   </Card>
 
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Weighted Normalized Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">Normalized values × Weights</CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="aras_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="WEIGHTED NORMALIZED MATRIX"
+                        included={selectedAiAssets.has("aras_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13286,10 +13849,16 @@ export default function MCDMCalculator() {
                   </Card>
 
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Optimality Function & Utility</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">Si (Optimality Function) and Ki (Degree of Utility)</CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="aras_optimality_function_utility"
+                        defaultLabel={getNextTableLabel()}
+                        title="OPTIMALITY FUNCTION & UTILITY"
+                        included={selectedAiAssets.has("aras_optimality_function_utility")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
@@ -13328,12 +13897,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Linear Normalization using Best (f*) and Worst (f-) values
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="vikor_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("vikor_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13367,12 +13940,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Best (f*) and Worst (f-) Values */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Best and Worst Values</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        f* (Best) and f- (Worst) for each criterion
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="vikor_best_and_worst_values"
+                        defaultLabel={getNextTableLabel()}
+                        title="BEST AND WORST VALUES"
+                        included={selectedAiAssets.has("vikor_best_and_worst_values")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13412,12 +13989,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: S, R and Q Values */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: VIKOR Values (S, R, Q)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        S (Utility Measure), R (Regret Measure), and Q (VIKOR Index)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="vikor_vikor_values_s_r_q"
+                        defaultLabel={getNextTableLabel()}
+                        title="VIKOR VALUES (S, R, Q)"
+                        included={selectedAiAssets.has("vikor_vikor_values_s_r_q")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
@@ -13456,12 +14037,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Linear Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="waspas_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("waspas_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13495,12 +14080,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: WSM Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Weighted Sum Model (WSM)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Values * Weight (additive part)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="waspas_weighted_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="WEIGHTED SUM MODEL (WSM)"
+                        included={selectedAiAssets.has("waspas_weighted_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13534,12 +14123,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: WPM Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Weighted Product Model (WPM)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Values ^ Weight (multiplicative part)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="waspas_weighted_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="WEIGHTED PRODUCT MODEL (WPM)"
+                        included={selectedAiAssets.has("waspas_weighted_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13573,12 +14166,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 5: Aggregated Scores */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 5: Aggregated WASPAS Scores</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Score = λ * WSM + (1 - λ) * WPM
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="waspas_aggregated_waspas_scores"
+                        defaultLabel={getNextTableLabel()}
+                        title="AGGREGATED WASPAS SCORES"
+                        included={selectedAiAssets.has("waspas_aggregated_waspas_scores")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
@@ -13619,12 +14216,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Average Solution */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Average Solution (AV)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Average value for each criterion
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="edas_average_solution_av"
+                        defaultLabel={getNextTableLabel()}
+                        title="AVERAGE SOLUTION (AV)"
+                        included={selectedAiAssets.has("edas_average_solution_av")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13654,12 +14255,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: PDA Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Positive Distance from Average (PDA)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        PDA Calculation
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="edas_positive_distance_from_average_pda"
+                        defaultLabel={getNextTableLabel()}
+                        title="POSITIVE DISTANCE FROM AVERAGE (PDA)"
+                        included={selectedAiAssets.has("edas_positive_distance_from_average_pda")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13693,12 +14298,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: NDA Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Negative Distance from Average (NDA)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        NDA Calculation
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="edas_negative_distance_from_average_nda"
+                        defaultLabel={getNextTableLabel()}
+                        title="NEGATIVE DISTANCE FROM AVERAGE (NDA)"
+                        included={selectedAiAssets.has("edas_negative_distance_from_average_nda")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13732,12 +14341,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 5: EDAS Scores Breakdown */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 5: EDAS Scores Breakdown</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        SP/SN (Weighted Sums), NSP/NSN (Normalized), AS (Appraisal Score)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="edas_edas_scores_breakdown"
+                        defaultLabel={getNextTableLabel()}
+                        title="EDAS SCORES BREAKDOWN"
+                        included={selectedAiAssets.has("edas_edas_scores_breakdown")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
@@ -13785,12 +14398,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Linear Normalization (Min-Max)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mabac_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("mabac_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13824,12 +14441,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Weighted Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Weighted Matrix (V)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        V = (n_ij + 1) * w_j
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mabac_weighted_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="WEIGHTED MATRIX (V)"
+                        included={selectedAiAssets.has("mabac_weighted_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13863,12 +14484,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: Border Approximation Area (BAA) */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Border Approximation Area (BAA)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Geometric mean of weighted matrix values for each criterion
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mabac_border_approximation_area_baa"
+                        defaultLabel={getNextTableLabel()}
+                        title="BORDER APPROXIMATION AREA (BAA)"
+                        included={selectedAiAssets.has("mabac_border_approximation_area_baa")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13900,12 +14525,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 5: Distance Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 5: Distance Matrix (Q)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Distance from BAA (Q = V - G)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mabac_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DISTANCE MATRIX (Q)"
+                        included={selectedAiAssets.has("mabac_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13943,12 +14572,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalization using Extended Matrix (with Ideal/Anti-Ideal)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="marcos_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("marcos_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -13982,12 +14615,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Weighted Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Weighted Normalized Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized Value * Weight
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="marcos_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="WEIGHTED NORMALIZED MATRIX"
+                        included={selectedAiAssets.has("marcos_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14021,12 +14658,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: Ideal and Anti-Ideal Solutions */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Ideal and Anti-Ideal Solutions</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Ideal (AI) and Anti-Ideal (AAI) solutions
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="marcos_ideal_and_anti_ideal_solutions"
+                        defaultLabel={getNextTableLabel()}
+                        title="IDEAL AND ANTI-IDEAL SOLUTIONS"
+                        included={selectedAiAssets.has("marcos_ideal_and_anti_ideal_solutions")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14066,12 +14707,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 5: Utility Degrees and Final Score */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 5: Utility Degrees</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Utility degrees relative to Ideal (K-) and Anti-Ideal (K+), and Final Utility Function (f(K))
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="marcos_utility_degrees"
+                        defaultLabel={getNextTableLabel()}
+                        title="UTILITY DEGREES"
+                        included={selectedAiAssets.has("marcos_utility_degrees")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
@@ -14110,12 +14755,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Vector Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="moora_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("moora_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14149,12 +14798,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Weighted Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Weighted Normalized Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized Value * Weight
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="moora_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="WEIGHTED NORMALIZED MATRIX"
+                        included={selectedAiAssets.has("moora_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14188,12 +14841,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: Final Scores Breakdown */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: MOORA Scores Breakdown</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Sum of Beneficial Criteria (Max) - Sum of Non-Beneficial Criteria (Min)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="moora_moora_scores_breakdown"
+                        defaultLabel={getNextTableLabel()}
+                        title="MOORA SCORES BREAKDOWN"
+                        included={selectedAiAssets.has("moora_moora_scores_breakdown")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
@@ -14232,12 +14889,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Vector Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="multimoora_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("multimoora_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14271,12 +14932,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Weighted Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Weighted Normalized Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Values * Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="multimoora_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="WEIGHTED NORMALIZED MATRIX"
+                        included={selectedAiAssets.has("multimoora_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14310,12 +14975,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: MULTIMOORA Scores and Rankings Breakdown */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: MULTIMOORA Scores & Rankings</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Ratio System (RS), Reference Point (RP), Full Multiplicative Form (FMF)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="multimoora_rankings"
+                        defaultLabel={getNextTableLabel()}
+                        title="MULTIMOORA SCORES & RANKINGS"
+                        included={selectedAiAssets.has("multimoora_rankings")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
@@ -14371,12 +15040,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Min-Max Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="todim_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("todim_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14410,12 +15083,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Relative Weights */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Relative Weights</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Normalized by maximum weight
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="todim_weights"
+                        defaultLabel={getNextTableLabel()}
+                        title="RELATIVE WEIGHTS"
+                        included={selectedAiAssets.has("todim_weights")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14445,12 +15122,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: Dominance Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Dominance Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Overall Dominance Degree δ(Ai, Aj)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="todim_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="DOMINANCE MATRIX"
+                        included={selectedAiAssets.has("todim_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14489,12 +15170,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Linear Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="codas_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("codas_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14528,12 +15213,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Negative Ideal Solution */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Negative Ideal Solution (NIS)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Min (Beneficial) or Max (Non-Beneficial) of Normalized Values
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="codas_negative_ideal_solution_nis"
+                        defaultLabel={getNextTableLabel()}
+                        title="NEGATIVE IDEAL SOLUTION (NIS)"
+                        included={selectedAiAssets.has("codas_negative_ideal_solution_nis")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14563,12 +15252,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: Distances and RA Scores */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: CODAS Distances and Assessment</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Euclidean (Ei) and Taxicab (Ti) Distances from NIS, and Relative Assessment (RA) Score
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="codas_codas_distances_and_assessment"
+                        defaultLabel={getNextTableLabel()}
+                        title="CODAS DISTANCES AND ASSESSMENT"
+                        included={selectedAiAssets.has("codas_codas_distances_and_assessment")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
@@ -14607,12 +15300,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Vector Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="moosra_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("moosra_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14646,12 +15343,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Weighted Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Weighted Normalized Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Values * Weights
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="moosra_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="WEIGHTED NORMALIZED MATRIX"
+                        included={selectedAiAssets.has("moosra_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14685,12 +15386,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: MOOSRA Scores Breakdown */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: MOOSRA Scores Breakdown</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Beneficial Sum, Non-Beneficial Sum, and Final Ratio (Score)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="moosra_moosra_scores_breakdown"
+                        defaultLabel={getNextTableLabel()}
+                        title="MOOSRA SCORES BREAKDOWN"
+                        included={selectedAiAssets.has("moosra_moosra_scores_breakdown")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">
@@ -14729,12 +15434,16 @@ export default function MCDMCalculator() {
                 <>
                   {/* Table 2: Normalized Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 2: Normalized Decision Matrix</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Linear Normalization
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mairca_normalized_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="NORMALIZED DECISION MATRIX"
+                        included={selectedAiAssets.has("mairca_normalized_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14768,12 +15477,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 3: Theoretical Ratings */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 3: Theoretical Ratings (Tp)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Tp = Weight * Ideal Value
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mairca_theoretical_ratings_tp"
+                        defaultLabel={getNextTableLabel()}
+                        title="THEORETICAL RATINGS (TP)"
+                        included={selectedAiAssets.has("mairca_theoretical_ratings_tp")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14807,12 +15520,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 4: Real Ratings */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 4: Real Ratings (Tr)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Tr = Weight * Normalized Value
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mairca_real_ratings_tr"
+                        defaultLabel={getNextTableLabel()}
+                        title="REAL RATINGS (TR)"
+                        included={selectedAiAssets.has("mairca_real_ratings_tr")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14846,12 +15563,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 5: Gap Matrix */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 5: Gap Matrix (G)</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Gap = Tp - Tr
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mairca_decision_matrix"
+                        defaultLabel={getNextTableLabel()}
+                        title="GAP MATRIX (G)"
+                        included={selectedAiAssets.has("mairca_decision_matrix")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <Table>
@@ -14885,12 +15606,16 @@ export default function MCDMCalculator() {
 
                   {/* Table 6: Total Gaps and Final Score */}
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-black">Table 6: Total Gaps & Final Score</CardTitle>
-                      <CardDescription className="text-xs text-gray-700">
-                        Sum of Gaps (Lower is better)
-                      </CardDescription>
-                    </CardHeader>
+                    <div className="px-6 pt-4">
+                      <ResearchAssetHeader
+                        assetKey="mairca_total_gaps_final_score"
+                        defaultLabel={getNextTableLabel()}
+                        title="TOTAL GAPS & FINAL SCORE"
+                        included={selectedAiAssets.has("mairca_total_gaps_final_score")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                    </div>
                     <CardContent>
                       <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                         <table className="min-w-full text-xs">

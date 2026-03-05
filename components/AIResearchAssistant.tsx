@@ -17,7 +17,13 @@ interface AIResearchAssistantProps {
     alternatives: any[];
     criteria: any[];
     method: string;
+    weightMethod: string;
+    comparisonMethods?: string[];
+    comparisonWeightMethod?: string;
+    sensitivityMethod?: string;
+    sensitivityWeightMethods?: string[];
     assetLabels?: Record<string, string>;
+    markedAssets?: Set<string>;
     onClose?: () => void;
 }
 
@@ -28,7 +34,7 @@ const SECTION_TEMPLATES = [
         name: 'Abstract',
         icon: <FileText className="w-4 h-4" />,
         description: 'Concise summary of the entire study',
-        defaultPrompt: 'Write a high-quality academic abstract following this exact structure: 1. Context & Problem: Start by describing the real-world challenge and the research gap. 2. Solution: Introduce the specific MCDM methodology (Sum Weighted Information (SWI) or Sum Weighted Exponential Information (SWEI)). 3. Methodology: Describe criteria and alternatives. 4. Findings: Summarize final rankings and sensitivity (±30% variation range). 5. Significance: Practical impact. End with exactly 5-6 professional Keywords.',
+        defaultPrompt: '', // Will be generated dynamically
         defaultWordCount: 250,
         color: 'from-blue-600 to-cyan-600'
     },
@@ -37,7 +43,7 @@ const SECTION_TEMPLATES = [
         name: '1. Introduction',
         icon: <BookOpen className="w-4 h-4" />,
         description: 'Context, research gap, and objectives',
-        defaultPrompt: 'Write a comprehensive scholarly introduction. Use hierarchical numbering for subsections (e.g., 1.1 Background, 1.2 Research Gap, 1.3 Objectives). Establish global context, narrow to the specific challenge, and justify the use of Sum Weighted Information (SWI) and Sum Weighted Exponential Information (SWEI).',
+        defaultPrompt: '', // Will be generated dynamically
         defaultWordCount: 1000,
         color: 'from-violet-600 to-purple-600'
     },
@@ -46,7 +52,7 @@ const SECTION_TEMPLATES = [
         name: '2. Literature Review',
         icon: <BookOpen className="w-4 h-4" />,
         description: 'Review of relevant research',
-        defaultPrompt: 'Write a comprehensive literature review. Use hierarchical numbering (e.g., 2.1 Theoretical Foundations, 2.2 MCDM Applications). Synthesize current research in the field and position this study using Sum Weighted Information (SWI) and Sum Weighted Exponential Information (SWEI).',
+        defaultPrompt: '', // Will be generated dynamically
         defaultWordCount: 1200,
         color: 'from-indigo-600 to-blue-600'
     },
@@ -55,7 +61,7 @@ const SECTION_TEMPLATES = [
         name: '3. Methodology',
         icon: <Target className="w-4 h-4" />,
         description: 'Research methods and procedures',
-        defaultPrompt: 'Write a technical methodology section. Use hierarchical numbering (e.g., 3.1 Framework, 3.2 Mathematical Steps of SWI/SWEI). Detail the procedural framework, criteria selection, and the stability validation approach (e.g., ±30% perturbation).',
+        defaultPrompt: '', // Will be generated dynamically
         defaultWordCount: 1500,
         color: 'from-emerald-600 to-teal-600'
     },
@@ -64,7 +70,7 @@ const SECTION_TEMPLATES = [
         name: '4. Results & Analysis',
         icon: <TrendingUp className="w-4 h-4" />,
         description: 'Presentation of findings',
-        defaultPrompt: 'Write a comprehensive results section. Use hierarchical numbering (e.g., 4.1 Numerical Results, 4.2 Ranking Stability). Refer to final weights as Table 1 and rankings as Table 2. Discuss rank reversals observed during the ±30% variation (refer to as Figure 1).',
+        defaultPrompt: '', // Will be generated dynamically
         defaultWordCount: 1500,
         color: 'from-amber-600 to-orange-600'
     },
@@ -73,7 +79,7 @@ const SECTION_TEMPLATES = [
         name: '5. Discussion',
         icon: <Lightbulb className="w-4 h-4" />,
         description: 'Interpretation and implications',
-        defaultPrompt: 'Write an insightful discussion section. Use hierarchical numbering (e.g., 5.1 Comparative Insights, 5.2 Practical Implications). Interpret findings, compare with existing research using SWI and SWEI, and highlight key insights.',
+        defaultPrompt: '', // Will be generated dynamically
         defaultWordCount: 1500,
         color: 'from-pink-600 to-rose-600'
     },
@@ -82,7 +88,7 @@ const SECTION_TEMPLATES = [
         name: '6. Conclusion',
         icon: <FileText className="w-4 h-4" />,
         description: 'Summary and future directions',
-        defaultPrompt: 'Write a strong conclusion. Use hierarchical numbering (e.g., 6.1 Summary of Findings, 6.2 Future Research). Summarize contributions, state final recommendations, and suggest future directions.',
+        defaultPrompt: '', // Will be generated dynamically
         defaultWordCount: 700,
         color: 'from-purple-600 to-pink-600'
     },
@@ -113,7 +119,13 @@ export function AIResearchAssistant({
     alternatives,
     criteria,
     method,
+    weightMethod,
+    comparisonMethods = [],
+    comparisonWeightMethod = "",
+    sensitivityMethod = "",
+    sensitivityWeightMethods = [],
     assetLabels,
+    markedAssets,
     onClose
 }: AIResearchAssistantProps) {
     const [selectedSection, setSelectedSection] = useState('abstract');
@@ -155,14 +167,47 @@ export function AIResearchAssistant({
 
     const currentTemplate = SECTION_TEMPLATES.find(t => t.id === selectedSection) || SECTION_TEMPLATES[0];
 
+    const getDynamicPrompt = (sectionId: string) => {
+        const rankingMethodName = method.toUpperCase();
+        const weightMethodName = weightMethod.toUpperCase();
+        const comparisonMethodsList = comparisonMethods.length > 0 ? comparisonMethods.join(', ').toUpperCase() : '';
+        const sensitivityDetails = sensitivityMethod ? `stability check using ${sensitivityMethod.toUpperCase()} with ${sensitivityWeightMethods.join(', ').toUpperCase()} weight variations` : '';
+
+        const contextString = `This study utilizes the ${rankingMethodName} method for ranking and ${weightMethodName} for criteria weighting. ` +
+            (comparisonMethodsList ? `The results are validated against ${comparisonMethodsList} methods. ` : '') +
+            (sensitivityDetails ? `Robustness is examined through ${sensitivityDetails}. ` : '');
+
+        switch (sectionId) {
+            case 'abstract':
+                return `Write a high-quality academic abstract. Structure: 1. Context & Problem: Describe the challenge and research gap. 2. Solution: Introduce ${rankingMethodName} integrated with ${weightMethodName} weighting. 3. Methodology: Describe criteria (${criteria.length}) and alternatives (${alternatives.length}). 4. Findings: Summarize final results and stability (${variationRange} variation). 5. Significance: Practical impact. End with exactly 5-6 professional Keywords.`;
+            case 'introduction':
+                return `Write a scholarly introduction with hierarchical numbering (e.g., 1.1 Background, 1.2 Gap). Establish global context and justify the dual application of ${rankingMethodName} and ${weightMethodName}.`;
+            case 'literature':
+                return `Write a literature review with hierarchical numbering. Synthesize research in the field and position this study using ${rankingMethodName} and ${weightMethodName} weighting.`;
+            case 'methodology':
+                return `Write a technical methodology section with hierarchical numbering. Detail the procedural framework of ${rankingMethodName}, criteria selection (${criteria.length} items), and the ${weightMethodName} weighing protocol. Describe the stability validation approach (${variationRange} perturbation).`;
+            case 'results':
+                return `Write a results section with hierarchical numbering. Discuss ranking results for ${alternatives.length} alternatives. Refer to criteria weights as Table 1 and final rankings as Table 2. Discuss ranking stability during the ${variationRange} variation (refer to as Figure 1).` + (comparisonMethodsList ? ` Include comparison results with ${comparisonMethodsList} in Table 3.` : '');
+            case 'discussion':
+                return `Write an insightful discussion section with hierarchical numbering. Interpret findings, provide comparative insights using ${comparisonMethodsList || rankingMethodName}, and highlight practical implications.`;
+            case 'conclusion':
+                return `Write a strong conclusion with hierarchical numbering. Summarize findings of the ${rankingMethodName}-${weightMethodName} framework, state final recommendations, and suggest future research.`;
+            case 'references':
+                return 'Generate a complete, alphabetically ordered References section in APA style based on the provided Scholarly References.';
+            default:
+                return '';
+        }
+    };
+
     // Update defaults when section changes
     React.useEffect(() => {
-        setCustomPrompt(currentTemplate.defaultPrompt);
+        const dynamicPrompt = getDynamicPrompt(selectedSection);
+        setCustomPrompt(dynamicPrompt);
         setWordCount(currentTemplate.defaultWordCount);
         setGeneratedContent('');
         setShowResult(false);
         setIsCopied(false);
-    }, [selectedSection]);
+    }, [selectedSection, method, weightMethod, comparisonMethods, sensitivityMethod, sensitivityWeightMethods]);
 
     const handleGenerate = async () => {
         setIsGenerating(true);
@@ -190,6 +235,7 @@ export function AIResearchAssistant({
                     criteria: criteria,
                     method: method,
                     assetLabels: assetLabels,
+                    markedAssets: markedAssets ? Array.from(markedAssets) : [],
                     ranking: kSensData?.results?.['0']
                         ? Object.entries(kSensData.results['0']).map(([altName, score]: [string, any]) => ({
                             alternativeName: altName,
@@ -257,7 +303,7 @@ export function AIResearchAssistant({
                         userApiKey,
                         analysisType: 'custom_section',
                         sectionType: section.id,
-                        customPrompt: section.defaultPrompt + " CRITICAL: Start writing technical content DIRECTLY. Do NOT include any section titles, numbers, or headings at the start of your response. This is part of a professional research paper; ensure it flows naturally without repeating headers. Use Sum Weighted Information (SWI) and Sum Weighted Exponential Information (SWEI).",
+                        customPrompt: getDynamicPrompt(section.id) + " CRITICAL: Start writing technical content DIRECTLY. Do NOT include any section titles, numbers, or headings at the start of your response. This is part of a professional research paper; ensure it flows naturally without repeating headers.",
                         wordCount: section.defaultWordCount,
                         additionalContext: additionalContext + (i > 0 ? " Previous section context: " + results[sectionsToGenerate[i - 1].id]?.substring(0, 500) : ""),
                         kSensData,
@@ -267,6 +313,7 @@ export function AIResearchAssistant({
                         criteria,
                         method,
                         assetLabels: assetLabels,
+                        markedAssets: markedAssets ? Array.from(markedAssets) : [],
                         ranking: kSensData?.results?.['0']
                             ? Object.entries(kSensData.results['0']).map(([altName, score]: [string, any]) => ({
                                 alternativeName: altName,

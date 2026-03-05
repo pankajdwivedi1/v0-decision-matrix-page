@@ -1397,7 +1397,6 @@ export default function KSensitivityCalculator({
         <CardHeader className="pb-3 px-3 sm:px-6">
           <CardTitle className="text-sm text-black flex items-center">
             {assetLabels?.sensitivity_analysis || "Perturbation Analysis"}
-            <AssetLabel assetKey="sensitivity_analysis" defaultLabel="Table 4" />
           </CardTitle>
           <CardDescription className="text-xs text-gray-700 flex flex-wrap items-center gap-1">
             <span>Step-by-step guided sensitivity analysis with customizable variation ranges</span>
@@ -2138,36 +2137,7 @@ export default function KSensitivityCalculator({
                       <Button onClick={() => { setKSensResults(null); setShowConfig(true); }} variant="outline" className="text-xs h-8">
                         🔄 Start Over
                       </Button>
-                      {selectedCriterionToVary && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowAIAssistant(true)}
-                          disabled={!kSensResults || isAnalyzing}
-                          className="bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 text-white hover:from-violet-700 hover:via-purple-700 hover:to-pink-700 border-none h-8 text-xs gap-1.5 shadow-lg px-3"
-                        >
-                          <Sparkles className="w-3.5 h-3.5" />
-                          AI Research
-                        </Button>
-                      )}
                     </div>
-
-
-                    {/* AI Research Assistant */}
-                    {showAIAssistant && selectedCriterionToVary && (
-                      <div className="mt-6">
-                        <AIResearchAssistant
-                          kSensData={kSensResults ? kSensResults[workingCriteria.find(c => c.id === selectedCriterionToVary)?.name || selectedCriterionToVary] : null}
-                          criterionName={workingCriteria.find(c => c.id === selectedCriterionToVary)?.name || selectedCriterionToVary}
-                          variationRange={kSensVariationRange.join(", ")}
-                          alternatives={alternatives}
-                          criteria={workingCriteria}
-                          method={selectedRankingMethod}
-                          assetLabels={assetLabels}
-                          onClose={() => setShowAIAssistant(false)}
-                        />
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
