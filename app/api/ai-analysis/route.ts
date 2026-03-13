@@ -80,21 +80,29 @@ export async function POST(req: NextRequest) {
         }
 
         let assetLabelsInjection = "";
-        if (assetLabels) {
+        if (assetLabels && typeof assetLabels === 'object') {
+            const manifestEntries = Object.entries(assetLabels).map(([key, label]) => {
+                // Human-friendly description based on key
+                let desc = "Decision-making data asset";
+                if (key.includes("matrix")) desc = "Mathematical processing matrix";
+                if (key.includes("ranking")) desc = "Final selection outcomes";
+                if (key.includes("sensitivity")) desc = "Model robustness validation results";
+                if (key.includes("chart") || key.includes("variation")) desc = "Graphical visualization of results";
+                if (key.includes("weight")) desc = "Criteria importance calculations";
+
+                return `- **Identifier:** \`${key}\` | **Refer to as:** \`${label}\` | **Description:** ${desc}`;
+            }).join("\n");
+
             assetLabelsInjection = `
-        **Mandatory Figure and Table Naming Convention:**
-        When writing the manuscript, you MUST use the following labels for tables and figures:
-        - Decision Matrix: ${assetLabels.decision_matrix || "Table 1"}
-        - Normalized Weight Matrix: ${assetLabels.normalized_weight_matrix || "Table 2"}
-        - Criteria Weights results: ${assetLabels.criteria_weights || "Table 3"}
-        - Normalized Ranking Matrix: ${assetLabels.normalized_ranking_matrix || "Table 4"}
-        - Final Rankings table: ${assetLabels.final_rankings || "Table 5"}
-        - Ranking Comparison table: ${assetLabels.ranking_comparison || "Table 6"}
-        - Sensitivity Analysis results (step-by-step): ${assetLabels.sensitivity_analysis || "Table 7"}
-        - Weight Radar Chart: ${assetLabels.radar_chart || "Figure 1"}
-        - Graphical Variation/Sensitivity Chart: ${assetLabels.sensitivity_chart || "Figure 2"}
-        
-        Example: Instead of saying "As shown in Table 1", check if the user assigned a different label for the intended table and use that.
+        **RESEARCH ASSET MANIFEST (MANDATORY REFERENCING):**
+        To ensure academic rigour and correct cross-referencing, you MUST use the following specific labels when mentioning tables or figures in your narrative. Use the "Refer to as" label in the text:
+
+        ${manifestEntries}
+
+        **STRICT CROSS-REFERENCING RULES:**
+        1. When interpreting data associated with an **Identifier**, you MUST cite the corresponding **Refer to as** label.
+        2. Example: If \`ranking_results\` is mapped to \`Table 5\`, you must write "As demonstrated in Table 5..."
+        3. Interpret the content of each Table/Figure specifically based on its Description and Identifier.
         `;
         }
 
@@ -151,13 +159,8 @@ export async function POST(req: NextRequest) {
         **MANDATORY RULES:**
         ${assetLabelsInjection}
         - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
-        - Whenever you mention a Table (e.g., Table 1, Table 2) or Figure (e.g., Figure 1), immediately follow that sentence with a new line containing exactly the corresponding placeholder, for example:
-          **[Insert ${assetLabels?.decision_matrix || "Table 1"}: Decision Matrix here]**
-          **[Insert ${assetLabels?.criteria_weights || "Table 3"}: Detailed Criteria Weights here]**
-          **[Insert ${assetLabels?.final_rankings || "Table 5"}: Final Rankings here]**
-          **[Insert ${assetLabels?.sensitivity_analysis || "Table 7"}: Perturbation Analysis results here]**
-          **[Insert ${assetLabels?.radar_chart || "Figure 1"}: Weight Radar Chart here]**
-          **[Insert ${assetLabels?.sensitivity_chart || "Figure 2"}: Graphical Sensitivity Variation here]**
+        - Whenever you mention a Table or Figure from the Manifest, you MUST immediately follow that sentence with a new line containing a placeholder in the format: **[Insert {Refer to as label}: {Description} here]**.
+        - Example: If the manifest says Table 1 is "Decision Matrix", write: **[Insert Table 1: Decision Matrix here]** on its own line.
         - Ensure all sections use hierarchical numbering (e.g., 4.1, 4.2).
         - No "K%" terminology; use "Perturbation Analysis" or "+30% / -30% variation".
       `;
@@ -200,7 +203,7 @@ export async function POST(req: NextRequest) {
         **MANDATORY RULES:**
         ${assetLabelsInjection}
         - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
-        - Whenever you mention a Table (e.g., Table 1, Table 2) or Figure (e.g., Figure 1), immediately follow that sentence with a new line containing exactly the corresponding placeholder (e.g., [Insert Table 7 here]).
+        - Whenever you mention a Table or Figure from the Manifest, you MUST immediately follow that sentence with a new line containing a placeholder in the format: **[Insert {Refer to as label}: {Description} here]**.
         
         **Requirements:**
         - 700-900 words
@@ -241,7 +244,7 @@ export async function POST(req: NextRequest) {
         **MANDATORY RULES:**
         ${assetLabelsInjection}
         - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
-        - Whenever you mention a Table (e.g., Table 7) or Figure (e.g., Figure 2), immediately follow that sentence with a new line containing exactly the corresponding placeholder.
+        - Whenever you mention a Table or Figure from the Manifest, you MUST immediately follow that sentence with a new line containing a placeholder in the format: **[Insert {Refer to as label}: {Description} here]**.
         
         **Requirements:**
         - 800-1000 words
@@ -293,7 +296,7 @@ export async function POST(req: NextRequest) {
         **MANDATORY RULES:**
         ${assetLabelsInjection}
         - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
-        - Whenever you mention Table 6 (Comparison) or other tables, immediately follow that sentence with a new line containing exactly the corresponding placeholder.
+        - Whenever you mention a Table or Figure from the Manifest, you MUST immediately follow that sentence with a new line containing a placeholder in the format: **[Insert {Refer to as label}: {Description} here]**.
         
         **Requirements:**
         - 600-800 words
@@ -431,7 +434,7 @@ export async function POST(req: NextRequest) {
         ${assetLabelsInjection}
         - Identify subsections using decimal numbering (e.g., 3.1, 3.2, 3.2.1).
         - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
-        - Insert Table/Figure placeholders: **[Insert Table X here]** or **[Insert Figure X here]** on a new line after mention.
+        - Whenever you mention a Table or Figure from the Manifest, you MUST immediately follow that sentence with a new line containing a placeholder in the format: **[Insert {Refer to as label}: {Description} here]**.
         `;
         } else if (analysisType === "custom_section") {
             // Custom section generation with user-defined prompts
@@ -482,7 +485,7 @@ export async function POST(req: NextRequest) {
         
         **Formatting Guidelines:**
         - Use markdown format for headings (## for sections, ### for subsections)
-        - **PLACEHOLDER RULE (MANDATORY)**: Whenever you mention a Table (e.g., Table 1, Table 2) or Figure (e.g., Figure 1), immediately follow that sentence with a new line containing exactly: **[Insert Table X here]** or **[Insert Figure X here]**.
+        - **PLACEHOLDER RULE (MANDATORY)**: Whenever you mention a Table or Figure from the Manifest, you MUST immediately follow that sentence with a new line containing exactly: **[Insert {Refer to as label}: {Description} here]**.
         - Organize content with clear paragraph breaks
         - Present complex ideas clearly and precisely
         

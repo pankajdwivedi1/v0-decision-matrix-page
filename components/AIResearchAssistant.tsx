@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Sparkles, FileText, X, BookOpen, Lightbulb, Target, TrendingUp, Check, Download } from 'lucide-react';
+import { Loader2, Sparkles, FileText, X, BookOpen, Lightbulb, Target, TrendingUp, Check, Download, Cpu } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } from "docx";
 import { saveAs } from "file-saver";
@@ -22,6 +22,9 @@ interface AIResearchAssistantProps {
     comparisonWeightMethod?: string;
     sensitivityMethod?: string;
     sensitivityWeightMethods?: string[];
+    spearmanCorrelation?: Record<string, Record<string, number>>;
+    kendallTau?: Record<string, Record<string, number>>;
+    technicalDepth?: 'standard' | 'mathematical';
     assetLabels?: Record<string, string>;
     markedAssets?: Set<string>;
     onClose?: () => void;
@@ -124,6 +127,9 @@ export function AIResearchAssistant({
     comparisonWeightMethod = "",
     sensitivityMethod = "",
     sensitivityWeightMethods = [],
+    spearmanCorrelation = {},
+    kendallTau = {},
+    technicalDepth: technicalDepthProp = 'standard',
     assetLabels,
     markedAssets,
     onClose
@@ -164,36 +170,73 @@ export function AIResearchAssistant({
     const [fullProgress, setFullProgress] = useState(0);
     const [fullManuscriptData, setFullManuscriptData] = useState<Record<string, string>>({});
     const [manuscriptTitle, setManuscriptTitle] = useState('');
+    const [technicalDepth, setTechnicalDepth] = useState<'standard' | 'mathematical'>(technicalDepthProp || 'standard');
+
+    useEffect(() => {
+        if (technicalDepthProp) {
+            setTechnicalDepth(technicalDepthProp);
+        }
+    }, [technicalDepthProp]);
 
     const currentTemplate = SECTION_TEMPLATES.find(t => t.id === selectedSection) || SECTION_TEMPLATES[0];
+
+    const getBibliometricNovelty = () => {
+        const critNames = criteria.map(c => c.name).join(', ');
+        const altNames = alternatives.map(a => a.name).join(', ');
+        return `Scanning for Literature Gap: Existing MCDM literature heavily focuses on ${method.toUpperCase()} in general contexts. However, applying it to ${altNames} specifically considering ${critNames} remains underexplored. Synthesize this as a 'novel contribution' to the field.`;
+    };
 
     const getDynamicPrompt = (sectionId: string) => {
         const rankingMethodName = method.toUpperCase();
         const weightMethodName = weightMethod.toUpperCase();
-        const comparisonMethodsList = comparisonMethods.length > 0 ? comparisonMethods.join(', ').toUpperCase() : '';
-        const sensitivityDetails = sensitivityMethod ? `stability check using ${sensitivityMethod.toUpperCase()} with ${sensitivityWeightMethods.join(', ').toUpperCase()} weight variations` : '';
+        const comparisonMethodsList = comparisonMethods && comparisonMethods.length > 0 ? comparisonMethods.join(', ').toUpperCase() : '';
+        const sensitivityDetails = sensitivityMethod ? `stability check using ${sensitivityMethod.toUpperCase()} with ${sensitivityWeightMethods?.join(', ').toUpperCase()} weight variations` : '';
 
-        const contextString = `This study utilizes the ${rankingMethodName} method for ranking and ${weightMethodName} for criteria weighting. ` +
-            (comparisonMethodsList ? `The results are validated against ${comparisonMethodsList} methods. ` : '') +
-            (sensitivityDetails ? `Robustness is examined through ${sensitivityDetails}. ` : '');
+        const spearmanText = spearmanCorrelation && Object.keys(spearmanCorrelation).length > 0
+            ? "Statistical validation is performed using Spearman Rank Correlation and Kendall's Tau to ensure ranking consistency between methods."
+            : "";
+
+        const mathInstructions = technicalDepth === 'mathematical'
+            ? "Include exact mathematical formulas (in LaTeX format) for normalization, weight calculation, and the final aggregation function. Use standard notation like $w_j$, $x_{ij}$, and normalization equations like $\\frac{x_{ij} - min}{max - min}$ for beneficial criteria."
+            : "Use professional descriptive text to explain the methodology without heavy mathematical equations.";
+
+        const noveltySuggestion = getBibliometricNovelty();
 
         switch (sectionId) {
             case 'abstract':
-                return `Write a high-quality academic abstract. Structure: 1. Context & Problem: Describe the challenge and research gap. 2. Solution: Introduce ${rankingMethodName} integrated with ${weightMethodName} weighting. 3. Methodology: Describe criteria (${criteria.length}) and alternatives (${alternatives.length}). 4. Findings: Summarize final results and stability (${variationRange} variation). 5. Significance: Practical impact. End with exactly 5-6 professional Keywords.`;
+                return `Write a high-quality academic abstract for a Q1 journal. Structure: 
+1. Context & Problem: Establish the domain and specific MCDM challenge. 
+2. Research Gap: ${noveltySuggestion}
+3. Solution: Introduce ${rankingMethodName} integrated with ${weightMethodName} weighting. 
+4. Methodology: Describe criteria (${criteria.length}) and alternatives (${alternatives.length}). 
+5. Statistical Validation: Mentions use of Spearman Rho and Kendall's Tau correlations.
+6. Findings: Summarize final stable results.
+7. Significance: Practical impact on decision-making. End with exactly 5-6 professional Keywords.`;
             case 'introduction':
-                return `Write a scholarly introduction with hierarchical numbering (e.g., 1.1 Background, 1.2 Gap). Establish global context and justify the dual application of ${rankingMethodName} and ${weightMethodName}.`;
+                return `Write a scholarly introduction with hierarchical numbering (1.1, 1.2). 
+Identify a "Literature Gap": ${noveltySuggestion}. 
+Justify the dual application of ${rankingMethodName} for ranking and ${weightMethodName} for weighting. 
+State the "Scientific Contributions" of this paper: (a) Integrated Ranking Framework, (b) Multi-model comparative analysis, and (c) Statistical validation via rank correlation.`;
             case 'literature':
-                return `Write a literature review with hierarchical numbering. Synthesize research in the field and position this study using ${rankingMethodName} and ${weightMethodName} weighting.`;
+                return `Write a systematic literature review (Section 2) with hierarchical numbering. 
+Synthesize recent research (last 5 years) in the field. 
+Critically analyze limitations and position this study's multi-method validation approach as the solution to the identified "Literature Gap" regarding the combination of ${criteria.length} criteria.`;
             case 'methodology':
-                return `Write a technical methodology section with hierarchical numbering. Detail the procedural framework of ${rankingMethodName}, criteria selection (${criteria.length} items), and the ${weightMethodName} weighing protocol. Describe the stability validation approach (${variationRange} perturbation).`;
+                return `Write a technical methodology section (Section 3). ${mathInstructions}
+Detail the procedural steps of ${rankingMethodName} and the weighting protocol of ${weightMethodName}. 
+Describe the "Statistical Robustness Proof" using Spearman and Kendall coefficients.`;
             case 'results':
-                return `Write a results section with hierarchical numbering. Discuss ranking results for ${alternatives.length} alternatives. Refer to criteria weights as Table 1 and final rankings as Table 2. Discuss ranking stability during the ${variationRange} variation (refer to as Figure 1).` + (comparisonMethodsList ? ` Include comparison results with ${comparisonMethodsList} in Table 3.` : '');
+                return `Write a results section (Section 4). Discuss ranking results for ${alternatives.length} alternatives. 
+Refer to criteria weights as Table 1 and final rankings as Table 2. 
+Discuss ranking stability during the ${variationRange} variation (refer to as Figure 1).` +
+                    (comparisonMethodsList ? ` Include comparison results with ${comparisonMethodsList} in Table 3.` : '') +
+                    (spearmanText ? ` Provide statistical validation (Table 4), stating that a high correlation indicates strong methodological consensus.` : '');
             case 'discussion':
-                return `Write an insightful discussion section with hierarchical numbering. Interpret findings, provide comparative insights using ${comparisonMethodsList || rankingMethodName}, and highlight practical implications.`;
+                return `Write an insightful discussion section (Section 5). Interpret findings, provide comparative insights between ${rankingMethodName} and other models, and highlight how the high correlation results increase decision-maker confidence.`;
             case 'conclusion':
-                return `Write a strong conclusion with hierarchical numbering. Summarize findings of the ${rankingMethodName}-${weightMethodName} framework, state final recommendations, and suggest future research.`;
+                return `Write a strong conclusion (Section 6). Summarize findings of the ${rankingMethodName}-${weightMethodName} framework, restate the proven stability, and explain how this addresses the initial literature gap of ${noveltySuggestion.toLowerCase().split(':')[1]}.`;
             case 'references':
-                return 'Generate a complete, alphabetically ordered References section in APA style based on the provided Scholarly References.';
+                return 'Generate a complete, alphabetically ordered References section in APA style based on provided Scholarly References and current MCDM literature trends.';
             default:
                 return '';
         }
@@ -207,7 +250,7 @@ export function AIResearchAssistant({
         setGeneratedContent('');
         setShowResult(false);
         setIsCopied(false);
-    }, [selectedSection, method, weightMethod, comparisonMethods, sensitivityMethod, sensitivityWeightMethods]);
+    }, [selectedSection, method, weightMethod, comparisonMethods, sensitivityMethod, sensitivityWeightMethods, technicalDepth, variationRange]);
 
     const handleGenerate = async () => {
         setIsGenerating(true);
@@ -530,6 +573,34 @@ export function AIResearchAssistant({
                         <span className="text-sm text-gray-600">
                             words (100-10000)
                         </span>
+                    </div>
+                </div>
+
+                {/* Technical Depth & Novelty */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-violet-50/50 p-4 rounded-xl border border-violet-100">
+                    <div className="space-y-2">
+                        <Label className="text-xs font-bold text-violet-900 uppercase tracking-wider flex items-center gap-2">
+                            <Cpu className="w-3 h-3" /> Technical Depth
+                        </Label>
+                        <Select value={technicalDepth} onValueChange={(v: any) => setTechnicalDepth(v)}>
+                            <SelectTrigger className="h-9 text-xs bg-white border-violet-200">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="standard" className="text-xs">Standard (Descriptive)</SelectItem>
+                                <SelectItem value="mathematical" className="text-xs">Mathematical (LaTeX Formulas)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <p className="text-[10px] text-violet-600 italic">Determines if rigorous equations are included.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label className="text-xs font-bold text-violet-900 uppercase tracking-wider flex items-center gap-2">
+                            <Lightbulb className="w-3 h-3" /> Literature Novelty
+                        </Label>
+                        <div className="p-2 bg-white rounded border border-violet-200 text-[10px] text-gray-700 leading-tight">
+                            {getBibliometricNovelty().replace('Scanning for Literature Gap: ', '')}
+                        </div>
                     </div>
                 </div>
 

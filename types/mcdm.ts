@@ -29,6 +29,7 @@ export type WeightMethod = "equal" | "entropy" | "critic" | "ahp" | "piprecia" |
     | "roc"
     | "rr"
     | "custom"
+    | "hybrid"
 
 export type PageStep = "home" | "input" | "table" | "matrix" | "calculate"
 

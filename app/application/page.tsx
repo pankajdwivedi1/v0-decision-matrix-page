@@ -44,7 +44,7 @@ import * as XLSX from "xlsx"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ApiKeySettings } from "@/components/ApiKeySettings";
-import { Upload, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, ArrowDown, Home, Download, LayoutGrid, Sparkles, FileText, Cpu, Bot, Pencil, Book, Settings, MessageCircle, RefreshCw, Loader2, Check } from "lucide-react"
+import { Upload, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, ArrowDown, Home, Download, LayoutGrid, Sparkles, FileText, Cpu, Bot, Pencil, Book, Settings, MessageCircle, RefreshCw, Loader2, Check, TrendingUp } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import PaperExtractor from "@/components/PaperExtractor"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar, PieChart, Pie, ReferenceLine } from "recharts"
@@ -103,6 +103,7 @@ import ColorSwitcher from "@/components/ColorSwitcher"
 import KSensitivityCalculator from "@/components/KSensitivityCalculator"
 import { AIResearchAssistant } from "@/components/AIResearchAssistant"
 import { ResearchAssetHeader } from "@/components/ResearchAssetHeader"
+import { toast } from "sonner"
 
 declare global {
   interface Window {
@@ -123,6 +124,13 @@ export default function MCDMCalculator() {
   const [selectedRankingMethods, setSelectedRankingMethods] = useState<MCDMMethod[]>(["topsis"])
   const [comparisonWeightMethod, setComparisonWeightMethod] = useState<WeightMethod>("equal")
   const [comparisonResults, setComparisonResults] = useState<ComparisonResult[]>([])
+  const [spearmanCorrelation, setSpearmanCorrelation] = useState<Record<string, Record<string, number>>>({})
+  const [hybridWeightRatio, setHybridWeightRatio] = useState<number>(0.5)
+  const [hybridWeightMethod1, setHybridWeightMethod1] = useState<WeightMethod>("entropy")
+  const [hybridWeightMethod2, setHybridWeightMethod2] = useState<WeightMethod>("critic")
+  const [isHybridDialogOpen, setIsHybridDialogOpen] = useState(false)
+  const [kendallTau, setKendallTau] = useState<Record<string, Record<string, number>>>({})
+  const [rankReversalResults, setRankReversalResults] = useState<Record<string, number>>({})
   const [comparisonLoading, setComparisonLoading] = useState(false)
   const [comparisonError, setComparisonError] = useState<string | null>(null)
   const [comparisonFileName, setComparisonFileName] = useState<string>("")
@@ -137,6 +145,7 @@ export default function MCDMCalculator() {
   const weightChartRef = useRef<HTMLDivElement>(null)
   const sensitivityGraphicalVariationRef = useRef<HTMLDivElement>(null)
   const sensitivityChartRef = useRef<HTMLDivElement>(null)
+  const decisionFrontierRef = useRef<HTMLDivElement>(null)
 
   // State to track where to return after completing input flow
   const [returnToTab, setReturnToTab] = useState<"rankingMethods" | "weightMethods" | "rankingComparison" | "sensitivityAnalysis" | null>(null)
@@ -512,6 +521,8 @@ export default function MCDMCalculator() {
   // ensuring there are no gaps or duplicate numbers on the current view.
   let tableCounter = 1
   const getNextTableLabel = () => `Table ${tableCounter++}`
+  let figureCounter = 1
+  const getNextFigureLabel = () => `Figure ${figureCounter++}`
 
 
 
@@ -1184,6 +1195,9 @@ export default function MCDMCalculator() {
       }
 
       setComparisonResults(results)
+      const corrs = calculateRankCorrelations(results)
+      setSpearmanCorrelation(corrs.spearman)
+      setKendallTau(corrs.kendall)
       console.log("Comparison results set:", results)
     } catch (error: any) {
       console.error("Comparison error:", error)
@@ -1192,6 +1206,170 @@ export default function MCDMCalculator() {
       setComparisonLoading(false)
     }
   }
+
+  const calculateRankCorrelations = (results: ComparisonResult[]) => {
+    const spearman: Record<string, Record<string, number>> = {}
+    const kendall: Record<string, Record<string, number>> = {}
+
+    results.forEach((r1) => {
+      spearman[r1.label] = {}
+      kendall[r1.label] = {}
+      results.forEach((r2) => {
+        if (r1.method === r2.method) {
+          spearman[r1.label][r2.label] = 1.0
+          kendall[r1.label][r2.label] = 1.0
+          return
+        }
+
+        const n = r1.ranking.length
+        if (n <= 1) {
+          spearman[r1.label][r2.label] = 1.0
+          kendall[r1.label][r2.label] = 1.0
+          return
+        }
+
+        // Spearman
+        let sumDSquared = 0
+        r1.ranking.forEach((item1) => {
+          const item2 = r2.ranking.find(i => i.alternativeName === item1.alternativeName)
+          if (item2) {
+            const d = item1.rank - item2.rank
+            sumDSquared += d * d
+          }
+        })
+        const rho = 1 - (6 * sumDSquared) / (n * (n * n - 1))
+        spearman[r1.label][r2.label] = rho
+
+        // Kendall's Tau-b (approx)
+        let concordant = 0
+        let discordant = 0
+        const sortedR1 = [...r1.ranking].sort((a, b) => a.alternativeName.localeCompare(b.alternativeName))
+        const sortedR2 = [...r2.ranking].sort((a, b) => a.alternativeName.localeCompare(b.alternativeName))
+
+        for (let i = 0; i < n; i++) {
+          for (let j = i + 1; j < n; j++) {
+            const r1_i = sortedR1[i].rank
+            const r1_j = sortedR1[j].rank
+            const r2_i = sortedR2[i].rank
+            const r2_j = sortedR2[j].rank
+
+            const s1 = Math.sign(r1_i - r1_j)
+            const s2 = Math.sign(r2_i - r2_j)
+
+            if (s1 === s2 && s1 !== 0) concordant++
+            else if (s1 !== s2 && s1 !== 0 && s2 !== 0) discordant++
+          }
+        }
+        const tau = (concordant - discordant) / ((n * (n - 1)) / 2)
+        kendall[r1.label][r2.label] = tau
+      })
+    })
+
+    return { spearman, kendall }
+  }
+
+  const copyToLatex = (data: (string | number)[][], headers: string[], title: string) => {
+    let latex = `\\begin{table}[ht]\n\\centering\n\\caption{${title}}\n\\begin{tabular}{${'l'.repeat(headers.length)}}\n\\toprule\n`;
+    latex += headers.join(' & ') + ' \\\\\n\\midrule\n';
+
+    data.forEach(row => {
+      latex += row.map(cell => typeof cell === 'number' ? cell.toFixed(resultsDecimalPlaces) : cell).join(' & ') + ' \\\\\n';
+    });
+
+    latex += `\\bottomrule\n\\end{tabular}\n\\end{table}`;
+
+    navigator.clipboard.writeText(latex).then(() => {
+      toast.success("LaTeX code copied to clipboard!", { description: `Table: ${title}` });
+    }).catch(() => {
+      toast.error("Failed to copy LaTeX code.");
+    });
+  };
+
+  const handleRankingComparisonToLatex = () => {
+    if (comparisonResults.length === 0) return;
+    const headers = ["Alternative"];
+    comparisonResults.forEach(r => {
+      headers.push(`${r.label} (Score)`);
+      headers.push(`${r.label} (Rank)`);
+    });
+
+    const data = (comparisonResults[0].ranking || []).map(item => {
+      const row: (string | number)[] = [item.alternativeName];
+      comparisonResults.forEach(result => {
+        const alt = (result.ranking || []).find(r => r.alternativeName === item.alternativeName);
+        row.push(alt?.score ?? 0);
+        row.push(alt?.rank ?? 0);
+      });
+      return row;
+    });
+
+    copyToLatex(data, headers, "Ranking Comparison Matrix");
+  };
+
+  const handleCorrelationToLatex = () => {
+    const labels = Object.keys(spearmanCorrelation);
+    if (labels.length === 0) return;
+    const headers = ["Method", ...labels];
+    const data = labels.map(label => {
+      const row: (string | number)[] = [label];
+      labels.forEach(l2 => {
+        row.push(spearmanCorrelation[label][l2] ?? 0);
+      });
+      return row;
+    });
+    copyToLatex(data, headers, "Spearman Rank Correlation Matrix");
+  };
+
+  const handleKendallToLatex = () => {
+    const labels = Object.keys(kendallTau);
+    if (labels.length === 0) return;
+    const headers = ["Method", ...labels];
+    const data = labels.map(label => {
+      const row: (string | number)[] = [label];
+      labels.forEach(l2 => {
+        row.push(kendallTau[label][l2] ?? 0);
+      });
+      return row;
+    });
+    copyToLatex(data, headers, "Kendall's Tau Correlation Matrix");
+  };
+
+  const handleWeightSensitivityToLatex = () => {
+    if (sensitivityCriteriaWeights.length === 0) return;
+    const headers = ["Criterion"];
+    sensitivityWeightComparisonResults.forEach(res => headers.push(res.weightLabel));
+
+    const data = sensitivityCriteriaWeights.map(row => {
+      const r: (string | number)[] = [row.name];
+      sensitivityWeightComparisonResults.forEach(res => {
+        r.push(row[res.weightLabel] ?? 0);
+      });
+      return row.name ? r : [];
+    }).filter(r => r.length > 0);
+
+    copyToLatex(data, headers, "Criteria Weights Variation Table");
+  };
+
+  const handleRobustnessToLatex = () => {
+    if (comparisonResults.length === 0) return;
+    const headers = ["Method", "Robustness Score (%)"];
+    const data = comparisonResults.map(res => {
+      let totalVar = 0;
+      res.ranking.forEach(alt => {
+        const otherRanks = comparisonResults
+          .filter(r => r.label !== res.label)
+          .map(r => r.ranking.find(i => i.alternativeName === alt.alternativeName)?.rank || 0);
+        if (otherRanks.length > 0) {
+          const avg = otherRanks.reduce((a, b) => a + b, 0) / otherRanks.length;
+          totalVar += Math.abs(alt.rank - avg);
+        }
+      });
+      const n = res.ranking.length;
+      const robustness = Math.max(0, 100 - (totalVar / (n * n / 2) || 0) * 100);
+      return [res.label, robustness.toFixed(2) + "%"];
+    });
+    copyToLatex(data, headers, "Methodological Robustness Scores");
+  };
 
   const downloadChartAsJpeg = (ref: React.RefObject<HTMLDivElement | null>, prefix: string) => {
     if (!ref.current) return
@@ -1619,6 +1797,52 @@ export default function MCDMCalculator() {
       }
       setIsLoading(false)
       return newCriteria
+    }
+
+    if (methodToUse === "hybrid") {
+      try {
+        const fetchWeights = async (m: WeightMethod): Promise<Record<string, number>> => {
+          if (m === "equal") {
+            const result: Record<string, number> = {};
+            criteria.forEach(c => result[c.id] = 1 / criteria.length);
+            return result;
+          }
+          if (m === "ahp") return ahpCalculatedWeights || {};
+          if (m === "swara") return swaraCalculatedWeights || {};
+          if (m === "piprecia") return pipreciaCalculatedWeights || {};
+          if (m === "roc") {
+            return rocResult?.weights || {};
+          }
+          if (m === "rr") return rrResult?.weights || {};
+
+          const url = m === "entropy" || m === "critic" || m === "merec"
+            ? `/api/${m}-weights`
+            : `/api/calculate-weights`;
+
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ method: m, alternatives, criteria }),
+          })
+          if (!response.ok) throw new Error(`Failed to calculate ${m} weights`)
+          const data = await response.json()
+          return data.weights
+        }
+
+        const w1 = await fetchWeights(hybridWeightMethod1)
+        const w2 = await fetchWeights(hybridWeightMethod2)
+
+        newCriteria = criteria.map((c) => ({
+          ...c,
+          weight: (1 - hybridWeightRatio) * (w1[c.id] || 0) + hybridWeightRatio * (w2[c.id] || 0)
+        }))
+        setCriteria(newCriteria)
+        setIsLoading(false)
+        return newCriteria
+      } catch (error: any) {
+        setIsLoading(false)
+        throw error
+      }
     }
 
     try {
@@ -2793,6 +3017,25 @@ export default function MCDMCalculator() {
         }
       }
 
+      // Build Asset Labels Mapping for AI with intelligent fallbacks
+      const assetLabels: Record<string, string> = {}
+      let autoTableCount = 1
+      let autoFigureCount = 1
+
+      selectedAiAssets.forEach(key => {
+        const savedLabel = localStorage.getItem(`asset_label_${key}`)
+        if (savedLabel) {
+          assetLabels[key] = savedLabel
+        } else {
+          // Fallback based on typical asset types
+          if (key.includes("chart") || key.includes("variation") || key.includes("plot") || key.includes("radar")) {
+            assetLabels[key] = `Figure ${autoFigureCount++}`
+          } else {
+            assetLabels[key] = `Table ${autoTableCount++}`
+          }
+        }
+      })
+
       const payload = {
         alternatives,
         criteria,
@@ -2802,6 +3045,8 @@ export default function MCDMCalculator() {
         analysisType: type,
         researchContext: aiResearchContext,
         extractedPaperData: extractedPaperData,
+        assetLabels: assetLabels, // Pass custom labels
+        selectedAssets: Array.from(selectedAiAssets), // Pass list of included assets
         ...overrideData
       }
 
@@ -3563,6 +3808,8 @@ export default function MCDMCalculator() {
                   comparisonWeightMethod={comparisonWeightMethod}
                   sensitivityMethod={sensitivityMethod}
                   sensitivityWeightMethods={sensitivityWeightMethods}
+                  spearmanCorrelation={spearmanCorrelation}
+                  kendallTau={kendallTau}
                   markedAssets={selectedAiAssets}
                   onClose={() => setHomeTab("rankingMethods")}
                 />
@@ -4021,8 +4268,12 @@ export default function MCDMCalculator() {
                           key={w.value}
                           onClick={() => {
                             setWeightMethod(w.value)
-                            setActiveFormulaType("weight")
-                            setIsDialogOpen(true)
+                            if (w.value === "hybrid") {
+                              setIsHybridDialogOpen(true)
+                            } else {
+                              setActiveFormulaType("weight")
+                              setIsDialogOpen(true)
+                            }
                           }}
                           className={`group relative flex flex-col justify-between p-3 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden h-[90px] w-full ${weightMethod === w.value
                             ? "border-emerald-500 bg-emerald-50 shadow-sm"
@@ -4809,6 +5060,11 @@ export default function MCDMCalculator() {
                           onIncludeChange={handleIncludeChange}
                           onLabelChange={handleAssetLabelChange}
                         />
+                        <div className="mt-2 flex justify-end">
+                          <Button onClick={handleWeightSensitivityToLatex} variant="outline" size="sm" className="h-7 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+                            <FileText className="w-3 h-3 mr-1" /> LaTeX Export
+                          </Button>
+                        </div>
                       </div>
                       <CardContent className="table-responsive">
                         <table className="min-w-full text-xs border border-gray-200 rounded-lg">
@@ -5456,88 +5712,365 @@ export default function MCDMCalculator() {
                 </Dialog>
 
                 {comparisonResults.length > 0 && (
-                  <Card className="border-gray-200 bg-white shadow-none w-full mb-4">
-                    <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                      <div>
-                        <CardTitle className="text-sm text-black">Ranking table</CardTitle>
+                  <>
+                    <Card className="border-gray-200 bg-white shadow-none w-full mb-4">
+                      <CardHeader className="pb-3 flex flex-col">
+                        <ResearchAssetHeader
+                          assetKey="ranking_comparison_table"
+                          defaultLabel={getNextTableLabel()}
+                          title="Ranking table"
+                          onLabelChange={handleAssetLabelChange}
+                          included={selectedAiAssets.has("ranking_comparison_table")}
+                          onIncludeChange={handleIncludeChange}
+                          onAiAnalysis={() => handleAiAnalysis("ranking_comparison", { comparisonData: comparisonResults })}
+                        />
                         <CardDescription className="text-xs text-gray-700">
                           Scores and rankings generated by the methods. Ranking depends on the method used.
                         </CardDescription>
-                      </div>
-                      <Button onClick={exportRankingComparisonToExcel} variant="outline" size="sm" className="h-7 text-xs">
-                        <Download className="w-3 h-3 mr-1" /> Excel
+                        <div className="flex gap-2 mt-2">
+                          <Button onClick={handleRankingComparisonToLatex} variant="outline" size="sm" className="h-7 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+                            <FileText className="w-3 h-3 mr-1" /> LaTeX
+                          </Button>
+                          <Button onClick={exportRankingComparisonToExcel} variant="outline" size="sm" className="h-7 text-xs">
+                            <Download className="w-3 h-3 mr-1" /> Excel
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="table-responsive">
+                        <div ref={rankingComparisonTableRef} className="bg-white">
+                          <table className="min-w-full text-xs border border-gray-200 rounded-lg overflow-x-auto">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th rowSpan={2} className="relative bg-white text-black font-bold text-[9px] border-r border-gray-200 p-0 h-10 w-32 min-w-[128px]">
+                                  <div className="flex flex-col items-center justify-center h-full leading-tight pr-6">
+                                    <div className="text-[9px] font-bold py-0.5 border-b border-gray-200 w-full text-center flex items-center justify-center gap-1">
+                                      Methods <ArrowRight className="w-2 h-2 stroke-[3]" />
+                                    </div>
+                                    <div className="text-[9px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">
+                                      Alternatives <ArrowDown className="w-2 h-2 stroke-[3]" />
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute top-1 right-1 h-6 w-6 text-gray-400 hover:text-blue-600 p-0"
+                                    onClick={downloadRankingComparisonTableAsJpeg}
+                                    title="Download Table as JPG"
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                  </Button>
+                                </th>
+                                {comparisonResults.map((result) => (
+                                  <th
+                                    key={result.method}
+                                    colSpan={2}
+                                    className="px-3 py-2 text-center border-b border-r border-gray-200 text-black font-semibold"
+                                  >
+                                    {result.label}
+                                  </th>
+                                ))}
+                              </tr>
+                              <tr>
+                                {comparisonResults.map((result) => (
+                                  <Fragment key={result.method}>
+                                    <th key={`${result.method}-score`} className="px-2 py-1 text-center border-b border-gray-200 text-gray-600 font-medium text-[10px]">
+                                      Score
+                                    </th>
+                                    <th key={`${result.method}-rank`} className="px-2 py-1 text-center border-b border-r border-gray-200 text-gray-600 font-medium text-[10px]">
+                                      Rank
+                                    </th>
+                                  </Fragment>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {comparisonResults[0]?.ranking?.map((item, altIndex) => (
+                                <tr key={item.alternativeName} className="border-b border-gray-200 hover:bg-gray-50">
+                                  <td className="px-3 py-2 font-medium text-black whitespace-nowrap border-r border-gray-200">
+                                    {item.alternativeName}
+                                  </td>
+                                  {comparisonResults.map((result) => {
+                                    const altRanking = result.ranking?.find(r => r.alternativeName === item.alternativeName)
+                                    return (
+                                      <Fragment key={result.method}>
+                                        <td key={`${result.method}-${item.alternativeName}-score`} className="px-2 py-2 text-center text-black">
+                                          {altRanking?.score !== undefined ? Number(altRanking.score).toFixed(resultsDecimalPlaces) : "-"}
+                                        </td>
+                                        <td key={`${result.method}-${item.alternativeName}-rank`} className="px-2 py-2 text-center font-semibold text-black border-r border-gray-200">
+                                          {altRanking?.rank ?? "-"}
+                                        </td>
+                                      </Fragment>
+                                    )
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {comparisonResults.length > 1 && Object.keys(spearmanCorrelation).length > 0 && (
+                      <Card className="border-indigo-100 bg-white shadow-none w-full mb-6">
+                        <CardHeader className="pb-3 flex flex-col border-b border-indigo-50 bg-indigo-50/10">
+                          <ResearchAssetHeader
+                            assetKey="ranking_spearman_correlation"
+                            defaultLabel={getNextTableLabel()}
+                            title="Spearman Rank Correlation (Methodological Rigor)"
+                            onLabelChange={handleAssetLabelChange}
+                            included={selectedAiAssets.has("ranking_spearman_correlation")}
+                            onIncludeChange={handleIncludeChange}
+                            onAiAnalysis={() => handleAiAnalysis("ranking_comparison", { spearmanData: spearmanCorrelation })}
+                          />
+                          <CardDescription className="text-[11px] text-indigo-700 font-medium">
+                            Statistical proof of consistency between selected MCDM methods. ρ values closer to 1.000 indicate high stability.
+                          </CardDescription>
+                          <Button onClick={handleCorrelationToLatex} variant="outline" size="sm" className="h-7 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50 w-fit mt-2">
+                            <FileText className="w-3 h-3 mr-1" /> LaTeX
+                          </Button>
+                        </CardHeader>
+                        <CardContent className="table-responsive p-0 sm:p-6 mt-4">
+                          <table className="min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden">
+                            <thead className="bg-gray-50 uppercase tracking-wider">
+                              <tr>
+                                <th className="px-3 py-2 text-left border-b border-r text-gray-500 font-bold text-[10px]">Method</th>
+                                {Object.keys(spearmanCorrelation).map((label) => (
+                                  <th key={label} className="px-3 py-2 text-center border-b text-gray-500 font-bold text-[10px] whitespace-nowrap">
+                                    {label}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {Object.entries(spearmanCorrelation).map(([label, correlations]) => (
+                                <tr key={label} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                  <td className="px-3 py-2 font-bold text-gray-700 border-r border-gray-200 bg-gray-50/50">{label}</td>
+                                  {Object.keys(spearmanCorrelation).map((l2) => {
+                                    const val = correlations[l2];
+                                    let colorClass = "text-gray-900";
+                                    let bgStyle = {};
+                                    if (val > 0.9) {
+                                      colorClass = "text-green-700 font-bold";
+                                      bgStyle = { backgroundColor: 'rgba(34, 197, 94, 0.05)' };
+                                    }
+                                    else if (val > 0.75) colorClass = "text-blue-700 font-semibold";
+                                    else if (val < 0.4) colorClass = "text-red-600 font-medium";
+
+                                    return (
+                                      <td key={l2} className={`px-3 py-2 text-center border-l border-gray-100 ${colorClass}`} style={bgStyle}>
+                                        {val.toFixed(4)}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          <div className="mt-4 p-3 bg-indigo-50/50 rounded-lg border border-indigo-100">
+                            <p className="text-[10px] text-indigo-800 leading-relaxed italic font-medium">
+                              <strong>Note for Q1 Journals:</strong> Report these correlation coefficients to demonstrate that your findings are
+                              robust and not sensitive to the choice of the aggregation algorithm. Higher correlation indicates
+                              strong consensus among methods.
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {comparisonResults.length > 1 && Object.keys(kendallTau).length > 0 && (
+                      <Card className="border-indigo-100 bg-white shadow-none w-full mb-6">
+                        <CardHeader className="pb-3 flex flex-col border-b border-indigo-50 bg-indigo-50/10">
+                          <ResearchAssetHeader
+                            assetKey="ranking_kendall_correlation"
+                            defaultLabel={getNextTableLabel()}
+                            title="Kendall's Tau Correlation (Non-Parametric Consistency)"
+                            onLabelChange={handleAssetLabelChange}
+                            included={selectedAiAssets.has("ranking_kendall_correlation")}
+                            onIncludeChange={handleIncludeChange}
+                            onAiAnalysis={() => handleAiAnalysis("ranking_comparison", { kendallData: kendallTau })}
+                          />
+                          <CardDescription className="text-[11px] text-indigo-700 font-medium">
+                            Measures the ordinal association between alternative rankings.
+                          </CardDescription>
+                          <Button onClick={handleKendallToLatex} variant="outline" size="sm" className="h-7 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50 w-fit mt-2">
+                            <FileText className="w-3 h-3 mr-1" /> LaTeX
+                          </Button>
+                        </CardHeader>
+                        <CardContent className="table-responsive p-0 sm:p-6 mt-4">
+                          <table className="min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden">
+                            <thead className="bg-gray-50 uppercase tracking-wider">
+                              <tr>
+                                <th className="px-3 py-2 text-left border-b border-r text-gray-500 font-bold text-[10px]">Method</th>
+                                {Object.keys(kendallTau).map((label) => (
+                                  <th key={label} className="px-3 py-2 text-center border-b text-gray-500 font-bold text-[10px] whitespace-nowrap">
+                                    {label}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {Object.entries(kendallTau).map(([label, correlations]) => (
+                                <tr key={label} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                  <td className="px-3 py-2 font-bold text-gray-700 border-r border-gray-200 bg-gray-50/50">{label}</td>
+                                  {Object.keys(kendallTau).map((l2) => {
+                                    const val = correlations[l2];
+                                    let colorClass = "text-gray-900";
+                                    let bgStyle = {};
+                                    if (val > 0.8) {
+                                      colorClass = "text-green-700 font-bold";
+                                      bgStyle = { backgroundColor: 'rgba(34, 197, 94, 0.05)' };
+                                    }
+                                    else if (val > 0.6) colorClass = "text-blue-700 font-semibold";
+
+                                    return (
+                                      <td key={l2} className={`px-3 py-2 text-center border-l border-gray-100 ${colorClass}`} style={bgStyle}>
+                                        {val.toFixed(4)}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {comparisonResults.length > 1 && (
+                      <Card className="border-indigo-100 bg-white shadow-none w-full mb-6">
+                        <CardHeader className="pb-3 flex flex-col border-b border-indigo-100 bg-indigo-50/10">
+                          <ResearchAssetHeader
+                            assetKey="ranking_robustness_analysis"
+                            defaultLabel={getNextTableLabel()}
+                            title="Methodological Robustness Score (Internal Consistency)"
+                            onLabelChange={handleAssetLabelChange}
+                            included={selectedAiAssets.has("ranking_robustness_analysis")}
+                            onIncludeChange={handleIncludeChange}
+                            onAiAnalysis={() => handleAiAnalysis("ranking_comparison", { robustnessData: comparisonResults })}
+                          />
+                          <CardDescription className="text-[11px] text-indigo-700 font-medium">
+                            An indicator of how much each algorithm agrees with the collective consensus of the group.
+                          </CardDescription>
+                          <Button onClick={handleRobustnessToLatex} variant="outline" size="sm" className="h-7 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50 w-fit mt-2">
+                            <FileText className="w-3 h-3 mr-1" /> LaTeX
+                          </Button>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            {comparisonResults.map(res => {
+                              let totalVar = 0;
+                              res.ranking.forEach(alt => {
+                                const otherRanks = comparisonResults
+                                  .filter(r => r.label !== res.label)
+                                  .map(r => r.ranking.find(i => i.alternativeName === alt.alternativeName)?.rank || 0);
+                                if (otherRanks.length > 0) {
+                                  const avg = otherRanks.reduce((a, b) => a + b, 0) / otherRanks.length;
+                                  totalVar += Math.abs(alt.rank - avg);
+                                }
+                              });
+                              const n = res.ranking.length;
+                              const robustness = Math.max(0, 100 - (totalVar / (n * n / 2) || 0) * 100);
+
+                              return (
+                                <div key={res.label} className="p-3 border rounded-lg bg-gray-50/50 flex flex-col items-center justify-center space-y-1">
+                                  <span className="text-[10px] font-bold text-gray-500 uppercase">{res.label}</span>
+                                  <span className={`text-lg font-bold ${robustness > 85 ? 'text-green-600' : robustness > 60 ? 'text-blue-600' : 'text-orange-600'}`}>
+                                    {robustness.toFixed(1)}%
+                                  </span>
+                                  <span className="text-[9px] text-gray-400">Robustness Index</span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                )}
+
+
+                {comparisonResults.length > 0 && (
+                  <Card className="border-indigo-100 bg-white shadow-none w-full mb-6 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                    <CardHeader className="pb-3 flex flex-col border-b border-indigo-100 bg-indigo-50/10">
+                      <ResearchAssetHeader
+                        assetKey="ranking_decision_frontiers"
+                        defaultLabel={`Figure ${tableCounter++}`}
+                        title="Advanced Decision Frontiers (Top 3 Performance)"
+                        onLabelChange={handleAssetLabelChange}
+                        included={selectedAiAssets.has("ranking_decision_frontiers")}
+                        onIncludeChange={handleIncludeChange}
+                        onAiAnalysis={() => handleAiAnalysis("ranking_comparison", { frontierData: comparisonResults })}
+                      />
+                      <CardDescription className="text-[11px] text-indigo-700 font-medium">
+                        Multidimensional comparison of the top ranked alternatives across all key criteria.
+                      </CardDescription>
+                      <Button variant="ghost" size="sm" onClick={() => downloadChartAsJpeg(decisionFrontierRef, 'decision-frontier')} className="h-7 text-[10px] text-indigo-600 w-fit mt-2">
+                        <Download className="w-3 h-3 mr-1" /> Export
                       </Button>
                     </CardHeader>
-                    <CardContent className="table-responsive">
-                      <div ref={rankingComparisonTableRef} className="bg-white">
-                        <table className="min-w-full text-xs border border-gray-200 rounded-lg overflow-x-auto">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th rowSpan={2} className="relative bg-white text-black font-bold text-[9px] border-r border-gray-200 p-0 h-10 w-32 min-w-[128px]">
-                                <div className="flex flex-col items-center justify-center h-full leading-tight pr-6">
-                                  <div className="text-[9px] font-bold py-0.5 border-b border-gray-200 w-full text-center flex items-center justify-center gap-1">
-                                    Methods <ArrowRight className="w-2 h-2 stroke-[3]" />
-                                  </div>
-                                  <div className="text-[9px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">
-                                    Alternatives <ArrowDown className="w-2 h-2 stroke-[3]" />
-                                  </div>
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute top-1 right-1 h-6 w-6 text-gray-400 hover:text-blue-600 p-0"
-                                  onClick={downloadRankingComparisonTableAsJpeg}
-                                  title="Download Table as JPG"
-                                >
-                                  <Download className="h-3.5 w-3.5" />
-                                </Button>
-                              </th>
-                              {comparisonResults.map((result) => (
-                                <th
-                                  key={result.method}
-                                  colSpan={2}
-                                  className="px-3 py-2 text-center border-b border-r border-gray-200 text-black font-semibold"
-                                >
-                                  {result.label}
-                                </th>
-                              ))}
-                            </tr>
-                            <tr>
-                              {comparisonResults.map((result) => (
-                                <Fragment key={result.method}>
-                                  <th key={`${result.method}-score`} className="px-2 py-1 text-center border-b border-gray-200 text-gray-600 font-medium text-[10px]">
-                                    Score
-                                  </th>
-                                  <th key={`${result.method}-rank`} className="px-2 py-1 text-center border-b border-r border-gray-200 text-gray-600 font-medium text-[10px]">
-                                    Rank
-                                  </th>
-                                </Fragment>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {comparisonResults[0]?.ranking?.map((item, altIndex) => (
-                              <tr key={item.alternativeName} className="border-b border-gray-200 hover:bg-gray-50">
-                                <td className="px-3 py-2 font-medium text-black whitespace-nowrap border-r border-gray-200">
-                                  {item.alternativeName}
-                                </td>
-                                {comparisonResults.map((result) => {
-                                  const altRanking = result.ranking?.find(r => r.alternativeName === item.alternativeName)
-                                  return (
-                                    <Fragment key={result.method}>
-                                      <td key={`${result.method}-${item.alternativeName}-score`} className="px-2 py-2 text-center text-black">
-                                        {altRanking?.score !== undefined ? Number(altRanking.score).toFixed(resultsDecimalPlaces) : "-"}
-                                      </td>
-                                      <td key={`${result.method}-${item.alternativeName}-rank`} className="px-2 py-2 text-center font-semibold text-black border-r border-gray-200">
-                                        {altRanking?.rank ?? "-"}
-                                      </td>
-                                    </Fragment>
-                                  )
-                                })}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                    <CardContent className="p-6 h-[400px]">
+                      <div ref={decisionFrontierRef} className="w-full h-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          {(() => {
+                            // Get top 3 alternatives from the first (main) method
+                            const mainResult = comparisonResults[0];
+                            if (!mainResult) return <div className="flex items-center justify-center h-full text-xs text-gray-400">Calculate results to view frontier.</div>;
+
+                            const top3Alts = [...mainResult.ranking]
+                              .sort((a, b) => a.rank - b.rank)
+                              .slice(0, 3);
+
+                            // Prepare data: normalized scores per criterion
+                            const radarData = criteria.map(crit => {
+                              const entry: any = { criterion: crit.name };
+
+                              // Find min/max for normalization using numeric values
+                              const scores = alternatives.map(a => Number(a.scores[crit.id] || 0));
+                              const min = Math.min(...scores);
+                              const max = Math.max(...scores);
+
+                              top3Alts.forEach(topAlt => {
+                                const altObj = alternatives.find(a => a.name === topAlt.alternativeName);
+                                const raw = Number(altObj?.scores[crit.id] || 0);
+
+                                // Normalize: (val - min) / (max - min)
+                                // If non-beneficial criterion, invert: (max - val) / (max - min)
+                                let normalized = max === min ? 1 : (raw - min) / (max - min);
+                                if (crit.type === 'non-beneficial') {
+                                  normalized = max === min ? 1 : (max - raw) / (max - min);
+                                }
+
+                                entry[topAlt.alternativeName] = normalized;
+                              });
+                              return entry;
+                            });
+
+                            return (
+                              <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                                <PolarGrid stroke="#e2e8f0" />
+                                <PolarAngleAxis dataKey="criterion" tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} />
+                                <PolarRadiusAxis angle={30} domain={[0, 1]} tick={{ fontSize: 9 }} />
+                                {top3Alts.map((alt, idx) => (
+                                  <Radar
+                                    key={alt.alternativeName}
+                                    name={alt.alternativeName}
+                                    dataKey={alt.alternativeName}
+                                    stroke={CHART_COLORS[idx % CHART_COLORS.length]}
+                                    fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                                    fillOpacity={0.3}
+                                    strokeWidth={2}
+                                  />
+                                ))}
+                                <Tooltip
+                                  contentStyle={{ fontSize: '10px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                  formatter={(val: number) => [val.toFixed(3), 'Score']}
+                                />
+                                <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 600, paddingTop: '20px' }} />
+                              </RadarChart>
+                            );
+                          })()}
+                        </ResponsiveContainer>
                       </div>
                     </CardContent>
                   </Card>
@@ -5588,16 +6121,22 @@ export default function MCDMCalculator() {
                       </Card>
                     )}
                     <Card className="border-gray-200 bg-white shadow-none w-full">
-                      <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                        <div>
-                          <CardTitle className="text-sm text-black">Ranking variation</CardTitle>
-                          <CardDescription className="text-xs text-gray-700">
-                            {comparisonChartType === "composed"
-                              ? "Deviation from average rank - bars extending left are better than average."
-                              : "Chart comparing alternative ranks across selected methods."}
-                          </CardDescription>
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
+                      <CardHeader className="pb-3 flex flex-col">
+                        <ResearchAssetHeader
+                          assetKey="ranking_variation_chart"
+                          defaultLabel={getNextFigureLabel()}
+                          title="Ranking variation"
+                          onLabelChange={handleAssetLabelChange}
+                          included={selectedAiAssets.has("ranking_variation_chart")}
+                          onIncludeChange={handleIncludeChange}
+                          onAiAnalysis={() => handleAiAnalysis("ranking_comparison", { comparisonData: comparisonResults })}
+                        />
+                        <CardDescription className="text-xs text-gray-700">
+                          {comparisonChartType === "composed"
+                            ? "Deviation from average rank - bars extending left are better than average."
+                            : "Chart comparing alternative ranks across selected methods."}
+                        </CardDescription>
+                        <div className="flex items-center gap-2 flex-wrap mt-3">
                           <Select value={comparisonChartType} onValueChange={setComparisonChartType}>
                             <SelectTrigger className="w-28 sm:w-40 h-7 text-xs">
                               <SelectValue />
@@ -6351,11 +6890,17 @@ export default function MCDMCalculator() {
 
                         <div className="space-y-6 animate-in fade-in duration-500">
                           <Card className="border-gray-200 bg-white shadow-none w-full">
-                            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                              <div>
-                                <CardTitle className="text-sm text-black">Comparison Results</CardTitle>
-                                <CardDescription className="text-xs text-gray-700">Ranking variations across weight methods</CardDescription>
-                              </div>
+                            <CardHeader className="pb-3 flex flex-col">
+                              <ResearchAssetHeader
+                                assetKey="sensitivity_comparison_table"
+                                defaultLabel={getNextTableLabel()}
+                                title="Comparison Results"
+                                onLabelChange={handleAssetLabelChange}
+                                included={selectedAiAssets.has("sensitivity_comparison_table")}
+                                onIncludeChange={handleIncludeChange}
+                                onAiAnalysis={() => handleAiAnalysis("sensitivity", { sensitivityData: sensitivityCriteriaWeights })}
+                              />
+                              <CardDescription className="text-xs text-gray-700">Ranking variations across weight methods</CardDescription>
                             </CardHeader>
                             <CardContent>
                               <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
@@ -6407,12 +6952,18 @@ export default function MCDMCalculator() {
                           </Card>
 
                           <Card className="border-gray-200 bg-white shadow-none w-full">
-                            <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                              <div>
-                                <CardTitle className="text-sm text-black">Graphical Variation</CardTitle>
-                                <CardDescription className="text-xs text-gray-700">Visualizing the impact of weight methods</CardDescription>
-                              </div>
-                              <div className="flex items-center gap-2 flex-wrap">
+                            <CardHeader className="pb-3 flex flex-col">
+                              <ResearchAssetHeader
+                                assetKey="sensitivity_graphical_variation"
+                                defaultLabel={getNextFigureLabel()}
+                                title="Graphical Variation"
+                                onLabelChange={handleAssetLabelChange}
+                                included={selectedAiAssets.has("sensitivity_graphical_variation")}
+                                onIncludeChange={handleIncludeChange}
+                                onAiAnalysis={() => handleAiAnalysis("sensitivity", { sensitivityData: sensitivityCriteriaWeights })}
+                              />
+                              <CardDescription className="text-xs text-gray-700">Visualizing the impact of weight methods</CardDescription>
+                              <div className="flex items-center gap-2 flex-wrap mt-3">
                                 <Select value={sensitivityChartType} onValueChange={setSensitivityChartType}>
                                   <SelectTrigger className="w-28 sm:w-32 h-7 text-xs">
                                     <SelectValue />
@@ -6733,6 +7284,9 @@ export default function MCDMCalculator() {
                   isAiLoading={aiLoading}
                   showAiPanel={showAiPanel && aiAnalysisType === "k_sensitivity"}
                   onCloseAiPanel={() => setShowAiPanel(false)}
+                  onLabelChange={handleAssetLabelChange}
+                  onIncludeChange={handleIncludeChange}
+                  selectedAiAssets={selectedAiAssets}
                 />
               </>
             )
@@ -11242,6 +11796,81 @@ export default function MCDMCalculator() {
                 </DialogContent>
               </Dialog>
 
+              {/* --- Hybrid Weighting Dialog --- */}
+              <Dialog open={isHybridDialogOpen} onOpenChange={setIsHybridDialogOpen}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Hybrid Weighting Configuration</DialogTitle>
+                    <DialogDescription className="text-xs text-gray-500 font-medium">
+                      Combine two weight methods to reduce methodological bias.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2 text-left">
+                      <Label className="text-xs font-bold text-gray-700">Primary Method (Subjective/Preference)</Label>
+                      <Select
+                        value={hybridWeightMethod1}
+                        onValueChange={(val: any) => setHybridWeightMethod1(val)}
+                      >
+                        <SelectTrigger className="text-xs h-8">
+                          <SelectValue placeholder="Select Method 1" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {WEIGHT_METHODS.filter(m => ["ahp", "piprecia", "swara", "roc", "rr", "custom", "equal"].includes(m.value)).map(m => (
+                            <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2 text-left">
+                      <Label className="text-xs font-bold text-gray-700">Secondary Method (Objective/Data-driven)</Label>
+                      <Select
+                        value={hybridWeightMethod2}
+                        onValueChange={(val: any) => setHybridWeightMethod2(val)}
+                      >
+                        <SelectTrigger className="text-xs h-8">
+                          <SelectValue placeholder="Select Method 2" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {WEIGHT_METHODS.filter(m => !["ahp", "piprecia", "swara", "roc", "rr", "custom", "hybrid", "equal"].includes(m.value)).map(m => (
+                            <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-3 pt-2">
+                      <div className="flex justify-between items-center text-left">
+                        <Label className="text-[11px] font-bold text-gray-500 uppercase">Weighting Ratio</Label>
+                        <span className="text-xs font-bold text-blue-600">{(100 - hybridWeightRatio * 100).toFixed(0)}% / {(hybridWeightRatio * 100).toFixed(0)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={hybridWeightRatio}
+                        onChange={(e) => setHybridWeightRatio(parseFloat(e.target.value))}
+                        className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      />
+                      <div className="flex justify-between text-[10px] text-gray-400 font-medium">
+                        <span>{WEIGHT_METHODS.find(m => m.value === hybridWeightMethod1)?.label || 'Method 1'}</span>
+                        <span>{WEIGHT_METHODS.find(m => m.value === hybridWeightMethod2)?.label || 'Method 2'}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsHybridDialogOpen(false)} className="text-xs h-8">Cancel</Button>
+                    <Button onClick={async () => {
+                      setIsHybridDialogOpen(false);
+                      const updatedCriteria = await calculateWeights("hybrid");
+                      handleCalculate(method, updatedCriteria);
+                    }} className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-8">Apply Hybrid Weights</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
               {/* --- PIPRECIA Dialog (Matrix Step) --- */}
               < Dialog open={isPipreciaDialogOpen} onOpenChange={setIsPipreciaDialogOpen} >
                 <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full">
@@ -13481,10 +14110,10 @@ export default function MCDMCalculator() {
                   <Card className="border-gray-200 bg-white shadow-none mb-6">
                     <div className="px-6 pt-4">
                       <ResearchAssetHeader
-                        assetKey="topsis_normalized_matrix"
+                        assetKey="topsis_weighted_matrix"
                         defaultLabel={getNextTableLabel()}
                         title="WEIGHTED NORMALIZED MATRIX"
-                        included={selectedAiAssets.has("topsis_normalized_matrix")}
+                        included={selectedAiAssets.has("topsis_weighted_matrix")}
                         onIncludeChange={handleIncludeChange}
                         onLabelChange={handleAssetLabelChange}
                       />

@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   generator: "decisionalgo",
 }
 
+import { Toaster } from "sonner"
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -34,6 +36,7 @@ export default function RootLayout({
         >
           {children}
           <Analytics />
+          <Toaster position="top-right" richColors />
         </ThemeProvider>
       </body>
     </html>

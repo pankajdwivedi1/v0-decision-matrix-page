@@ -276,6 +276,11 @@ export const WEIGHT_METHODS: { value: WeightMethod; label: string; description: 
         label: "Enter Own Weight",
         description: "Manually specify custom weights for each criterion based on your own judgment or external analysis.",
     },
+    {
+        value: "hybrid",
+        label: "Hybrid Weighting",
+        description: "Combines two weight calculation methods (Subjective & Objective) using a specific ratio to minimize bias.",
+    },
 ]
 
 export const CHART_COLORS = [
