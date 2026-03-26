@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useRef, useMemo, Fragment, useEffect } from "react"
 import { MCDMMethod, WeightMethod, PageStep, ComparisonResult, EntropyResult, CriticResult, AHPResult, PipreciaResult, MERECResult, SWARAResult, WensloResult, LopcowResult, DematelResult, SDResult, VarianceResult, MADResult, DBWResult, SVPResult, MDMResult, LSWResult, GPOWResult, LPWMResult, PCWMResult, RankingWeightResult, ROCResult, RRResult, Criterion, Alternative } from "@/types/mcdm"
@@ -3931,8 +3931,23 @@ export default function MCDMCalculator() {
                             : "border-blue-400/40 bg-white hover:border-blue-500 hover:bg-blue-50/30 hover:shadow-sm"
                             }`}
                         >
-                          <div className="absolute top-2 right-2 opacity-30 group-hover:opacity-100 transition-opacity">
-                            <div className="text-blue-500 border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic font-bold">i</div>
+                          <div className="absolute top-2 right-2 flex flex-col items-end gap-1.5 transition-opacity">
+                            <div className="opacity-30 group-hover:opacity-100 text-blue-500 border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic font-bold">i</div>
+                            <div 
+                              className="flex items-center gap-1 bg-white/80 backdrop-blur-sm px-1.5 py-0.5 rounded border border-indigo-100 shadow-sm hover:bg-indigo-50 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleIncludeChange(`method_${m.value}`, !selectedAiAssets.has(`method_${m.value}`));
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedAiAssets.has(`method_${m.value}`)}
+                                onChange={() => {}} // Handled by container onClick
+                                className="w-3 h-3 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                              />
+                              <span className="text-[8px] font-bold text-indigo-700 uppercase leading-none">AI</span>
+                            </div>
                           </div>
 
                           <div className="pr-4 flex-1 flex flex-col justify-center">
@@ -4355,6 +4370,22 @@ export default function MCDMCalculator() {
                               <span className="text-xs font-semibold text-black group-hover:text-blue-600 transition-colors truncate">
                                 {w.label}
                               </span>
+                              <div 
+                                className="flex items-center gap-1 ml-auto bg-indigo-50/50 px-1 py-0.5 rounded border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleIncludeChange(`weight_method_${w.value}`, !selectedAiAssets.has(`weight_method_${w.value}`));
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedAiAssets.has(`weight_method_${w.value}`)}
+                                  onChange={() => {}} // container handles it
+                                  className="w-3 h-3 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                />
+                                <span className="text-[8px] font-bold text-indigo-700 uppercase">AI</span>
+                              </div>
                             </label>
                           ))}
                           <label className="flex items-center gap-3 cursor-pointer group">
@@ -5242,9 +5273,25 @@ export default function MCDMCalculator() {
                                   disabled={comparisonLoading}
                                   className="mt-0.5"
                                 />
-                                <span>
+                                <span className="flex-1">
                                   <span className="font-normal">{w.label}</span>
                                 </span>
+                                <div 
+                                  className="flex items-center gap-1 bg-indigo-50/50 px-1 py-0 rounded border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleIncludeChange(`weight_method_${w.value}`, !selectedAiAssets.has(`weight_method_${w.value}`));
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedAiAssets.has(`weight_method_${w.value}`)}
+                                    onChange={() => {}} 
+                                    className="w-2.5 h-2.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                  />
+                                  <span className="text-[7px] font-bold text-indigo-700">AI</span>
+                                </div>
                               </label>
                             ))}
                           </div>
@@ -5277,9 +5324,25 @@ export default function MCDMCalculator() {
                                   disabled={comparisonLoading}
                                   className="mt-0.5"
                                 />
-                                <span>
+                                <span className="flex-1">
                                   <span className="font-normal">{m.label}</span>
                                 </span>
+                                <div 
+                                  className="flex items-center gap-1 bg-indigo-50/50 px-1 py-0 rounded border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleIncludeChange(`method_${m.value}`, !selectedAiAssets.has(`method_${m.value}`));
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedAiAssets.has(`method_${m.value}`)}
+                                    onChange={() => {}} 
+                                    className="w-2.5 h-2.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                  />
+                                  <span className="text-[7px] font-bold text-indigo-700">AI</span>
+                                </div>
                               </label>
                             ))}
                           </div>

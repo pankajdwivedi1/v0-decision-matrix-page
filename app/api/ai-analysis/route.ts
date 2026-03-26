@@ -94,15 +94,93 @@ export async function POST(req: NextRequest) {
             }).join("\n");
 
             assetLabelsInjection = `
-        **RESEARCH ASSET MANIFEST (MANDATORY REFERENCING):**
-        To ensure academic rigour and correct cross-referencing, you MUST use the following specific labels when mentioning tables or figures in your narrative. Use the "Refer to as" label in the text:
-
+        **RESEARCH ASSET MANIFEST (MANDATORY & EXHAUSTIVE REFERENCING):**
+        To meet Q1 academic standards, you MUST explicitly interpret and include placeholders for **EVERY** asset listed below. Failure to reference even one asset listed here is considered a technical omission error.
+        
+        **Available Research Assets:**
         ${manifestEntries}
 
-        **STRICT CROSS-REFERENCING RULES:**
-        1. When interpreting data associated with an **Identifier**, you MUST cite the corresponding **Refer to as** label.
-        2. Example: If \`ranking_results\` is mapped to \`Table 5\`, you must write "As demonstrated in Table 5..."
-        3. Interpret the content of each Table/Figure specifically based on its Description and Identifier.
+        **STRICT REFERENCING & PLACEHOLDER RULES:**
+        1. **Sequential Narrative Integration:** For each asset listed above, you MUST write at least one paragraph of interpretation of its data and its technical significance.
+        2. **Explicit Citations:** Cite the "Refer to as" label directly in the prose (e.g., "As demonstrated in Table 1...").
+        3. **AUTOMATIC PLACEHOLDERS:** Immediately after mentioning/citing an asset, you MUST insert a new line containing exactly: **[Insert {Refer to as label}: {Description} here]**.
+        4. **The "Chain of Evidence" Requirement:** Every numerical claim in your text MUST be traceable to one of the assets in this manifest. If the manifest has 10 entries, the manuscript MUST contain exactly 10 [Insert...] placeholders.
+        5. **No Hallucinations:** Do not fabricate tables or reference identifiers not found in this Manifest.
+        `;
+        }
+
+        // Identify which methods are explicitly "selected" via checkboxes (markedAssets)
+        const selectedAssets = reqContent.selectedAssets || [];
+        const markedMethods = selectedAssets
+            .filter((key: string) => key.startsWith("method_"))
+            .map((key: string) => key.replace("method_", ""));
+
+        const markedWeightMethods = selectedAssets
+            .filter((key: string) => key.startsWith("weight_method_"))
+            .map((key: string) => key.replace("weight_method_", ""));
+
+        // If the user hasn't explicitly marked any methods but provided a primary 'method', use that
+        const finalMethodsToDescribe = markedMethods.length > 0 ? markedMethods : (method ? [method] : []);
+        const finalWeightsToDescribe = markedWeightMethods.length > 0 ? markedWeightMethods : (reqContent.weightMethod ? [reqContent.weightMethod] : []);
+
+        // ---------------------------------------------------------
+        // METHODOLOGY SCOPE LOGIC (Anti-Hallucination)
+        // ---------------------------------------------------------
+        const activeRankingMethod = (method || "MCDM").toUpperCase();
+        const activeWeightingMethod = (finalWeightsToDescribe[0] || "Assigned").toUpperCase();
+        const hasSensitivityData = !!(reqContent.sensitivityData || reqContent.kSensData || analysisType === 'sensitivity' || analysisType === 'k_sensitivity');
+        const hasComparisonData = !!(reqContent.comparisonData || analysisType === 'ranking_comparison');
+
+        const sensitivityRule = hasSensitivityData
+            ? "- Provide a deep technical analysis of the **Sensitivity Analysis** results using the provided data."
+            : "- DO NOT mention Sensitivity Analysis or Perturbation Analysis as it was not performed.";
+
+        const correlationRule = hasComparisonData
+            ? "- Analyze the **Spearman Rank Correlation** and methodological consistency based on the comparison data."
+            : "- DO NOT mention Spearman's Rank Correlation or Kendall's Tau as these validations were not performed.";
+
+        const commonMethodsArray = ["SWEI", "SWI", "EDAS", "TOPSIS", "VIKOR", "AHP", "ENTROPY", "CRITIC", "WASPAS", "VOI"];
+        const forbiddenMethods = commonMethodsArray.filter(m => m !== activeRankingMethod && m !== activeWeightingMethod);
+        const isEdas = activeRankingMethod.includes("EDAS") || activeRankingMethod.includes("SWEI") || activeRankingMethod.includes("SWI");
+
+        const methodScopeInjection = `
+        **STRICT METHODOLOGY SCOPE:**
+        - This study employs **${activeRankingMethod}** for ranking and **${activeWeightingMethod}** for weighting.
+        - Core Section Protocol: Descriptions of any other methods (like ${forbiddenMethods.slice(0, 5).join(", ")}) are strictly FORBIDDEN in Methodology, Results, and Discussion.
+        ${isEdas ? "- Use full terminology for EDAS components: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**." : "- DO NOT mention SWI or SWEI as they are not part of the selected methodology."}
+        - ${sensitivityRule}
+        - ${correlationRule}
+        - Hallucination Protocol: If a method's specific data is missing from the JSON context above, do NOT mention or define it.
+        `;
+
+        // ---------------------------------------------------------
+        // RESEARCH SYNTHESIS LOGIC (Connecting Problem to Solution)
+        // ---------------------------------------------------------
+        const topic = reqContent.researchContext?.topic || "the specified research topic";
+        const gap = reqContent.researchContext?.gap || "the need for a robust decision model in this domain";
+        const justification = reqContent.researchContext?.methodologyJustification || "the unique technical accuracy of the " + activeRankingMethod + " framework";
+
+        const researchSynthesisInjection = `
+        **RESEARCH CONTEXT & NARRATIVE SYNTHESIS (Q1 QUALITY):**
+        - **Core Topic:** ${topic}
+        - **The Identified Research Gap:** ${gap}
+        - **Methodological Justification:** ${justification}
+        - **Logical Connection Protocol (CRITICAL):** In your Discussion and Results sections, you MUST explicitly describe how the ${activeRankingMethod} results provide a solution to the gap of "${gap.slice(0, 150)}...". Bridge the results back to the original problem.
+        `;
+
+        let methodDescriptionsInjection = "";
+        if (finalMethodsToDescribe.length > 0) {
+            methodDescriptionsInjection = `
+        **SELECTED MCDM METHODS FOR ANALYSIS:**
+        The researcher has specifically selected the following methods for this study. You MUST provide technical descriptions and mathematical rationale for these specific methods ONLY:
+        ${finalMethodsToDescribe.map((m: any) => `- **${String(m).toUpperCase()}**: Provide its unique normalization logic and aggregation framework.`).join("\n")}
+        `;
+        }
+
+        if (finalWeightsToDescribe.length > 0 && finalWeightsToDescribe[0]) {
+            methodDescriptionsInjection += `
+        **SELECTED WEIGHTING CRITERIA (METHODS):**
+        ${finalWeightsToDescribe.map((w: any) => `- **${String(w).toUpperCase()} Weighting**: Describe how this method determines criteria importance.`).join("\n")}
         `;
         }
 
@@ -112,6 +190,9 @@ export async function POST(req: NextRequest) {
         You are analyzing Multi-Criteria Decision Analysis (MCDM) results using the **${method ? method.toUpperCase() : "Selected"}** method.
         
         ${contextInjection}
+        ${methodDescriptionsInjection}
+        ${methodScopeInjection}
+        ${researchSynthesisInjection}
         
         **Context:**
         Alternatives being ranked: ${alternativesList}
@@ -137,8 +218,8 @@ export async function POST(req: NextRequest) {
 
         **Content to Cover (integrate naturally, not as rigid sections):**
 
-        **1. Opening Summary & Context** (~150-200 words)
-        Begin by establishing what was analyzed and why. Present the winning alternative (${topAlternatives[0]?.alternativeName || "the top-ranked option"}) and its score, explaining its significance in addressing the research gap. Make clear connections to the problem statement and research objectives.
+        **1. Opening Summary & Strategic Alignment** (~150-200 words)
+        Establish the problem domain and research significance. Present the optimal alternative (${topAlternatives[0]?.alternativeName || "the top-ranked alternative"}) and explicitly describe how this specific result provides a technical solution to the research gap of "**${gap}**" identified in this study.
 
         **2. Deep Analytical Discussion** (~450-550 words)
         This is your core analysis. Discuss:
@@ -158,7 +239,7 @@ export async function POST(req: NextRequest) {
 
         **MANDATORY RULES:**
         ${assetLabelsInjection}
-        - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
+        - Primary Methodology Focus: Only describe the mathematical steps for the active methods (**${activeRankingMethod}** and **${activeWeightingMethod}** weighting).
         - Whenever you mention a Table or Figure from the Manifest, you MUST immediately follow that sentence with a new line containing a placeholder in the format: **[Insert {Refer to as label}: {Description} here]**.
         - Example: If the manifest says Table 1 is "Decision Matrix", write: **[Insert Table 1: Decision Matrix here]** on its own line.
         - Ensure all sections use hierarchical numbering (e.g., 4.1, 4.2).
@@ -188,6 +269,8 @@ export async function POST(req: NextRequest) {
         You are conducting a rigorous Sensitivity Analysis for a research paper on Multi-Criteria Decision Making.
         
         ${contextInjection}
+        ${methodScopeInjection}
+        ${researchSynthesisInjection}
 
         **Context:**
         Analyzing decision model robustness by systematically varying criteria weights.
@@ -202,7 +285,7 @@ export async function POST(req: NextRequest) {
         
         **MANDATORY RULES:**
         ${assetLabelsInjection}
-        - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
+        - Primary Methodology Focus: Only describe the mathematical steps for the active methods (**${activeRankingMethod}** and **${activeWeightingMethod}** weighting).
         - Whenever you mention a Table or Figure from the Manifest, you MUST immediately follow that sentence with a new line containing a placeholder in the format: **[Insert {Refer to as label}: {Description} here]**.
         
         **Requirements:**
@@ -231,6 +314,8 @@ export async function POST(req: NextRequest) {
         You are conducting a sophisticated One-at-a-Time (OAT) Sensitivity Analysis for an MCDM research study.
         
         ${contextInjection}
+        ${methodScopeInjection}
+        ${researchSynthesisInjection}
 
         **Analysis Context:**
         Performing robustness validation through systematic perturbation of a single criterion.
@@ -243,7 +328,7 @@ export async function POST(req: NextRequest) {
         
         **MANDATORY RULES:**
         ${assetLabelsInjection}
-        - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
+        - Primary Methodology Focus: Only describe the mathematical steps for the active methods (**${activeRankingMethod}** and **${activeWeightingMethod}** weighting).
         - Whenever you mention a Table or Figure from the Manifest, you MUST immediately follow that sentence with a new line containing a placeholder in the format: **[Insert {Refer to as label}: {Description} here]**.
         
         **Requirements:**
@@ -281,6 +366,8 @@ export async function POST(req: NextRequest) {
         You are comparing multiple MCDM ranking methodologies in a rigorous academic analysis.
         
         ${contextInjection}
+        ${methodScopeInjection}
+        ${researchSynthesisInjection}
 
         **Context:**
         Alternatives evaluated: ${alternativesList}
@@ -295,7 +382,7 @@ export async function POST(req: NextRequest) {
         
         **MANDATORY RULES:**
         ${assetLabelsInjection}
-        - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
+        - Primary Methodology Focus: Only describe the mathematical steps for the active methods (**${activeRankingMethod}** and **${activeWeightingMethod}** weighting).
         - Whenever you mention a Table or Figure from the Manifest, you MUST immediately follow that sentence with a new line containing a placeholder in the format: **[Insert {Refer to as label}: {Description} here]**.
         
         **Requirements:**
@@ -373,7 +460,7 @@ export async function POST(req: NextRequest) {
         ${contextInjection}
         
         **Task:**
-        Develop a compelling introduction that establishes the importance of "${reqContent.researchContext?.topic || 'the research topic'}".
+        Develop a compelling introduction that establishes the importance of **"${topic}"** and explicitly defines the research gap as **"${gap}"**. This study must be positioned as a robust methodological response to these specific challenges.
         
         **Structure:**
         1. **Broad Context**: Discuss the significance of the industry/domain.
@@ -417,9 +504,10 @@ export async function POST(req: NextRequest) {
         `;
         } else if (analysisType === "methodology") {
             prompt = `
-        Write a technical, 800-word **Methodology** section for ${method.toUpperCase()}.
-        
         ${contextInjection}
+        ${methodDescriptionsInjection}
+        ${methodScopeInjection}
+        ${researchSynthesisInjection}
         
         **Task:**
         Detail the step-by-step mathematical and procedural framework used in your analysis.
@@ -433,7 +521,7 @@ export async function POST(req: NextRequest) {
         **MANDATORY RULES:**
         ${assetLabelsInjection}
         - Identify subsections using decimal numbering (e.g., 3.1, 3.2, 3.2.1).
-        - Use full terminology: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**.
+        - Primary Methodology Focus: Only describe the mathematical steps for the active methods (**${activeRankingMethod}** and **${activeWeightingMethod}** weighting).
         - Whenever you mention a Table or Figure from the Manifest, you MUST immediately follow that sentence with a new line containing a placeholder in the format: **[Insert {Refer to as label}: {Description} here]**.
         `;
         } else if (analysisType === "custom_section") {
@@ -480,7 +568,7 @@ export async function POST(req: NextRequest) {
         - Use hierarchical numbering for sections and subsections (e.g., 1., 1.1, 1.2, 2., etc.)
         - Integrate quantitative evidence naturally into narrative
         - Maintain logical flow and coherent argumentation
-        - Use full terms: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**
+        - Primary Methodology Focus: Only describe the mathematical steps for the active methods (**${activeRankingMethod}** and **${activeWeightingMethod}** weighting).
         - Avoid generic statements - be specific to THIS analysis
         
         **Formatting Guidelines:**
@@ -547,10 +635,13 @@ Quality standards:
 - Q1 journal quality reasoning and argumentation
 - Data-driven claims with specific numerical support
 - Critical thinking, not just description
-- **STRUCTURAL INTEGRITY (MANDATORY)**:
-  1. DO NOT include any numerical results, rankings, or findings of THIS study in the **Introduction** or **Literature Review** sections. These sections must focus on theoretical foundations, domain background, and existing work.
-  2. Reserve all empirical findings, rankings, and statistical data for the **Results**, **Discussion**, and **Sensitivity Analysis** sections.
-  3. Ensure hierarchical section numbering (e.g., 1.1, 2.1, 3.1).
+- **STRUCTURAL INTEGRITY & Q1 COMPLIANCE (MANDATORY)**:
+  1. **Zero Omission Policy**: You MUST interpret and include a placeholder for EVERY Table and Figure listed in the Research Asset Manifest. If 10 assets are provided, 10 placeholders must exist in the final text.
+  2. **Data Traceability**: Every statistical claim must be backed by a clear reference to a provided asset. Do not invent or "hallucinate" numerical findings.
+  3. **Methodological Exclusion**: ONLY describe methods that are active in the current session (refer to the STRICT METHODOLOGY SCOPE).
+  4. **No Findings in Background**: DO NOT include any rankings or empirical results of THIS study in the Introduction or Literature Review.
+  5. **Hierarchical Precision**: Ensure consistent section and subsection numbering (e.g., 4.1, 4.2.1).
+- **ANTI-HALLUCINATION POLICY (STRICT)**: You are FORBIDDEN from mentioning or explaining methods like SWEI, SWI, VOI, or Sensitivity Analysis if their corresponding data is not provided in the current prompt context. Do not use standard templates; write uniquely based on the provided inputs.
 - Technical precision in terminology`
                 });
 

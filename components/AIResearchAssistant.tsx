@@ -140,6 +140,27 @@ export function AIResearchAssistant({
     const [additionalContext, setAdditionalContext] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatedContent, setGeneratedContent] = useState('');
+
+    const markedAssetsList = Array.from(markedAssets || []);
+    const tablesCount = markedAssetsList.filter(k => 
+        !k.includes('chart') && !k.includes('variation') && !k.includes('plot') && !k.includes('radar') && 
+        !k.startsWith('method_') && !k.startsWith('weight_method_')
+    ).length;
+    
+    const diagramsCount = markedAssetsList.filter(k => 
+        (k.includes('chart') || k.includes('variation') || k.includes('plot') || k.includes('radar')) && 
+        !k.startsWith('method_') && !k.startsWith('weight_method_')
+    ).length;
+    
+    const selectedRankingMethods = markedAssetsList
+        .filter(k => k.startsWith('method_'))
+        .map(k => k.replace('method_', '').toUpperCase());
+    
+    const selectedWeightMethods = markedAssetsList
+        .filter(k => k.startsWith('weight_method_'))
+        .map(k => k.replace('weight_method_', '').toUpperCase());
+
+    const methodsCount = selectedRankingMethods.length + selectedWeightMethods.length;
     const [showResult, setShowResult] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
 
@@ -187,8 +208,9 @@ export function AIResearchAssistant({
     };
 
     const getDynamicPrompt = (sectionId: string) => {
-        const rankingMethodName = method.toUpperCase();
-        const weightMethodName = weightMethod.toUpperCase();
+        const rankingMethodName = selectedRankingMethods.length > 0 ? selectedRankingMethods.join(' and ') : method.toUpperCase();
+        const weightMethodName = selectedWeightMethods.length > 0 ? selectedWeightMethods.join(' and ') : weightMethod.toUpperCase();
+        
         const comparisonMethodsList = comparisonMethods && comparisonMethods.length > 0 ? comparisonMethods.join(', ').toUpperCase() : '';
         const sensitivityDetails = sensitivityMethod ? `stability check using ${sensitivityMethod.toUpperCase()} with ${sensitivityWeightMethods?.join(', ').toUpperCase()} weight variations` : '';
 
@@ -224,13 +246,15 @@ Critically analyze limitations and position this study's multi-method validation
             case 'methodology':
                 return `Write a technical methodology section (Section 3). ${mathInstructions}
 Detail the procedural steps of ${rankingMethodName} and the weighting protocol of ${weightMethodName}. 
+${selectedRankingMethods.length > 1 ? `Discuss the comparative rationale between ${selectedRankingMethods.join(', ')}.` : ""}
+Detail the weighting protocol using ${weightMethodName}.
 Describe the "Statistical Robustness Proof" using Spearman and Kendall coefficients.`;
             case 'results':
-                return `Write a results section (Section 4). Discuss ranking results for ${alternatives.length} alternatives. 
-Refer to criteria weights as Table 1 and final rankings as Table 2. 
-Discuss ranking stability during the ${variationRange} variation (refer to as Figure 1).` +
-                    (comparisonMethodsList ? ` Include comparison results with ${comparisonMethodsList} in Table 3.` : '') +
-                    (spearmanText ? ` Provide statistical validation (Table 4), stating that a high correlation indicates strong methodological consensus.` : '');
+                return `Write a results section (Section 4). Discuss ranking results for ${alternatives.length} alternatives using ${rankingMethodName}. 
+Discuss the results specifically for the methods and tables marked in the manifest.
+Discuss ranking stability during the ${variationRange} variation.` +
+                    (comparisonMethodsList ? ` Include comparison results with ${comparisonMethodsList}.` : '') +
+                    (spearmanText ? ` Provide statistical validation, stating that a high correlation indicates strong methodological consensus.` : '');
             case 'discussion':
                 return `Write an insightful discussion section (Section 5). Interpret findings, provide comparative insights between ${rankingMethodName} and other models, and highlight how the high correlation results increase decision-maker confidence.`;
             case 'conclusion':
@@ -531,6 +555,37 @@ Discuss ranking stability during the ${variationRange} variation (refer to as Fi
             </CardHeader>
 
             <CardContent className="p-6 space-y-6">
+                {/* Marked Assets Summary */}
+                <div className="bg-indigo-50/50 rounded-xl p-4 border border-indigo-100 flex flex-wrap gap-4 items-center">
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-indigo-600" />
+                        <span className="text-sm font-bold text-indigo-900">Marked for AI:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {methodsCount > 0 && (
+                        <span className="bg-white px-2 py-1 rounded border border-indigo-200 text-indigo-700 font-semibold shadow-sm flex items-center gap-1.5">
+                          <Cpu className="w-3 h-3" /> {methodsCount} Methods
+                        </span>
+                      )}
+                      {tablesCount > 0 && (
+                        <span className="bg-white px-2 py-1 rounded border border-indigo-200 text-indigo-700 font-semibold shadow-sm flex items-center gap-1.5">
+                          <FileText className="w-3 h-3" /> {tablesCount} Tables
+                        </span>
+                      )}
+                      {diagramsCount > 0 && (
+                        <span className="bg-white px-2 py-1 rounded border border-indigo-200 text-indigo-700 font-semibold shadow-sm flex items-center gap-1.5">
+                          <TrendingUp className="w-3 h-3" /> {diagramsCount} Diagrams
+                        </span>
+                      )}
+                      {methodsCount === 0 && tablesCount === 0 && diagramsCount === 0 && (
+                         <span className="text-indigo-400 italic">No assets marked yet - the AI will use default selection</span>
+                      )}
+                    </div>
+                    <p className="w-full text-[11px] text-indigo-600 font-medium italic">
+                        The AI will synthesize descriptions ONLY for marked methods and reference ONLY checked tables/diagrams.
+                    </p>
+                </div>
+
                 {/* Section Selector */}
                 <div className="space-y-2">
                     <Label className="text-sm font-semibold text-gray-700">Select Section Type</Label>
