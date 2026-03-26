@@ -3472,60 +3472,53 @@ export default function MCDMCalculator() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 mb-2 sm:mb-4 sm:flex sm:flex-wrap">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch gap-2 mb-4">
+              <div className="h-full flex">
+                <ApiKeySettings />
+              </div>
               <Button
                 variant="outline"
-                className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
-                onClick={() => setHomeTab("rankingMethods")}
+                className={`flex-1 sm:flex-none text-[12px] sm:text-xs min-h-[40px] sm:h-8 px-2 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 items-center justify-center flex`}
+                onClick={() => setIsResearchContextDialogOpen(true)}
               >
-                Ranking Methods
+                <Sparkles className="w-3 h-3 mr-1 shrink-0" />
+                Step 2: Research Context
               </Button>
               <Button
                 variant="outline"
-                className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+                className={`flex-1 sm:flex-none text-[12px] sm:text-xs min-h-[40px] sm:h-8 px-2 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
                 onClick={() => setHomeTab("weightMethods")}
               >
-                Weight Methods
+                Step 3: Weight Methods
               </Button>
               <Button
                 variant="outline"
-                className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+                className={`flex-1 sm:flex-none text-[12px] sm:text-xs min-h-[40px] sm:h-8 px-2 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+                onClick={() => setHomeTab("rankingMethods")}
+              >
+                Step 4: Ranking Methods
+              </Button>
+              <Button
+                variant="outline"
+                className={`flex-1 sm:flex-none text-[12px] sm:text-xs min-h-[40px] sm:h-8 px-2 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
                 onClick={() => setHomeTab("rankingComparison")}
               >
-                Ranking comparison
+                Step 5: Ranking comparison
               </Button>
               <Button
                 variant="outline"
-                className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+                className={`flex-1 sm:flex-none text-[12px] sm:text-xs min-h-[40px] sm:h-8 px-2 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
                 onClick={() => setHomeTab("sensitivityAnalysis")}
               >
-                Sensitivity Analysis
+                Step 6: Sensitivity Analysis
               </Button>
               <Button
-                variant="outline"
-                className={`w-full sm:w-auto text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "aiResearch" ? "bg-violet-100 border-violet-200 text-violet-700 hover:bg-violet-200" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
                 onClick={() => setHomeTab("aiResearch")}
+                className={`col-span-2 sm:flex-none bg-gradient-to-r ${homeTab === 'aiResearch' ? 'from-violet-700 via-purple-700 to-pink-700' : 'from-violet-600 via-purple-600 to-pink-600'} text-white hover:from-violet-700 hover:via-purple-700 hover:to-pink-700 border-none min-h-[40px] sm:h-8 text-[12px] sm:text-xs gap-1.5 shadow-lg px-4 flex items-center justify-center`}
               >
-                AI Research
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                Step 7: AI Research (Manuscript)
               </Button>
-              <div className="w-full sm:w-auto col-span-2 flex flex-col sm:flex-row gap-2">
-                <ApiKeySettings />
-                <Button
-                  variant="outline"
-                  className={`flex-1 text-[14px] sm:text-xs h-auto py-2 sm:py-0 sm:h-8 px-1 sm:px-3 cursor-pointer whitespace-normal text-center leading-tight bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 items-center justify-center flex`}
-                  onClick={() => setIsResearchContextDialogOpen(true)}
-                >
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  Define Research Context (AI)
-                </Button>
-                <Button
-                  onClick={() => setHomeTab("aiResearch")}
-                  className={`w-full sm:w-auto bg-gradient-to-r ${homeTab === 'aiResearch' ? 'from-violet-700 via-purple-700 to-pink-700' : 'from-violet-600 via-purple-600 to-pink-600'} text-white hover:from-violet-700 hover:via-purple-700 hover:to-pink-700 border-none h-8 text-[14px] sm:text-xs gap-1.5 shadow-lg px-3 flex items-center justify-center`}
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  AI Research
-                </Button>
-              </div>
             </div>
           </div>
 

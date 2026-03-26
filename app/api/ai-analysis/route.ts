@@ -133,11 +133,11 @@ export async function POST(req: NextRequest) {
 
         const sensitivityRule = hasSensitivityData
             ? "- Provide a deep technical analysis of the **Sensitivity Analysis** results using the provided data."
-            : "- DO NOT mention Sensitivity Analysis or Perturbation Analysis as it was not performed.";
+            : "- **STRICT PROHIBITION**: DO NOT mention Sensitivity Analysis or Perturbation Analysis. No data was provided.";
 
         const correlationRule = hasComparisonData
             ? "- Analyze the **Spearman Rank Correlation** and methodological consistency based on the comparison data."
-            : "- DO NOT mention Spearman's Rank Correlation or Kendall's Tau as these validations were not performed.";
+            : "- **STRICT PROHIBITION**: DO NOT mention Spearman's Rank Correlation or Kendall's Tau. These validations were NOT performed for this study.";
 
         const commonMethodsArray = ["SWEI", "SWI", "EDAS", "TOPSIS", "VIKOR", "AHP", "ENTROPY", "CRITIC", "WASPAS", "VOI"];
         const forbiddenMethods = commonMethodsArray.filter(m => m !== activeRankingMethod && m !== activeWeightingMethod);
@@ -512,17 +512,34 @@ export async function POST(req: NextRequest) {
         **Task:**
         Detail the step-by-step mathematical and procedural framework used in your analysis.
         
-        **Structure:**
-        1. **Conceptual Framework**: Why is ${method.toUpperCase()} appropriate for this specific problem? (Mention its strengths like compromise solution, distance from ideal, etc.)
-        2. **Evaluation Setup**: List the ${alternatives.length} alternatives and ${criteria.length} criteria defined.
-        3. **Mathematical Steps**: Describe the normalization, weighting (using your selected ${reqContent.weightMethod || 'weighting'} approach), and aggregation steps of ${method.toUpperCase()}.
-        4. **Validation Procedure**: Explain the rationale behind the sensitivity analysis and the specific robustness check performed (e.g., ±30% perturbation).
+        **Structure (SEQUENTIAL REFERENCING REQUIRED):**
+        1. **Conceptual Framework**: Technical justification for ${method.toUpperCase()}.
+        2. **Evaluation Setup & Input Data**: Introduce the decision matrix components and explicitly refer to the Table ID for the matrix (e.g., Table 1).
+        3. **Mathematical Steps (Narrative-to-Table Linkage)**: For every step below, explicitly state which Table presents the data (e.g., "Table {X} presents the normalized matrix..."):
+           - **Normalization**: Describe the process and refer to the specific table.
+           - **Weighting Protocol**: Describe ${reqContent.weightMethod || 'the weighting'} step and refer to the weight table.
+           - **Aggregation/Ranking**: Detail the final ${method.toUpperCase()} calculation and refer to the ranking outcomes table.
+        4. **Validation Procedure**: ${hasSensitivityData || hasComparisonData ? "Explain the rationale behind the sensitivity analysis and the specific robustness check, referencing the corresponding validation tables." : "State that the reliability of the rankings is based on the technical soundness of the active MCDM framework applied."}
 
         **MANDATORY RULES:**
         ${assetLabelsInjection}
         - Identify subsections using decimal numbering (e.g., 3.1, 3.2, 3.2.1).
+        - **SEQUENTIAL TABLE REFERENCING (MANDATORY)**: You MUST narratively introduce every calculation step by referencing its table (e.g., "The evaluation parameters are presented in Table 1; subsequently, the normalization process results in Table 2...").
         - Primary Methodology Focus: Only describe the mathematical steps for the active methods (**${activeRankingMethod}** and **${activeWeightingMethod}** weighting).
         - Whenever you mention a Table or Figure from the Manifest, you MUST immediately follow that sentence with a new line containing a placeholder in the format: **[Insert {Refer to as label}: {Description} here]**.
+        `;
+        } else if (analysisType === "references") {
+            prompt = `
+        ${contextInjection}
+        
+        **Your Task:**
+        Generate a professional, vertical bibliography of **Scholarly References** for this manuscript. 
+        
+        **STRICT FORMATTING RULES (MANDATORY):**
+        1. **ONLY LIST CITATIONS**: Return ONLY a numbered list of academic references (e.g., [1] Author, Title, Year...). 
+        2. **ZERO DISCUSSION**: Do NOT write any summary paragraphs, concluding remarks, or descriptions of the calculations. 
+        3. **NO RANKINGS**: Do NOT mention ${alternativesList} or any ranking results in this section. 
+        4. **SOURCE MATERIAL**: Use the provided "Available Scholarly References" for citations. 
         `;
         } else if (analysisType === "custom_section") {
             // Custom section generation with user-defined prompts
@@ -641,6 +658,7 @@ Quality standards:
   3. **Methodological Exclusion**: ONLY describe methods that are active in the current session (refer to the STRICT METHODOLOGY SCOPE).
   4. **No Findings in Background**: DO NOT include any rankings or empirical results of THIS study in the Introduction or Literature Review.
   5. **Hierarchical Precision**: Ensure consistent section and subsection numbering (e.g., 4.1, 4.2.1).
+  6. **TECHNICAL PURITY**: You are strictly FORBIDDEN from mentioning Spearman’s Rho, Kendall’s Tau, or Sensitivity Analysis (±30%) if the prompt does not contain their corresponding numerical data tables. Do not use them even as \"generic validation examples.\"
 - **ANTI-HALLUCINATION POLICY (STRICT)**: You are FORBIDDEN from mentioning or explaining methods like SWEI, SWI, VOI, or Sensitivity Analysis if their corresponding data is not provided in the current prompt context. Do not use standard templates; write uniquely based on the provided inputs.
 - Technical precision in terminology`
                 });

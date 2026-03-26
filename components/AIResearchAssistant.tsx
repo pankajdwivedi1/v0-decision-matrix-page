@@ -143,13 +143,14 @@ export function AIResearchAssistant({
 
     const markedAssetsList = Array.from(markedAssets || []);
     const tablesCount = markedAssetsList.filter(k => 
-        !k.includes('chart') && !k.includes('variation') && !k.includes('plot') && !k.includes('radar') && 
+        (k.toLowerCase().includes('table') || k.toLowerCase().includes('matrix')) && 
         !k.startsWith('method_') && !k.startsWith('weight_method_')
     ).length;
     
     const diagramsCount = markedAssetsList.filter(k => 
-        (k.includes('chart') || k.includes('variation') || k.includes('plot') || k.includes('radar')) && 
-        !k.startsWith('method_') && !k.startsWith('weight_method_')
+        (k.includes('chart') || k.includes('variation') || k.includes('plot') || k.includes('radar') || k.includes('comparison')) && 
+        !k.startsWith('method_') && !k.startsWith('weight_method_') &&
+        !k.toLowerCase().includes('table')
     ).length;
     
     const selectedRankingMethods = markedAssetsList
@@ -231,8 +232,7 @@ export function AIResearchAssistant({
 2. Research Gap: ${noveltySuggestion}
 3. Solution: Introduce ${rankingMethodName} integrated with ${weightMethodName} weighting. 
 4. Methodology: Describe criteria (${criteria.length}) and alternatives (${alternatives.length}). 
-5. Statistical Validation: Mentions use of Spearman Rho and Kendall's Tau correlations.
-6. Findings: Summarize final stable results.
+${Object.keys(spearmanCorrelation || {}).length > 0 ? "5. Statistical Validation: Mentions use of Spearman Rho and Kendall's Tau correlations.\n" : ""}6. Findings: Summarize final stable results.
 7. Significance: Practical impact on decision-making. End with exactly 5-6 professional Keywords.`;
             case 'introduction':
                 return `Write a scholarly introduction with hierarchical numbering (1.1, 1.2). 
@@ -248,7 +248,7 @@ Critically analyze limitations and position this study's multi-method validation
 Detail the procedural steps of ${rankingMethodName} and the weighting protocol of ${weightMethodName}. 
 ${selectedRankingMethods.length > 1 ? `Discuss the comparative rationale between ${selectedRankingMethods.join(', ')}.` : ""}
 Detail the weighting protocol using ${weightMethodName}.
-Describe the "Statistical Robustness Proof" using Spearman and Kendall coefficients.`;
+${Object.keys(spearmanCorrelation || {}).length > 0 ? 'Describe the "Statistical Robustness Proof" using Spearman and Kendall coefficients.' : ""}`;
             case 'results':
                 return `Write a results section (Section 4). Discuss ranking results for ${alternatives.length} alternatives using ${rankingMethodName}. 
 Discuss the results specifically for the methods and tables marked in the manifest.

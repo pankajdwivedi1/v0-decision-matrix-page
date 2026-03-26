@@ -49,7 +49,7 @@ export function ApiKeySettings() {
                     className="h-8 gap-1.5 text-xs border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
                 >
                     <Key className="w-3.5 h-3.5" />
-                    API Settings
+                    Step 1: API Settings
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
