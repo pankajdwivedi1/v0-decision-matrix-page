@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase-admin";
 
 const ADMIN_PASSWORD = "pankajdwivedi81";
 
@@ -17,26 +16,23 @@ export async function POST(request: Request) {
         }
 
         try {
-            const q = query(collection(db, "messages"), orderBy("timestamp", "desc"));
-            const querySnapshot = await getDocs(q);
+            // Using Firebase Admin SDK (db is initialized in lib/firebase-admin.ts)
+            const snapshot = await db.collection("messages").orderBy("timestamp", "desc").get();
 
-            const messages = querySnapshot.docs.map((doc) => {
+            const messages = snapshot.docs.map((doc) => {
                 const data = doc.data();
                 return {
                     id: doc.id,
                     ...data,
-                    // Convert Firestore Timestamp to ISO string if needed, or keep as is if serializable
-                    // Usually Firestore timestamps need conversion
                     timestamp: data.timestamp?.toDate ? data.timestamp.toDate().toISOString() : data.timestamp,
                 };
             });
 
             return NextResponse.json({ success: true, messages });
         } catch (dbError: any) {
-            console.error("Firestore Error:", dbError);
-            // Fallback for when index is missing or rules deny access
+            console.error("Firestore Admin Error:", dbError);
             return NextResponse.json(
-                { success: false, error: "Database access error. Please checks logs/rules." },
+                { success: false, error: "Database error. Make sure you added credentials to .env" },
                 { status: 500 }
             );
         }

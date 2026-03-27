@@ -545,8 +545,19 @@ export async function POST(req: NextRequest) {
             // Custom section generation with user-defined prompts
             const { customPrompt, wordCount, additionalContext, sectionType } = reqContent;
 
-            const kSensContext = reqContent.kSensData ?
+            // If this is a references section, we MUST suppress numerical context to prevent "ghost" results sections
+            const isReferences = sectionType === 'references';
+            
+            const kSensContext = (!isReferences && reqContent.kSensData) ?
                 `\n**K% Sensitivity Analysis Results:**\n${JSON.stringify(formatNumbersInObject(reqContent.kSensData), null, 2)}` : "";
+
+            const resultsContext = isReferences ? "" : `
+        **Analysis Results:**
+        Top 3 alternatives:
+        ${rankingSummary}
+        
+        ${kSensContext}
+        `;
 
             prompt = `
         You are an expert academic writer specializing in Multi-Criteria Decision Analysis (MCDM) research papers.
@@ -556,14 +567,9 @@ export async function POST(req: NextRequest) {
         **Research Context:**
         - Method Used: ${method ? method.toUpperCase() : "MCDM"}
         - Alternatives Evaluated: ${alternativesList}
-        - Evaluation Criteria:
-        ${criteriaSummary}
+        ${isReferences ? "" : `- Evaluation Criteria:\n${criteriaSummary}`}
         
-        **Analysis Results:**
-        Top 3 alternatives:
-        ${rankingSummary}
-        
-        ${kSensContext}
+        ${resultsContext}
         
         ${additionalContext ? `\n**Additional Context Provided by Researcher:**\n${additionalContext}\n` : ""}
         
@@ -574,7 +580,7 @@ export async function POST(req: NextRequest) {
         - Target Length: Approximately ${wordCount || 1000} words
         - Academic Quality: Publication-ready, suitable for high-impact journals
         - Writing Style: Formal academic tone with clear, flowing prose
-        - Evidence-Based: Reference specific numerical results from the analysis
+        ${isReferences ? "- NO DISCUSSION: Return ONLY the reference list. No headers for other sections." : "- Evidence-Based: Reference specific numerical results from the analysis"}
         - Structure: Use appropriate headings and subheadings for readability
         - Citations: If the researcher provides citations in additional context, integrate them appropriately
         ${assetLabelsInjection}
@@ -593,6 +599,7 @@ export async function POST(req: NextRequest) {
         - **PLACEHOLDER RULE (MANDATORY)**: Whenever you mention a Table or Figure from the Manifest, you MUST immediately follow that sentence with a new line containing exactly: **[Insert {Refer to as label}: {Description} here]**.
         - Organize content with clear paragraph breaks
         - Present complex ideas clearly and precisely
+        ${isReferences ? "**STRICT PROHIBITION**: Do NOT append any 'Results', 'Discussion', or 'Conclusion' sections after the bibliography. Return ONLY the citations." : ""}
         
         Generate high-quality academic content that directly addresses the prompt.
        `;
@@ -656,7 +663,7 @@ Quality standards:
   1. **Zero Omission Policy**: You MUST interpret and include a placeholder for EVERY Table and Figure listed in the Research Asset Manifest. If 10 assets are provided, 10 placeholders must exist in the final text.
   2. **Data Traceability**: Every statistical claim must be backed by a clear reference to a provided asset. Do not invent or "hallucinate" numerical findings.
   3. **Methodological Exclusion**: ONLY describe methods that are active in the current session (refer to the STRICT METHODOLOGY SCOPE).
-  4. **No Findings in Background**: DO NOT include any rankings or empirical results of THIS study in the Introduction or Literature Review.
+  4. **No Findings in Background (CRITICAL Q1 RULE)**: DO NOT include any rankings, scores, or empirical results of THIS study in the Introduction or Literature Review. This rule SPECIFICALLY applies to the 'Literature Gap and Novel Contributions' sub-section. Contributions listed there MUST describe the study METHODOLOGY, FRAMEWORK, and APPROACH only. Any mention of specific scores (e.g. 'Alternative X scored 0.81'), city/alternative rankings (e.g. 'Liverpool emerged as top-ranked'), or quantitative findings inside a contributions bullet point is an ABSOLUTE VIOLATION of Q1 academic writing standards.
   5. **Hierarchical Precision**: Ensure consistent section and subsection numbering (e.g., 4.1, 4.2.1).
   6. **TECHNICAL PURITY**: You are strictly FORBIDDEN from mentioning Spearman’s Rho, Kendall’s Tau, or Sensitivity Analysis (±30%) if the prompt does not contain their corresponding numerical data tables. Do not use them even as \"generic validation examples.\"
 - **ANTI-HALLUCINATION POLICY (STRICT)**: You are FORBIDDEN from mentioning or explaining methods like SWEI, SWI, VOI, or Sensitivity Analysis if their corresponding data is not provided in the current prompt context. Do not use standard templates; write uniquely based on the provided inputs.

@@ -3,13 +3,13 @@ import { getFirestore } from "firebase/firestore";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCxaTqdHVdapHgZ_xaA_umR9qx8Nygbzs8",
-    authDomain: "rankova-b3c2d.firebaseapp.com",
-    projectId: "rankova-b3c2d",
-    storageBucket: "rankova-b3c2d.firebasestorage.app",
-    messagingSenderId: "799418357632",
-    appId: "1:799418357632:web:7a2cdec078c8f6083e5365",
-    measurementId: "G-T384CNYQTH"
+    apiKey: "AIzaSyBgXU8P-Wp0BRqdQJwYbedEiO_LTs039nA",
+    authDomain: "decisionalgo-36e5c.firebaseapp.com",
+    projectId: "decisionalgo-36e5c",
+    storageBucket: "decisionalgo-36e5c.firebasestorage.app",
+    messagingSenderId: "526875498420",
+    appId: "1:526875498420:web:207f83a92afe7a44ea44e1",
+    measurementId: "G-TREXPX323M"
 };
 
 // Initialize Firebase

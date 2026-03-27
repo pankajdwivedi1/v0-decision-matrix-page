@@ -46,7 +46,7 @@ export function ApiKeySettings() {
                 <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 gap-1.5 text-xs border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                    className="h-8 w-full gap-1 text-[10px] border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 px-2"
                 >
                     <Key className="w-3.5 h-3.5" />
                     Step 1: API Settings

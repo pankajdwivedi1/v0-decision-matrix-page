@@ -473,6 +473,13 @@ body {
 
 /* Mobile-Responsive Utilities - COMPACT TABLE DESIGN */
 @layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 
   /* ========================================
      MOBILE-FIRST: COMPACT TABLE SYSTEM

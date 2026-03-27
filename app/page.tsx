@@ -133,7 +133,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen text-slate-900 font-sans selection:bg-blue-100 transition-colors duration-300 bg-[#fdfdfd]">
+    <div className="min-h-screen text-slate-900 font-sans selection:bg-blue-100 transition-colors duration-300 bg-[#fdfdfd]" suppressHydrationWarning>
       <Toaster position="top-center" richColors />
 
       {/* Decorative Grid Background */}
@@ -442,7 +442,8 @@ export default function LandingPage() {
                       <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[8px] sm:text-[10px] font-black tracking-widest transition-all uppercase ${activeTab === tab ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-900'}`}
+                        suppressHydrationWarning
+                        className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[8px] sm:text-[10px] font-black tracking-widest transition-all uppercase ${mounted && activeTab === tab ? 'bg-slate-900 text-white' : mounted ? 'text-slate-400 hover:text-slate-900' : 'text-slate-400 hover:text-slate-900'}`}
                       >
                         {tab}
                       </button>

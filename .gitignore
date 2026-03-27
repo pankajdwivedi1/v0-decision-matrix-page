@@ -6,6 +6,7 @@
 # next.js
 /.next/
 /out/
+serviceAccountKey.json
 
 # production
 /build

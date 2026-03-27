@@ -235,10 +235,19 @@ export function AIResearchAssistant({
 ${Object.keys(spearmanCorrelation || {}).length > 0 ? "5. Statistical Validation: Mentions use of Spearman Rho and Kendall's Tau correlations.\n" : ""}6. Findings: Summarize final stable results.
 7. Significance: Practical impact on decision-making. End with exactly 5-6 professional Keywords.`;
             case 'introduction':
-                return `Write a scholarly introduction with hierarchical numbering (1.1, 1.2). 
-Identify a "Literature Gap": ${noveltySuggestion}. 
-Justify the dual application of ${rankingMethodName} for ranking and ${weightMethodName} for weighting. 
-State the "Scientific Contributions" of this paper: (a) Integrated Ranking Framework, (b) Multi-model comparative analysis, and (c) Statistical validation via rank correlation.`;
+                return `Write a scholarly introduction with hierarchical numbering (1.1, 1.2).
+
+Section 1.1 — Background & Motivation: Establish the significance and decision-making challenges in the domain, referencing the broader literature context.
+
+Section 1.2 — Literature Gap and Novel Contributions:
+  - Identify the Literature Gap: ${noveltySuggestion}.
+  - List the Scientific Contributions of this paper in labelled sub-points (a), (b), (c):
+    (a) Describe the integrated ${rankingMethodName}-based ranking FRAMEWORK developed — its design, scope (${alternatives.length} alternatives, ${criteria.length} criteria), and what it systematically integrates.
+    (b) Describe the METHODOLOGICAL APPROACH employed: how ${rankingMethodName} with ${weightMethodName} weighting is applied to systematically evaluate the alternatives with respect to the defined criteria.
+    (c) Describe the VALIDATION STRATEGY — the robustness checks and sensitivity procedures used to ensure model reliability.
+
+**CRITICAL RULE — STRICTLY ENFORCED**: The contributions sub-section (1.2) MUST describe what the study DOES and HOW it does it — NOT what it FINDS. You are STRICTLY FORBIDDEN from mentioning any numerical outcomes, TOPSIS scores, ranking positions, alternative names followed by scores, or any specific quantitative result in this section. Phrases like "Liverpool emerges as top-ranked with score X", "Edinburgh at 0.76", or any similar result disclosure are ABSOLUTELY PROHIBITED here. Contributions must be described in terms of methodology, framework, and approach ONLY.`;
+
             case 'literature':
                 return `Write a systematic literature review (Section 2) with hierarchical numbering. 
 Synthesize recent research (last 5 years) in the field. 
@@ -260,7 +269,21 @@ Discuss ranking stability during the ${variationRange} variation.` +
             case 'conclusion':
                 return `Write a strong conclusion (Section 6). Summarize findings of the ${rankingMethodName}-${weightMethodName} framework, restate the proven stability, and explain how this addresses the initial literature gap of ${noveltySuggestion.toLowerCase().split(':')[1]}.`;
             case 'references':
-                return 'Generate a complete, alphabetically ordered References section in APA style based on provided Scholarly References and current MCDM literature trends.';
+                return `Generate ONLY a numbered bibliography list for this research paper.
+
+**ABSOLUTE RULES — NO EXCEPTIONS:**
+1. OUTPUT FORMAT: Return ONLY a numbered list of citations. Example format: [1] Author, A. B., & Author, C. D. (Year). Title of article. Journal Name, Vol(Issue), Pages. https://doi.org/xxx
+2. FORBIDDEN CONTENT — You MUST NOT write ANY of the following:
+   - Section headers or subheaders (e.g. "4. Results and Discussion", "4.1", "4.2", "Conclusion", "Discussion" etc.)
+   - Paragraphs of text, analysis, or interpretation
+   - Summaries of findings or methodology
+   - Any mention of rankings, TOPSIS scores, or alternative names
+   - Any prose before or after the numbered list
+3. START IMMEDIATELY with [1] — do not write any preamble or introduction sentence.
+4. END IMMEDIATELY after the last citation — do not write any closing paragraph or remark.
+5. Use ONLY the sources from the Available Scholarly References. Do not fabricate DOIs or journal names.
+
+This section MUST contain ONLY the numbered reference list — nothing else whatsoever.`;
             default:
                 return '';
         }
