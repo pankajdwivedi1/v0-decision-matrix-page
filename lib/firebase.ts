@@ -9,7 +9,7 @@ const firebaseConfig = {
     storageBucket: "decisionalgo-36e5c.firebasestorage.app",
     messagingSenderId: "526875498420",
     appId: "1:526875498420:web:207f83a92afe7a44ea44e1",
-    measurementId: "G-TREXPX323M"
+    measurementId: "G-TREXPX323W"
 };
 
 // Initialize Firebase
