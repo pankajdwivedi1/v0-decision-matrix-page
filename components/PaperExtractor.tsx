@@ -98,12 +98,22 @@ export default function PaperExtractor({ onExtractComplete, onClose }: PaperExtr
     const extractFromText = async (text: string) => {
         try {
             const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
+            const userApiKeysRaw = localStorage.getItem("user_gemini_api_keys");
+            const userApiKeys: string[] = userApiKeysRaw ? JSON.parse(userApiKeysRaw) : (userApiKey ? [userApiKey] : []);
+
+            if (userApiKeys.length > 0) {
+                console.log(`✅ Sending ${userApiKeys.length} user API key(s) for rotation`);
+            } else {
+                console.warn('⚠️ No user API keys found — using shared server keys (may hit quota limits)');
+            }
+
             const response = await fetch('/api/extract-paper', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     paperText: text,
-                    userApiKey
+                    userApiKey,
+                    userApiKeys
                 }),
             });
 
@@ -113,9 +123,27 @@ export default function PaperExtractor({ onExtractComplete, onClose }: PaperExtr
                 throw new Error(result.error || 'Extraction failed');
             }
 
+            // Track usage for the primary key (simplified)
+            if (userApiKeys.length > 0) {
+                const keyId = userApiKeys[0].substring(0, 10);
+                const statsStr = localStorage.getItem("gemini_usage_stats") || "{}";
+                try {
+                    const stats = JSON.parse(statsStr);
+                    stats[keyId] = (stats[keyId] || 0) + 1;
+                    localStorage.setItem("gemini_usage_stats", JSON.stringify(stats));
+                    localStorage.setItem("gemini_stats_date", new Date().toDateString());
+                } catch (e) {}
+            }
+
             setExtractedData(result.data);
         } catch (err: any) {
-            setError(err.message || 'Failed to extract paper data');
+            const msg = err.message || 'Failed to extract paper data';
+            // Make quota errors more user-friendly
+            if (msg.includes('429') || msg.includes('quota') || msg.includes('Too Many Requests')) {
+                setError('⚠️ API Quota Exceeded. Your Gemini API key has hit its daily/minute limit. Possible causes:\n• Free-tier quota is shared across all keys in the same Google project\n• You may have used this quota on other requests today\n\nSolution: Wait a few minutes and retry, or create a key from a different Google account at https://aistudio.google.com/app/apikey');
+            } else {
+                setError(msg);
+            }
         } finally {
             setIsExtracting(false);
         }

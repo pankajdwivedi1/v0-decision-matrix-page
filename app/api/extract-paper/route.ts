@@ -4,7 +4,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // POST handler for Paper Extraction
 export async function POST(req: NextRequest) {
   try {
-    const { paperText, extractionType, userApiKey: providedKey } = await req.json();
+    const { paperText, extractionType, userApiKey: providedKey, userApiKeys: providedKeys } = await req.json();
 
     if (!paperText) {
       return NextResponse.json(
@@ -13,11 +13,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get API keys
+    // Build key list: user-provided keys take priority, fall back to server keys
     let apiKeys: string[] = [];
-    if (providedKey && providedKey.trim().length > 0) {
-      apiKeys = [providedKey.trim()];
-    } else {
+
+    // Accept multiple keys (new format)
+    if (providedKeys && Array.isArray(providedKeys) && providedKeys.length > 0) {
+      apiKeys = providedKeys.map((k: string) => k.trim()).filter((k: string) => k.length > 0);
+    }
+    // Also accept single legacy key
+    if (providedKey && providedKey.trim().length > 0 && !apiKeys.includes(providedKey.trim())) {
+      apiKeys.unshift(providedKey.trim());
+    }
+    // Fall back to server keys if no user key provided
+    if (apiKeys.length === 0) {
       const keysString = process.env.GEMINI_API_KEY || "";
       apiKeys = keysString.split(",").map(k => k.trim()).filter(k => k.length > 0);
     }
@@ -29,13 +37,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Truncate text to avoid token limits on free tier (roughly 10k-15k words)
+    const truncatedText = paperText.length > 40000 
+        ? paperText.substring(0, 40000) + "... [Text truncated to prevent quota overflow]"
+        : paperText;
+
     const prompt = `
 You are an expert academic research analyst specializing in Multi-Criteria Decision Making (MCDM) literature.
 
-Analyze the following research paper and extract all relevant MCDM information in a structured format.
+Analyze the following research paper (partially truncated if long) and extract all relevant MCDM information in a structured format.
 
 **Paper Text:**
-${paperText}
+${truncatedText}
 
 **Your Task:**
 Extract and structure the following information from this paper:
@@ -151,9 +164,9 @@ Return ONLY the JSON object, no additional text.
       try {
         const genAI = new GoogleGenerativeAI(apiKeys[i]);
         const model = genAI.getGenerativeModel({
-          model: "gemini-2.5-flash",
+          model: "gemini-2.5-flash", // Reverting to user confirmed working model
           generationConfig: {
-            temperature: 0.3, // Lower temperature for more precise extraction
+            temperature: 0.3,
             topP: 0.95,
             topK: 40,
           },

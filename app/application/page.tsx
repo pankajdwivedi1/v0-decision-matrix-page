@@ -44,7 +44,7 @@ import * as XLSX from "xlsx"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ApiKeySettings } from "@/components/ApiKeySettings";
-import { Upload, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, ArrowDown, Home, Download, LayoutGrid, Sparkles, FileText, Cpu, Bot, Pencil, Book, Settings, MessageCircle, RefreshCw, Loader2, Check, TrendingUp } from "lucide-react"
+import { Upload, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, ArrowDown, Home, Download, LayoutGrid, Sparkles, FileText, Cpu, Bot, Pencil, Book, Settings, MessageCircle, RefreshCw, Loader2, Check, TrendingUp, CheckCircle2 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import PaperExtractor from "@/components/PaperExtractor"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar, PieChart, Pie, ReferenceLine } from "recharts"
@@ -3433,60 +3433,72 @@ export default function MCDMCalculator() {
         </div>
         <Button
           variant="outline"
-          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 items-center justify-center flex`}
+          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${aiResearchContext.topic ? "bg-green-50 border-green-200 text-black" : "bg-white border-gray-200 text-black"} hover:bg-green-100 items-center justify-center flex`}
           onClick={() => setIsResearchContextDialogOpen(true)}
         >
-          <Sparkles className="w-3 h-3 mr-1 shrink-0" />
+          {aiResearchContext.topic ? (
+            <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-green-600 shrink-0" />
+          ) : (
+            <Sparkles className="w-3 h-3 mr-1 shrink-0 text-indigo-500" />
+          )}
           Step 2: Research Context
         </Button>
         <Button
           variant="outline"
-          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${(entropyResult || criticResult || swaraCalculatedWeights || ahpCalculatedWeights) ? "bg-green-50 border-green-200" : homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
           onClick={() => {
             setHomeTab("weightMethods");
             if (currentStep !== "home") setCurrentStep("home");
           }}
         >
-          {homeTab === "weightMethods" && (
+          {(entropyResult || criticResult || swaraCalculatedWeights || ahpCalculatedWeights) ? (
+            <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-green-600 shrink-0" />
+          ) : homeTab === "weightMethods" && (
             <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse mr-1 shrink-0" />
           )}
           Step 3: Weight Methods
         </Button>
         <Button
           variant="outline"
-          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${apiResults ? "bg-green-50 border-green-200" : homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
           onClick={() => {
             setHomeTab("rankingMethods");
             if (currentStep !== "home") setCurrentStep("home");
           }}
         >
-          {homeTab === "rankingMethods" && (
+          {apiResults ? (
+            <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-green-600 shrink-0" />
+          ) : homeTab === "rankingMethods" && (
             <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse mr-1 shrink-0" />
           )}
           Step 4: Ranking Methods
         </Button>
         <Button
           variant="outline"
-          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${apiResults ? "bg-green-50 border-green-200" : homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
           onClick={() => {
             setHomeTab("rankingComparison");
             if (currentStep !== "home") setCurrentStep("home");
           }}
         >
-          {homeTab === "rankingComparison" && (
+          {apiResults ? (
+            <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-green-600 shrink-0" />
+          ) : homeTab === "rankingComparison" && (
             <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse mr-1 shrink-0" />
           )}
           Step 5: Ranking comparison
         </Button>
         <Button
           variant="outline"
-          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${sensitivityWeightComparisonResults.length > 0 ? "bg-green-50 border-green-200" : homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
           onClick={() => {
             setHomeTab("sensitivityAnalysis");
             if (currentStep !== "home") setCurrentStep("home");
           }}
         >
-          {homeTab === "sensitivityAnalysis" && (
+          {sensitivityWeightComparisonResults.length > 0 ? (
+            <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-green-600 shrink-0" />
+          ) : homeTab === "sensitivityAnalysis" && (
             <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse mr-1 shrink-0" />
           )}
           Step 6: Sensitivity Analysis
@@ -3496,12 +3508,14 @@ export default function MCDMCalculator() {
             setHomeTab("aiResearch");
             if (currentStep !== "home") setCurrentStep("home");
           }}
-          className={`col-span-2 sm:flex-1 bg-gradient-to-r ${homeTab === 'aiResearch' ? 'from-violet-700 via-purple-700 to-pink-700' : 'from-violet-600 via-purple-600 to-pink-600'} text-white hover:from-violet-700 hover:via-purple-700 hover:to-pink-700 border-none h-8 text-[10px] gap-1 shadow-lg px-2 flex items-center justify-center`}
+          className={`col-span-2 sm:flex-1 h-8 text-[10px] gap-1 px-2 flex items-center justify-center cursor-pointer ${aiAnalysisResult ? 'bg-green-50 border border-green-200 text-black border-solid' : 'bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 text-white border-none shadow-lg'}`}
         >
-          {homeTab === 'aiResearch' && (
+          {aiAnalysisResult ? (
+            <CheckCircle2 className="w-3.5 h-3.5 mr-0.5 text-green-600 shrink-0" />
+          ) : homeTab === 'aiResearch' && (
             <span className="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
           )}
-          <Sparkles className="w-3 h-3 shrink-0" />
+          <Sparkles className={`w-3 h-3 shrink-0 ${aiAnalysisResult ? 'text-indigo-500' : 'text-white'}`} />
           Step 7: AI Research (Manuscript)
         </Button>
       </div>
@@ -3554,10 +3568,24 @@ export default function MCDMCalculator() {
               const contribsList = extractedData.suggestedContributions.map((c: string, i: number) => `${i + 1}. ${c}`).join('\n');
               const researchGapText = `Building upon ${extractedData.citation.authors} (${extractedData.citation.year}), this study addresses critical gaps:\n\n${gapsList}\n\nNovel Contributions:\n${contribsList}`;
 
+              const extractedCriteriaDefs: Record<string, string> = {};
+              extractedData.criteria.forEach((c: any) => {
+                const typeText = (c.type === 'non-beneficial' || c.type === 'cost') ? ' (Lower is better)' : ' (Higher is better)';
+                extractedCriteriaDefs[c.name] = c.description + (c.description.includes(typeText) ? '' : typeText);
+              });
+
               setAiResearchContext(prev => ({
                 ...prev,
+                topic: extractedData.citation.title || extractedData.researchContext?.topic || "",
                 researchGap: researchGapText,
+                criteriaDefs: extractedCriteriaDefs,
                 extractionMode: 'manual'
+              }));
+
+              // Sync criteriaRanks for other components if needed
+              setCriteriaRanks(prev => ({
+                ...prev,
+                ...extractedCriteriaDefs
               }));
 
               // 2. Set API method for the algorithm
@@ -3567,30 +3595,55 @@ export default function MCDMCalculator() {
               }
 
               // 3. Populate matrix data if present in extraction
-              if (extractedData.matrixData) {
-                const newCriteria: Criterion[] = extractedData.matrixData.criteria.map((c: any, i: number) => ({
+              // API returns: { decisionMatrix: { hasMatrix, values }, criteria: [...], alternatives: [...] }
+              const hasMatrix = extractedData.decisionMatrix?.hasMatrix && extractedData.decisionMatrix?.values;
+              if (hasMatrix && extractedData.criteria?.length > 0 && extractedData.alternatives?.length > 0) {
+                const newCriteria: Criterion[] = extractedData.criteria.map((c: any, i: number) => ({
                   id: `crit-${i}`,
                   name: c.name,
-                  weight: c.weight,
+                  weight: c.weight || (1 / extractedData.criteria.length),
                   type: (c.type === 'non-beneficial' || c.type === 'cost') ? 'non-beneficial' : 'beneficial',
-                  unit: ""
+                  unit: c.unit || ""
                 }));
                 setCriteria(newCriteria);
 
-                const newAlternatives: Alternative[] = extractedData.matrixData.alternatives.map((a: string, i: number) => ({
+                const newAlternatives: Alternative[] = extractedData.alternatives.map((a: any, i: number) => ({
                   id: `alt-${i}`,
-                  name: a,
+                  name: typeof a === 'string' ? a : a.name,
                   scores: {}
                 }));
 
+                const matrixValues = extractedData.decisionMatrix.values;
                 newAlternatives.forEach((alt, altIdx) => {
                   newCriteria.forEach((crit, critIdx) => {
-                    alt.scores[crit.id] = extractedData.matrixData!.values[altIdx][critIdx];
+                    alt.scores[crit.id] = matrixValues[altIdx]?.[critIdx] ?? 0;
                   });
                 });
 
                 setAlternatives(newAlternatives);
-                setCurrentStep("input");
+                setNumAlternatives(newAlternatives.length);
+                setNumCriteria(newCriteria.length);
+                setCurrentStep("table");
+              } else if (extractedData.criteria?.length > 0 && extractedData.alternatives?.length > 0) {
+                // No matrix values but we have criteria and alternatives — fill names only
+                const newCriteria: Criterion[] = extractedData.criteria.map((c: any, i: number) => ({
+                  id: `crit-${i}`,
+                  name: c.name,
+                  weight: c.weight || (1 / extractedData.criteria.length),
+                  type: (c.type === 'non-beneficial' || c.type === 'cost') ? 'non-beneficial' : 'beneficial',
+                  unit: c.unit || ""
+                }));
+                setCriteria(newCriteria);
+
+                const newAlternatives: Alternative[] = extractedData.alternatives.map((a: any, i: number) => ({
+                  id: `alt-${i}`,
+                  name: typeof a === 'string' ? a : a.name,
+                  scores: {}
+                }));
+                setAlternatives(newAlternatives);
+                setNumAlternatives(newAlternatives.length);
+                setNumCriteria(newCriteria.length);
+                setCurrentStep("table");
               }
             }}
           />

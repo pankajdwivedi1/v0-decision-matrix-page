@@ -141,6 +141,18 @@ export function AIResearchAssistant({
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatedContent, setGeneratedContent] = useState('');
 
+    const trackGeminiUsage = (key: string) => {
+        if (!key) return;
+        const keyId = key.substring(0, 10);
+        const statsStr = localStorage.getItem("gemini_usage_stats") || "{}";
+        try {
+            const stats = JSON.parse(statsStr);
+            stats[keyId] = (stats[keyId] || 0) + 1;
+            localStorage.setItem("gemini_usage_stats", JSON.stringify(stats));
+            localStorage.setItem("gemini_stats_date", new Date().toDateString());
+        } catch (e) {}
+    };
+
     const markedAssetsList = Array.from(markedAssets || []);
     const tablesCount = markedAssetsList.filter(k => 
         (k.toLowerCase().includes('table') || k.toLowerCase().includes('matrix')) && 
@@ -215,7 +227,8 @@ export function AIResearchAssistant({
         const comparisonMethodsList = comparisonMethods && comparisonMethods.length > 0 ? comparisonMethods.join(', ').toUpperCase() : '';
         const sensitivityDetails = sensitivityMethod ? `stability check using ${sensitivityMethod.toUpperCase()} with ${sensitivityWeightMethods?.join(', ').toUpperCase()} weight variations` : '';
 
-        const spearmanText = spearmanCorrelation && Object.keys(spearmanCorrelation).length > 0
+        const isSpearmanMarked = markedAssetsList.some(k => k.includes('spearman') || k.includes('kendall'));
+        const spearmanText = isSpearmanMarked
             ? "Statistical validation is performed using Spearman Rank Correlation and Kendall's Tau to ensure ranking consistency between methods."
             : "";
 
@@ -232,7 +245,7 @@ export function AIResearchAssistant({
 2. Research Gap: ${noveltySuggestion}
 3. Solution: Introduce ${rankingMethodName} integrated with ${weightMethodName} weighting. 
 4. Methodology: Describe criteria (${criteria.length}) and alternatives (${alternatives.length}). 
-${Object.keys(spearmanCorrelation || {}).length > 0 ? "5. Statistical Validation: Mentions use of Spearman Rho and Kendall's Tau correlations.\n" : ""}6. Findings: Summarize final stable results.
+${isSpearmanMarked ? "5. Statistical Validation: Mentions use of Spearman Rho and Kendall's Tau correlations.\n" : ""}6. Findings: Summarize final stable results.
 7. Significance: Practical impact on decision-making. End with exactly 5-6 professional Keywords.`;
             case 'introduction':
                 return `Write a scholarly introduction with hierarchical numbering (1.1, 1.2).
@@ -257,7 +270,7 @@ Critically analyze limitations and position this study's multi-method validation
 Detail the procedural steps of ${rankingMethodName} and the weighting protocol of ${weightMethodName}. 
 ${selectedRankingMethods.length > 1 ? `Discuss the comparative rationale between ${selectedRankingMethods.join(', ')}.` : ""}
 Detail the weighting protocol using ${weightMethodName}.
-${Object.keys(spearmanCorrelation || {}).length > 0 ? 'Describe the "Statistical Robustness Proof" using Spearman and Kendall coefficients.' : ""}`;
+${isSpearmanMarked ? 'Describe the "Statistical Robustness Proof" using Spearman and Kendall coefficients.' : ""}`;
             case 'results':
                 return `Write a results section (Section 4). Discuss ranking results for ${alternatives.length} alternatives using ${rankingMethodName}. 
 Discuss the results specifically for the methods and tables marked in the manifest.
@@ -338,6 +351,9 @@ This section MUST contain ONLY the numbered reference list — nothing else what
             });
 
             const result = await response.json();
+            if (response.ok) {
+                trackGeminiUsage(userApiKey);
+            }
             setGeneratedContent(result.markdown || result.error || 'Failed to generate content');
         } catch (error) {
             setGeneratedContent('Error: Failed to generate content. Please try again.');
@@ -379,6 +395,9 @@ This section MUST contain ONLY the numbered reference list — nothing else what
                 })
             });
             const titleData = await titleResponse.json();
+            if (titleResponse.ok) {
+                trackGeminiUsage(userApiKey);
+            }
             const generatedTitle = (titleData.markdown || "Technical Analysis of Decision Criteria").replace(/[#*]/g, '').trim();
             setManuscriptTitle(generatedTitle);
 
@@ -416,6 +435,9 @@ This section MUST contain ONLY the numbered reference list — nothing else what
                 });
 
                 const result = await response.json();
+                if (response.ok) {
+                    trackGeminiUsage(userApiKey);
+                }
                 results[section.id] = result.markdown || "Section generation failed.";
             }
 
