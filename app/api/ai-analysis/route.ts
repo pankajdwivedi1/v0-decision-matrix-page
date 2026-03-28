@@ -88,9 +88,11 @@ export async function POST(req: NextRequest) {
                 const isComparisonAsset = k.includes("comparison") || k.includes("rho") || k.includes("tau") || k.includes("spearman") || k.includes("kendall");
                 const isSensitivityAsset = k.includes("sensitiv") || k.includes("chart") || k.includes("variation") || k.includes("perturbation");
                 
-                // Exclude all assets for non-data sections
-                if (["introduction", "literature_review", "references", "manuscript_title", "abstract"].includes(analysisType) ||
-                    ["introduction", "literature_review", "references", "abstract"].includes(reqContent.sectionType || "")) {
+                // EXCLUSION POLICY: Strictly forbid Study-Specific Assets in Preliminary/Terminal sections
+                const isPreliminarySection = ["introduction", "literature", "literature_review", "references", "manuscript_title", "abstract", "conclusion"].includes(analysisType) ||
+                                           ["introduction", "literature", "literature_review", "references", "abstract", "conclusion"].includes(reqContent.sectionType || "");
+                
+                if (isPreliminarySection) {
                     return false;
                 }
 
