@@ -314,14 +314,18 @@ export function AIResearchAssistant({
 
         switch (sectionId) {
             case 'abstract':
-                return `Write a high-quality academic abstract for a Q1 journal. Structure: 
-1. Context & Problem: Establish the domain and specific MCDM challenge. 
-2. Research Gap: ${noveltySuggestion}
-3. Solution: Introduce ${rankingMethodName} integrated with ${weightMethodName} weighting. 
-4. Methodology: Describe criteria (${criteria.length}) and alternatives (${alternatives.length}). 
-5. Robustness Proof: ${sensitivityStrategyText}
-${isSpearmanMarked ? "6. Statistical Validation: Mentions use of Spearman Rho and Kendall's Tau correlations.\n" : ""}7. Findings: Summarize results and stable configurations.
-8. Significance: Practical impact on decision-making. End with exactly 5-6 professional Keywords.`;
+                return `Write a high-quality, professional academic abstract for a Q1-standard journal. Follow this specific Phased Methodological Flow:
+1. **Context & Problem:** Establish the domain of the manufacturing/industrial application and the specific decision-making challenge.
+2. **Research Gap:** ${noveltySuggestion}
+3. **Purpose:** Introduce the purpose of this research to develop an integrated ${rankingMethodName} model integrated with ${weightMethodName} weighting.
+4. **Methodology (Step-by-Step Phasing):**
+   - **Firstly:** Describe the initial problem structuring using the decision matrix with ${criteria.length} criteria and ${alternatives.length} alternatives.
+   - **Secondly:** Detail how ${weightMethodName} weighting is employed to analyze criteria importance and resolve interrelationships.
+   - **Thirdly:** Explain how ${rankingMethodName} is introduced to prioritize solutions and overcome existing analytical drawbacks${isSpearmanMarked ? ", validated via cross-methodological comparison using Spearman/Kendall correlations" : ""}.
+   - **Finally:** Detail how ${sensitivityStrategyText.replace("- ", "")} is conducted to assess results effectiveness.
+5. **Attractive Features:** Describe the unique advantages of this proposed strategy (consistency, flexibility, and robust analysis).
+6. **Implications & Validity:** State that the approach was investigated in a real case study (Robot Selection/Industrial domain) and summarize its practical effectiveness for leaders and industrial decision-makers.
+7. **Synthesis:** End with 5-6 professional keywords in alphabetical order.`;
             case 'introduction':
                 return `Write a scholarly introduction with hierarchical numbering (1.1, 1.2).
 

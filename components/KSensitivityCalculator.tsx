@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import AHPFormula from "./AHPFormula";
 import PIPRECIAFormula from "./PIPRECIAFormula";
-import { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label } from 'recharts';
+import { ComposedChart, LineChart, Line, BarChart, Bar, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label } from 'recharts';
 import { Check, ChevronRight, Download, RefreshCw, Loader2, Sparkles, Bot, FileText, LayoutGrid } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import ReactMarkdown from 'react-markdown';
@@ -578,6 +578,7 @@ export default function KSensitivityCalculator({
     { value: 'scatter', label: 'Scatter Plot', icon: '⚫' },
     { value: 'area', label: 'Area Chart', icon: '📈' },
     { value: 'radar', label: 'Radar Chart', icon: '🎯' },
+    { value: 'dual', label: 'Dual-Axis (Score & Rank)', icon: '🌓' },
   ];
 
   const calculateKSensScore = (altValues: number[], weights: number[], criteriaTypes: string[]) => {
@@ -735,6 +736,7 @@ export default function KSensitivityCalculator({
         alternatives.forEach(alt => {
           if (varData.rankings && varData.rankings[alt.name]) {
             dataPoint[alt.name] = varData.rankings[alt.name].rank;
+            dataPoint[`${alt.name} Score`] = varData.rankings[alt.name].score;
           } else {
             hasCompleteData = false;
           }
@@ -1052,6 +1054,121 @@ export default function KSensitivityCalculator({
                   return (<Scatter key={alt.name} name={alt.name} data={scatterData} fill={colors[altIdx % colors.length]} />);
                 }))}
             </ScatterChart>
+          ) : kSensChartType === 'dual' ? (
+            <ComposedChart 
+              {...commonProps} 
+              barGap={0}
+              barCategoryGap="30%"
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.5} />
+              <XAxis 
+                dataKey="variation" 
+                tick={{ fontSize: 10, fill: '#374151' }} 
+                axisLine={{ stroke: '#000' }}
+                tickLine={{ stroke: '#000' }}
+                interval={0}
+                label={{ value: 'Perturbation Strength (%)', position: 'insideBottom', offset: -25, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }} 
+              />
+              <YAxis 
+                yAxisId="left" 
+                tick={{ fontSize: 10, fill: '#374151' }}
+                axisLine={{ stroke: '#000' }}
+                tickLine={{ stroke: '#000' }}
+                label={{ value: 'SWEI Score', angle: -90, position: 'insideLeft', offset: 0, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }} 
+                domain={[0, 'auto']}
+              />
+              <YAxis 
+                yAxisId="right" 
+                orientation="right" 
+                tick={{ fontSize: 10, fill: '#374151' }}
+                axisLine={{ stroke: '#000' }}
+                tickLine={{ stroke: '#000' }}
+                label={{ value: 'Ranking (1 = Best)', angle: 90, position: 'insideRight', offset: 10, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }} 
+                domain={[1, 8]} 
+                reversed 
+                interval={0}
+                ticks={[1, 2, 3, 4, 5, 6, 7, 8]}
+              />
+              <Tooltip
+                cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-white border border-gray-400 p-2 shadow-lg text-[10px] min-w-[150px]">
+                        <p className="font-bold border-b mb-1 pb-1">{label} Variation</p>
+                        {payload.map((entry: any, index: number) => {
+                          const isRank = !entry.name.includes("Score");
+                          return (
+                            <p key={index} className="flex justify-between py-0.5">
+                              <span style={{ color: entry.color }} className="font-medium">{entry.name}:</span>
+                              <span className="font-bold ml-4">
+                                {isRank ? entry.value : Number(entry.value).toFixed(4)}
+                              </span>
+                            </p>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Legend 
+                verticalAlign="bottom" 
+                align="center" 
+                wrapperStyle={{ fontSize: "10px", color: '#000', paddingTop: "30px" }}
+                layout="horizontal"
+                iconSize={12}
+              />
+              
+              {/* Matplotlib Colors Mapping for Alternatives */}
+              {(() => {
+                const mplColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
+                return alternatives.map((alt, i) => {
+                  return (
+                    <Bar 
+                      key={`bar-${alt.name}`} 
+                      yAxisId="left" 
+                      dataKey={`${alt.name} Score`} 
+                      fill={mplColors[i % mplColors.length]} 
+                      name={`${alt.name} Score`} 
+                      barSize={12}
+                    />
+                  );
+                });
+              })()}
+              
+              {/* Ranking Lines for Alternatives */}
+              {(() => {
+                const mplColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
+                return alternatives.map((alt, i) => {
+                  const isDashed = i % 2 !== 0;
+                  const markerType = i % 2 === 0 ? "circle" : "square";
+                  const seriesColor = mplColors[i % mplColors.length];
+                  
+                  return (
+                    <Line 
+                      key={`line-${alt.name}`} 
+                      yAxisId="right" 
+                      type="linear" 
+                      dataKey={alt.name} 
+                      stroke={seriesColor} 
+                      strokeWidth={1.5} 
+                      strokeDasharray={isDashed ? "5 5" : "0"}
+                      name={`${alt.name} Rank`} 
+                      dot={(props: any) => {
+                        const { cx, cy, index } = props;
+                        if (markerType === "square") {
+                          return <rect key={`dot-${alt.name}-${index}`} x={cx - 3} y={cy - 3} width={6} height={6} fill={seriesColor} />;
+                        }
+                        return <circle key={`dot-${alt.name}-${index}`} cx={cx} cy={cy} r={3.5} fill={seriesColor} />;
+                      }}
+                      legendType={isDashed ? "plainline" : "line"}
+                    />
+                  );
+                });
+              })()}
+            </ComposedChart>
           ) : (
             <BarChart {...commonProps} layout={kSensChartType === 'bar' ? 'vertical' : undefined}>
               <CartesianGrid strokeDasharray="3 3" />

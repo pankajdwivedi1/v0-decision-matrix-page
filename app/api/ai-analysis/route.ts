@@ -93,10 +93,12 @@ export async function POST(req: NextRequest) {
                                            ["introduction", "literature", "literature_review", "references", "abstract", "conclusion"].includes(reqContent.sectionType || "");
                 
                 if (isPreliminarySection) {
-                    return false;
+                    // CRITICAL: Still allow Method Names to pass through for theoretical discussion/definitions
+                    // This allows the AI to know WHICH methods to describe in Intro/Lit Review without inserting Table placeholders.
+                    return k.startsWith('method_') || k.startsWith('weight_method_');
                 }
 
-                // Methodology only gets inputs (Matrix, Criteria) and weight methods
+                // Methodology only gets inputs (Matrix, Criteria), weight methods, and all comparison rank methods
                 if (analysisType === "methodology" || reqContent.sectionType === "methodology") {
                     return !isRankingAsset && !isSensitivityAsset && !isComparisonAsset;
                 }
@@ -122,11 +124,13 @@ export async function POST(req: NextRequest) {
                 const manifestEntries = relevantAssets.map(([key, label]) => {
                     // Human-friendly description based on key
                     let desc = "Decision-making data asset";
+                    if (key.startsWith("method_")) desc = "MCDM Method: Provide technical definition and mathematical rationale.";
+                    if (key.startsWith("weight_method_")) desc = "Weighting Method: Describe its calculation framework.";
                     if (key.includes("matrix")) desc = "Mathematical processing matrix";
                     if (key.includes("ranking") || key.includes("result")) desc = "Final selection outcomes";
                     if (key.includes("sensitiv")) desc = "Model robustness validation results";
                     if (key.includes("chart") || key.includes("variation")) desc = "Graphical visualization of results";
-                    if (key.includes("weight")) desc = "Criteria importance calculations";
+                    if (key.includes("weight") && !key.startsWith("weight_method_")) desc = "Criteria importance calculations";
 
                     return `- **Identifier:** \`${key}\` | **Refer to as:** \`${label}\` | **Description:** ${desc}`;
                 }).join("\n");
@@ -184,18 +188,24 @@ export async function POST(req: NextRequest) {
             ? "- Analyze the **Spearman Rank Correlation** and methodological consistency based on the comparison data."
             : "- **STRICT PROHIBITION**: DO NOT mention Spearman's Rank Correlation or Kendall's Tau. These validations were NOT performed for this study.";
 
-        const commonMethodsArray = ["SWEI", "SWI", "EDAS", "TOPSIS", "VIKOR", "AHP", "ENTROPY", "CRITIC", "WASPAS", "VOI"];
-        const forbiddenMethods = commonMethodsArray.filter(m => m !== activeRankingMethod && m !== activeWeightingMethod);
+        const commonMethodsArray = ["SWEI", "SWI", "EDAS", "TOPSIS", "VIKOR", "AHP", "ENTROPY", "CRITIC", "WASPAS", "VOIP", "MARCOS", "ARAS", "MABAC"];
+        const forbiddenMethods = commonMethodsArray.filter(m => 
+            m !== activeRankingMethod && 
+            m !== activeWeightingMethod && 
+            !markedMethods.some((mm: string) => mm.toUpperCase() === m) &&
+            !markedWeightMethods.some((wm: string) => wm.toUpperCase() === m)
+        );
         const isEdas = activeRankingMethod.includes("EDAS") || activeRankingMethod.includes("SWEI") || activeRankingMethod.includes("SWI");
 
         const methodScopeInjection = `
         **STRICT METHODOLOGY SCOPE:**
-        - This study employs **${activeRankingMethod}** for ranking and **${activeWeightingMethod}** for weighting.
-        - Core Section Protocol: Descriptions of any other methods (like ${forbiddenMethods.slice(0, 5).join(", ")}) are strictly FORBIDDEN in Methodology, Results, and Discussion.
+        - This study primarily employs **${activeRankingMethod}** for ranking and **${activeWeightingMethod}** for weighting.
+        - **Validation Framework:** The study also includes results from ${markedMethods.length > 0 ? markedMethods.join(", ").toUpperCase() : "the primary method only"} for comparative validation.
+        - Core Section Protocol: Descriptions of any other methods (like ${forbiddenMethods.slice(0, 5).join(", ")}) are strictly FORBIDDEN.
         ${isEdas ? "- Use full terminology for EDAS components: **Sum Weighted Information (SWI)** and **Sum Weighted Exponential Information (SWEI)**." : "- DO NOT mention SWI or SWEI as they are not part of the selected methodology."}
         - ${sensitivityRule}
         - ${correlationRule}
-        - Hallucination Protocol: If a method's specific data is missing from the JSON context above, do NOT mention or define it.
+        - Hallucination Protocol: If a method's specific data (e.g., scores/ranks) is missing from the JSON context above, do NOT mention its specific numerical findings, but you MAY explain its mathematics if it is in the Asset Manifest.
         `;
 
         // ---------------------------------------------------------

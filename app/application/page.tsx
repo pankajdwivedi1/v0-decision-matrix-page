@@ -166,6 +166,8 @@ export default function MCDMCalculator() {
 
   const [isLoading, setIsLoading] = useState(false)
   const [apiResults, setApiResults] = useState<any>(null)
+  const [rankingChartType, setRankingChartType] = useState<string>('dualScoreRank')
+  const rankingChartRef = useRef<HTMLDivElement>(null)
   const [entropyResult, setEntropyResult] = useState<EntropyResult | null>(null)
   const [criticResult, setCriticResult] = useState<CriticResult | null>(null)
   const [sdResult, setSdResult] = useState<SDResult | null>(null)
@@ -7202,6 +7204,7 @@ export default function MCDMCalculator() {
                                     <SelectItem value="composed">Gantt Chart (Range)</SelectItem>
                                     <SelectItem value="radar">Radar Chart</SelectItem>
                                     <SelectItem value="radial">Radial Bar Chart</SelectItem>
+                                    <SelectItem value="dual">Dual-Axis (Score & Rank)</SelectItem>
                                   </SelectContent>
                                 </Select>
                                 <Button onClick={() => handleAiAnalysis("sensitivity", { sensitivityData: sensitivityCriteriaWeights })} variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700 h-7 text-xs gap-1"><Sparkles className="w-3 h-3" /> AI Analysis</Button>
@@ -7463,6 +7466,141 @@ export default function MCDMCalculator() {
                                         </RadialBarChart>
                                       );
                                     })()
+                                  ) : sensitivityChartType === "dual" ? (
+                                    <div className="flex flex-col h-full bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                                      {/* Academic Title matching Screenshot 1 */}
+                                      <div className="text-center mb-2">
+                                        <h4 className="text-[13px] font-medium text-gray-900 leading-tight">
+                                          Comparative Evaluation of Robot Alternatives Using Multiple Weighting Methods
+                                        </h4>
+                                      </div>
+                                      
+                                      <div className="flex-1 min-h-[400px]">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                          <ComposedChart 
+                                            data={sensitivityWeightChartData} 
+                                            margin={{ top: 10, right: 10, left: 10, bottom: 40 }}
+                                            barGap={0}
+                                            barCategoryGap="25%"
+                                          >
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.5} />
+                                            <XAxis 
+                                              dataKey="name" 
+                                              tick={{ fontSize: 10, fill: '#374151' }} 
+                                              axisLine={{ stroke: '#000' }}
+                                              tickLine={{ stroke: '#000' }}
+                                              interval={0}
+                                              tickFormatter={(val) => {
+                                                // If it's "Robot-1", convert to "R1" to match screenshot
+                                                return val.replace('Robot-', 'R');
+                                              }}
+                                              label={{ value: 'Robot Alternatives', position: 'insideBottom', offset: -25, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }} 
+                                            />
+                                            <YAxis 
+                                              yAxisId="left" 
+                                              tick={{ fontSize: 10, fill: '#374151' }}
+                                              axisLine={{ stroke: '#000' }}
+                                              tickLine={{ stroke: '#000' }}
+                                              label={{ value: 'SWEI Score', angle: -90, position: 'insideLeft', offset: 0, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }} 
+                                              domain={[0, 'auto']}
+                                            />
+                                            <YAxis 
+                                              yAxisId="right" 
+                                              orientation="right" 
+                                              tick={{ fontSize: 10, fill: '#374151' }}
+                                              axisLine={{ stroke: '#000' }}
+                                              tickLine={{ stroke: '#000' }}
+                                              label={{ value: 'Ranking (1 = Best)', angle: 90, position: 'insideRight', offset: 10, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }} 
+                                              domain={[1, 8]} 
+                                              reversed 
+                                              interval={0}
+                                              ticks={[1, 2, 3, 4, 5, 6, 7, 8]}
+                                            />
+                                            <Tooltip
+                                              cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                                              content={({ active, payload, label }) => {
+                                                if (active && payload && payload.length) {
+                                                  return (
+                                                    <div className="bg-white border border-gray-400 p-2 shadow-lg text-[10px] min-w-[150px]">
+                                                      <p className="font-bold border-b mb-1 pb-1">{label}</p>
+                                                      {payload.map((entry: any, index: number) => {
+                                                        const isRank = entry.name.includes("Rank");
+                                                        return (
+                                                          <p key={index} className="flex justify-between py-0.5">
+                                                            <span style={{ color: entry.color }} className="font-medium">{entry.name}:</span>
+                                                            <span className="font-bold ml-4">
+                                                              {isRank ? entry.value : Number(entry.value).toFixed(resultsDecimalPlaces)}
+                                                            </span>
+                                                          </p>
+                                                        );
+                                                      })}
+                                                    </div>
+                                                  );
+                                                }
+                                                return null;
+                                              }}
+                                            />
+                                            <Legend 
+                                              verticalAlign="bottom" 
+                                              align="center" 
+                                              wrapperStyle={{ fontSize: "10px", color: '#000', paddingTop: "30px" }}
+                                              layout="horizontal"
+                                              iconSize={12}
+                                            />
+                                            
+                                            {/* Matplotlib Colors Mapping */}
+                                            {(() => {
+                                              const mplColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
+                                              return sensitivityWeightComparisonResults.map((res, i) => {
+                                                const cleanLabel = res.weightLabel.replace(" Weight", "");
+                                                return (
+                                                  <Bar 
+                                                    key={`bar-${res.weightLabel}`} 
+                                                    yAxisId="left" 
+                                                    dataKey={`${res.weightLabel} Score`} 
+                                                    fill={mplColors[i % mplColors.length]} 
+                                                    name={cleanLabel} 
+                                                    barSize={15}
+                                                  />
+                                                );
+                                              });
+                                            })()}
+                                            
+                                            {/* Lines matching dotted/dashed style from Screenshot 1 */}
+                                            {(() => {
+                                              const mplColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
+                                              return sensitivityWeightComparisonResults.map((res, i) => {
+                                                const cleanLabel = res.weightLabel.replace(" Weight", "");
+                                                const isDashed = i % 2 !== 0;
+                                                const markerType = i % 2 === 0 ? "circle" : "square";
+                                                const seriesColor = mplColors[i % mplColors.length];
+                                                
+                                                return (
+                                                  <Line 
+                                                    key={`line-${res.weightLabel}-${i}`} // More unique key
+                                                    yAxisId="right" 
+                                                    type="linear" 
+                                                    dataKey={`${res.weightLabel} Rank`} 
+                                                    stroke={seriesColor} 
+                                                    strokeWidth={1.5} 
+                                                    strokeDasharray={isDashed ? "5 5" : "0"}
+                                                    name={`${cleanLabel} Rank`} 
+                                                    dot={(props: any) => {
+                                                      const { cx, cy, index } = props;
+                                                      if (markerType === "square") {
+                                                        return <rect key={`dot-${cleanLabel}-${index}`} x={cx - 3} y={cy - 3} width={6} height={6} fill={seriesColor} />;
+                                                      }
+                                                      return <circle key={`dot-${cleanLabel}-${index}`} cx={cx} cy={cy} r={3.5} fill={seriesColor} />;
+                                                    }}
+                                                    legendType={isDashed ? "plainline" : "line"}
+                                                  />
+                                                );
+                                              });
+                                            })()}
+                                          </ComposedChart>
+                                        </ResponsiveContainer>
+                                      </div>
+                                    </div>
                                   ) : (
                                     <LineChart data={sensitivityWeightChartData}>
                                       <CartesianGrid strokeDasharray="3 3" />
@@ -12648,6 +12786,219 @@ export default function MCDMCalculator() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Ranking Results Chart */}
+                {apiResults && apiResults.ranking && apiResults.ranking.length > 0 && (
+                  <Card className="border-gray-200 bg-white shadow-none w-full mb-6 rounded-none sm:rounded-xl">
+                    <CardHeader className="pb-3 bg-white/50 border-b border-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div>
+                        <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-2 uppercase tracking-wide italic">
+                          RANKING VISUALIZATION
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                        </CardTitle>
+                        <CardDescription className="text-xs text-gray-500 font-medium">Graphical representation of results for {method.toUpperCase()} method</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase">Style:</span>
+                          <Select value={rankingChartType} onValueChange={setRankingChartType}>
+                            <SelectTrigger className="w-40 sm:w-48 h-8 text-[10px] font-bold border-gray-200 shadow-sm hover:border-blue-400 bg-white">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="border-gray-200 shadow-xl">
+                              <SelectItem value="dualScoreRank" className="text-[11px] font-bold text-blue-700">🏆 Dual-Axis (Score & Rank)</SelectItem>
+                              <SelectItem value="barScore" className="text-[11px] font-medium">📊 Scores (Bar Chart)</SelectItem>
+                              <SelectItem value="lineScore" className="text-[11px] font-medium">📈 Scores (Line Chart)</SelectItem>
+                              <SelectItem value="radarScore" className="text-[11px] font-medium">🎯 Scores (Radar Chart)</SelectItem>
+                              <SelectItem value="lineRank" className="text-[11px] font-medium">📈 Rankings (Line Chart)</SelectItem>
+                              <SelectItem value="barRank" className="text-[11px] font-medium">📊 Rankings (Bar Chart)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <Button 
+                          onClick={() => downloadChartAsJpeg(rankingChartRef, `${method}-ranking-chart`)} 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 text-[10px] font-bold gap-1.5 border-gray-200 bg-white hover:bg-gray-50 transition-all shadow-sm ring-1 ring-black/5"
+                        >
+                          <Download className="w-3.5 h-3.5 text-blue-600" /> 
+                          Export JPG
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <div ref={rankingChartRef} className="h-[500px] w-full bg-white p-6 border border-gray-100 rounded-2xl shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          {(() => {
+                            const isRankView = rankingChartType.includes("Rank") && rankingChartType !== "dualScoreRank";
+                            const isRadar = rankingChartType === "radarScore";
+                            const isDual = rankingChartType === "dualScoreRank";
+                            
+                            if (isRadar) {
+                              return (
+                                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={apiResults.ranking}>
+                                  <PolarGrid stroke="#e2e8f0" />
+                                  <PolarAngleAxis dataKey="alternativeName" tick={{ fontSize: 10, fontWeight: 700, fill: '#1e293b' }} />
+                                  <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fontSize: 9, fontWeight: 500 }} />
+                                  <Tooltip 
+                                    contentStyle={{ fontSize: '11px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                                    itemStyle={{ fontWeight: 'bold' }}
+                                  />
+                                  <Radar
+                                    name="Relative Score"
+                                    dataKey="score"
+                                    stroke="#2563eb"
+                                    fill="#3b82f6"
+                                    fillOpacity={0.4}
+                                    dot={{ r: 4, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }}
+                                  />
+                                </RadarChart>
+                              );
+                            }
+
+                            if (isDual) {
+                              return (
+                                <div className="w-full h-full flex flex-col items-center">
+                                  <h3 className="text-[13px] font-bold font-serif mb-4 text-center text-gray-800 tracking-tight">
+                                    Evaluation of Robot Alternatives Based on {method.toUpperCase()} Scores and Rankings
+                                  </h3>
+                                  <ResponsiveContainer width="100%" height="90%">
+                                    <ComposedChart data={apiResults.ranking} margin={{ top: 20, right: 30, left: 10, bottom: 60 }}>
+                                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.6} />
+                                      <XAxis 
+                                        dataKey="alternativeName" 
+                                        tick={{ fontSize: 10, fontWeight: 700, fill: '#000', fontFamily: 'serif' }} 
+                                        label={{ value: 'Robot Alternatives', position: 'insideBottom', offset: -45, style: { fontSize: 11, fontStyle: 'italic', fill: '#000', fontFamily: 'serif' } }}
+                                        height={80}
+                                        axisLine={{ stroke: '#000' }}
+                                        tickLine={{ stroke: '#000' }}
+                                      />
+                                      <YAxis 
+                                        yAxisId="left"
+                                        tick={{ fontSize: 10, fontWeight: 600, fill: '#000', fontFamily: 'serif' }}
+                                        axisLine={{ stroke: '#000' }}
+                                        tickLine={{ stroke: '#000' }}
+                                        domain={[0, 'auto']}
+                                        label={{ 
+                                          value: `${method.toUpperCase()} Score`, 
+                                          angle: -90, 
+                                          position: 'insideLeft',
+                                          offset: 0,
+                                          style: { fontSize: 11, fontStyle: 'italic', fill: '#000', fontWeight: 600, fontFamily: 'serif' }
+                                        }}
+                                      />
+                                      <YAxis 
+                                        yAxisId="right"
+                                        orientation="right"
+                                        reversed
+                                        tick={{ fontSize: 10, fontWeight: 600, fill: '#000', fontFamily: 'serif' }}
+                                        axisLine={{ stroke: '#000' }}
+                                        tickLine={{ stroke: '#000' }}
+                                        domain={[1, apiResults.ranking.length]}
+                                        tickCount={apiResults.ranking.length}
+                                        label={{ 
+                                          value: 'Ranking (1 = Best)', 
+                                          angle: 90, 
+                                          position: 'insideRight',
+                                          offset: 10,
+                                          style: { fontSize: 11, fontStyle: 'italic', fill: '#000', fontWeight: 600, fontFamily: 'serif' }
+                                        }}
+                                      />
+                                      <Tooltip 
+                                        contentStyle={{ fontSize: '11px', borderRadius: '4px', border: '1px solid #000', boxShadow: 'none', fontFamily: 'serif' }}
+                                        cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                                      />
+                                      <Legend 
+                                        verticalAlign="top" 
+                                        align="right" 
+                                        iconType="square"
+                                        wrapperStyle={{ fontSize: '10px', fontFamily: 'serif', paddingRight: '20px', top: 0 }}
+                                      />
+                                      <Bar 
+                                        yAxisId="left"
+                                        dataKey="score" 
+                                        fill="#1f77b4" 
+                                        stroke="#000"
+                                        strokeWidth={1}
+                                        name="Score"
+                                        barSize={30}
+                                      />
+                                      <Line 
+                                        yAxisId="right"
+                                        type="linear" 
+                                        dataKey="rank" 
+                                        stroke="#1f77b4" 
+                                        strokeWidth={2} 
+                                        strokeDasharray="5 5"
+                                        dot={{ r: 4, fill: '#1f77b4', strokeWidth: 1, stroke: '#1f77b4' }}
+                                        name="Rank"
+                                      />
+                                    </ComposedChart>
+                                  </ResponsiveContainer>
+                                </div>
+                              );
+                            }
+                            
+                            return (
+                              <ComposedChart data={apiResults.ranking} margin={{ top: 20, right: 30, left: 10, bottom: 60 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis 
+                                  dataKey="alternativeName" 
+                                  tick={{ fontSize: 10, fontWeight: 700, fill: '#4b5563' }} 
+                                  label={{ value: 'Alternatives', position: 'insideBottom', offset: -45, style: { fontSize: 11, fontStyle: 'italic', fill: '#64748b' } }}
+                                  height={80}
+                                  axisLine={{ stroke: '#94a3b8' }}
+                                  tickLine={{ stroke: '#94a3b8' }}
+                                />
+                                <YAxis 
+                                  reversed={isRankView}
+                                  tick={{ fontSize: 10, fontWeight: 600, fill: '#4b5563' }}
+                                  axisLine={{ stroke: '#94a3b8' }}
+                                  tickLine={{ stroke: '#94a3b8' }}
+                                  domain={isRankView ? [1, apiResults.ranking.length] : [0, 'auto']}
+                                  tickCount={isRankView ? apiResults.ranking.length : undefined}
+                                  interval={0}
+                                  label={{ 
+                                    value: isRankView ? 'Ranking (1 = Best)' : 'Relative Score', 
+                                    angle: -90, 
+                                    position: 'insideLeft',
+                                    offset: 0,
+                                    style: { fontSize: 11, fontStyle: 'italic', fill: '#64748b', fontWeight: 600 }
+                                  }}
+                                />
+                                <Tooltip 
+                                  contentStyle={{ fontSize: '11px', borderRadius: '12px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}
+                                  cursor={{ fill: '#f8fafc' }}
+                                  formatter={(value: any) => isRankView ? value : value.toFixed(resultsDecimalPlaces)}
+                                />
+                                {rankingChartType.startsWith("line") ? (
+                                  <Line 
+                                    type="linear" 
+                                    dataKey={isRankView ? "rank" : "score"} 
+                                    stroke="#2563eb" 
+                                    strokeWidth={2.5} 
+                                    dot={{ r: 5, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }}
+                                    activeDot={{ r: 7, strokeWidth: 0 }}
+                                    name={isRankView ? "Rank" : "Score"}
+                                  />
+                                ) : (
+                                  <Bar 
+                                    dataKey={isRankView ? "rank" : "score"} 
+                                    fill="#3b82f6" 
+                                    radius={[4, 4, 0, 0]}
+                                    barSize={Math.min(60, 400 / apiResults.ranking.length)}
+                                    name={isRankView ? "Rank" : "Score"}
+                                  />
+                                )}
+                              </ComposedChart>
+                            );
+                          })()}
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Criteria Weights Display */}
                 <Card className="border-gray-200 bg-white shadow-none mb-6">
