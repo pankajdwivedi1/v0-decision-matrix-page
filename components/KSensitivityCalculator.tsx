@@ -1402,17 +1402,22 @@ export default function KSensitivityCalculator({
       }} />
       <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
         <CardHeader className="pb-3 px-3 sm:px-6">
-          <CardTitle className="text-sm text-black flex items-center">
-            {assetLabels?.sensitivity_analysis || "Perturbation Analysis"}
-          </CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
+            <CardTitle className="text-sm text-black flex items-center">
+              {assetLabels?.sensitivity_analysis || "Type 2: Data Perturbation (Test ±% Fluctuations)"}
+            </CardTitle>
+            <span className="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-1 rounded border border-green-200 w-fit flex items-center gap-1 shadow-sm">
+              <span>⭐</span> Highly Recommended for Q1 Journals
+            </span>
+          </div>
           <CardDescription className="text-xs text-gray-700 flex flex-wrap items-center gap-1">
-            <span>Step-by-step guided sensitivity analysis with customizable variation ranges</span>
+            <span>Use this to test real-world risk. It simulates what happens to your rankings if the importance of a separate criterion fluctuates by ±margin.</span>
             <a
               href="#"
-              className="text-blue-600 hover:underline inline-flex items-center gap-1"
+              className="text-blue-600 hover:underline inline-flex items-center gap-1 ml-1"
               onClick={(e) => { e.preventDefault(); setShowFormula(!showFormula); }}
             >
-              General formula for Sensitivity analysis methodology
+              General formula
               <span className="text-gray-500 text-[10px]">{showFormula ? '▼' : '▶'}</span>
             </a>
           </CardDescription>

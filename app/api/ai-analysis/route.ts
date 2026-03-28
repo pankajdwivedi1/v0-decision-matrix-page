@@ -81,19 +81,40 @@ export async function POST(req: NextRequest) {
 
         let assetLabelsInjection = "";
         if (assetLabels && typeof assetLabels === 'object') {
-            const manifestEntries = Object.entries(assetLabels).map(([key, label]) => {
-                // Human-friendly description based on key
-                let desc = "Decision-making data asset";
-                if (key.includes("matrix")) desc = "Mathematical processing matrix";
-                if (key.includes("ranking")) desc = "Final selection outcomes";
-                if (key.includes("sensitivity")) desc = "Model robustness validation results";
-                if (key.includes("chart") || key.includes("variation")) desc = "Graphical visualization of results";
-                if (key.includes("weight")) desc = "Criteria importance calculations";
+            const relevantAssets = Object.entries(assetLabels).filter(([key, label]) => {
+                const k = key.toLowerCase();
+                const isRanking = k.includes("ranking") || k.includes("result") || k.includes("comparison") || k.includes("score");
+                const isSensitivity = k.includes("sensitiv") || k.includes("chart") || k.includes("variation") || k.includes("perturbation");
+                
+                if (["introduction", "literature_review", "references", "manuscript_title"].includes(analysisType)) {
+                    return false;
+                }
+                if (analysisType === "methodology") {
+                    return !isRanking && !isSensitivity;
+                }
+                if (analysisType === "sensitivity" || analysisType === "k_sensitivity") {
+                    return isSensitivity;
+                }
+                if (analysisType === "ranking_comparison") {
+                    return isRanking || isSensitivity;
+                }
+                return true; 
+            });
 
-                return `- **Identifier:** \`${key}\` | **Refer to as:** \`${label}\` | **Description:** ${desc}`;
-            }).join("\n");
+            if (relevantAssets.length > 0) {
+                const manifestEntries = relevantAssets.map(([key, label]) => {
+                    // Human-friendly description based on key
+                    let desc = "Decision-making data asset";
+                    if (key.includes("matrix")) desc = "Mathematical processing matrix";
+                    if (key.includes("ranking") || key.includes("result")) desc = "Final selection outcomes";
+                    if (key.includes("sensitiv")) desc = "Model robustness validation results";
+                    if (key.includes("chart") || key.includes("variation")) desc = "Graphical visualization of results";
+                    if (key.includes("weight")) desc = "Criteria importance calculations";
 
-            assetLabelsInjection = `
+                    return `- **Identifier:** \`${key}\` | **Refer to as:** \`${label}\` | **Description:** ${desc}`;
+                }).join("\n");
+
+                assetLabelsInjection = `
         **RESEARCH ASSET MANIFEST (MANDATORY & EXHAUSTIVE REFERENCING):**
         To meet Q1 academic standards, you MUST explicitly interpret and include placeholders for **EVERY** asset listed below. Failure to reference even one asset listed here is considered a technical omission error.
         
@@ -104,9 +125,16 @@ export async function POST(req: NextRequest) {
         1. **Sequential Narrative Integration:** For each asset listed above, you MUST write at least one paragraph of interpretation of its data and its technical significance.
         2. **Explicit Citations:** Cite the "Refer to as" label directly in the prose (e.g., "As demonstrated in Table 1...").
         3. **AUTOMATIC PLACEHOLDERS:** Immediately after mentioning/citing an asset, you MUST insert a new line containing exactly: **[Insert {Refer to as label}: {Description} here]**.
-        4. **The "Chain of Evidence" Requirement:** Every numerical claim in your text MUST be traceable to one of the assets in this manifest. If the manifest has 10 entries, the manuscript MUST contain exactly 10 [Insert...] placeholders.
+        4. **The "Chain of Evidence" Requirement:** Every numerical claim in your text MUST be traceable to one of the assets in this manifest. If the manifest has ${relevantAssets.length} entries, the manuscript MUST contain exactly ${relevantAssets.length} [Insert...] placeholders.
         5. **No Hallucinations:** Do not fabricate tables or reference identifiers not found in this Manifest.
         `;
+            } else {
+                assetLabelsInjection = `
+        **STRICT PROVISION (Q1 STANDARD):**
+        - DO NOT mention any tables, figures, numerical ranking results, or sensitivity findings in this section.
+        - DO NOT insert any placeholders in this section.
+        `;
+            }
         }
 
         // Identify which methods are explicitly "selected" via checkboxes (markedAssets)
@@ -518,13 +546,14 @@ export async function POST(req: NextRequest) {
         3. **Mathematical Steps (Narrative-to-Table Linkage)**: For every step below, explicitly state which Table presents the data (e.g., "Table {X} presents the normalized matrix..."):
            - **Normalization**: Describe the process and refer to the specific table.
            - **Weighting Protocol**: Describe ${reqContent.weightMethod || 'the weighting'} step and refer to the weight table.
-           - **Aggregation/Ranking**: Detail the final ${method.toUpperCase()} calculation and refer to the ranking outcomes table.
-        4. **Validation Procedure**: ${hasSensitivityData || hasComparisonData ? "Explain the rationale behind the sensitivity analysis and the specific robustness check, referencing the corresponding validation tables." : "State that the reliability of the rankings is based on the technical soundness of the active MCDM framework applied."}
+           - **Aggregation/Ranking**: Detail the final ${method.toUpperCase()} calculation. If the ranking table is provided in the available assets, reference it; otherwise just describe the math.
+        4. **Validation Procedure**: ${hasSensitivityData || hasComparisonData ? "Explain the rationale behind the sensitivity analysis and the specific robustness check, referencing the corresponding validation tables." : "State that the reliability of the rankings is based on the technical soundness of the active MCDM framework applied. **DO NOT invent or describe theoretical validation procedures like Spearman's Rho or Kendall's Tau.**"}
 
         **MANDATORY RULES:**
         ${assetLabelsInjection}
         - Identify subsections using decimal numbering (e.g., 3.1, 3.2, 3.2.1).
-        - **SEQUENTIAL TABLE REFERENCING (MANDATORY)**: You MUST narratively introduce every calculation step by referencing its table (e.g., "The evaluation parameters are presented in Table 1; subsequently, the normalization process results in Table 2...").
+        - **SEQUENTIAL TABLE REFERENCING (MANDATORY)**: You MUST narratively introduce every calculation step by referencing its table (e.g., "The evaluation parameters are presented in Table 1..."). You may ONLY reference tables that are EXPLICITLY listed in your Asset Manifest below.
+        - **ABSOLUTE PROHIBITION**: Do NOT invent or describe theoretical validations (e.g., Spearman, Kendall) if their specific tables are not provided in your manifest. If no validation table is present, you MUST NOT write about statistical correlation.
         - Primary Methodology Focus: Only describe the mathematical steps for the active methods (**${activeRankingMethod}** and **${activeWeightingMethod}** weighting).
         - Whenever you mention a Table or Figure from the Manifest, you MUST immediately follow that sentence with a new line containing a placeholder in the format: **[Insert {Refer to as label}: {Description} here]**.
         `;

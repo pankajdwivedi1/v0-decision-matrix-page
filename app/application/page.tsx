@@ -6570,9 +6570,9 @@ export default function MCDMCalculator() {
 
                 <Card className="border-gray-200 bg-white shadow-none w-full mb-6 rounded-none sm:rounded-xl">
                   <CardHeader className="pb-3 px-4 sm:px-6">
-                    <CardTitle className="text-sm text-black">Sensitivity Analysis Configuration</CardTitle>
+                    <CardTitle className="text-sm text-black">Type 1: Methodological Sensitivity (Compare Weight Methods)</CardTitle>
                     <CardDescription className="text-xs text-gray-700">
-                      Analyze how changing the weight of a specific criterion affects the ranking of alternatives
+                      Use this to prove your final ranking isn't biased by the weighting method you chose. It tests if your top alternative stays #1 even if you change between objective or subjective weighting modes.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
