@@ -11,9 +11,11 @@ import { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } fro
 import { saveAs } from "file-saver";
 
 interface AIResearchAssistantProps {
-    kSensData: any;
-    criterionName: string;
-    variationRange: string;
+    kSensData?: any;
+    criterionName?: string;
+    variationRange?: string;
+    sensitivityData?: any[];
+    comparisonData?: any[];
     alternatives: any[];
     criteria: any[];
     method: string;
@@ -119,6 +121,8 @@ export function AIResearchAssistant({
     kSensData,
     criterionName,
     variationRange,
+    sensitivityData,
+    comparisonData,
     alternatives,
     criteria,
     method,
@@ -153,27 +157,58 @@ export function AIResearchAssistant({
         } catch (e) {}
     };
 
-    const markedAssetsList = Array.from(markedAssets || []);
-    const tablesCount = markedAssetsList.filter(k => 
-        (k.toLowerCase().includes('table') || k.toLowerCase().includes('matrix')) && 
-        !k.startsWith('method_') && !k.startsWith('weight_method_')
-    ).length;
-    
-    const diagramsCount = markedAssetsList.filter(k => 
-        (k.includes('chart') || k.includes('variation') || k.includes('plot') || k.includes('radar') || k.includes('comparison')) && 
-        !k.startsWith('method_') && !k.startsWith('weight_method_') &&
-        !k.toLowerCase().includes('table')
-    ).length;
-    
-    const selectedRankingMethods = markedAssetsList
-        .filter(k => k.startsWith('method_'))
-        .map(k => k.replace('method_', '').toUpperCase());
-    
-    const selectedWeightMethods = markedAssetsList
-        .filter(k => k.startsWith('weight_method_'))
-        .map(k => k.replace('weight_method_', '').toUpperCase());
+    // Full Manuscript States
+    const [isProcessingFull, setIsProcessingFull] = useState(false);
+    const [fullProgress, setFullProgress] = useState(0);
+    const [fullManuscriptData, setFullManuscriptData] = useState<Record<string, string>>({});
+    const [manuscriptTitle, setManuscriptTitle] = useState('');
+    const [technicalDepth, setTechnicalDepth] = useState<'standard' | 'mathematical'>(technicalDepthProp || 'standard');
+    const [computedAssetLabels, setComputedAssetLabels] = useState<Record<string, string>>({});
 
-    const methodsCount = selectedRankingMethods.length + selectedWeightMethods.length;
+    const markedAssetsList = Array.from(markedAssets || []);
+
+    const { tablesCount, diagramsCount, methodsCount, selectedRankingMethods, selectedWeightMethods } = React.useMemo(() => {
+        
+        const rankingMethods = markedAssetsList
+            .filter(k => k.startsWith('method_'))
+            .map(k => k.replace('method_', '').toUpperCase());
+        
+        const weightMethods = markedAssetsList
+            .filter(k => k.startsWith('weight_method_'))
+            .map(k => k.replace('weight_method_', '').toUpperCase());
+
+        let tCount = 0;
+        let dCount = 0;
+
+        markedAssetsList.forEach(key => {
+            if (key.startsWith('method_') || key.startsWith('weight_method_')) return;
+
+            // Use the computed labels (Badges like "Table 1") for counting
+            const label = computedAssetLabels[key] || "";
+            if (label.startsWith('Table')) {
+                tCount++;
+            } else if (label.startsWith('Figure') || label.startsWith('Chart') || label.startsWith('Diagram')) {
+                dCount++;
+            } else {
+                // Technical internal fallback
+                const lowKey = key.toLowerCase();
+                const isTable = (lowKey.includes('table') || lowKey.includes('matrix') || lowKey.includes('result_data')) && !lowKey.includes('chart');
+                const isDiagram = (lowKey.includes('chart') || lowKey.includes('variation') || lowKey.includes('plot') || lowKey.includes('radar')) && !lowKey.includes('table');
+                
+                if (isTable) tCount++;
+                else if (isDiagram) dCount++;
+                else if (lowKey.includes('data') || lowKey.includes('step') || lowKey.includes('overall')) tCount++; // Default most data items to tables
+            }
+        });
+
+        return {
+            tablesCount: tCount,
+            diagramsCount: dCount,
+            methodsCount: rankingMethods.length + weightMethods.length,
+            selectedRankingMethods: rankingMethods,
+            selectedWeightMethods: weightMethods
+        };
+    }, [markedAssets, computedAssetLabels]);
     const [showResult, setShowResult] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
 
@@ -199,12 +234,41 @@ export function AIResearchAssistant({
         }
     }, []);
 
-    // Full Manuscript States
-    const [isProcessingFull, setIsProcessingFull] = useState(false);
-    const [fullProgress, setFullProgress] = useState(0);
-    const [fullManuscriptData, setFullManuscriptData] = useState<Record<string, string>>({});
-    const [manuscriptTitle, setManuscriptTitle] = useState('');
-    const [technicalDepth, setTechnicalDepth] = useState<'standard' | 'mathematical'>(technicalDepthProp || 'standard');
+
+    // Compute or sync asset labels
+    useEffect(() => {
+        if (assetLabels && Object.keys(assetLabels).length > 0) {
+            setComputedAssetLabels(assetLabels);
+            return;
+        }
+
+        // Reconstruct from markedAssets and localStorage
+        const labels: Record<string, string> = {};
+        let tableCount = 1;
+        let figureCount = 1;
+
+        Array.from(markedAssets || []).forEach(key => {
+            const savedLabel = localStorage.getItem(`asset_label_${key}`);
+            if (savedLabel) {
+                labels[key] = savedLabel;
+            } else {
+                // Fallback naming logic
+                if (key.includes('chart') || key.includes('variation') || key.includes('plot') || key.includes('radar') || key.includes('comparison')) {
+                    labels[key] = `Figure ${figureCount++}`;
+                } else if (key.includes('table') || key.includes('matrix') || key.includes('result')) {
+                    labels[key] = `Table ${tableCount++}`;
+                } else if (key.startsWith('method_')) {
+                    labels[key] = `MCDM Method: ${key.replace('method_', '').toUpperCase()}`;
+                } else if (key.startsWith('weight_method_')) {
+                    labels[key] = `Weighting Method: ${key.replace('weight_method_', '').toUpperCase()}`;
+                } else {
+                    labels[key] = `Asset ${tableCount++}`;
+                }
+            }
+        });
+
+        setComputedAssetLabels(labels);
+    }, [assetLabels, markedAssets]);
 
     useEffect(() => {
         if (technicalDepthProp) {
@@ -225,9 +289,19 @@ export function AIResearchAssistant({
         const weightMethodName = selectedWeightMethods.length > 0 ? selectedWeightMethods.join(' and ') : weightMethod.toUpperCase();
         
         const comparisonMethodsList = comparisonMethods && comparisonMethods.length > 0 ? comparisonMethods.join(', ').toUpperCase() : '';
-        const sensitivityDetails = sensitivityMethod ? `stability check using ${sensitivityMethod.toUpperCase()} with ${sensitivityWeightMethods?.join(', ').toUpperCase()} weight variations` : '';
+        const hasType1 = sensitivityData && sensitivityData.length > 0;
+        const hasType2 = kSensData && kSensData.results;
 
-        const isSpearmanMarked = markedAssetsList.some(k => k.includes('spearman') || k.includes('kendall'));
+        let sensitivityStrategyText = "";
+        if (hasType1 && hasType2) {
+            sensitivityStrategyText = "A dual-stage validation is applied: (Type 1) Methodological Sensitivity via Weight Method Comparison and (Type 2) Data Perturbation Analysis via Criterion Variation.";
+        } else if (hasType1) {
+            sensitivityStrategyText = "Type 1: Methodological Sensitivity analysis is conducted to test ranking stability across different weighting schemes.";
+        } else if (hasType2) {
+            sensitivityStrategyText = "Type 2: Data Perturbation Analysis is conducted to determine the impact of criterion fluctuations on the final ranking.";
+        }
+
+        const isSpearmanMarked = Array.from(markedAssets || []).some((k: string) => k.includes('spearman') || k.includes('kendall'));
         const spearmanText = isSpearmanMarked
             ? "Statistical validation is performed using Spearman Rank Correlation and Kendall's Tau to ensure ranking consistency between methods."
             : "";
@@ -245,8 +319,9 @@ export function AIResearchAssistant({
 2. Research Gap: ${noveltySuggestion}
 3. Solution: Introduce ${rankingMethodName} integrated with ${weightMethodName} weighting. 
 4. Methodology: Describe criteria (${criteria.length}) and alternatives (${alternatives.length}). 
-${isSpearmanMarked ? "5. Statistical Validation: Mentions use of Spearman Rho and Kendall's Tau correlations.\n" : ""}6. Findings: Summarize final stable results.
-7. Significance: Practical impact on decision-making. End with exactly 5-6 professional Keywords.`;
+5. Robustness Proof: ${sensitivityStrategyText}
+${isSpearmanMarked ? "6. Statistical Validation: Mentions use of Spearman Rho and Kendall's Tau correlations.\n" : ""}7. Findings: Summarize results and stable configurations.
+8. Significance: Practical impact on decision-making. End with exactly 5-6 professional Keywords.`;
             case 'introduction':
                 return `Write a scholarly introduction with hierarchical numbering (1.1, 1.2).
 
@@ -257,7 +332,7 @@ Section 1.2 — Literature Gap and Novel Contributions:
   - List the Scientific Contributions of this paper in labelled sub-points (a), (b), (c):
     (a) Describe the integrated ${rankingMethodName}-based ranking FRAMEWORK developed — its design, scope (${alternatives.length} alternatives, ${criteria.length} criteria), and what it systematically integrates.
     (b) Describe the METHODOLOGICAL APPROACH employed: how ${rankingMethodName} with ${weightMethodName} weighting is applied to systematically evaluate the alternatives with respect to the defined criteria.
-    (c) Describe the VALIDATION STRATEGY — the robustness checks and sensitivity procedures used to ensure model reliability.
+    (c) Describe the VALIDATION STRATEGY — ${sensitivityStrategyText} ${isSpearmanMarked ? "This includes statistical correlation analysis to ensure inter-method reliability." : ""}
 
 **CRITICAL RULE — STRICTLY ENFORCED**: The contributions sub-section (1.2) MUST describe what the study DOES and HOW it does it — NOT what it FINDS. You are STRICTLY FORBIDDEN from mentioning any numerical outcomes, TOPSIS scores, ranking positions, alternative names followed by scores, or any specific quantitative result in this section. Phrases like "Liverpool emerges as top-ranked with score X", "Edinburgh at 0.76", or any similar result disclosure are ABSOLUTELY PROHIBITED here. Contributions must be described in terms of methodology, framework, and approach ONLY.`;
 
@@ -269,12 +344,14 @@ Critically analyze limitations and position this study's multi-method validation
                 return `Write a technical methodology section (Section 3). ${mathInstructions}
 Detail the procedural steps of ${rankingMethodName} and the weighting protocol of ${weightMethodName}. 
 ${selectedRankingMethods.length > 1 ? `Discuss the comparative rationale between ${selectedRankingMethods.join(', ')}.` : ""}
-Detail the weighting protocol using ${weightMethodName}.
+Detail the robustness verification strategy: ${sensitivityStrategyText}
 ${isSpearmanMarked ? 'Describe the "Statistical Robustness Proof" using Spearman and Kendall coefficients.' : ""}`;
             case 'results':
                 return `Write a results section (Section 4). Discuss ranking results for ${alternatives.length} alternatives using ${rankingMethodName}. 
 Discuss the results specifically for the methods and tables marked in the manifest.
-Discuss ranking stability during the ${variationRange} variation.` +
+${sensitivityStrategyText}
+${hasType2 ? `Address the ranking stability during the ${variationRange} variation targeted for criterion ${criterionName || 'the critical criterion'}.` : ""}
+${hasType1 ? `Explain the methodological comparison using ${sensitivityWeightMethods?.join(', ')} weighting schemes.` : ""}` +
                     (comparisonMethodsList ? ` Include comparison results with ${comparisonMethodsList}.` : '') +
                     (spearmanText ? ` Provide statistical validation, stating that a high correlation indicates strong methodological consensus.` : '');
             case 'discussion':
@@ -337,8 +414,8 @@ This section MUST contain ONLY the numbered reference list — nothing else what
                     alternatives: alternatives,
                     criteria: criteria,
                     method: method,
-                    assetLabels: assetLabels,
-                    markedAssets: markedAssets ? Array.from(markedAssets) : [],
+                    assetLabels: Object.keys(computedAssetLabels).length > 0 ? computedAssetLabels : assetLabels,
+                    selectedAssets: markedAssets ? Array.from(markedAssets) : [],
                     ranking: kSensData?.results?.['0']
                         ? Object.entries(kSensData.results['0']).map(([altName, score]: [string, any]) => ({
                             alternativeName: altName,
@@ -418,11 +495,13 @@ This section MUST contain ONLY the numbered reference list — nothing else what
                         kSensData,
                         criterionName,
                         variationRange,
+                        sensitivityData,
+                        comparisonData,
                         alternatives,
                         criteria,
                         method,
-                        assetLabels: assetLabels,
-                        markedAssets: markedAssets ? Array.from(markedAssets) : [],
+                        assetLabels: Object.keys(computedAssetLabels).length > 0 ? computedAssetLabels : assetLabels,
+                        selectedAssets: markedAssets ? Array.from(markedAssets) : [],
                         ranking: kSensData?.results?.['0']
                             ? Object.entries(kSensData.results['0']).map(([altName, score]: [string, any]) => ({
                                 alternativeName: altName,

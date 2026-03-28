@@ -285,6 +285,10 @@ export default function MCDMCalculator() {
   const [isWeightSelectorOpen, setIsWeightSelectorOpen] = useState(false)
   const [sensitivityWeightComparisonResults, setSensitivityWeightComparisonResults] = useState<any[]>([])
   const [sensitivityCriteriaWeights, setSensitivityCriteriaWeights] = useState<any[]>([])
+  const [isKSensitivityCalculated, setIsKSensitivityCalculated] = useState(false)
+  const [kSensResultsData, setKSensResultsData] = useState<any>(null)
+  const [kSensCriterionVary, setKSensCriterionVary] = useState<string>("")
+  const [kSensVariationRange, setKSensVariationRange] = useState<string>("±30%")
   const [weightChartType, setWeightChartType] = useState<string>("bar")
 
   // Decimal precision for results display
@@ -311,6 +315,104 @@ export default function MCDMCalculator() {
     extractionMode: 'manual'
   })
   const [selectedAiAssets, setSelectedAiAssets] = useState<Set<string>>(new Set())
+
+  // Memoized asset labels for AI manifest
+  const assetLabelsMap = useMemo(() => {
+    const labels: Record<string, string> = {}
+    let tableCount = 1
+    let figureCount = 1
+
+    selectedAiAssets.forEach(key => {
+      const savedLabel = localStorage.getItem(`asset_label_${key}`)
+      if (savedLabel) {
+        labels[key] = savedLabel
+      } else {
+        // Intelligent fallback naming
+        if (key.includes("chart") || key.includes("variation") || key.includes("plot") || key.includes("radar") || key.includes("comparison")) {
+          labels[key] = `Figure ${figureCount++}`
+        } else {
+          labels[key] = `Table ${tableCount++}`
+        }
+      }
+    })
+    return labels
+  }, [selectedAiAssets])
+
+  // Comprehensive check for any weight calculation across all possible methods
+  const isAnyWeightCalculated = useMemo(() => {
+    return !!(
+      entropyResult ||
+      criticResult ||
+      sdResult ||
+      varianceResult ||
+      madResult ||
+      merecResult ||
+      dbwResult ||
+      svpResult ||
+      mdmResult ||
+      lswResult ||
+      gpowResult ||
+      lpwmResult ||
+      pcwmResult ||
+      rocResult ||
+      rrResult ||
+      ahpResult ||
+      ahpCalculatedWeights ||
+      pipreciaResult ||
+      pipreciaCalculatedWeights ||
+      swaraResult ||
+      swaraCalculatedWeights ||
+      wensloResult ||
+      lopcowResult ||
+      dematelResult ||
+      customWeightsCalculated
+    );
+  }, [
+    entropyResult, criticResult, sdResult, varianceResult, madResult, merecResult,
+    dbwResult, svpResult, mdmResult, lswResult, gpowResult, lpwmResult, pcwmResult,
+    rocResult, rrResult, ahpResult, ahpCalculatedWeights, pipreciaResult,
+    pipreciaCalculatedWeights, swaraResult, swaraCalculatedWeights,
+    wensloResult, lopcowResult, dematelResult, customWeightsCalculated
+  ]);
+
+  const resetAllCalculations = () => {
+    setEntropyResult(null)
+    setCriticResult(null)
+    setAhpResult(null)
+    setPipreciaResult(null)
+    setMerecResult(null)
+    setWensloResult(null)
+    setLopcowResult(null)
+    setDematelResult(null)
+    setSdResult(null)
+    setVarianceResult(null)
+    setMadResult(null)
+    setDbwResult(null)
+    setSvpResult(null)
+    setMdmResult(null)
+    setLswResult(null)
+    setGpowResult(null)
+    setLpwmResult(null)
+    setPcwmResult(null)
+    setRocResult(null)
+    setRrResult(null)
+    setAhpCalculatedWeights(null)
+    setPipreciaCalculatedWeights(null)
+    setSwaraCalculatedWeights(null)
+    setCustomWeightsCalculated(null)
+    setApiResults(null)
+    setComparisonResults([])
+    setSensitivityWeightComparisonResults([])
+    setIsKSensitivityCalculated(false)
+    setKSensResultsData(null)
+    setAiAnalysisResult(null)
+    
+    // Also clear from local storage to ensure "Reality" on refresh
+    localStorage.removeItem("mcdm_api_results")
+    localStorage.removeItem("ai_analysis_result")
+    localStorage.removeItem("ai_selected_assets")
+    setSelectedAiAssets(new Set())
+  }
 
   const handleIncludeChange = (key: string, included: boolean) => {
     setSelectedAiAssets((prev) => {
@@ -342,21 +444,10 @@ export default function MCDMCalculator() {
 
   // Load research context and results from local storage on mount
   useEffect(() => {
-    try {
-      const savedSelected = localStorage.getItem("ai_selected_assets")
-      if (savedSelected) {
-        const parsed: string[] = JSON.parse(savedSelected)
-        setSelectedAiAssets(new Set(parsed))
-      }
-    } catch (e) {
-      console.error("Failed to load AI asset selection", e)
-    }
 
     const savedTopic = localStorage.getItem("ai_research_topic") || ""
     const savedGap = localStorage.getItem("ai_research_gap") || ""
     const savedDefs = localStorage.getItem("ai_criteria_defs")
-    const savedApiResults = localStorage.getItem("mcdm_api_results")
-    const savedAiAnalysis = localStorage.getItem("ai_analysis_result")
     const savedMethod = localStorage.getItem("mcdm_method")
 
     setAiResearchContext({
@@ -366,15 +457,6 @@ export default function MCDMCalculator() {
       extractionMode: 'manual'
     })
 
-    if (savedApiResults) {
-      try {
-        setApiResults(JSON.parse(savedApiResults))
-      } catch (e) {
-        console.error("Failed to parse saved API results", e)
-      }
-    }
-
-    if (savedAiAnalysis) setAiAnalysisResult(savedAiAnalysis)
     if (savedMethod) setMethod(savedMethod as MCDMMethod)
   }, [])
 
@@ -534,6 +616,9 @@ export default function MCDMCalculator() {
       alert("Excel file appears to be empty")
       return
     }
+
+    // Reset all old calculations when new file is processed
+    resetAllCalculations()
 
     // 2. Identify components: Headers, Types, Weights, Data
     let startRowIndex = 0
@@ -3445,13 +3530,13 @@ export default function MCDMCalculator() {
         </Button>
         <Button
           variant="outline"
-          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${(entropyResult || criticResult || swaraCalculatedWeights || ahpCalculatedWeights) ? "bg-green-50 border-green-200" : homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${isAnyWeightCalculated ? "bg-green-50 border-green-200" : homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
           onClick={() => {
             setHomeTab("weightMethods");
             if (currentStep !== "home") setCurrentStep("home");
           }}
         >
-          {(entropyResult || criticResult || swaraCalculatedWeights || ahpCalculatedWeights) ? (
+          {isAnyWeightCalculated ? (
             <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-green-600 shrink-0" />
           ) : homeTab === "weightMethods" && (
             <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse mr-1 shrink-0" />
@@ -3475,13 +3560,13 @@ export default function MCDMCalculator() {
         </Button>
         <Button
           variant="outline"
-          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${apiResults ? "bg-green-50 border-green-200" : homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${comparisonResults.length > 0 ? "bg-green-50 border-green-200" : homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
           onClick={() => {
             setHomeTab("rankingComparison");
             if (currentStep !== "home") setCurrentStep("home");
           }}
         >
-          {apiResults ? (
+          {comparisonResults.length > 0 ? (
             <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-green-600 shrink-0" />
           ) : homeTab === "rankingComparison" && (
             <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse mr-1 shrink-0" />
@@ -3490,13 +3575,13 @@ export default function MCDMCalculator() {
         </Button>
         <Button
           variant="outline"
-          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${sensitivityWeightComparisonResults.length > 0 ? "bg-green-50 border-green-200" : homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${(sensitivityWeightComparisonResults.length > 0 || isKSensitivityCalculated) ? "bg-green-50 border-green-200" : homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
           onClick={() => {
             setHomeTab("sensitivityAnalysis");
             if (currentStep !== "home") setCurrentStep("home");
           }}
         >
-          {sensitivityWeightComparisonResults.length > 0 ? (
+          {(sensitivityWeightComparisonResults.length > 0 || isKSensitivityCalculated) ? (
             <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-green-600 shrink-0" />
           ) : homeTab === "sensitivityAnalysis" && (
             <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse mr-1 shrink-0" />
@@ -3870,20 +3955,22 @@ export default function MCDMCalculator() {
             homeTab === "aiResearch" && (
               <div className="w-full mb-6">
                 <AIResearchAssistant
-                  kSensData={apiResults ? { results: { '0': Object.fromEntries(apiResults.ranking.map((r: any) => [r.alternativeName, r.score])) } } : null}
-                  criterionName=""
-                  variationRange="±30%"
                   alternatives={alternatives}
                   criteria={criteria}
                   method={method}
                   weightMethod={weightMethod}
                   comparisonMethods={selectedRankingMethods}
                   comparisonWeightMethod={comparisonWeightMethod}
-                  sensitivityMethod={sensitivityMethod}
-                  sensitivityWeightMethods={sensitivityWeightMethods}
                   spearmanCorrelation={spearmanCorrelation}
                   kendallTau={kendallTau}
                   markedAssets={selectedAiAssets}
+                  assetLabels={assetLabelsMap}
+                  kSensData={kSensResultsData}
+                  criterionName={kSensCriterionVary}
+                  variationRange={kSensVariationRange}
+                  sensitivityData={sensitivityWeightComparisonResults}
+                  sensitivityMethod={sensitivityMethod}
+                  sensitivityWeightMethods={sensitivityWeightMethods}
                   onClose={() => setHomeTab("rankingMethods")}
                 />
               </div>
@@ -7423,6 +7510,14 @@ export default function MCDMCalculator() {
                   onLabelChange={handleAssetLabelChange}
                   onIncludeChange={handleIncludeChange}
                   selectedAiAssets={selectedAiAssets}
+                  onCalculationComplete={(hasResults, results) => {
+                    setIsKSensitivityCalculated(hasResults);
+                    if (results) {
+                      setKSensResultsData(results);
+                      // Update meta from tool state if possible, though defaults cover most cases
+                      setKSensVariationRange("±30%");
+                    }
+                  }}
                 />
               </>
             )

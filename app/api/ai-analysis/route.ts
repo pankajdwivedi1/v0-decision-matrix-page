@@ -83,21 +83,36 @@ export async function POST(req: NextRequest) {
         if (assetLabels && typeof assetLabels === 'object') {
             const relevantAssets = Object.entries(assetLabels).filter(([key, label]) => {
                 const k = key.toLowerCase();
-                const isRanking = k.includes("ranking") || k.includes("result") || k.includes("comparison") || k.includes("score");
-                const isSensitivity = k.includes("sensitiv") || k.includes("chart") || k.includes("variation") || k.includes("perturbation");
+                const isWeightingAsset = k.includes("weight") || k.includes("crit");
+                const isRankingAsset = k.includes("ranking") || k.includes("result") || k.includes("score");
+                const isComparisonAsset = k.includes("comparison") || k.includes("rho") || k.includes("tau") || k.includes("spearman") || k.includes("kendall");
+                const isSensitivityAsset = k.includes("sensitiv") || k.includes("chart") || k.includes("variation") || k.includes("perturbation");
                 
-                if (["introduction", "literature_review", "references", "manuscript_title"].includes(analysisType)) {
+                // Exclude all assets for non-data sections
+                if (["introduction", "literature_review", "references", "manuscript_title", "abstract"].includes(analysisType) ||
+                    ["introduction", "literature_review", "references", "abstract"].includes(reqContent.sectionType || "")) {
                     return false;
                 }
-                if (analysisType === "methodology") {
-                    return !isRanking && !isSensitivity;
+
+                // Methodology only gets inputs (Matrix, Criteria) and weight methods
+                if (analysisType === "methodology" || reqContent.sectionType === "methodology") {
+                    return !isRankingAsset && !isSensitivityAsset && !isComparisonAsset;
                 }
-                if (analysisType === "sensitivity" || analysisType === "k_sensitivity") {
-                    return isSensitivity;
+
+                // Results & Discussion sections get Findings based on their specific type
+                if (analysisType === "sensitivity" || analysisType === "k_sensitivity" || 
+                    reqContent.sectionType === "sensitivity" || reqContent.sectionType === "k_sensitivity") {
+                    return isSensitivityAsset;
                 }
-                if (analysisType === "ranking_comparison") {
-                    return isRanking || isSensitivity;
+
+                if (analysisType === "ranking_comparison" || reqContent.sectionType === "ranking_comparison") {
+                    return isRankingAsset || isComparisonAsset;
                 }
+
+                if (analysisType === "results" || reqContent.sectionType === "results") {
+                    return isRankingAsset || isWeightingAsset;
+                }
+
                 return true; 
             });
 
@@ -115,18 +130,18 @@ export async function POST(req: NextRequest) {
                 }).join("\n");
 
                 assetLabelsInjection = `
-        **RESEARCH ASSET MANIFEST (MANDATORY & EXHAUSTIVE REFERENCING):**
-        To meet Q1 academic standards, you MUST explicitly interpret and include placeholders for **EVERY** asset listed below. Failure to reference even one asset listed here is considered a technical omission error.
+        **RESEARCH ASSET MANIFEST (STRATEGIC ITERATION MANDATE):**
+        To meet Q1 academic standards, you MUST explicitly interpret and include placeholders for **EVERY SINGLE ASSET** listed below. This is a technical requirement: if the manifest provides 10 assets, the manuscript MUST contain exactly 10 distinct interpretations and 10 placeholders.
         
         **Available Research Assets:**
         ${manifestEntries}
-
-        **STRICT REFERENCING & PLACEHOLDER RULES:**
-        1. **Sequential Narrative Integration:** For each asset listed above, you MUST write at least one paragraph of interpretation of its data and its technical significance.
-        2. **Explicit Citations:** Cite the "Refer to as" label directly in the prose (e.g., "As demonstrated in Table 1...").
-        3. **AUTOMATIC PLACEHOLDERS:** Immediately after mentioning/citing an asset, you MUST insert a new line containing exactly: **[Insert {Refer to as label}: {Description} here]**.
-        4. **The "Chain of Evidence" Requirement:** Every numerical claim in your text MUST be traceable to one of the assets in this manifest. If the manifest has ${relevantAssets.length} entries, the manuscript MUST contain exactly ${relevantAssets.length} [Insert...] placeholders.
-        5. **No Hallucinations:** Do not fabricate tables or reference identifiers not found in this Manifest.
+        
+        **STRICT EXECUTION RULES (NON-NEGOTIABLE):**
+        1. **Checklist Interpretation:** You MUST treat the manifest above as a checklist. For each "Identifier", write a technical interpretation in the narrative flow. 
+        2. **Explicit Mentions:** Use the "Refer to as" label directly in the text (e.g., "The results presented in Table 1 reveal...").
+        3. **AUTOMATIC PLACEHOLDERS:** Immediately after discussing an asset, you MUST insert a new line containing exactly: **[Insert {Refer to as label}: {Description} here]**.
+        4. **Anti-Omission Protocol:** You are STRICTLY FORBIDDEN from skipping assets or merging multiple assets into a single sentence. Interpret the numerical importance of each one individually.
+        5. **Traceability:** Every statistical claim in your text MUST be traceable to an identifier in this manifest.
         `;
             } else {
                 assetLabelsInjection = `
@@ -578,14 +593,22 @@ export async function POST(req: NextRequest) {
             const isReferences = sectionType === 'references';
             
             const kSensContext = (!isReferences && reqContent.kSensData) ?
-                `\n**K% Sensitivity Analysis Results:**\n${JSON.stringify(formatNumbersInObject(reqContent.kSensData), null, 2)}` : "";
+                `\n**Type 2: Data Perturbation Analysis Results (±% Fluctuations):**\n${JSON.stringify(formatNumbersInObject(reqContent.kSensData), null, 2)}` : "";
+
+            const sensitivityContext = (!isReferences && reqContent.sensitivityData) ?
+                `\n**Type 1: Methodological Sensitivity Results (Weight Comparison):**\n${JSON.stringify(formatNumbersInObject(reqContent.sensitivityData), null, 2)}` : "";
+
+            const comparisonContext = (!isReferences && reqContent.comparisonData) ?
+                `\n**Ranking Comparison results (Different Ranking Methods):**\n${JSON.stringify(formatNumbersInObject(reqContent.comparisonData), null, 2)}` : "";
 
             const resultsContext = isReferences ? "" : `
         **Analysis Results:**
         Top 3 alternatives:
         ${rankingSummary}
         
+        ${sensitivityContext}
         ${kSensContext}
+        ${comparisonContext}
         `;
 
             prompt = `

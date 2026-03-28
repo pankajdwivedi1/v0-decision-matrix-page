@@ -46,6 +46,7 @@ interface KSensitivityCalculatorProps {
   onLabelChange?: (key: string, label: string) => void;
   onIncludeChange?: (key: string, included: boolean) => void;
   selectedAiAssets?: Set<string>;
+  onCalculationComplete?: (hasResults: boolean, results?: any) => void;
 }
 
 export default function KSensitivityCalculator({
@@ -60,7 +61,8 @@ export default function KSensitivityCalculator({
   onCloseAiPanel,
   onLabelChange,
   onIncludeChange,
-  selectedAiAssets = new Set()
+  selectedAiAssets = new Set(),
+  onCalculationComplete
 }: KSensitivityCalculatorProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   let tableCounter = 1;
@@ -699,6 +701,8 @@ export default function KSensitivityCalculator({
         });
 
         setKSensResults(results);
+        setIsAnalyzing(false);
+        if (onCalculationComplete) onCalculationComplete(true, results);
       } else {
         // Get error message from API response
         const errorData = await response.json();
