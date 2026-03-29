@@ -38,7 +38,7 @@ const SECTION_TEMPLATES = [
         id: 'abstract',
         name: 'Abstract',
         icon: <FileText className="w-4 h-4" />,
-        description: 'Concise summary of the entire study',
+        description: 'Phased High-Impact Summary (Novelty focused)',
         defaultPrompt: '', // Will be generated dynamically
         defaultWordCount: 250,
         color: 'from-blue-600 to-cyan-600'
@@ -47,62 +47,62 @@ const SECTION_TEMPLATES = [
         id: 'introduction',
         name: '1. Introduction',
         icon: <BookOpen className="w-4 h-4" />,
-        description: 'Context, research gap, and objectives',
+        description: 'Problem Urgency & Strategic Novelty',
         defaultPrompt: '', // Will be generated dynamically
-        defaultWordCount: 1000,
+        defaultWordCount: 1500,
         color: 'from-violet-600 to-purple-600'
     },
     {
         id: 'literature',
         name: '2. Literature Review',
         icon: <BookOpen className="w-4 h-4" />,
-        description: 'Review of relevant research',
+        description: 'Bibliometric Trends & Critical Taxonomy',
         defaultPrompt: '', // Will be generated dynamically
-        defaultWordCount: 1200,
+        defaultWordCount: 2000,
         color: 'from-indigo-600 to-blue-600'
     },
     {
         id: 'methodology',
         name: '3. Methodology',
         icon: <Target className="w-4 h-4" />,
-        description: 'Research methods and procedures',
+        description: 'Axiomatic Rigor & Mathematical Steps',
         defaultPrompt: '', // Will be generated dynamically
-        defaultWordCount: 1500,
+        defaultWordCount: 2000,
         color: 'from-emerald-600 to-teal-600'
     },
     {
         id: 'results',
         name: '4. Results & Analysis',
         icon: <TrendingUp className="w-4 h-4" />,
-        description: 'Presentation of findings',
+        description: 'Multi-Method Benchmarking & Thresholds',
         defaultPrompt: '', // Will be generated dynamically
-        defaultWordCount: 1500,
+        defaultWordCount: 2000,
         color: 'from-amber-600 to-orange-600'
     },
     {
         id: 'discussion',
         name: '5. Discussion',
         icon: <Lightbulb className="w-4 h-4" />,
-        description: 'Interpretation and implications',
+        description: 'Managerial Governance & Policy Bridge',
         defaultPrompt: '', // Will be generated dynamically
-        defaultWordCount: 1500,
+        defaultWordCount: 1800,
         color: 'from-pink-600 to-rose-600'
     },
     {
         id: 'conclusion',
         name: '6. Conclusion',
         icon: <FileText className="w-4 h-4" />,
-        description: 'Summary and future directions',
+        description: 'Scientific Contribution & Future Scope',
         defaultPrompt: '', // Will be generated dynamically
-        defaultWordCount: 700,
+        defaultWordCount: 800,
         color: 'from-purple-600 to-pink-600'
     },
     {
         id: 'references',
         name: 'References',
         icon: <BookOpen className="w-4 h-4" />,
-        description: 'APA style bibliography',
-        defaultPrompt: 'Generate a complete, alphabetically ordered References section in APA style based on the provided Scholarly References. List only the sources relevant to the study. Ensure professional formatting.',
+        description: 'Q1-Standard Clean Bibliography',
+        defaultPrompt: 'Generate a professional, vertically ordered References section in APA/IEEE style. Return ONLY the citations.',
         defaultWordCount: 500,
         color: 'from-slate-700 to-gray-800'
     },
@@ -314,54 +314,73 @@ export function AIResearchAssistant({
 
         switch (sectionId) {
             case 'abstract':
-                return `Write a high-quality, professional academic abstract for a Q1-standard journal. Follow this specific Phased Methodological Flow:
-1. **Context & Problem:** Establish the domain of the manufacturing/industrial application and the specific decision-making challenge.
-2. **Research Gap:** ${noveltySuggestion}
-3. **Purpose:** Introduce the purpose of this research to develop an integrated ${rankingMethodName} model integrated with ${weightMethodName} weighting.
-4. **Methodology (Step-by-Step Phasing):**
-   - **Firstly:** Describe the initial problem structuring using the decision matrix with ${criteria.length} criteria and ${alternatives.length} alternatives.
-   - **Secondly:** Detail how ${weightMethodName} weighting is employed to analyze criteria importance and resolve interrelationships.
-   - **Thirdly:** Explain how ${rankingMethodName} is introduced to prioritize solutions and overcome existing analytical drawbacks${isSpearmanMarked ? ", validated via cross-methodological comparison using Spearman/Kendall correlations" : ""}.
-   - **Finally:** Detail how ${sensitivityStrategyText.replace("- ", "")} is conducted to assess results effectiveness.
-5. **Attractive Features:** Describe the unique advantages of this proposed strategy (consistency, flexibility, and robust analysis).
-6. **Implications & Validity:** State that the approach was investigated in a real case study (Robot Selection/Industrial domain) and summarize its practical effectiveness for leaders and industrial decision-makers.
-7. **Synthesis:** End with 5-6 professional keywords in alphabetical order.`;
+                const compareMethodsRaw = comparisonData && comparisonData.length > 0 
+                  ? Object.keys(comparisonData[0]).filter(k => k !== 'alternativeName' && k !== 'Rank') 
+                  : [];
+                
+                const allParticipatingMethods = Array.from(new Set([
+                    method.toUpperCase(), 
+                    ...selectedRankingMethods,
+                    ...compareMethodsRaw.map(m => m.toUpperCase())
+                ])).join(', ');
+
+                return `Write a Research Abstract for a Q1 journal (Impact Factor 20+). 
+**STRICT RULES:**
+- DO NOT INCLUDE ANY CITATIONS (e.g., [1], [2], or author names).
+- You MUST identify and mention EVERY method used: ${allParticipatingMethods}.
+- Define the framework as a "robust comparative MCDM investigation" utilizing ${allParticipatingMethods.split(',').length} distinct ranking algorithms.
+- Highlight that the findings remain consistent across these frameworks.
+- Conclude with the study's impact on industrial policy and strategic governance.`;
+
             case 'introduction':
-                return `Write a scholarly introduction with hierarchical numbering (1.1, 1.2).
+                return `Write a 1500-word Q1-standard **Introduction** with hierarchical numbering.
+- **Section 1.1 — Problem Significance:** Establish the high-stakes nature of this decision problem in the global supply chain/industrial domain.
+- **Section 1.2 — Technical Gap Analysis:** Critically analyze why existing literature has yet to provide a robust solution for ${alternatives.length} alternatives under the given criteria.
+- **Section 1.3 — Research Gap and Innovations:** 
+  Describe the "Novelty of the Proposed Strategy" in three distinct layers:
+  (a) **Methodological Innovation:** Why the ${rankingMethodName} framework was selected over classical alternatives.
+  (b) **Scope of Integration:** How ${weightMethodName} weighting resolves the interdependency of the evaluation parameters.
+  (c) **Scientific Validation:** Introduce the dual-stage verification (Type 1 & Type 2) used to prove results reproducibility.
+- **Section 1.4 — Organization of the Manuscript:** Conclude this section with a professional roadmap. Detail that Section 2 provides the literature synthesis, Section 3 presents the proposed methodology, Section 4 illustrates the results and comparative analysis, Section 5 provides the discussion, and Section 6 summarizes the findings and future directions.
 
-Section 1.1 — Background & Motivation: Establish the significance and decision-making challenges in the domain, referencing the broader literature context.
-
-Section 1.2 — Literature Gap and Novel Contributions:
-  - Identify the Literature Gap: ${noveltySuggestion}.
-  - List the Scientific Contributions of this paper in labelled sub-points (a), (b), (c):
-    (a) Describe the integrated ${rankingMethodName}-based ranking FRAMEWORK developed — its design, scope (${alternatives.length} alternatives, ${criteria.length} criteria), and what it systematically integrates.
-    (b) Describe the METHODOLOGICAL APPROACH employed: how ${rankingMethodName} with ${weightMethodName} weighting is applied to systematically evaluate the alternatives with respect to the defined criteria.
-    (c) Describe the VALIDATION STRATEGY — ${sensitivityStrategyText} ${isSpearmanMarked ? "This includes statistical correlation analysis to ensure inter-method reliability." : ""}
-
-**CRITICAL RULE — STRICTLY ENFORCED**: The contributions sub-section (1.2) MUST describe what the study DOES and HOW it does it — NOT what it FINDS. You are STRICTLY FORBIDDEN from mentioning any numerical outcomes, TOPSIS scores, ranking positions, alternative names followed by scores, or any specific quantitative result in this section. Phrases like "Liverpool emerges as top-ranked with score X", "Edinburgh at 0.76", or any similar result disclosure are ABSOLUTELY PROHIBITED here. Contributions must be described in terms of methodology, framework, and approach ONLY.`;
+**CRITICAL Q1 COMPLIANCE:** Describe the METHODOLOGY only. DO NOT mention specific rankings or scores (e.g., "Edinburgh scored 0.82") in this section. This is a scientific paper; findings belong in Section 4.`;
 
             case 'literature':
-                return `Write a systematic literature review (Section 2) with hierarchical numbering. 
-Synthesize recent research (last 5 years) in the field. 
-Critically analyze limitations and position this study's multi-method validation approach as the solution to the identified "Literature Gap" regarding the combination of ${criteria.length} criteria.`;
+                return `Write a 2000-word **Literature Review** (Section 2) for an IF 20+ journal.
+- **Section 2.1 — Bibliometric Analysis:** Discuss the evolution of the field from 2019–2024, mentioning shifts toward hybrid MCDM models.
+- **Section 2.2 — Taxonomy of Existing Methods:** Group previous research logically (e.g., Sustainability focus, Technical efficiency focus) rather than chronologically.
+- **Section 2.3 — Critical Gap Identification:** Explicitly identify the 'blind spot' in current literature that this ${rankingMethodName} study addresses. 
+Use professional academic synthesis, not simple summaries.`;
+
             case 'methodology':
-                return `Write a technical methodology section (Section 3). ${mathInstructions}
-Detail the procedural steps of ${rankingMethodName} and the weighting protocol of ${weightMethodName}. 
-${selectedRankingMethods.length > 1 ? `Discuss the comparative rationale between ${selectedRankingMethods.join(', ')}.` : ""}
-Detail the robustness verification strategy: ${sensitivityStrategyText}
-${isSpearmanMarked ? 'Describe the "Statistical Robustness Proof" using Spearman and Kendall coefficients.' : ""}`;
+                return `Write a rigorous 2000-word **Methodology** section (Section 3).
+- **Section 3.1 — Axiomatic Rationale:** Provide the theoretical justification for using ${rankingMethodName} and ${weightMethodName}.
+- **Section 3.2 — Step-wise Mathematical Framework:** ${mathInstructions}
+  (a) Detailing the normalization logic (Cost vs. Beneficial).
+  (b) Presenting the weight resolution equations.
+  (c) Explaining the final aggregation algorithm.
+- **Section 3.3 — Robustness Evaluation Protocol:** Explain the rationale for 'Spearman Rank Correlation' and 'Sensitivity Threshold Analysis' as scientific proof of model stability.
+**PLACEHOLDER RULE:** Use hierarchical numbering and reference every Table/Figure identifier from the manifest sequentially.`;
+
             case 'results':
-                return `Write a results section (Section 4). Discuss ranking results for ${alternatives.length} alternatives using ${rankingMethodName}. 
-Discuss the results specifically for the methods and tables marked in the manifest.
-${sensitivityStrategyText}
-${hasType2 ? `Address the ranking stability during the ${variationRange} variation targeted for criterion ${criterionName || 'the critical criterion'}.` : ""}
-${hasType1 ? `Explain the methodological comparison using ${sensitivityWeightMethods?.join(', ')} weighting schemes.` : ""}` +
-                    (comparisonMethodsList ? ` Include comparison results with ${comparisonMethodsList}.` : '') +
-                    (spearmanText ? ` Provide statistical validation, stating that a high correlation indicates strong methodological consensus.` : '');
+                return `Write an 2000-word **Results & Analysis** (Section 4).
+- **Section 4.1 — Ranking Performance:** Discuss the selection outcomes.
+- **Section 4.2 — Multi-Method Benchmarking:** Narratively compare the ${rankingMethodName} results against classical models (TOPSIS, VIKOR, etc.) provided in the comparison data.
+- **Section 4.3 — Sensitivity Threshold Identification:** Address the stability for ${criterionName || 'the critical criterion'} during variation. Identify the 'Break-even Point' where rank reversals occur.
+- **Section 4.4 — Statistical Robustness Certificate:** Synthesize the Spearman/Kendall correlation findings as evidence of methodological consensus. 
+Interpret the **BEHAVIORAL ELASTICITY** of the alternatives—don't just list numbers.`;
+
             case 'discussion':
-                return `Write an insightful discussion section (Section 5). Interpret findings, provide comparative insights between ${rankingMethodName} and other models, and highlight how the high correlation results increase decision-maker confidence.`;
+                return `Write an insightful 1800-word **Discussion** (Section 5).
+- **Section 5.1 — Interpretation of Insights:** Map the findings back to the Research Gap identified in Section 1.
+- **Section 5.2 — Managerial Governance & Policy Implications:** What should a CEO or Policy Director DO with these results? Provide actionable, high-level strategic guidance.
+- **Section 5.3 — Theoretical Contributions:** How does this study advance the 'Decision Science' body of knowledge? Discuss the scalability and the potential for Fuzzy/Machine Learning extensions.`;
+
             case 'conclusion':
-                return `Write a strong conclusion (Section 6). Summarize findings of the ${rankingMethodName}-${weightMethodName} framework, restate the proven stability, and explain how this addresses the initial literature gap of ${noveltySuggestion.toLowerCase().split(':')[1]}.`;
+                return `Write an 800-word **Conclusion** (Section 6).
+- **Section 6.1 — Summary of Scientific Contributions:** Reiterate how the ${rankingMethodName}-${weightMethodName} model proved superior in terms of stability and accuracy.
+- **Section 6.2 — Actionable Strategy:** Briefly state the priority selection for decision-makers.
+- **Section 6.3 — Limitations and Strategic Future Scope:** Be honest about data constraints and suggest integrating neural networks or interval-valued fuzzy sets in future iterations.`;
             case 'references':
                 return `Generate ONLY a numbered bibliography list for this research paper.
 

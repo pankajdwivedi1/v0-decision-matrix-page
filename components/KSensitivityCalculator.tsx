@@ -18,6 +18,8 @@ import { AssetLabel } from './AssetLabel';
 import { ResearchAssetHeader } from './ResearchAssetHeader';
 import { Tag } from 'lucide-react';
 import { toJpeg } from 'html-to-image';
+import { MCDM_METHODS } from "@/constants/mcdm";
+import { MCDMMethod } from "@/types/mcdm";
 
 
 interface Criterion {
@@ -47,6 +49,7 @@ interface KSensitivityCalculatorProps {
   onIncludeChange?: (key: string, included: boolean) => void;
   selectedAiAssets?: Set<string>;
   onCalculationComplete?: (hasResults: boolean, results?: any) => void;
+  methodName?: string;
 }
 
 export default function KSensitivityCalculator({
@@ -62,7 +65,8 @@ export default function KSensitivityCalculator({
   onLabelChange,
   onIncludeChange,
   selectedAiAssets = new Set(),
-  onCalculationComplete
+  onCalculationComplete,
+  methodName = "Method"
 }: KSensitivityCalculatorProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   let tableCounter = 1;
@@ -942,31 +946,33 @@ export default function KSensitivityCalculator({
       }));
 
       return (
-        <ResponsiveContainer width="100%" height={400}>
-          <RadarChart data={radarData} margin={commonProps.margin}>
-            <PolarGrid />
-            <PolarAngleAxis dataKey="alternative" tick={{ fontSize: 10 }} />
-            <PolarRadiusAxis tick={{ fontSize: 10 }} />
-            <Tooltip />
-            <Legend wrapperStyle={{ fontSize: '10px' }} />
-            {kSensVariationRange.map((v, vIdx) => (
-              <Radar
-                key={v}
-                name={`${v}%`}
-                dataKey={`${v}%`}
-                stroke={colors[vIdx % colors.length]}
-                fill={colors[vIdx % colors.length]}
-                fillOpacity={0.3}
-              />
-            ))}
-          </RadarChart>
-        </ResponsiveContainer>
+        <div ref={chartRef} className="bg-white max-w-5xl mx-auto">
+          <ResponsiveContainer width="100%" height={750}>
+            <RadarChart data={radarData} margin={commonProps.margin}>
+              <PolarGrid />
+              <PolarAngleAxis dataKey="alternative" tick={{ fontSize: 10 }} />
+              <PolarRadiusAxis tick={{ fontSize: 10 }} />
+              <Tooltip />
+              <Legend wrapperStyle={{ fontSize: '10px' }} />
+              {kSensVariationRange.map((v, vIdx) => (
+                <Radar
+                  key={v}
+                  name={`${v}%`}
+                  dataKey={`${v}%`}
+                  stroke={colors[vIdx % colors.length]}
+                  fill={colors[vIdx % colors.length]}
+                  fillOpacity={0.3}
+                />
+              ))}
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
       );
     }
 
     return (
-      <div ref={chartRef} className="bg-white">
-        <ResponsiveContainer width="100%" height={400}>
+      <div ref={chartRef} className="bg-white max-w-5xl mx-auto">
+        <ResponsiveContainer width="100%" height={750}>
           {['line', 'area'].includes(kSensChartType) ? (
             <LineChart {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -1069,13 +1075,23 @@ export default function KSensitivityCalculator({
                 interval={0}
                 label={{ value: 'Perturbation Strength (%)', position: 'insideBottom', offset: -25, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }} 
               />
+              <XAxis 
+                orientation="top"
+                xAxisId="top_border"
+                axisLine={{ stroke: '#000' }}
+                tick={false}
+                tickLine={false}
+              />
               <YAxis 
                 yAxisId="left" 
                 tick={{ fontSize: 10, fill: '#374151' }}
                 axisLine={{ stroke: '#000' }}
                 tickLine={{ stroke: '#000' }}
-                label={{ value: 'SWEI Score', angle: -90, position: 'insideLeft', offset: 0, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }} 
-                domain={[0, 'auto']}
+                /* Dynamic label for current ranking method */
+                label={{ value: `${MCDM_METHODS.find(m => m.value === selectedRankingMethod)?.label || selectedRankingMethod.toUpperCase()} Score`, angle: -90, position: 'insideLeft', offset: 0, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }} 
+                domain={[0, (max: number) => Math.ceil(max * 10) / 10]}
+                tickFormatter={(val: number) => val.toFixed(1)}
+                padding={{ top: 40 }}
               />
               <YAxis 
                 yAxisId="right" 
@@ -1084,10 +1100,13 @@ export default function KSensitivityCalculator({
                 axisLine={{ stroke: '#000' }}
                 tickLine={{ stroke: '#000' }}
                 label={{ value: 'Ranking (1 = Best)', angle: 90, position: 'insideRight', offset: 10, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }} 
-                domain={[1, 8]} 
+                domain={[1, alternatives.length]} 
                 reversed 
+                padding={{ top: 40 }}
                 interval={0}
-                ticks={[1, 2, 3, 4, 5, 6, 7, 8]}
+                ticks={alternatives.length <= 20 
+                  ? Array.from({ length: alternatives.length }, (_, i) => i + 1)
+                  : Array.from({ length: Math.floor(alternatives.length / 2) }, (_, i) => (i + 1) * 2)}
               />
               <Tooltip
                 cursor={{ fill: 'rgba(0,0,0,0.05)' }}
@@ -1190,14 +1209,14 @@ export default function KSensitivityCalculator({
                     type="number"
                     tick={{ fontSize: 10, fill: '#333' }}
                     width={50}
-                    domain={isWeightView ? [0, 'auto'] : [0, alternatives.length]}
-                    allowDecimals={isWeightView}
-                    tickCount={isWeightView ? undefined : alternatives.length + 1}
+                    domain={isWeightView ? [0, 'auto'] : [0, 'auto']}
+                    allowDecimals={true}
+                    tickCount={6}
                     interval={0}
                     reversed={false}
                   >
                     <Label
-                      value={isWeightView ? 'Criterion Weight' : 'Alternative Rank'}
+                      value={isWeightView ? 'Criterion Weight' : `${MCDM_METHODS.find(m => m.value === selectedRankingMethod)?.label || selectedRankingMethod.toUpperCase()} Score`}
                       angle={-90}
                       position="insideLeft"
                       style={{ textAnchor: 'middle', fill: '#374151', fontSize: '11px', fontWeight: 700 }}
@@ -1208,14 +1227,24 @@ export default function KSensitivityCalculator({
                 </>
               )}
               <Tooltip />
-              <Legend wrapperStyle={{ fontSize: '10px' }} />
+              <Legend 
+                verticalAlign="bottom" 
+                align="center" 
+                layout="horizontal"
+                wrapperStyle={{ fontSize: '10px', paddingTop: '30px' }} 
+              />
               {isWeightView ? (
                 workingCriteria.map((crit, idx) => (
-                  <Bar key={crit.name} dataKey={crit.name} fill={colors[idx % colors.length]} />
+                  <Bar key={crit.name} dataKey={crit.name} fill={colors[idx % colors.length]} name={`${crit.name} Weight`} />
                 ))
               ) : (
                 alternatives.map((alt, altIdx) => (
-                  <Bar key={alt.name} dataKey={alt.name} fill={colors[altIdx % colors.length]} />
+                  <Bar 
+                    key={alt.name} 
+                    dataKey={`${alt.name} Score`} 
+                    fill={colors[altIdx % colors.length]} 
+                    name={`${alt.name} Score`} 
+                  />
                 )))}
             </BarChart>
           )}
