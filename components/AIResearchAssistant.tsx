@@ -154,6 +154,52 @@ export function AIResearchAssistant({
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatedContent, setGeneratedContent] = useState('');
 
+    // ── Manuscript Configuration States ────────────────────────────────────
+    const [showConfigModal, setShowConfigModal] = useState(false);
+    const [manuscriptConfig, setManuscriptConfig] = useState({
+        citations: 35,
+        wordLimits: {
+            abstract: 300,
+            introduction: 1500,
+            literature: 2000,
+            methodology: 1800,
+            results: 2000,
+            sensitivity: 1500,
+            discussion: 1600,
+            conclusion: 800
+        }
+    });
+
+    const distributeCitations = (total: number) => {
+        return {
+            introduction: Math.round(total * 0.25),
+            literature: Math.round(total * 0.40),
+            methodology: Math.round(total * 0.10),
+            results: Math.round(total * 0.10),
+            discussion: Math.round(total * 0.10),
+            conclusion: Math.round(total * 0.05)
+        };
+    };
+
+    const applyPreset = (type: 'short' | 'standard' | 'high') => {
+        if (type === 'short') {
+            setManuscriptConfig({
+                citations: 20,
+                wordLimits: { abstract: 250, introduction: 1000, literature: 1200, methodology: 1200, results: 1200, sensitivity: 1000, discussion: 1000, conclusion: 500 }
+            });
+        } else if (type === 'standard') {
+            setManuscriptConfig({
+                citations: 35,
+                wordLimits: { abstract: 300, introduction: 1500, literature: 2000, methodology: 1800, results: 2000, sensitivity: 1500, discussion: 1600, conclusion: 800 }
+            });
+        } else {
+            setManuscriptConfig({
+                citations: 55,
+                wordLimits: { abstract: 350, introduction: 2500, literature: 3500, methodology: 2500, results: 3000, sensitivity: 2000, discussion: 2500, conclusion: 1200 }
+            });
+        }
+    };
+
     const trackGeminiUsage = (key: string) => {
         if (!key) return;
         const keyId = key.substring(0, 10);
@@ -176,7 +222,7 @@ export function AIResearchAssistant({
             const res = await fetch('/api/fetch-citations', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query, limit: 35 })
+                body: JSON.stringify({ query, limit: manuscriptConfig.citations }) // LOCK: Fetch exact requested count
             });
             if (!res.ok) return '';
             const data = await res.json();
@@ -218,6 +264,26 @@ export function AIResearchAssistant({
     const [manuscriptTitle, setManuscriptTitle] = useState('');
     const [technicalDepth, setTechnicalDepth] = useState<'standard' | 'mathematical'>(technicalDepthProp || 'standard');
     const [computedAssetLabels, setComputedAssetLabels] = useState<Record<string, string>>({});
+
+    // ── Live DOI Tracker States ──────────────────────────────────────────
+    const [currentCitationCount, setCurrentCitationCount] = useState(0);
+    const [doiTrackerSet, setDoiTrackerSet] = useState<Set<string>>(new Set());
+
+    const extractDOIsFromText = (text: string) => {
+        const regex = /\[DOI:(10\.\d{4,9}\/[-._;()/:A-Z0-9]+)\]/gi;
+        const matches = text.match(regex) || [];
+        return matches.map(m => m.replace(/\[DOI:/i, "").replace("]", "").trim().toLowerCase());
+    };
+
+    const updateLiveTracker = (newText: string) => {
+        const found = extractDOIsFromText(newText);
+        setDoiTrackerSet(prev => {
+            const next = new Set(prev);
+            found.forEach(d => next.add(d));
+            setCurrentCitationCount(next.size);
+            return next;
+        });
+    };
 
     const markedAssetsList = Array.from(markedAssets || []);
 
@@ -380,7 +446,55 @@ export function AIResearchAssistant({
         const comparisonMethodsUsed = comparisonMethods && comparisonMethods.length > 0 ? comparisonMethods.join(', ').toUpperCase() : 'None';
         const sensitivityTypeUsed = sensitivityMethod || 'Perturbation Analysis';
 
-        return `🔥 SECTION MODE CONTROL:
+        const citationDistribution = distributeCitations(manuscriptConfig.citations);
+        const sectionCitations = (citationDistribution as any)[sectionKey] || 0;
+        const sectionWordLimit = (manuscriptConfig.wordLimits as any)[sectionKey] || 500;
+
+        return `🧠 REAL-TIME CITATION EMISSION PROTOCOL (STRICT):
+* Every time you introduce a new citation:
+  1. Add in-text citation: (Author et al., Year)
+  2. Immediately append DOI in this exact format: [DOI:10.xxxx/xxxxx]
+
+MANDATORY RULES:
+- Target CITATIONS for THIS Section: EXACTLY ${sectionCitations} UNIQUE citations.
+- Target TOTAL CITATIONS: EXACTLY ${manuscriptConfig.citations} UNIQUE citations.
+- Each citation must include a UNIQUE DOI from the provided list.
+- DO NOT repeat DOIs unless the section limit is already met.
+- DO NOT skip DOI tagging in [DOI:...] format.
+
+🧠 CITATION CONTROL SYSTEM (STRICT MODE):
+Target Total Citations for THIS Section: ${sectionCitations} UNIQUE citations
+Target Total Citations for ENTIRE Manuscript: ${manuscriptConfig.citations} UNIQUE citations
+
+MANDATORY RULES:
+1. EXACT COUNT RULE:
+   - You MUST include EXACTLY ${sectionCitations} UNIQUE citations from the list provided below.
+   - You must NOT use fewer than ${sectionCitations}.
+
+2. UNIQUENESS RULE:
+   - Each citation must refer to a DIFFERENT paper (unique DOI).
+   - Repeated citations for the same paper are allowed only AFTER you have met the ${sectionCitations} unique requirement.
+
+3. REALITY & NO-HALLUCINATION RULE:
+   - EVERY citation MUST correspond to a REAL paper with DOI from the provided list.
+   - DO NOT fabricate, guess, or use any citation outside the list provided in "VERIFIED LIVE REFERENCES".
+   - IF YOU CANNOT FIND ENOUGH PAPERS, STATE SO, but do NOT invent ones.
+
+4. DISTRIBUTION RULE:
+   - This section must contain at least ${sectionCitations} UNIQUE in-text citations.
+   - No section should be empty.
+
+🔥 MASTER CONTROL PARAMETERS (STRICT):
+* Target Word Count: ${sectionWordLimit} words (±5% tolerance)
+* Assigned Citation Count: ${sectionCitations} real academic citations
+* Total Bibliography Target: ${manuscriptConfig.citations} unique sources
+
+STRICT RULES:
+- Do NOT exceed or go below word limits by more than ±5%
+- Maintain proportional citation distribution (Target: ${sectionCitations} for this section)
+- Use ONLY the provided verified citations.
+
+🔥 SECTION MODE CONTROL:
 Mode = ${mode}
 
 RULES:
@@ -436,7 +550,7 @@ AUTO-CITATION SYSTEM (MANDATORY):
   Example: (Saaty, 1980), (Dwivedi et al., 2025)
 - Every major claim MUST include a citation
 - Generate a final reference list:
-  * Minimum 30 references
+  * Total references: ${manuscriptConfig.citations}
   * APA format
   * Include DOI for each reference
   * Ensure references are REAL and traceable
@@ -872,6 +986,10 @@ FORBIDDEN:
                 const section = sectionsToGenerate[i];
                 setFullProgress(10 + Math.round((i / sectionsToGenerate.length) * 90));
 
+                const citationDistribution = distributeCitations(manuscriptConfig.citations);
+                const assignedCitations = (citationDistribution as any)[section.id] || 0;
+                const assignedWordCount = (manuscriptConfig.wordLimits as any)[section.id] || section.defaultWordCount;
+
                 const response = await fetch('/api/ai-analysis', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -879,8 +997,8 @@ FORBIDDEN:
                         userApiKey,
                         analysisType: 'custom_section',
                         sectionType: section.id,
-                        customPrompt: getDynamicPrompt(section.id) + " CRITICAL: Start writing technical content DIRECTLY. Do NOT include any section titles, numbers, or headings at the start of your response. This is part of a professional research paper; ensure it flows naturally without repeating headers.",
-                        wordCount: section.defaultWordCount,
+                        customPrompt: getDynamicPrompt(section.id) + `\nCRITICAL CONSTRAINTS: Target Word Count: ${assignedWordCount}. Target Citations: ${assignedCitations}. Start writing technical content DIRECTLY. Do NOT include any section titles, numbers, or headings at the start of your response. This is part of a professional research paper; ensure it flows naturally without repeating headers.`,
+                        wordCount: assignedWordCount,
                         additionalContext: (additionalContext || '') + citationBlock + (i > 0 ? " Previous section context: " + results[sectionsToGenerate[i - 1].id]?.substring(0, 500) : ""),
                         kSensData,
                         criterionName,
@@ -907,7 +1025,11 @@ FORBIDDEN:
                 if (response.ok) {
                     trackGeminiUsage(userApiKey);
                 }
-                results[section.id] = result.markdown || "Section generation failed.";
+                const sectionContent = result.markdown || "Section generation failed.";
+                results[section.id] = sectionContent;
+                
+                // 📊 Real-time DOI Extraction and Tracker Update
+                updateLiveTracker(sectionContent);
             }
 
             setFullManuscriptData(results);
@@ -1241,19 +1363,25 @@ FORBIDDEN:
                     </Button>
 
                     <Button
-                        onClick={handleGenerateFullManuscript}
+                        onClick={() => setShowConfigModal(true)}
                         disabled={isGenerating || isProcessingFull}
                         variant="outline"
                         className="flex-1 h-12 text-sm font-bold border-2 border-indigo-600 text-indigo-700 hover:bg-indigo-50 shadow-md"
                     >
                         {isProcessingFull ? (
-                            <div className="flex flex-col items-center">
-                                <div className="flex items-center gap-2">
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                    <span>Writing Paper ({fullProgress}%)</span>
+                            <div className="flex flex-col items-center w-full">
+                                <div className="flex items-center justify-between w-full mb-1">
+                                    <div className="flex items-center gap-2">
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        <span className="text-[10px]">Writing ({fullProgress}%)</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10px] text-indigo-600 font-bold">
+                                        📚 {currentCitationCount} / {manuscriptConfig.citations} citations
+                                    </div>
                                 </div>
-                                <div className="w-full bg-gray-200 h-1 mt-1 rounded-full overflow-hidden">
-                                    <div className="bg-indigo-600 h-full transition-all duration-300" style={{ width: `${fullProgress}%` }} />
+                                <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden flex">
+                                    <div className="bg-indigo-600 h-full transition-all duration-500" style={{ width: `${fullProgress}%` }} />
+                                    <div className="bg-emerald-500 h-full opacity-50 transition-all duration-1000 ml-[-100%]" style={{ width: `${(currentCitationCount / manuscriptConfig.citations) * 100}%` }} />
                                 </div>
                             </div>
                         ) : (
@@ -1264,6 +1392,98 @@ FORBIDDEN:
                         )}
                     </Button>
                 </div>
+
+                {/* Manuscript Configuration Modal */}
+                {showConfigModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                        <Card className="w-full max-w-lg shadow-2xl border-2 border-indigo-100 overflow-hidden animate-in fade-in zoom-in duration-200">
+                            <CardHeader className="bg-indigo-600 text-white pb-6">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="w-5 h-5 text-indigo-100" />
+                                        <CardTitle className="text-xl">📄 Manuscript Configuration</CardTitle>
+                                    </div>
+                                    <Button variant="ghost" size="sm" onClick={() => setShowConfigModal(false)} className="text-white hover:bg-indigo-700 h-8 w-8 p-0">
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                                <CardDescription className="text-indigo-100 mt-1">Set your technical word limits and citation targets</CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-6 space-y-5 bg-white">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="col-span-2 space-y-2">
+                                        <Label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            🔢 Number of Citations
+                                            <span className="text-[10px] font-normal text-gray-400 font-sans tracking-normal">(Target: {manuscriptConfig.citations} verified DOIs)</span>
+                                        </Label>
+                                        <Input
+                                            type="number"
+                                            value={manuscriptConfig.citations}
+                                            onChange={(e) => setManuscriptConfig({ ...manuscriptConfig, citations: parseInt(e.target.value) || 0 })}
+                                            className="h-10 border-indigo-100 focus:border-indigo-500"
+                                        />
+                                    </div>
+
+                                    <div className="col-span-2 pt-2 border-t border-gray-100">
+                                        <Label className="text-sm font-bold text-gray-700 block mb-3">📝 Section Word Limits</Label>
+                                        <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                                            {Object.entries(manuscriptConfig.wordLimits).map(([section, count]) => (
+                                                <div key={section} className="flex flex-col gap-1">
+                                                    <span className="text-[10px] uppercase font-bold text-gray-400 leading-none">{section}</span>
+                                                    <Input
+                                                        type="number"
+                                                        value={count}
+                                                        onChange={(e) => setManuscriptConfig({
+                                                            ...manuscriptConfig,
+                                                            wordLimits: { ...manuscriptConfig.wordLimits, [section]: parseInt(e.target.value) || 0 }
+                                                        })}
+                                                        className="h-8 text-xs border-gray-100"
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2 pt-2">
+                                    <Label className="text-[11px] font-bold text-indigo-900/60 uppercase tracking-widest">⚡ Quick Presets</Label>
+                                    <div className="flex gap-2">
+                                        <Button variant="outline" size="sm" onClick={() => applyPreset('short')} className="flex-1 text-[11px] h-8 border-indigo-100 text-indigo-600 hover:bg-indigo-50">Short Paper</Button>
+                                        <Button variant="outline" size="sm" onClick={() => applyPreset('standard')} className="flex-1 text-[11px] h-8 border-indigo-100 text-indigo-600 hover:bg-indigo-50">Standard Q1</Button>
+                                        <Button variant="outline" size="sm" onClick={() => applyPreset('high')} className="flex-1 text-[11px] h-8 border-indigo-100 text-indigo-600 hover:bg-indigo-50">High Impact</Button>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 pt-4">
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1 text-sm font-semibold h-11 border-gray-200 text-gray-600"
+                                        onClick={() => {
+                                            applyPreset('standard');
+                                            setShowConfigModal(false);
+                                            handleGenerateFullManuscript();
+                                        }}
+                                    >
+                                        Use Default
+                                    </Button>
+                                    <Button
+                                        className="flex-1 text-sm font-bold h-11 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg"
+                                        onClick={() => {
+                                            if (manuscriptConfig.citations >= 10 && manuscriptConfig.citations <= 100) {
+                                                setShowConfigModal(false);
+                                                handleGenerateFullManuscript();
+                                            } else {
+                                                alert("Citations must be between 10 and 100 for academic rigor.");
+                                            }
+                                        }}
+                                    >
+                                        Generate Manuscript 🚀
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
 
                 {/* Generated Content Display */}
                 {showResult && (
@@ -1368,12 +1588,12 @@ FORBIDDEN:
                                 <div className="flex items-center justify-between flex-wrap gap-2">
                                     <h4 className="text-sm font-bold text-emerald-900">🔍 Citation Validation Report</h4>
                                     <div className="flex flex-wrap gap-2 text-xs font-semibold">
-                                        <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">✅ {citationValidation.summary.valid} Valid</span>
+                                        <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">✅ {citationValidation.results.filter(r => r.valid && r.type === "doi").length} Validated DOIs</span>
                                         <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded-full border border-red-300">❌ {citationValidation.summary.invalid} Invalid</span>
                                         {citationValidation.summary.fake > 0 && (
                                             <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full border border-orange-300">⚠️ {citationValidation.summary.fake} Fake</span>
                                         )}
-                                        <span className="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full border border-indigo-300">Pass Rate: {citationValidation.summary.passRate}</span>
+                                        <span className="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full border border-indigo-300">Target: {manuscriptConfig.citations} refs</span>
                                     </div>
                                 </div>
 
