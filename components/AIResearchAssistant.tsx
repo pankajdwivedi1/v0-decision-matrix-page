@@ -80,8 +80,17 @@ const SECTION_TEMPLATES = [
         color: 'from-amber-600 to-orange-600'
     },
     {
+        id: 'sensitivity',
+        name: '5. Sensitivity Analysis',
+        icon: <TrendingUp className="w-4 h-4" />,
+        description: 'Robustness Testing & OAT Perturbation',
+        defaultPrompt: '', // Will be generated dynamically
+        defaultWordCount: 1500,
+        color: 'from-orange-600 to-red-600'
+    },
+    {
         id: 'discussion',
-        name: '5. Discussion',
+        name: '6. Discussion',
         icon: <Lightbulb className="w-4 h-4" />,
         description: 'Managerial Governance & Policy Bridge',
         defaultPrompt: '', // Will be generated dynamically
@@ -90,7 +99,7 @@ const SECTION_TEMPLATES = [
     },
     {
         id: 'conclusion',
-        name: '6. Conclusion',
+        name: '7. Conclusion',
         icon: <FileText className="w-4 h-4" />,
         description: 'Scientific Contribution & Future Scope',
         defaultPrompt: '', // Will be generated dynamically
@@ -154,7 +163,52 @@ export function AIResearchAssistant({
             stats[keyId] = (stats[keyId] || 0) + 1;
             localStorage.setItem("gemini_usage_stats", JSON.stringify(stats));
             localStorage.setItem("gemini_stats_date", new Date().toDateString());
-        } catch (e) {}
+        } catch (e) { }
+    };
+
+    // ── Live Citation System ────────────────────────────────────────────────
+    const fetchLiveCitations = async (topic: string): Promise<string> => {
+        if (!topic || topic.trim().length < 3) return '';
+        setIsFetchingCitations(true);
+        try {
+            const rankingM = selectedRankingMethods.length > 0 ? selectedRankingMethods[0] : method;
+            const query = `${topic} ${rankingM} MCDM decision making`;
+            const res = await fetch('/api/fetch-citations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query, limit: 35 })
+            });
+            if (!res.ok) return '';
+            const data = await res.json();
+            setCitationCount(data.count || 0);
+            setLiveCitations(data.citationContext || '');
+            return data.citationContext || '';
+        } catch {
+            return '';
+        } finally {
+            setIsFetchingCitations(false);
+        }
+    };
+
+    // ── AUTO CITATION VALIDATION CHECKER ───────────────────────────────
+    const handleValidateCitations = async (content: string) => {
+        if (!content) return;
+        setIsValidatingCitations(true);
+        setCitationValidation(null);
+        try {
+            const res = await fetch('/api/validate-citations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: content })
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            setCitationValidation(data);
+        } catch {
+            // Silent fail - validation is non-blocking
+        } finally {
+            setIsValidatingCitations(false);
+        }
     };
 
     // Full Manuscript States
@@ -168,11 +222,11 @@ export function AIResearchAssistant({
     const markedAssetsList = Array.from(markedAssets || []);
 
     const { tablesCount, diagramsCount, methodsCount, selectedRankingMethods, selectedWeightMethods } = React.useMemo(() => {
-        
+
         const rankingMethods = markedAssetsList
             .filter(k => k.startsWith('method_'))
             .map(k => k.replace('method_', '').toUpperCase());
-        
+
         const weightMethods = markedAssetsList
             .filter(k => k.startsWith('weight_method_'))
             .map(k => k.replace('weight_method_', '').toUpperCase());
@@ -194,7 +248,7 @@ export function AIResearchAssistant({
                 const lowKey = key.toLowerCase();
                 const isTable = (lowKey.includes('table') || lowKey.includes('matrix') || lowKey.includes('result_data')) && !lowKey.includes('chart');
                 const isDiagram = (lowKey.includes('chart') || lowKey.includes('variation') || lowKey.includes('plot') || lowKey.includes('radar')) && !lowKey.includes('table');
-                
+
                 if (isTable) tCount++;
                 else if (isDiagram) dCount++;
                 else if (lowKey.includes('data') || lowKey.includes('step') || lowKey.includes('overall')) tCount++; // Default most data items to tables
@@ -211,6 +265,20 @@ export function AIResearchAssistant({
     }, [markedAssets, computedAssetLabels]);
     const [showResult, setShowResult] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
+
+    // Live Citation System state
+    const [liveCitations, setLiveCitations] = useState<string>('');
+    const [isFetchingCitations, setIsFetchingCitations] = useState(false);
+    const [citationCount, setCitationCount] = useState(0);
+
+    // Citation Validation state
+    const [isValidatingCitations, setIsValidatingCitations] = useState(false);
+    const [citationValidation, setCitationValidation] = useState<{
+        summary: { total: number; valid: number; invalid: number; fake: number; passRate: string };
+        results: { type: string; doi?: string; author?: string; year?: string; valid: boolean; reason?: string; title?: string; suggestedTitle?: string; suggestedDoi?: string }[];
+        output: { author: string; year: string; valid: boolean }[];
+        invalidCitations: { author: string; year: string; valid: boolean; reason?: string; suggestedTitle?: string; suggestedDoi?: string }[];
+    } | null>(null);
 
     const [researchContext, setResearchContext] = useState<any>(null);
 
@@ -284,10 +352,124 @@ export function AIResearchAssistant({
         return `Scanning for Literature Gap: Existing MCDM literature heavily focuses on ${method.toUpperCase()} in general contexts. However, applying it to ${altNames} specifically considering ${critNames} remains underexplored. Synthesize this as a 'novel contribution' to the field.`;
     };
 
+    const getFormattedMasterPrompt = (sectionName: string, sectionKey: string) => {
+        const dMatrix = kSensData?.results ? JSON.stringify(kSensData.results['0'] || {}, null, 2) : "Check Research Manifest";
+        const criteriaDefsText = researchContext?.criteriaDefs
+            ? Object.entries(researchContext.criteriaDefs).map(([id, def]) => {
+                const cName = criteria.find(c => c.id === id)?.name || id;
+                return `${cName}: ${def}`;
+            }).join(', ')
+            : criteria.map(c => c.name).join(', ');
+
+        const altNames = alternatives.map(a => a.name).join(', ');
+        const rankingMethodsUsed = [
+            method.toUpperCase(),
+            ...(comparisonMethods || [])
+        ].filter(Boolean).join(', ');
+
+        const weightMethodsUsed = [
+            weightMethod.toUpperCase(),
+            ...(sensitivityWeightMethods || [])
+        ].filter(Boolean).join(', ');
+
+        const sensResultsText = kSensData?.results ? "Provided in JSON manifest" : "Not provided";
+
+        const isGlobalLiterature = sectionKey === 'introduction' || sectionKey === 'literature';
+        const mode = isGlobalLiterature ? 'GLOBAL_LITERATURE' : 'STRICT_COMPUTATIONAL';
+
+        const comparisonMethodsUsed = comparisonMethods && comparisonMethods.length > 0 ? comparisonMethods.join(', ').toUpperCase() : 'None';
+        const sensitivityTypeUsed = sensitivityMethod || 'Perturbation Analysis';
+
+        return `🔥 SECTION MODE CONTROL:
+Mode = ${mode}
+
+RULES:
+GLOBAL_LITERATURE MODE:
+- Discuss all relevant MCDA methods
+- Include AHP, TOPSIS, VIKOR, WASPAS, etc.
+- Identify research gaps
+- Do NOT restrict to selected methods
+
+STRICT_COMPUTATIONAL MODE:
+- ONLY use methods selected by the user
+- ONLY use data from decision matrix tables
+- DO NOT introduce any new method
+- DO NOT discuss unselected techniques
+
+CRITICAL: If any unselected method appears in STRICT mode → REMOVE it.
+
+🔥 METHOD FILTER PROMPT (DYNAMIC): SELECTED METHODS (STRICT USE):
+Weight Methods:
+${weightMethodsUsed}
+
+Ranking Methods:
+${rankingMethodsUsed}
+
+Comparison Methods:
+${comparisonMethodsUsed}
+
+Sensitivity Type:
+${sensitivityTypeUsed}
+
+STRICT RULE:
+Use ONLY above methods in computation sections. Any other method is strictly forbidden.
+
+🎯 FINAL LOGIC (VERY IMPORTANT): 
+IF section == Introduction OR Literature:
+    allow_all_methods = TRUE
+ELSE:
+    allow_all_methods = FALSE
+    restrict_to_selected = TRUE.
+
+STEP 0: MASTER PROMPT (WITH REAL CITATIONS SYSTEM) (TARGET SECTION: ${sectionName}):
+You are a world-class academic researcher writing for top-tier Q1 journals (Impact Factor >30, e.g., Nature, Elsevier, IEEE, Springer).
+
+STRICT RULES:
+- No generic or AI-like writing
+- Every claim must be supported by a REAL academic citation
+- Use only high-quality journal papers (Scopus/WoS indexed)
+- Prefer recent papers (2018–2025)
+- Avoid fake or hallucinated references
+
+AUTO-CITATION SYSTEM (MANDATORY):
+- Insert in-text citations using APA style:
+  Example: (Saaty, 1980), (Dwivedi et al., 2025)
+- Every major claim MUST include a citation
+- Generate a final reference list:
+  * Minimum 30 references
+  * APA format
+  * Include DOI for each reference
+  * Ensure references are REAL and traceable
+- Ensure consistency:
+  * Every in-text citation must appear in reference list
+  * No unused references
+
+INPUT DATA:
+- Decision Matrix: ${dMatrix}
+- Criteria Definitions: ${criteriaDefsText}
+- Alternatives Definitions: ${altNames}
+- Weight Methods: ${weightMethodsUsed}
+- Ranking Methods: ${rankingMethodsUsed}
+- Sensitivity Results: ${sensResultsText}
+- Domain: ${researchContext?.topic || "Technical Decision Analysis"}
+
+OUTPUT REQUIREMENTS:
+- Scientifically rigorous
+- Mathematically grounded where needed
+- Critically analytical
+- Publication-ready for Q1 (>30 IF).
+
+---
+TECHNICAL SECTION INSTRUCTIONS:
+`;
+    };
+
     const getDynamicPrompt = (sectionId: string) => {
+        const masterPrefix = getFormattedMasterPrompt(sectionId.charAt(0).toUpperCase() + sectionId.slice(1), sectionId);
         const rankingMethodName = selectedRankingMethods.length > 0 ? selectedRankingMethods.join(' and ') : method.toUpperCase();
+
         const weightMethodName = selectedWeightMethods.length > 0 ? selectedWeightMethods.join(' and ') : weightMethod.toUpperCase();
-        
+
         const comparisonMethodsList = comparisonMethods && comparisonMethods.length > 0 ? comparisonMethods.join(', ').toUpperCase() : '';
         const hasType1 = sensitivityData && sensitivityData.length > 0;
         const hasType2 = kSensData && kSensData.results;
@@ -312,94 +494,262 @@ export function AIResearchAssistant({
 
         const noveltySuggestion = getBibliometricNovelty();
 
+        let promptBody = "";
         switch (sectionId) {
             case 'abstract':
-                const compareMethodsRaw = comparisonData && comparisonData.length > 0 
-                  ? Object.keys(comparisonData[0]).filter(k => k !== 'alternativeName' && k !== 'Rank') 
-                  : [];
-                
-                const allParticipatingMethods = Array.from(new Set([
-                    method.toUpperCase(), 
-                    ...selectedRankingMethods,
-                    ...compareMethodsRaw.map(m => m.toUpperCase())
-                ])).join(', ');
+                const compareMethodsRaw = comparisonData && comparisonData.length > 0
+                    ? Object.keys(comparisonData[0]).filter(k => k !== 'alternativeName' && k !== 'Rank')
+                    : [];
 
-                return `Write a Research Abstract for a Q1 journal (Impact Factor 20+). 
-**STRICT RULES:**
+                // ✅ FIX: Include weight method + comparison methods prop + comparisonData keys
+                const allRankingMethods = Array.from(new Set([
+                    method.toUpperCase(),
+                    ...selectedRankingMethods,
+                    ...compareMethodsRaw.map((m: string) => m.toUpperCase()),
+                    ...(comparisonMethods || []).map((m: string) => m.toUpperCase())
+                ])).filter(Boolean);
+
+                const allWeightMethods = Array.from(new Set([
+                    weightMethod.toUpperCase(),
+                    ...selectedWeightMethods
+                ])).filter(Boolean);
+
+                const sensitivityRangeText = variationRange
+                    ? `±${variationRange}%`
+                    : (kSensData?.results ? '±50%' : '');
+
+                const allParticipatingMethods = allRankingMethods.join(', ');
+                const allWeightMethodsText = allWeightMethods.join(', ');
+                const comparisonMethodsText = allRankingMethods.filter(m => m !== method.toUpperCase()).join(', ');
+
+                promptBody = `STEP 1: ABSTRACT: Write a HIGH-IMPACT abstract (250–300 words).
+
+STRUCTURE (STRICT):
+- Problem context (3–4 lines)
+- Specific research gap (NOT generic)
+- Proposed methodology: You MUST explicitly name ALL of the following:
+  * PRIMARY RANKING METHOD: ${method.toUpperCase()}
+  * WEIGHTING METHOD: ${allWeightMethodsText}
+  * COMPARISON/VALIDATION METHODS: ${comparisonMethodsText || 'none specified'}
+  * SENSITIVITY ANALYSIS: Data Perturbation Analysis conducted at ${sensitivityRangeText || 'specified variation range'}
+- Key numerical/analytical results
+- Novel scientific contribution
+- Practical/industrial implication
+
+MANDATORY RULES:
+- No vague words (e.g., "various", "several")
+- Must sound innovative and technical
+- Include at least one quantitative insight
 - DO NOT INCLUDE ANY CITATIONS (e.g., [1], [2], or author names).
-- You MUST identify and mention EVERY method used: ${allParticipatingMethods}.
-- Define the framework as a "robust comparative MCDM investigation" utilizing ${allParticipatingMethods.split(',').length} distinct ranking algorithms.
-- Highlight that the findings remain consistent across these frameworks.
-- Conclude with the study's impact on industrial policy and strategic governance.`;
+- You MUST explicitly mention: ${method.toUpperCase()}, ${allWeightMethodsText}${comparisonMethodsText ? `, and the comparative validation using ${comparisonMethodsText}` : ''}.
+- You MUST mention the sensitivity perturbation range: ${sensitivityRangeText || 'as conducted'}.
+
+FINAL LINE:
+Include 5–7 keywords in alphabetical order.`;
+                break;
 
             case 'introduction':
-                return `Write a 1500-word Q1-standard **Introduction** with hierarchical numbering.
-- **Section 1.1 — Problem Significance:** Establish the high-stakes nature of this decision problem in the global supply chain/industrial domain.
-- **Section 1.2 — Technical Gap Analysis:** Critically analyze why existing literature has yet to provide a robust solution for ${alternatives.length} alternatives under the given criteria.
-- **Section 1.3 — Research Gap and Innovations:** 
-  Describe the "Novelty of the Proposed Strategy" in three distinct layers:
-  (a) **Methodological Innovation:** Why the ${rankingMethodName} framework was selected over classical alternatives.
-  (b) **Scope of Integration:** How ${weightMethodName} weighting resolves the interdependency of the evaluation parameters.
-  (c) **Scientific Validation:** Introduce the dual-stage verification (Type 1 & Type 2) used to prove results reproducibility.
-- **Section 1.4 — Organization of the Manuscript:** Conclude this section with a professional roadmap. Detail that Section 2 provides the literature synthesis, Section 3 presents the proposed methodology, Section 4 illustrates the results and comparative analysis, Section 5 provides the discussion, and Section 6 summarizes the findings and future directions.
+                promptBody = `STEP 2: INTRODUCTION: Write a Q1-level Introduction (1500–1600 words).
 
-**CRITICAL Q1 COMPLIANCE:** Describe the METHODOLOGY only. DO NOT mention specific rankings or scores (e.g., "Edinburgh scored 0.82") in this section. This is a scientific paper; findings belong in Section 4.`;
+STRUCTURE:
+- **Section 1.1- Global context (with citations)
+- **Section 1.2- Problem definition
+- **Section 1.3- Literature limitations
+- **Section 1.4- Research gap (bullet points)
+- **Section 1.5- Contributions (numbered)
+
+AUTO-CITATION RULES:
+- Minimum 12–18 citations
+- Use recent Q1 sources from last 6 years till current date.
+- Mix classical + recent works
+
+MANDATORY RULES:
+- Every paragraph must contain at least 1 citation
+- Avoid generic statements
+- Address the gap driving the use of ${rankingMethodName} and ${weightMethodName} for evaluating ${alternatives.length} alternatives.
+
+END:
+Conclude this section with the exact phrase: "This study proposes..."`;
+                break;
 
             case 'literature':
-                return `Write a 2000-word **Literature Review** (Section 2) for an IF 20+ journal.
-- **Section 2.1 — Bibliometric Analysis:** Discuss the evolution of the field from 2019–2024, mentioning shifts toward hybrid MCDM models.
-- **Section 2.2 — Taxonomy of Existing Methods:** Group previous research logically (e.g., Sustainability focus, Technical efficiency focus) rather than chronologically.
-- **Section 2.3 — Critical Gap Identification:** Explicitly identify the 'blind spot' in current literature that this ${rankingMethodName} study addresses. 
-Use professional academic synthesis, not simple summaries.`;
+                promptBody = `STEP 3: LITERATURE REVIEW (GLOBAL LITERATURE MODE): Write a CRITICAL literature review (2000–2100 words).
+
+STRUCTURE:
+- **Section 2.1 — Method-based grouping (AHP, SWEI TOPSIS, VIKOR, WASPAS, etc.)
+- **Section 2.2 — Comparative analysis
+- **Section 2.3 — Emerging trends (AI, GIS, hybrid MCDA)
+- **Section 2.4 — Research gaps
+
+AUTO-CITATION RULES:
+- Minimum 20–30 citations
+- Use high-impact journals
+- Include comparative references
+
+MANDATORY RULES:
+- Discuss ALL major MCDA methods: AHP, TOPSIS, VIKOR, WASPAS, ELECTRE.
+- DO NOT restrict to selected methods here.
+- Then identify: WHY selected method (${rankingMethodName}) is better.
+- Include comparison table (Method vs Limitations)
+- Critically analyze papers (not summary)
+- Establish the specific "blind spot" driving this ${rankingMethodName} and ${weightMethodName} study.
+
+END: 
+Conclude this section with exactly: "Existing studies fail to..."`;
+                break;
 
             case 'methodology':
-                return `Write a rigorous 2000-word **Methodology** section (Section 3).
-- **Section 3.1 — Axiomatic Rationale:** Provide the theoretical justification for using ${rankingMethodName} and ${weightMethodName}.
-- **Section 3.2 — Step-wise Mathematical Framework:** ${mathInstructions}
-  (a) Detailing the normalization logic (Cost vs. Beneficial).
-  (b) Presenting the weight resolution equations.
-  (c) Explaining the final aggregation algorithm.
-- **Section 3.3 — Robustness Evaluation Protocol:** Explain the rationale for 'Spearman Rank Correlation' and 'Sensitivity Threshold Analysis' as scientific proof of model stability.
-**PLACEHOLDER RULE:** Use hierarchical numbering and reference every Table/Figure identifier from the manifest sequentially.`;
+                promptBody = `STEP 4: METHODOLOGY (STRICT COMPUTATIONAL MODE): Write a mathematically rigorous Methodology (1500–2200 words).
+
+STRUCTURE (Include the following):
+- Decision matrix formulation
+- Normalization equations
+- Weight calculation equations (${weightMethodName})
+- Final ranking model equations (${rankingMethodName})
+- Algorithm (stepwise)
+
+AUTO-CITATION RULES:
+- Cite original methods where applicable (e.g., AHP (Saaty), SWEI (Dwivedi et al.), WASPAS (Zavadskas)).
+- You MUST cite all other active methods (${rankingMethodName}, ${weightMethodName}).
+
+MANDATORY RULES:
+- Define ONLY selected methods mathematically.
+- DO NOT include other MCDA methods. Use equations only for selected methods. If extra method appears → REMOVE it.
+- Define all mathematical variables clearly
+- Include precise equations for every calculation step
+- Provide step-by-step technical justification
+- ${mathInstructions}
+
+FOCUS:
+Scientific rigor + exact reproducibility.`;
+                break;
 
             case 'results':
-                return `Write an 2000-word **Results & Analysis** (Section 4).
-- **Section 4.1 — Ranking Performance:** Discuss the selection outcomes.
-- **Section 4.2 — Multi-Method Benchmarking:** Narratively compare the ${rankingMethodName} results against classical models (TOPSIS, VIKOR, etc.) provided in the comparison data.
-- **Section 4.3 — Sensitivity Threshold Identification:** Address the stability for ${criterionName || 'the critical criterion'} during variation. Identify the 'Break-even Point' where rank reversals occur.
-- **Section 4.4 — Statistical Robustness Certificate:** Synthesize the Spearman/Kendall correlation findings as evidence of methodological consensus. 
-Interpret the **BEHAVIORAL ELASTICITY** of the alternatives—don't just list numbers.`;
+                promptBody = `STEP 5: RESULTS & ANALYSIS (STRICT COMPUTATIONAL MODE): Write a high-impact Results & Analysis section (2000–2200 words).
+
+STRUCTURE (Include the following):
+- **Section 5.1 — Ranking results
+- **Section 5.2 — Cross-method comparison
+- **Section 5.3 — Statistical validation
+- **Section 5.4 — Interpretation
+
+AUTO-CITATION RULES:
+- Cite comparison studies
+- Cite validation methods (Spearman, Kendall)
+
+MANDATORY RULES:
+- Use ONLY selected ranking methods.
+- Explain results ONLY from computed tables.
+- DO NOT mention: AHP, TOPSIS, VIKOR, ELECTRE (if not selected).
+- Explain WHY results are correct
+- Not just reporting data; critically interpret the outcomes.
+- ${spearmanText}
+
+FORBIDDEN:
+- DO NOT include a bibliography, reference list, or citations list at the end of this section.
+- DO NOT write any concluding remarks about the whole paper.
+
+FOCUS:
+Why ranking occurred + Stability of results + Comparison ONLY among selected methods.`;
+                break;
+
+            case 'sensitivity':
+                promptBody = `STEP 6: SENSITIVITY ANALYSIS: Write a deep sensitivity analysis (1500–1600 words).
+
+STRUCTURE (Include the following):
+- Perturbation approach (${sensitivityStrategyText})
+- Impact on ranking
+- Stability discussion: Discuss how changes in criteria importance affect the strategic ranking for ${criterionName || 'critical criteria'}.
+
+AUTO-CITATION RULES:
+- Cite studies on robustness analysis in MCDA
+
+MANDATORY RULES:
+- Analytical explanation
+- Identify stable solutions and rank reversals.
+
+FORBIDDEN:
+- DO NOT include a bibliography, reference list, or citations list at the end of this section.
+- STOP writing immediately after the stability discussion.`;
+                break;
 
             case 'discussion':
-                return `Write an insightful 1800-word **Discussion** (Section 5).
-- **Section 5.1 — Interpretation of Insights:** Map the findings back to the Research Gap identified in Section 1.
-- **Section 5.2 — Managerial Governance & Policy Implications:** What should a CEO or Policy Director DO with these results? Provide actionable, high-level strategic guidance.
-- **Section 5.3 — Theoretical Contributions:** How does this study advance the 'Decision Science' body of knowledge? Discuss the scalability and the potential for Fuzzy/Machine Learning extensions.`;
+                promptBody = `STEP 7: DISCUSSION: Write a deep Discussion section (1600–1800 words).
+
+STRUCTURE (Mandatory subsections with numbering):
+- **Section 7.1 — Interpretation of Results:** Map findings directly back to the initial research gap. Explain specifically how the ${rankingMethodName} ranking resolves the problem stated in the Introduction.
+- **Section 7.2 — Comparison with Existing Literature:** Cite supporting or conflicting studies. Where do this study's findings agree or diverge from prior MCDM research? Use APA citations.
+- **Section 7.3 — Managerial & Policy Implications:** What should decision-makers, CEOs, or policy directors DO based on these results? Provide 3–5 concrete, actionable recommendations. State which alternative should be prioritized and WHY. Connect to real-world industrial or organizational decision-making.
+- **Section 7.4 — Theoretical Contributions:** How does this study advance the Decision Science body of knowledge? Discuss the scalability of the ${rankingMethodName}-${weightMethodName} framework to other domains or data types (e.g., fuzzy sets, interval-valued criteria, AI-augmented MCDM).
+
+AUTO-CITATION RULES:
+- Cite supporting or conflicting studies (minimum 4–6 citations)
+- Cite at least 1 policy/managerial application paper
+
+MANDATORY RULES:
+- No repetition of Results section content
+- Must show deep insight into WHY the ${rankingMethodName} framework yielded these specific outcomes
+- Managerial section must be concrete and actionable — NOT generic
+
+FORBIDDEN:
+- DO NOT include a bibliography or reference list at the end of this section.`;
+                break;
 
             case 'conclusion':
-                return `Write an 800-word **Conclusion** (Section 6).
-- **Section 6.1 — Summary of Scientific Contributions:** Reiterate how the ${rankingMethodName}-${weightMethodName} model proved superior in terms of stability and accuracy.
-- **Section 6.2 — Actionable Strategy:** Briefly state the priority selection for decision-makers.
-- **Section 6.3 — Limitations and Strategic Future Scope:** Be honest about data constraints and suggest integrating neural networks or interval-valued fuzzy sets in future iterations.`;
+                promptBody = `STEP 8: CONCLUSION: Write a strong Conclusion (800–1000 words).
+
+STRUCTURE (Include the following):
+- Contributions
+- Key findings
+- Limitations
+- Future scope
+
+AUTO-CITATION RULES:
+- Optional but include 2–3 references if needed
+
+MANDATORY RULES:
+- Clearly state the definitive ranking list and findings without repeating earlier paragraphs word-for-word.
+
+FOCUS:
+Impact + future direction.`;
+                break;
             case 'references':
-                return `Generate ONLY a numbered bibliography list for this research paper.
+                return `STEP 9: FINAL REFERENCES (CRITICAL): Generate a complete reference list.
+
+REQUIREMENTS:
+- Strictly up to 50 references (Use ONLY the verified sources provided below)
+- APA style
+- **SORTING: The entire bibliography MUST be sorted ALPHABETICALLY by the first author's last name (A to Z).**
+- **Ensure [1] is the first name alphabetically (e.g., starting with A).**
+- Include DOI for each reference
+- Years: 2018–2025 (majority) and up to current date
+- Journals: Q1, Q2 only
+
+STRICT VALIDATION:
+- **ZERO HALLUCINATION MANDATE**: Use ONLY the papers provided in the "VERIFIED LIVE REFERENCES" block.
+- **DO NOT INVENT ANY PAPER**. If you reach the end of the provided list, STOP generating.
+- All references must correspond to in-text citations from the earlier sections.
+- NO FAKE OR PLACEHOLDER REFERENCES. They must be REAL DOIs and REAL papers.
+
+FORMAT:
+Author(s). (Year). Title. Journal. Volume(Issue), pages. DOI
+Example: [1] Dwivedi, P. P., & Sharma, D. K. (2025). Quantitative assessment of photovoltaic thermal collectors to enhance energy efficiency in the power system by SWEI MCDM method. Renewable and Sustainable Energy Reviews, 217, 115791. https://doi.org/10.1016/j.rser.2025.115791
+
+FORBIDDEN:
+- **DO NOT use asterisks (*) or underscores (_) to indicate italics.**
+- **DO NOT use any Markdown formatting in the bibliography.**
+- **DO NOT include any reference with "Unknown Authors", "No Data", "Anonymous", or "Author Missing".**
+- **Every citation MUST have real, fully attributed author names.**
+- **Return ONLY clean plain text.**
 
 **ABSOLUTE RULES — NO EXCEPTIONS:**
-1. OUTPUT FORMAT: Return ONLY a numbered list of citations. Example format: [1] Author, A. B., & Author, C. D. (Year). Title of article. Journal Name, Vol(Issue), Pages. https://doi.org/xxx
-2. FORBIDDEN CONTENT — You MUST NOT write ANY of the following:
-   - Section headers or subheaders (e.g. "4. Results and Discussion", "4.1", "4.2", "Conclusion", "Discussion" etc.)
-   - Paragraphs of text, analysis, or interpretation
-   - Summaries of findings or methodology
-   - Any mention of rankings, TOPSIS scores, or alternative names
-   - Any prose before or after the numbered list
-3. START IMMEDIATELY with [1] — do not write any preamble or introduction sentence.
-4. END IMMEDIATELY after the last citation — do not write any closing paragraph or remark.
-5. Use ONLY the sources from the Available Scholarly References. Do not fabricate DOIs or journal names.
-
-This section MUST contain ONLY the numbered reference list — nothing else whatsoever.`;
+1. START IMMEDIATELY with the first citation [1], which MUST be the first alphabetically.
+2. END IMMEDIATELY after the last citation — do not write any closing paragraph or remark.
+3. FORBIDDEN CONTENT: You MUST NOT write any theoretical text, summaries, section headers, or methodology overview. Return ONLY the reference list.`;
             default:
                 return '';
         }
+        return masterPrefix + promptBody;
     };
 
     // Update defaults when section changes
@@ -421,6 +771,13 @@ This section MUST contain ONLY the numbered reference list — nothing else what
             const finalPrompt = customPrompt || currentTemplate.defaultPrompt;
             const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
 
+            // 🔗 Fetch live citations before generating this section
+            const topic = researchContext?.topic || method;
+            const fetchedCitations = await fetchLiveCitations(topic);
+            const citationBlock = fetchedCitations
+                ? `\n\nVERIFIED LIVE REFERENCES (CrossRef + Semantic Scholar — USE THESE ONLY):\n${fetchedCitations}`
+                : '';
+
             const response = await fetch('/api/ai-analysis', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -430,10 +787,11 @@ This section MUST contain ONLY the numbered reference list — nothing else what
                     sectionType: selectedSection,
                     customPrompt: finalPrompt,
                     wordCount: wordCount,
-                    additionalContext: additionalContext,
                     kSensData: kSensData,
                     criterionName: criterionName,
                     variationRange: variationRange,
+                    sensitivityData: sensitivityData,
+                    comparisonData: comparisonData,
                     alternatives: alternatives,
                     criteria: criteria,
                     method: method,
@@ -446,7 +804,8 @@ This section MUST contain ONLY the numbered reference list — nothing else what
                         })).sort((a, b) => b.score - a.score)
                         : [],
                     researchContext: researchContext,
-                    isLastSection: selectedSection === 'references'
+                    isLastSection: selectedSection === 'references',
+                    additionalContext: (additionalContext || '') + citationBlock
                 })
             });
 
@@ -473,6 +832,14 @@ This section MUST contain ONLY the numbered reference list — nothing else what
 
         try {
             const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
+
+            // 🔗 STEP: Fetch live citations ONCE before the entire manuscript run
+            setFullProgress(3);
+            const topic = researchContext?.topic || method;
+            const fetchedCitations = await fetchLiveCitations(topic);
+            const citationBlock = fetchedCitations
+                ? `\nVERIFIED LIVE REFERENCES (CrossRef + Semantic Scholar — USE THESE ONLY):\n${fetchedCitations}`
+                : '';
 
             // Step 0: Generate Title
             setFullProgress(5);
@@ -514,7 +881,7 @@ This section MUST contain ONLY the numbered reference list — nothing else what
                         sectionType: section.id,
                         customPrompt: getDynamicPrompt(section.id) + " CRITICAL: Start writing technical content DIRECTLY. Do NOT include any section titles, numbers, or headings at the start of your response. This is part of a professional research paper; ensure it flows naturally without repeating headers.",
                         wordCount: section.defaultWordCount,
-                        additionalContext: additionalContext + (i > 0 ? " Previous section context: " + results[sectionsToGenerate[i - 1].id]?.substring(0, 500) : ""),
+                        additionalContext: (additionalContext || '') + citationBlock + (i > 0 ? " Previous section context: " + results[sectionsToGenerate[i - 1].id]?.substring(0, 500) : ""),
                         kSensData,
                         criterionName,
                         variationRange,
@@ -709,24 +1076,40 @@ This section MUST contain ONLY the numbered reference list — nothing else what
                         <span className="text-sm font-bold text-indigo-900">Marked for AI:</span>
                     </div>
                     <div className="flex flex-wrap gap-2 text-xs">
-                      {methodsCount > 0 && (
-                        <span className="bg-white px-2 py-1 rounded border border-indigo-200 text-indigo-700 font-semibold shadow-sm flex items-center gap-1.5">
-                          <Cpu className="w-3 h-3" /> {methodsCount} Methods
-                        </span>
-                      )}
-                      {tablesCount > 0 && (
-                        <span className="bg-white px-2 py-1 rounded border border-indigo-200 text-indigo-700 font-semibold shadow-sm flex items-center gap-1.5">
-                          <FileText className="w-3 h-3" /> {tablesCount} Tables
-                        </span>
-                      )}
-                      {diagramsCount > 0 && (
-                        <span className="bg-white px-2 py-1 rounded border border-indigo-200 text-indigo-700 font-semibold shadow-sm flex items-center gap-1.5">
-                          <TrendingUp className="w-3 h-3" /> {diagramsCount} Diagrams
-                        </span>
-                      )}
-                      {methodsCount === 0 && tablesCount === 0 && diagramsCount === 0 && (
-                         <span className="text-indigo-400 italic">No assets marked yet - the AI will use default selection</span>
-                      )}
+                        {methodsCount > 0 && (
+                            <span className="bg-white px-2 py-1 rounded border border-indigo-200 text-indigo-700 font-semibold shadow-sm flex items-center gap-1.5">
+                                <Cpu className="w-3 h-3" /> {methodsCount} Methods
+                            </span>
+                        )}
+                        {tablesCount > 0 && (
+                            <span className="bg-white px-2 py-1 rounded border border-indigo-200 text-indigo-700 font-semibold shadow-sm flex items-center gap-1.5">
+                                <FileText className="w-3 h-3" /> {tablesCount} Tables
+                            </span>
+                        )}
+                        {diagramsCount > 0 && (
+                            <span className="bg-white px-2 py-1 rounded border border-indigo-200 text-indigo-700 font-semibold shadow-sm flex items-center gap-1.5">
+                                <TrendingUp className="w-3 h-3" /> {diagramsCount} Diagrams
+                            </span>
+                        )}
+                        {methodsCount === 0 && tablesCount === 0 && diagramsCount === 0 && (
+                            <span className="text-indigo-400 italic">No assets marked yet - the AI will use default selection</span>
+                        )}
+                    </div>
+                    {/* Live Citation System Status Badge */}
+                    <div className="w-full flex items-center gap-2 mt-1">
+                        {isFetchingCitations ? (
+                            <span className="flex items-center gap-1.5 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-md font-medium animate-pulse">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block"></span>
+                                Fetching live Q1 citations from CrossRef & Semantic Scholar...
+                            </span>
+                        ) : citationCount > 0 ? (
+                            <span className="flex items-center gap-1.5 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-md font-medium">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                                🔗 {citationCount} verified live references loaded (CrossRef + Semantic Scholar)
+                            </span>
+                        ) : (
+                            <span className="text-[11px] text-gray-400 italic">Live citations will be fetched automatically when you generate a section.</span>
+                        )}
                     </div>
                     <p className="w-full text-[11px] text-indigo-600 font-medium italic">
                         The AI will synthesize descriptions ONLY for marked methods and reference ONLY checked tables/diagrams.
@@ -934,6 +1317,19 @@ This section MUST contain ONLY the numbered reference list — nothing else what
                                         </>
                                     )}
                                 </Button>
+                                <Button
+                                    onClick={() => handleValidateCitations(generatedContent)}
+                                    disabled={isValidatingCitations || !generatedContent || isGenerating}
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5"
+                                >
+                                    {isValidatingCitations ? (
+                                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Validating...</>
+                                    ) : (
+                                        <>🔍 Validate Citations</>
+                                    )}
+                                </Button>
                             </div>
                         </div>
                         <div className="prose prose-sm max-w-none bg-white p-8 rounded shadow-inner border border-gray-100"
@@ -965,6 +1361,71 @@ This section MUST contain ONLY the numbered reference list — nothing else what
                                 </div>
                             )}
                         </div>
+
+                        {/* Citation Validation Results Panel */}
+                        {citationValidation && (
+                            <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+                                <div className="flex items-center justify-between flex-wrap gap-2">
+                                    <h4 className="text-sm font-bold text-emerald-900">🔍 Citation Validation Report</h4>
+                                    <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                                        <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">✅ {citationValidation.summary.valid} Valid</span>
+                                        <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded-full border border-red-300">❌ {citationValidation.summary.invalid} Invalid</span>
+                                        {citationValidation.summary.fake > 0 && (
+                                            <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full border border-orange-300">⚠️ {citationValidation.summary.fake} Fake</span>
+                                        )}
+                                        <span className="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full border border-indigo-300">Pass Rate: {citationValidation.summary.passRate}</span>
+                                    </div>
+                                </div>
+
+                                {/* APA Author/Year Results */}
+                                {citationValidation.output && citationValidation.output.length > 0 && (
+                                    <div>
+                                        <p className="text-xs font-bold text-gray-600 mb-1.5">📖 In-Text APA Citations (Author, Year)</p>
+                                        <div className="max-h-44 overflow-y-auto space-y-1 pr-1">
+                                            {citationValidation.output.map((r, i) => {
+                                                const detail = citationValidation.results.find(d => d.type === "author" && d.author === r.author && d.year === r.year);
+                                                return (
+                                                    <div key={i} className={`flex items-start gap-2 text-xs px-3 py-2 rounded-lg border ${r.valid ? 'bg-white border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                                                        <span className="flex-shrink-0 mt-0.5">{r.valid ? '✅' : '❌'}</span>
+                                                        <div className="min-w-0 flex-1">
+                                                            <span className="font-semibold text-gray-800">({r.author}, {r.year})</span>
+                                                            {r.valid && detail?.suggestedTitle && <span className="ml-2 text-gray-500 text-[11px]">— {detail.suggestedTitle}</span>}
+                                                            {!r.valid && detail?.reason && <span className="ml-2 italic text-red-700 text-[11px]">{detail.reason}</span>}
+                                                            {!r.valid && detail?.suggestedDoi && (
+                                                                <span className="ml-2 text-blue-600 text-[11px]">→ Suggested: <a href={`https://doi.org/${detail.suggestedDoi}`} target="_blank" rel="noreferrer" className="underline">{detail.suggestedDoi}</a></span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* DOI Results */}
+                                {citationValidation.results.filter(r => r.type === "doi").length > 0 && (
+                                    <div>
+                                        <p className="text-xs font-bold text-gray-600 mb-1.5">🔗 DOI Validation</p>
+                                        <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+                                            {citationValidation.results.filter(r => r.type === "doi").map((r, i) => (
+                                                <div key={i} className={`flex items-start gap-2 text-xs px-3 py-2 rounded-lg border ${r.valid ? 'bg-white border-emerald-200 text-gray-700' : 'bg-red-50 border-red-200 text-red-800'}`}>
+                                                    <span className="mt-0.5 flex-shrink-0">{r.valid ? '✅' : '❌'}</span>
+                                                    <div className="min-w-0">
+                                                        <span className="font-mono font-semibold break-all">{r.doi}</span>
+                                                        {r.valid && r.title && <span className="ml-2 text-gray-500">— {r.title} ({r.year})</span>}
+                                                        {!r.valid && r.reason && <span className="ml-2 italic">{r.reason}</span>}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {citationValidation.results.length === 0 && (
+                                    <p className="text-xs text-emerald-700 italic">No citations detected. Ensure the AI included APA-style citations like (Author, 2025) and DOI links.</p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
             </CardContent>
