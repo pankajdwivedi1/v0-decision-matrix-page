@@ -305,6 +305,8 @@ export default function MCDMCalculator() {
   const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiAnalysisType, setAiAnalysisType] = useState<"full_report" | "sensitivity" | "ranking_comparison" | "k_sensitivity" | "research_abstract" | "introduction" | "literature_review" | "methodology">("full_report")
+  const [weightResultsChartType, setWeightResultsChartType] = useState<string>("bar")
+  const weightResultsChartRef = useRef<HTMLDivElement>(null)
   const [aiResearchContext, setAiResearchContext] = useState<{
     topic: string,
     researchGap: string,
@@ -408,6 +410,7 @@ export default function MCDMCalculator() {
     setIsKSensitivityCalculated(false)
     setKSensResultsData(null)
     setAiAnalysisResult(null)
+    setWeightResultsChartType("bar")
     
     // Also clear from local storage to ensure "Reality" on refresh
     localStorage.removeItem("mcdm_api_results")
@@ -3519,6 +3522,275 @@ export default function MCDMCalculator() {
     );
   };
 
+  const getCurrentWeights = () => {
+    // Collect weights for the current method from its corresponding result object or the criteria array
+    let weightsArray: { name: string, value: number, id: string }[] = [];
+
+    if (weightMethod === "entropy" && entropyResult) {
+      weightsArray = criteria.map(c => ({ name: c.name, value: entropyResult.weights[c.id] || 0, id: c.id }));
+    } else if (weightMethod === "critic" && criticResult) {
+      weightsArray = criteria.map(c => ({ name: c.name, value: criticResult.weights[c.id] || 0, id: c.id }));
+    } else if (weightMethod === "lopcow" && lopcowResult) {
+      weightsArray = criteria.map(c => ({ name: c.name, value: lopcowResult.weights[c.id] || 0, id: c.id }));
+    } else if (weightMethod === "dematel" && dematelResult) {
+      weightsArray = criteria.map(c => ({ name: c.name, value: dematelResult.weights[c.id] || 0, id: c.id }));
+    } else if (weightMethod === "sd" && sdResult) {
+      weightsArray = criteria.map(c => ({ name: c.name, value: sdResult.weights[c.id] || 0, id: c.id }));
+    } else if (weightMethod === "variance" && varianceResult) {
+      weightsArray = criteria.map(c => ({ name: c.name, value: varianceResult.weights[c.id] || 0, id: c.id }));
+    } else if (weightMethod === "mad" && madResult) {
+      weightsArray = criteria.map(c => ({ name: c.name, value: madResult.weights[c.id] || 0, id: c.id }));
+    } else if (weightMethod === "pcwm" && pcwmResult) {
+      weightsArray = criteria.map(c => ({ name: c.name, value: pcwmResult.weights[c.id] || 0, id: c.id }));
+    } else if (weightMethod === "roc" && rocResult) {
+      weightsArray = criteria.map(c => ({ name: c.name, value: rocResult.weights[c.id] || 0, id: c.id }));
+    } else if (weightMethod === "rr" && rrResult) {
+      weightsArray = criteria.map(c => ({ name: c.name, value: rrResult.weights[c.id] || 0, id: c.id }));
+    } else if (weightMethod === "ahp" && ahpCalculatedWeights) {
+      weightsArray = criteria.map(c => ({ name: c.name, value: ahpCalculatedWeights[c.id] || 0, id: c.id }));
+    } else if (weightMethod === "piprecia" && pipreciaCalculatedWeights) {
+      weightsArray = criteria.map(c => ({ name: c.name, value: pipreciaCalculatedWeights[c.id] || 0, id: c.id }));
+    } else if (weightMethod === "swara" && swaraCalculatedWeights) {
+      weightsArray = criteria.map(c => ({ name: c.name, value: swaraCalculatedWeights[c.id] || 0, id: c.id }));
+    } else if (merecResult && weightMethod === "merec") {
+      weightsArray = criteria.map(c => ({ name: c.name, value: merecResult.weights[c.id] || 0, id: c.id }));
+    } else if (weightMethod === "custom" && customWeightsCalculated) {
+      weightsArray = criteria.map(c => ({ name: c.name, value: customWeightsCalculated[c.id] || 0, id: c.id }));
+    } else {
+      // Fallback for methods that update the criteria weights directly (AHP, SWARA, Equal, etc.)
+      weightsArray = criteria.map(c => ({ name: c.name, value: c.weight || 0, id: c.id }));
+    }
+
+    // Ensure weights are strictly numeric and valid
+    return weightsArray.map(w => ({
+      ...w,
+      value: typeof w.value === 'number' && !isNaN(w.value) ? w.value : 0
+    }));
+  };
+
+  const handleDownloadWeightResultsChart = () => {
+    if (weightResultsChartRef.current) {
+      toJpeg(weightResultsChartRef.current, { backgroundColor: '#fff', quality: 0.95 })
+        .then((dataUrl) => {
+          const link = document.createElement('a');
+          link.download = `Weight_Distribution_${weightMethod}_${new Date().toISOString().slice(0, 10)}.jpg`;
+          link.href = dataUrl;
+          link.click();
+        })
+        .catch((err) => {
+          console.error('Failed to download chart:', err);
+        });
+    }
+  };
+
+  const renderWeightResultsChart = () => {
+    const data = getCurrentWeights();
+    if (data.length === 0) return null;
+
+    // Matplotlib Tab10 Color Palette
+    const MATPLOTLIB_COLORS = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
+    
+    // Scientific Color Mapping with Fixed Baseline (0.00 to 0.20) for Cross-Method Comparability
+    const SCIENTIFIC_MAX_WEIGHT = 0.20; // Standardized for all Heatmaps to ensure color consistency
+
+    const getViridisColor = (value: number) => {
+      const f = Math.min(Math.max(value / SCIENTIFIC_MAX_WEIGHT, 0), 1);
+      // Viridis approximate points: 0.0: #440154, 0.25: #3b528b, 0.5: #21908d, 0.75: #5dc963, 1.0: #fde725
+      if (f <= 0.25) {
+        const t = f / 0.25;
+        return `rgb(${Math.round(68 + t * (59 - 68))}, ${Math.round(1 + t * (82 - 1))}, ${Math.round(84 + t * (139 - 84))})`;
+      } else if (f <= 0.5) {
+        const t = (f - 0.25) / 0.25;
+        return `rgb(${Math.round(59 + t * (33 - 59))}, ${Math.round(82 + t * (144 - 82))}, ${Math.round(139 + t * (141 - 139))})`;
+      } else if (f <= 0.75) {
+        const t = (f - 0.5) / 0.25;
+        return `rgb(${Math.round(33 + t * (93 - 33))}, ${Math.round(144 + t * (201 - 144))}, ${Math.round(141 + t * (99 - 141))})`;
+      } else {
+        const t = (f - 0.75) / 0.25;
+        return `rgb(${Math.round(93 + t * (253 - 93))}, ${Math.round(201 + t * (231 - 201))}, ${Math.round(99 + t * (37 - 99))})`;
+      }
+    };
+
+    const maxValue = Math.max(...data.map(d => d.value), 0.0001);
+    const chartTitle = weightResultsChartType === 'bar' ? `Ranking (${weightMethod.charAt(0).toUpperCase() + weightMethod.slice(1)} Weights)` :
+                       weightResultsChartType === 'pie' ? "Weight Distribution" :
+                       weightResultsChartType === 'line' ? "Weight Trend" :
+                       weightResultsChartType === 'radar' ? "Radar Chart" :
+                       weightResultsChartType === 'heatmap' ? "Heatmap" : "Area Representation";
+
+    return (
+      <Card id="weight-method-chart-section" className="border-gray-300 bg-white shadow-sm mt-8 mb-6 overflow-hidden rounded-md">
+        <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100">
+          <ResearchAssetHeader
+            assetKey="weight_results_chart"
+            defaultLabel={getNextFigureLabel()}
+            title={chartTitle.toUpperCase()}
+            included={selectedAiAssets.has("weight_results_chart")}
+            onIncludeChange={handleIncludeChange}
+            onLabelChange={handleAssetLabelChange}
+          />
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">Select Plot Style</span>
+              <Select value={weightResultsChartType} onValueChange={setWeightResultsChartType}>
+                <SelectTrigger className="h-9 text-[11px] w-48 border-gray-300 bg-white hover:bg-gray-50 transition-colors font-medium text-black">
+                  <span className="flex items-center gap-2">
+                    {weightResultsChartType === 'bar' && '📊 Horizontal Ranking'}
+                    {weightResultsChartType === 'pie' && '🍕 Pie Chart'}
+                    {weightResultsChartType === 'line' && '📈 Line Plot'}
+                    {weightResultsChartType === 'area' && '🟦 Area Chart'}
+                    {weightResultsChartType === 'radar' && '🕸️ Radar Chart'}
+                    {weightResultsChartType === 'heatmap' && '🌡️ Heatmap'}
+                  </span>
+                </SelectTrigger>
+                <SelectContent className="border-gray-300 shadow-md">
+                  <SelectItem value="bar" className="text-[11px]">📊 Horizontal Bar (Ranking)</SelectItem>
+                  <SelectItem value="pie" className="text-[11px]">🍕 Pie Chart</SelectItem>
+                  <SelectItem value="line" className="text-[11px]">📈 Line Plot</SelectItem>
+                  <SelectItem value="area" className="text-[11px]">🟦 Area Chart</SelectItem>
+                  <SelectItem value="radar" className="text-[11px]">🕸️ Radar Chart</SelectItem>
+                  <SelectItem value="heatmap" className="text-[11px]">🌡️ Heatmap</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              onClick={handleDownloadWeightResultsChart}
+              variant="outline"
+              size="sm"
+              className="h-9 w-9 p-0 border-gray-300 text-black hover:bg-gray-100 mt-auto"
+              title="Save Figure"
+            >
+              <Download className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        <CardContent className="p-8 bg-[#fdfdfd] flex justify-center">
+          <div ref={weightResultsChartRef} className="w-full max-w-[800px] h-[550px] bg-white border border-gray-200 shadow-sm p-4 sm:p-8 flex flex-col items-center overflow-visible">
+            {/* Scientific Plot Title (Unified Header) */}
+            {weightResultsChartType !== 'heatmap' && (
+              <h3 className="text-sm font-sans font-semibold mb-6 text-black tracking-tight">{chartTitle}</h3>
+            )}
+            
+            <div className="w-full h-full flex flex-col items-center">
+              <ResponsiveContainer width="100%" height="100%">
+                {weightResultsChartType === 'bar' ? (
+                  <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 60, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="none" stroke="#eee" vertical={false} horizontal={false} />
+                    <XAxis type="number" stroke="#000" tick={{ fontSize: 10, fill: '#000' }} label={{ value: 'Weight', position: 'bottom', offset: -10, fontSize: 10, fill: '#000' }} />
+                    <YAxis dataKey="name" type="category" stroke="#000" tick={{ fontSize: 10, fill: '#000' }} width={80} />
+                    <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ fontSize: 10 }} />
+                    <Bar dataKey="value" fill="#1f77b4" barSize={25} />
+                  </BarChart>
+                ) : weightResultsChartType === 'pie' ? (
+                  <PieChart>
+                    <Pie
+                      data={data}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius="85%"
+                      dataKey="value"
+                      labelLine={true}
+                      label={({ name, percent }) => `${name}\n${(percent * 100).toFixed(1)}%`}
+                      isAnimationActive={false}
+                    >
+                      {data.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={MATPLOTLIB_COLORS[index % MATPLOTLIB_COLORS.length]} stroke="#fff" />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                ) : weightResultsChartType === 'line' ? (
+                  <LineChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: 60 }}>
+                    <CartesianGrid strokeDasharray="none" stroke="#ddd" />
+                    <XAxis dataKey="name" stroke="#000" tick={{ fontSize: 9, fill: '#000' }} angle={-45} textAnchor="end" interval={0} height={60} />
+                    <YAxis stroke="#000" tick={{ fontSize: 10, fill: '#000' }} />
+                    <Tooltip contentStyle={{ fontSize: 10 }} />
+                    <Line type="linear" dataKey="value" stroke="#1f77b4" strokeWidth={1.5} dot={{ r: 4, fill: '#1f77b4', strokeWidth: 1, stroke: '#fff' }} isAnimationActive={false} />
+                  </LineChart>
+                ) : weightResultsChartType === 'area' ? (
+                  <AreaChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: 60 }}>
+                    <XAxis dataKey="name" stroke="#000" tick={{ fontSize: 9, fill: '#000' }} angle={-45} textAnchor="end" interval={0} height={60} />
+                    <YAxis stroke="#000" tick={{ fontSize: 10, fill: '#000' }} />
+                    <Tooltip />
+                    <Area type="linear" dataKey="value" stroke="#1f77b4" fill="#1f77b4" fillOpacity={1} isAnimationActive={false} />
+                  </AreaChart>
+                ) : weightResultsChartType === 'radar' ? (
+                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
+                    <PolarGrid stroke="#ccc" />
+                    <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: '#000' }} />
+                    <PolarRadiusAxis stroke="#666" tick={{ fontSize: 8 }} />
+                    <Radar name="Weight" dataKey="value" stroke="#1f77b4" fill="#1f77b4" fillOpacity={0.2} isAnimationActive={false} />
+                    <Tooltip />
+                  </RadarChart>
+                ) : (
+                  /* --- Matplotlib Heatmap Reconstruction (FINAL MATCH) --- */
+                  <div className="flex flex-col items-center h-full w-full py-2">
+                    <div className="flex flex-row items-start justify-center gap-8 px-8 overflow-visible mt-4">
+                      {/* Grid + Title Container */}
+                      <div className="flex flex-col items-center">
+                        <div className="text-[12px] font-sans font-bold text-black mb-4 uppercase tracking-wider">Heatmap</div>
+                        
+                        <div className="flex h-[280px] w-[450px] border border-black relative bg-white">
+                          {data.map((d, i) => (
+                            <div
+                              key={i}
+                              className="flex-1 h-full border-r border-black/20 last:border-r-0 relative group"
+                              style={{ backgroundColor: getViridisColor(d.value) }}
+                            >
+                              {/* X-Axis Tick Dash */}
+                              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full h-1.5 w-[1px] bg-black" />
+                              
+                              {/* X-Axis Label (Placed BELOW tick, pointing down-right) */}
+                              <div 
+                                className="absolute top-full left-1/2 translate-y-[10px] -translate-x-[15%] rotate-[45deg] origin-top-left text-[9px] font-medium text-black whitespace-nowrap"
+                              >
+                                {d.name}
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Y-Axis Label 'Weights' (Centered and Horizontal) */}
+                          <div className="absolute left-0 top-1/2 -translate-x-full pr-3 flex items-center">
+                            <span className="text-[10px] font-sans text-black">Weights</span>
+                            <div className="w-1.5 h-[1px] bg-black ml-1" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Colorbar: Explicitly matched height and position to Top of Grid area */}
+                      <div className="flex flex-col items-center" style={{ marginTop: '32px' }}> 
+                        <div className="flex items-center h-[280px] gap-2 pr-1">
+                          {/* 5-Point Viridis Gradient matching getViridisColor logic */}
+                          <div 
+                            className="w-[18px] h-full border border-black" 
+                            style={{ 
+                              background: 'linear-gradient(to top, #440154 0%, #3b528b 25%, #21908d 50%, #5dc963 75%, #fde725 100%)' 
+                            }} 
+                          />
+                          <div className="flex flex-col justify-between h-full py-0 text-[8.5px] font-sans font-medium text-black">
+                            <span>{SCIENTIFIC_MAX_WEIGHT.toFixed(2)}</span>
+                            <span>{(SCIENTIFIC_MAX_WEIGHT * 0.8).toFixed(2)}</span>
+                            <span>{(SCIENTIFIC_MAX_WEIGHT * 0.6).toFixed(2)}</span>
+                            <span>{(SCIENTIFIC_MAX_WEIGHT * 0.4).toFixed(2)}</span>
+                            <span>{(SCIENTIFIC_MAX_WEIGHT * 0.2).toFixed(2)}</span>
+                            <span>0.00</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </CardContent>
+        <div className="px-6 py-2 bg-gray-50 border-t border-gray-200 flex justify-center">
+            <span className="text-[10px] font-bold text-gray-400 italic">Scientific Plotting Interface (Classic Matplotlib Style)</span>
+        </div>
+      </Card>
+    );
+  };
   const renderWorkflowNavigation = () => {
     return (
       <div className="grid grid-cols-2 sm:flex sm:flex-nowrap items-stretch gap-1 mb-4">
@@ -12219,6 +12491,13 @@ export default function MCDMCalculator() {
               )}
 
 
+
+              {/* --- FINAL WEIGHTS VISUALIZATION (STEP 3) --- */}
+              {isAnyWeightCalculated && (
+                <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                  {renderWeightResultsChart()}
+                </div>
+              )}
 
               {/* --- ROC & RR Ranks Dialog (Matrix Step) --- */}
               <Dialog open={isRanksDialogOpen} onOpenChange={setIsRanksDialogOpen}>
