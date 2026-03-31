@@ -109,8 +109,10 @@ function extractDoisFromText(text: string): string[] {
 }
 
 // ─── DOI validator ───────────────────────────────────────────────────────────
-async function validateDoi(doi: string): Promise<DoiResult> {
+async function validateDoi(doi: string): Promise<DoiResult & { quartile?: string | null }> {
     const cleanDoi = doi.replace(/^https?:\/\/doi\.org\//i, "").trim();
+    const { getQuartile } = await import("@/lib/journalData");
+
     try {
         const url = `https://api.crossref.org/works/${encodeURIComponent(cleanDoi)}`;
         const res = await fetch(url, {
@@ -121,11 +123,15 @@ async function validateDoi(doi: string): Promise<DoiResult> {
         if (!res.ok) return { type: "doi", doi: cleanDoi, valid: false, reason: `CrossRef HTTP ${res.status}` };
         const data = await res.json();
         const item = data.message;
+        const journal = item["container-title"]?.[0] || item.publisher;
+        const quartile = getQuartile(journal);
+
         return {
             type: "doi", doi: cleanDoi, valid: true,
             title: item.title?.[0],
             year: item.published?.["date-parts"]?.[0]?.[0],
-            journal: item["container-title"]?.[0] || item.publisher
+            journal,
+            quartile
         };
     } catch (err: any) {
         return { type: "doi", doi: cleanDoi, valid: false, reason: err?.name === "TimeoutError" ? "Request timed out" : "Network error" };

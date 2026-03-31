@@ -9,6 +9,18 @@ import { Loader2, Sparkles, FileText, X, BookOpen, Lightbulb, Target, TrendingUp
 import ReactMarkdown from 'react-markdown';
 import { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } from "docx";
 import { saveAs } from "file-saver";
+import {
+    MASTER_ROLE_PROMPT,
+    AI_AWARE_WRITING_PROMPT,
+    SECTION_REFINEMENT_PROMPTS,
+    postEnhance,
+    preservationCheck,
+    getOverallAIRiskFromText,
+    computeSentenceVariance,
+    computeLexicalDiversity,
+    type AIDetectionResult,
+    DETECTION_RISK_COLORS,
+} from '@/lib/manuscriptPrompts';
 
 interface AIResearchAssistantProps {
     kSensData?: any;
@@ -346,6 +358,13 @@ export function AIResearchAssistant({
         invalidCitations: { author: string; year: string; valid: boolean; reason?: string; suggestedTitle?: string; suggestedDoi?: string }[];
     } | null>(null);
 
+    // AI Detection state
+    const [isDetectingAI, setIsDetectingAI] = useState(false);
+    const [isFixingAI, setIsFixingAI] = useState(false);
+    const [aiDetectionResult, setAiDetectionResult] = useState<AIDetectionResult | null>(null);
+    const [aiDetectionError, setAiDetectionError] = useState('');
+    const [fixReport, setFixReport] = useState<any>(null);
+
     const [researchContext, setResearchContext] = useState<any>(null);
 
     // Load research context from localStorage on mount
@@ -536,14 +555,22 @@ ELSE:
     restrict_to_selected = TRUE.
 
 STEP 0: MASTER PROMPT (WITH REAL CITATIONS SYSTEM) (TARGET SECTION: ${sectionName}):
+
+${MASTER_ROLE_PROMPT}
+
+${AI_AWARE_WRITING_PROMPT}
+
+${SECTION_REFINEMENT_PROMPTS[sectionKey] || ''}
+
 You are a world-class academic researcher writing for top-tier Q1 journals (Impact Factor >30, e.g., Nature, Elsevier, IEEE, Springer).
 
 STRICT RULES:
-- No generic or AI-like writing
+- No generic or AI-like writing — enforce AI_AWARE_WRITING_PROMPT rules above at all times
 - Every claim must be supported by a REAL academic citation
 - Use only high-quality journal papers (Scopus/WoS indexed)
 - Prefer recent papers (2018–2025)
 - Avoid fake or hallucinated references
+- Write like a domain expert — NOT like an AI text generator
 
 AUTO-CITATION SYSTEM (MANDATORY):
 - Insert in-text citations using APA style:
@@ -571,7 +598,8 @@ OUTPUT REQUIREMENTS:
 - Scientifically rigorous
 - Mathematically grounded where needed
 - Critically analytical
-- Publication-ready for Q1 (>30 IF).
+- Publication-ready for Q1 (>30 IF)
+- LOW AI-detection signature (human expert writing style mandatory)
 
 ---
 TECHNICAL SECTION INSTRUCTIONS:
@@ -876,13 +904,75 @@ FORBIDDEN:
         setIsCopied(false);
     }, [selectedSection, method, weightMethod, comparisonMethods, sensitivityMethod, sensitivityWeightMethods, technicalDepth, variationRange]);
 
+    // ── AI Content Detection Handler ────────────────────────────
+    const handleDetectAI = async () => {
+        if (!generatedContent) return;
+        setIsDetectingAI(true);
+        setAiDetectionResult(null);
+        setAiDetectionError('');
+        try {
+            const userApiKey = localStorage.getItem('user_gemini_api_key') || '';
+
+            // Client-side statistical pre-analysis
+            const variance = computeSentenceVariance(generatedContent);
+            const diversity = computeLexicalDiversity(generatedContent);
+
+            const res = await fetch('/api/detect-ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: generatedContent, userApiKey }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Detection failed');
+            setAiDetectionResult(data);
+        } catch (err: any) {
+            setAiDetectionError(err.message || 'Detection failed. Please try again.');
+        } finally {
+            setIsDetectingAI(false);
+        }
+    };
+
+    const handleFixAI = async () => {
+        if (!generatedContent) return;
+        setIsFixingAI(true);
+        setFixReport(null);
+        try {
+            const userApiKey = localStorage.getItem('user_gemini_api_key') || '';
+            const res = await fetch('/api/fix-ai-sentences', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: generatedContent, userApiKey }),
+            });
+            const data = await res.json();
+            if (data.fixedText) {
+                setGeneratedContent(data.fixedText);
+                setFixReport(data.report);
+                // Re-detect AI automatically after fix
+                // Small delay to ensure state update if needed
+                setTimeout(() => handleDetectAI(), 500);
+            }
+        } catch (e) {
+            console.error("AI fix failed:", e);
+        } finally {
+            setIsFixingAI(false);
+        }
+    };
+
     const handleGenerate = async () => {
         setIsGenerating(true);
         setShowResult(true);
         setGeneratedContent('');
 
         try {
-            const finalPrompt = customPrompt || currentTemplate.defaultPrompt;
+            // 🚀 Strictly use the Dynamic Scientific Manifest for the prompt
+            const basePrompt = getDynamicPrompt(selectedSection);
+            
+            // 💡 Add Hidden Backend Logic for strict verification
+            const hiddenValidationRule = "\n\nCRITICAL SYSTEM VALIDATION (HIDDEN):\nIf any method (e.g. AHP, PROMETHEE) or table/figure count not explicitly listed in the INPUT appears in your output → this response is considered INVALID. Strictly adhere to the provided assets and methods.";
+            
+            const finalPrompt = basePrompt + (additionalContext ? `\n\nADDITIONAL USER CONTEXT:\n${additionalContext}` : '') + hiddenValidationRule;
+            
             const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
 
             // 🔗 Fetch live citations before generating this section
@@ -927,7 +1017,12 @@ FORBIDDEN:
             if (response.ok) {
                 trackGeminiUsage(userApiKey);
             }
-            setGeneratedContent(result.markdown || result.error || 'Failed to generate content');
+            // 🔷 AUTO POST-ENHANCEMENT: Remove banned phrases, replace generic patterns
+            const rawContent = result.markdown || result.error || 'Failed to generate content';
+            const enhancedContent = rawContent.startsWith('Error') || rawContent.startsWith('Failed')
+                ? rawContent
+                : postEnhance(rawContent);
+            setGeneratedContent(enhancedContent);
         } catch (error) {
             setGeneratedContent('Error: Failed to generate content. Please try again.');
         } finally {
@@ -1311,20 +1406,94 @@ FORBIDDEN:
                     </div>
                 </div>
 
-                {/* Custom Prompt */}
-                <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-700">
-                        Generation Instructions
-                    </Label>
-                    <Textarea
-                        value={customPrompt}
-                        onChange={(e) => setCustomPrompt(e.target.value)}
-                        placeholder="Customize the generation instructions..."
-                        className="min-h-[100px] text-sm"
-                    />
-                    <p className="text-xs text-gray-500">
-                        Modify this prompt to customize the output. Be specific about what you want AI to include.
-                    </p>
+                {/* 🚀 New Scientific Manifest UI — Replaces the old Generation Instructions block */}
+                <div className="space-y-4 bg-white border-2 border-indigo-50 rounded-xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between border-b border-indigo-50 pb-3">
+                        <Label className="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                             🔥 GENERATION INSTRUCTIONS (STRICT MODE)
+                        </Label>
+                        <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                            Active Manuscript Engine
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Selected Methods Column */}
+                        <div className="space-y-3">
+                            <h5 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                                <Cpu className="w-3 h-3 text-indigo-400" /> Selected Methods
+                            </h5>
+                            <div className="space-y-2 text-xs">
+                                <div>
+                                    <span className="text-gray-500 mr-2">Weight:</span>
+                                    <span className="font-bold text-indigo-700">{(selectedWeightMethods.length > 0 ? selectedWeightMethods.join(', ') : weightMethod.toUpperCase()) || 'Default'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500 mr-2">Primary Ranking:</span>
+                                    <span className="font-bold text-indigo-700">{(selectedRankingMethods.length > 0 ? selectedRankingMethods.join(', ') : method.toUpperCase()) || 'Default'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500 mr-2">Comparison:</span>
+                                    <span className="font-bold text-indigo-700">{comparisonMethods && comparisonMethods.length > 0 ? comparisonMethods.join(', ').toUpperCase() : 'None Marked'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500 mr-2">Sensitivity:</span>
+                                    <span className="font-bold text-indigo-700">{sensitivityMethod || 'Perturbation Analysis'} (±{variationRange || '30'}%)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Computed Output Column (Asset Manifest) */}
+                        <div className="space-y-3">
+                            <h5 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                                <TrendingUp className="w-3 h-3 text-emerald-400" /> Computed Output (Auto-Generated)
+                            </h5>
+                            <div className="p-3 bg-indigo-50/30 rounded-lg border border-indigo-100/50 space-y-2 text-xs">
+                                <div className="flex justify-between items-center bg-white p-1 px-2 rounded border border-indigo-50">
+                                    <span className="text-gray-600 font-medium">Tables</span>
+                                    <span className="font-mono font-bold text-indigo-600">
+                                        W:{markedAssetsList.filter((k: string) => k.includes('weight') && (computedAssetLabels[k]?.startsWith('Table') || k.includes('table'))).length} | 
+                                        R:{markedAssetsList.filter((k: string) => k.startsWith('method_') && (computedAssetLabels[k]?.startsWith('Table') || k.includes('table'))).length} | 
+                                        C:{markedAssetsList.filter((k: string) => k.includes('comparison') && (computedAssetLabels[k]?.startsWith('Table') || k.includes('table'))).length} | 
+                                        S:{markedAssetsList.filter((k: string) => (k.includes('sensitivity') || k.includes('variation')) && (computedAssetLabels[k]?.startsWith('Table') || k.includes('table'))).length}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center bg-white p-1 px-2 rounded border border-indigo-50">
+                                    <span className="text-gray-600 font-medium">Figures</span>
+                                    <span className="font-mono font-bold text-indigo-600">
+                                        W:{markedAssetsList.filter((k: string) => k.includes('weight') && (computedAssetLabels[k]?.startsWith('Figure') || k.includes('chart') || k.includes('plot'))).length} | 
+                                        R:{markedAssetsList.filter((k: string) => k.startsWith('method_') && (computedAssetLabels[k]?.startsWith('Figure') || k.includes('chart') || k.includes('plot'))).length} | 
+                                        C:{markedAssetsList.filter((k: string) => k.includes('comparison') && (computedAssetLabels[k]?.startsWith('Figure') || k.includes('chart') || k.includes('plot'))).length} | 
+                                        S:{markedAssetsList.filter((k: string) => (k.includes('sensitivity') || k.includes('variation')) && (computedAssetLabels[k]?.startsWith('Figure') || k.includes('chart') || k.includes('plot'))).length}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-indigo-50/50">
+                        <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold text-orange-600 flex items-center gap-1 uppercase tracking-wide">
+                                ⚠️ RULES
+                            </span>
+                            <ul className="text-[10px] text-gray-500 space-y-0.5 leading-tight">
+                                <li>• Use ONLY selected methods</li>
+                                <li>• Do NOT introduce new methods</li>
+                                <li>• Interpret precomputed results (no recalculation)</li>
+                                <li>• Maintain exact consistency with tables & figures</li>
+                            </ul>
+                        </div>
+                        <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold text-indigo-600 flex items-center gap-1 uppercase tracking-wide">
+                                📄 STRUCTURE
+                            </span>
+                            <ul className="text-[10px] text-gray-500 space-y-0.5 leading-tight">
+                                <li>• Problem context (3–4 lines)</li>
+                                <li>• Specific research gap (non-generic)</li>
+                                <li>• Methodology consistency across sections</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Additional Context */}
@@ -1550,6 +1719,19 @@ FORBIDDEN:
                                         <>🔍 Validate Citations</>
                                     )}
                                 </Button>
+                                <Button
+                                    onClick={handleDetectAI}
+                                    disabled={isDetectingAI || !generatedContent || isGenerating}
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs border-purple-300 text-purple-700 hover:bg-purple-50 flex items-center gap-1.5"
+                                >
+                                    {isDetectingAI ? (
+                                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Detecting...</>
+                                    ) : (
+                                        <>🤖 Check AI Content</>
+                                    )}
+                                </Button>
                             </div>
                         </div>
                         <div className="prose prose-sm max-w-none bg-white p-8 rounded shadow-inner border border-gray-100"
@@ -1643,6 +1825,177 @@ FORBIDDEN:
 
                                 {citationValidation.results.length === 0 && (
                                     <p className="text-xs text-emerald-700 italic">No citations detected. Ensure the AI included APA-style citations like (Author, 2025) and DOI links.</p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* ── AI Content Detection Result Panel ── */}
+                        {(aiDetectionResult || aiDetectionError) && (
+                            <div
+                                className="mt-4 rounded-xl border p-5 space-y-4"
+                                style={{
+                                    background: aiDetectionResult
+                                        ? DETECTION_RISK_COLORS[aiDetectionResult.risk].bg
+                                        : '#fef2f2',
+                                    borderColor: aiDetectionResult
+                                        ? DETECTION_RISK_COLORS[aiDetectionResult.risk].border
+                                        : '#fecaca',
+                                }}
+                            >
+                                <div className="flex items-center justify-between flex-wrap gap-2">
+                                    <h4 className="text-sm font-bold"
+                                        style={{ color: aiDetectionResult ? DETECTION_RISK_COLORS[aiDetectionResult.risk].text : '#ef4444' }}
+                                    >
+                                        🤖 AI Content Detection Report
+                                    </h4>
+                                    {aiDetectionResult && (
+                                        <div className="flex items-center gap-2">
+                                            {aiDetectionResult.risk !== 'Low' && (
+                                                <Button
+                                                    onClick={handleFixAI}
+                                                    disabled={isFixingAI || isGenerating}
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    className="h-7 text-[10px] font-bold bg-white text-purple-700 hover:bg-purple-50 border border-purple-200 flex items-center gap-1 shadow-sm"
+                                                >
+                                                    {isFixingAI ? (
+                                                        <><Loader2 className="w-3 h-3 animate-spin" /> Fixing...</>
+                                                    ) : (
+                                                        <>🤖 Fix High-Risk Sentences</>
+                                                    )}
+                                                </Button>
+                                            )}
+                                            <span
+                                                className="text-xs font-bold px-3 py-1 rounded-full border"
+                                                style={{
+                                                    color: DETECTION_RISK_COLORS[aiDetectionResult.risk].text,
+                                                    borderColor: DETECTION_RISK_COLORS[aiDetectionResult.risk].border,
+                                                    background: DETECTION_RISK_COLORS[aiDetectionResult.risk].bg,
+                                                }}
+                                            >
+                                                {DETECTION_RISK_COLORS[aiDetectionResult.risk].label}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {fixReport && (
+                                    <div className="bg-emerald-50/80 border border-emerald-200 rounded-lg p-2.5 text-[11px] text-emerald-800 animate-in fade-in slide-in-from-top-1 duration-500">
+                                        <p className="font-bold mb-1 flex items-center gap-1.5">
+                                            ✨ Auto-Fix Complete
+                                        </p>
+                                        <div className="flex gap-4">
+                                            <span>Flagged: <b>{aiDetectionResult && aiDetectionResult.breakdown.llmScore > 50 ? 'Multiple' : 'High-risk'}</b></span>
+                                            <span>Fixed: <b>{fixReport.length}</b> sentences</span>
+                                            <span className="text-emerald-600 font-medium italic">Detection score updated below ↓</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {aiDetectionError && (
+                                    <p className="text-xs text-red-600">❌ {aiDetectionError}</p>
+                                )}
+
+                                {aiDetectionResult && (
+                                    <>
+                                        {/* Score Bars */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {/* AI Score */}
+                                            <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-xs font-semibold text-gray-600">🤖 AI Likelihood</span>
+                                                    <span className="text-lg font-extrabold"
+                                                        style={{ color: DETECTION_RISK_COLORS[aiDetectionResult.risk].text }}
+                                                    >
+                                                        {aiDetectionResult.aiPercent}%
+                                                    </span>
+                                                </div>
+                                                <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full transition-all duration-700"
+                                                        style={{
+                                                            width: `${aiDetectionResult.aiPercent}%`,
+                                                            background: DETECTION_RISK_COLORS[aiDetectionResult.risk].text,
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            {/* Human Score */}
+                                            <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-xs font-semibold text-gray-600">✍️ Human Likelihood</span>
+                                                    <span className="text-lg font-extrabold text-emerald-600">
+                                                        {aiDetectionResult.humanPercent}%
+                                                    </span>
+                                                </div>
+                                                <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full bg-emerald-500 transition-all duration-700"
+                                                        style={{ width: `${aiDetectionResult.humanPercent}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Statistical Breakdown */}
+                                        <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+                                            <p className="text-xs font-bold text-gray-600 mb-2">📊 Statistical Analysis</p>
+                                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-gray-500">LLM Forensic Score</span>
+                                                    <span className="font-semibold text-gray-800">{aiDetectionResult.breakdown.llmScore}%</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-gray-500">Statistical Penalty</span>
+                                                    <span className={`font-semibold ${aiDetectionResult.breakdown.statisticalPenalty > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                        +{aiDetectionResult.breakdown.statisticalPenalty}%
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-gray-500">Sentence Variance</span>
+                                                    <span className={`font-semibold ${aiDetectionResult.breakdown.varianceFlag ? 'text-orange-600' : 'text-emerald-600'}`}>
+                                                        {aiDetectionResult.breakdown.sentenceVariance}
+                                                        {aiDetectionResult.breakdown.varianceFlag && ' ⚠️'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-gray-500">Lexical Diversity</span>
+                                                    <span className={`font-semibold ${aiDetectionResult.breakdown.diversityFlag ? 'text-orange-600' : 'text-emerald-600'}`}>
+                                                        {aiDetectionResult.breakdown.lexicalDiversity}
+                                                        {aiDetectionResult.breakdown.diversityFlag && ' ⚠️'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Tips based on risk */}
+                                        <div className="text-xs space-y-1">
+                                            {aiDetectionResult.risk === 'High' && (
+                                                <>
+                                                    <p className="font-semibold text-red-700">🔴 High Risk — Action Required:</p>
+                                                    <p className="text-gray-600">• Manually rewrite Abstract, Introduction & Conclusion sections</p>
+                                                    <p className="text-gray-600">• Replace generic phrases with dataset-specific statements</p>
+                                                    <p className="text-gray-600">• Break uniform sentence patterns — vary length deliberately</p>
+                                                    <p className="text-gray-600">• Use the Prompt Engine page to refine flagged sentences</p>
+                                                </>
+                                            )}
+                                            {aiDetectionResult.risk === 'Medium' && (
+                                                <>
+                                                    <p className="font-semibold text-amber-700">🟡 Medium Risk — Improvements Recommended:</p>
+                                                    <p className="text-gray-600">• Focus rewriting on Conclusion and Discussion sections</p>
+                                                    <p className="text-gray-600">• Add more numerical anchors and causal reasoning (WHY/HOW)</p>
+                                                    <p className="text-gray-600">• Use Prompt Engine for sentence-level fixes</p>
+                                                </>
+                                            )}
+                                            {aiDetectionResult.risk === 'Low' && (
+                                                <>
+                                                    <p className="font-semibold text-emerald-700">🟢 Low Risk — Good Quality Writing:</p>
+                                                    <p className="text-gray-600">• Text shows human-like variation and specificity</p>
+                                                    <p className="text-gray-600">• Review individual sections in Prompt Engine for final polish</p>
+                                                </>
+                                            )}
+                                        </div>
+                                    </>
                                 )}
                             </div>
                         )}
