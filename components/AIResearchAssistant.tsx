@@ -21,11 +21,12 @@ import {
     type AIDetectionResult,
     DETECTION_RISK_COLORS,
 } from '@/lib/manuscriptPrompts';
+import { WEIGHT_METHODS } from '@/constants/mcdm';
 
 interface AIResearchAssistantProps {
     kSensData?: any;
     criterionName?: string;
-    variationRange?: string;
+    variationRange?: string | number[];
     sensitivityData?: any[];
     comparisonData?: any[];
     alternatives: any[];
@@ -277,6 +278,17 @@ export function AIResearchAssistant({
     const [technicalDepth, setTechnicalDepth] = useState<'standard' | 'mathematical'>(technicalDepthProp || 'standard');
     const [computedAssetLabels, setComputedAssetLabels] = useState<Record<string, string>>({});
 
+    // Derived state for marked correlation assets
+    const statisticalConsistencyLabel = React.useMemo(() => {
+        const assets = Array.from(markedAssets || []);
+        const hasSpearman = assets.includes("ranking_spearman_correlation");
+        const hasKendall = assets.includes("ranking_kendall_correlation");
+        if (hasSpearman && hasKendall) return "Spearman Rank & Kendall's Tau Correlation";
+        if (hasSpearman) return "Spearman Rank Correlation";
+        if (hasKendall) return "Kendall's Tau Correlation";
+        return "";
+    }, [markedAssets]);
+
     // ── Live DOI Tracker States ──────────────────────────────────────────
     const [currentCitationCount, setCurrentCitationCount] = useState(0);
     const [doiTrackerSet, setDoiTrackerSet] = useState<Set<string>>(new Set());
@@ -299,7 +311,7 @@ export function AIResearchAssistant({
 
     const markedAssetsList = Array.from(markedAssets || []);
 
-    const { tablesCount, diagramsCount, methodsCount, selectedRankingMethods, selectedWeightMethods } = React.useMemo(() => {
+    const { tablesCount, diagramsCount, methodsCount, selectedRankingMethods, selectedWeightMethods, assetCounts } = React.useMemo(() => {
 
         const rankingMethods = markedAssetsList
             .filter(k => k.startsWith('method_'))
@@ -309,27 +321,61 @@ export function AIResearchAssistant({
             .filter(k => k.startsWith('weight_method_'))
             .map(k => k.replace('weight_method_', '').toUpperCase());
 
-        let tCount = 0;
-        let dCount = 0;
+        let tw = 0, fw = 0, tr = 0, fr = 0, tc = 0, ts = 0, fc = 0, fs = 0;
+        let tCount = 0, dCount = 0;
+
+        const getForensicCategory = (k: string) => {
+            const lowKey = k.toLowerCase();
+            const weightMethodsKeys = ['entropy', 'merec', 'critic', 'ahp', 'piprecia', 'swara', 'roc', 'rr', 'wenslo', 'lopcow', 'dematel', 'sd', 'variance', 'mad', 'dbw', 'svp', 'mdm', 'lsw', 'gpow', 'lpwm', 'pcwm', 'seca', 'idocriw'];
+            const rankingMethodsKeys = ['topsis', 'waspas', 'moora', 'multimoora', 'vikor', 'edas', 'copras', 'todim', 'codas', 'moosra', 'mairca', 'marcos', 'swei', 'swi', 'ocra', 'electre', 'oresme', 'pivia'];
+
+            // Priority 1: Comparison & Correlation (Forensic C)
+            if (lowKey.includes("comparison") || lowKey.includes("correlation") || lowKey.includes("spearman") || lowKey.includes("kendall") || lowKey.includes("rank_reversal")) {
+                // Special case: sensitivity comparison belongs to S
+                if (lowKey.startsWith("sensitivity_comparison")) return 'S';
+                return 'C';
+            }
+            
+            // Priority 2: Ranking Variation charts (from Comparison tab, belongs to C)
+            if (lowKey.includes("ranking_variation")) return 'C';
+            
+            // Priority 3: Sensitivity & Perturbation (Forensic S)
+            if (lowKey.includes("sensitivity") || lowKey.includes("k_sens_") || lowKey.includes("oat_variation")) return 'S';
+            
+            // Priority 4: Direct Weight Methods (Forensic W)
+            if (lowKey === "decision_matrix" || lowKey === "normalized_decision_matrix" || lowKey.includes("criteria_weight") || 
+                weightMethodsKeys.some(m => lowKey.startsWith(m + "_")) || lowKey.includes("weight")) return 'W';
+            
+            // Priority 5: Direct Ranking Methods (Forensic R)
+            if (rankingMethodsKeys.some(m => lowKey.startsWith(m + "_"))) return 'R';
+            
+            return 'R'; // Default fallback
+        };
 
         markedAssetsList.forEach(key => {
             if (key.startsWith('method_') || key.startsWith('weight_method_')) return;
 
-            // Use the computed labels (Badges like "Table 1") for counting
+            const lowKey = key.toLowerCase();
             const label = computedAssetLabels[key] || "";
-            if (label.startsWith('Table')) {
-                tCount++;
-            } else if (label.startsWith('Figure') || label.startsWith('Chart') || label.startsWith('Diagram')) {
-                dCount++;
-            } else {
-                // Technical internal fallback
-                const lowKey = key.toLowerCase();
-                const isTable = (lowKey.includes('table') || lowKey.includes('matrix') || lowKey.includes('result_data')) && !lowKey.includes('chart');
-                const isDiagram = (lowKey.includes('chart') || lowKey.includes('variation') || lowKey.includes('plot') || lowKey.includes('radar')) && !lowKey.includes('table');
+            
+            // Forensic Type Taxonomy (Table vs Figure)
+            const isTable = (label.startsWith('Table') || lowKey.includes('table') || lowKey.includes('matrix') || lowKey.includes('result_data')) && !lowKey.includes('chart');
+            const isFigure = (label.startsWith('Figure') || label.startsWith('Chart') || label.startsWith('Diagram') || lowKey.includes('chart') || lowKey.includes('variation') || lowKey.includes('plot') || lowKey.includes('radar')) && !lowKey.includes('table') && !lowKey.includes('matrix');
 
-                if (isTable) tCount++;
-                else if (isDiagram) dCount++;
-                else if (lowKey.includes('data') || lowKey.includes('step') || lowKey.includes('overall')) tCount++; // Default most data items to tables
+            const cat = getForensicCategory(key);
+
+            if (isTable) {
+                tCount++;
+                if (cat === 'W') tw++;
+                else if (cat === 'R') tr++;
+                else if (cat === 'C') tc++;
+                else if (cat === 'S') ts++;
+            } else if (isFigure) {
+                dCount++;
+                if (cat === 'W') fw++;
+                else if (cat === 'R') fr++;
+                else if (cat === 'C') fc++;
+                else if (cat === 'S') fs++;
             }
         });
 
@@ -338,7 +384,8 @@ export function AIResearchAssistant({
             diagramsCount: dCount,
             methodsCount: rankingMethods.length + weightMethods.length,
             selectedRankingMethods: rankingMethods,
-            selectedWeightMethods: weightMethods
+            selectedWeightMethods: weightMethods,
+            assetCounts: { tw, fw, tr, fr, tc, ts, fc, fs }
         };
     }, [markedAssets, computedAssetLabels]);
     const [showResult, setShowResult] = useState(false);
@@ -397,25 +444,52 @@ export function AIResearchAssistant({
 
         // Reconstruct from markedAssets and localStorage
         const labels: Record<string, string> = {};
-        let tableCount = 1;
-        let figureCount = 1;
+        let wTable = 1, rTable = 1, cTable = 1, sTable = 1;
+        let wFigure = 1, rFigure = 1, cFigure = 1, sFigure = 1;
+
+        const weightMethods = ['entropy', 'merec', 'critic', 'ahp', 'piprecia', 'swara', 'roc', 'rr', 'wenslo', 'lopcow', 'dematel', 'sd', 'variance', 'mad', 'dbw', 'svp', 'mdm', 'lsw', 'gpow', 'lpwm', 'pcwm', 'seca', 'idocriw'];
+        const rankingMethods = ['topsis', 'waspas', 'moora', 'multimoora', 'vikor', 'edas', 'copras', 'todim', 'codas', 'moosra', 'mairca', 'marcos', 'swei', 'swi', 'ocra', 'electre', 'oresme', 'pivia'];
 
         Array.from(markedAssets || []).forEach(key => {
             const savedLabel = localStorage.getItem(`asset_label_${key}`);
             if (savedLabel) {
                 labels[key] = savedLabel;
             } else {
-                // Fallback naming logic
-                if (key.includes('chart') || key.includes('variation') || key.includes('plot') || key.includes('radar') || key.includes('comparison')) {
-                    labels[key] = `Figure ${figureCount++}`;
-                } else if (key.includes('table') || key.includes('matrix') || key.includes('result')) {
-                    labels[key] = `Table ${tableCount++}`;
-                } else if (key.startsWith('method_')) {
-                    labels[key] = `MCDM Method: ${key.replace('method_', '').toUpperCase()}`;
-                } else if (key.startsWith('weight_method_')) {
-                    labels[key] = `Weighting Method: ${key.replace('weight_method_', '').toUpperCase()}`;
+                const lowKey = key.toLowerCase();
+                // Step 1: Determine if Figure or Table
+                const isFigure = (lowKey.includes("chart") || lowKey.includes("plot") || lowKey.includes("radar") || lowKey.includes("graph") || lowKey.includes("composed") || lowKey.includes("variation")) && !lowKey.includes("table") && !lowKey.includes("matrix");
+
+                // Step 2: Determine Forensic Prefix (W/R/C/S) using consistent priority
+                let prefix = "R"; 
+
+                if (lowKey.includes("comparison") || lowKey.includes("correlation") || lowKey.includes("spearman") || lowKey.includes("kendall") || lowKey.includes("rank_reversal")) {
+                    prefix = lowKey.startsWith("sensitivity_comparison") ? "S" : "C";
+                } else if (lowKey.includes("ranking_variation")) {
+                    prefix = "C";
+                } else if (lowKey.includes("sensitivity") || lowKey.includes("k_sens_") || lowKey.includes("oat_variation")) {
+                    prefix = "S";
+                } else if (lowKey === "decision_matrix" || lowKey === "normalized_decision_matrix" || lowKey.includes("criteria_weight") || 
+                           weightMethods.some(m => lowKey.startsWith(m + "_")) || lowKey.includes("weight")) {
+                    prefix = "W";
+                } else if (rankingMethods.some(m => lowKey.startsWith(m + "_"))) {
+                    prefix = "R";
+                }
+
+                // Step 3: Assign and Increment
+                if (isFigure) {
+                    let num = 1;
+                    if (prefix === "W") num = wFigure++;
+                    else if (prefix === "R") num = rFigure++;
+                    else if (prefix === "C") num = cFigure++;
+                    else num = sFigure++;
+                    labels[key] = `Figure ${prefix}${num}`;
                 } else {
-                    labels[key] = `Asset ${tableCount++}`;
+                    let num = 1;
+                    if (prefix === "W") num = wTable++;
+                    else if (prefix === "R") num = rTable++;
+                    else if (prefix === "C") num = cTable++;
+                    else num = sTable++;
+                    labels[key] = `Table ${prefix}${num}`;
                 }
             }
         });
@@ -438,7 +512,7 @@ export function AIResearchAssistant({
     };
 
     const getFormattedMasterPrompt = (sectionName: string, sectionKey: string) => {
-        const dMatrix = kSensData?.results ? JSON.stringify(kSensData.results['0'] || {}, null, 2) : "Check Research Manifest";
+        const dMatrix = kSensData && Object.keys(kSensData).length > 0 ? JSON.stringify(kSensData, null, 2) : "Check Research Manifest";
         const criteriaDefsText = researchContext?.criteriaDefs
             ? Object.entries(researchContext.criteriaDefs).map(([id, def]) => {
                 const cName = criteria.find(c => c.id === id)?.name || id;
@@ -528,6 +602,12 @@ STRICT_COMPUTATIONAL MODE:
 - ONLY use data from decision matrix tables
 - DO NOT introduce any new method
 - DO NOT discuss unselected techniques
+- ASSET PLACEMENT PROTOCOL:
+  1. Use forensic labels (e.g., Table R1, Figure W1) for all internal references.
+  2. At the primary discussion point for each asset, provide a clear placeholder: [Insert Asset Label here].
+  3. ALWAYS follow each placeholder with a professional, descriptive caption.
+  4. Caption structure: [Label]: [Title] with [Context].
+  Example: "Table R1: Ranking sensitivity results for Land Cover under ±30% perturbation."
 
 CRITICAL: If any unselected method appears in STRICT mode → REMOVE it.
 
@@ -546,6 +626,7 @@ ${sensitivityTypeUsed}
 
 STRICT RULE:
 Use ONLY above methods in computation sections. Any other method is strictly forbidden.
+- Refer to individual research assets by their assigned forensic labels (e.g., Table R1, Figure W1) provided in the manifest.
 
 🎯 FINAL LOGIC (VERY IMPORTANT): 
 IF section == Introduction OR Literature:
@@ -572,6 +653,15 @@ STRICT RULES:
 - Avoid fake or hallucinated references
 - Write like a domain expert — NOT like an AI text generator
 
+⛔ ANTI-HALLUCINATION MANDATE (ABSOLUTE — NO EXCEPTIONS):
+- You are STRICTLY FORBIDDEN from inventing, guessing, or fabricating any citation.
+- DO NOT use citations that are not in the "VERIFIED LIVE REFERENCES" block below.
+- DO NOT invent DOIs. DO NOT guess author names. DO NOT estimate publication years.
+- If a paper exists in your training data but is NOT in the provided list → DO NOT cite it.
+- Each in-text citation MUST match EXACTLY one entry in the VERIFIED LIVE REFERENCES (same author spelling, same year, same DOI).
+- Writing a citation that does not exist in the provided list is a CRITICAL FAILURE of this task.
+- PREFER FEWER REAL CITATIONS over more fake ones. Real accuracy > artificial quantity.
+
 AUTO-CITATION SYSTEM (MANDATORY):
 - Insert in-text citations using APA style:
   Example: (Saaty, 1980), (Dwivedi et al., 2025)
@@ -580,10 +670,11 @@ AUTO-CITATION SYSTEM (MANDATORY):
   * Total references: ${manuscriptConfig.citations}
   * APA format
   * Include DOI for each reference
-  * Ensure references are REAL and traceable
+  * Ensure references are REAL and traceable — use ONLY papers from VERIFIED LIVE REFERENCES
 - Ensure consistency:
   * Every in-text citation must appear in reference list
   * No unused references
+  * No reference in the list that was not cited in-text
 
 INPUT DATA:
 - Decision Matrix: ${dMatrix}
@@ -592,6 +683,7 @@ INPUT DATA:
 - Weight Methods: ${weightMethodsUsed}
 - Ranking Methods: ${rankingMethodsUsed}
 - Sensitivity Results: ${sensResultsText}
+- RESEARCH ASSETS MANIFEST: ${JSON.stringify(computedAssetLabels)}
 - Domain: ${researchContext?.topic || "Technical Decision Analysis"}
 
 OUTPUT REQUIREMENTS:
@@ -613,21 +705,39 @@ TECHNICAL SECTION INSTRUCTIONS:
         const weightMethodName = selectedWeightMethods.length > 0 ? selectedWeightMethods.join(' and ') : weightMethod.toUpperCase();
 
         const comparisonMethodsList = comparisonMethods && comparisonMethods.length > 0 ? comparisonMethods.join(', ').toUpperCase() : '';
-        const hasType1 = sensitivityData && sensitivityData.length > 0;
-        const hasType2 = kSensData && kSensData.results;
+        const hasType1 = sensitivityWeightMethods && sensitivityWeightMethods.length > 0;
+        const hasType2 = kSensData && Object.keys(kSensData).length > 0;
+
+        const getWLabel = (v: string) => {
+            const found = (WEIGHT_METHODS as any[]).find(m => m.value === v);
+            return found ? found.label.replace(' Weight', '') : v.toUpperCase();
+        };
+        const type1Names = (sensitivityWeightMethods || []).map(getWLabel).join(', ');
+
+        const sensRankingVal = sensitivityMethod?.toUpperCase() || method?.toUpperCase() || 'SWEI';
+
+        const rangeText = (() => {
+            if (!variationRange) return '30';
+            if (Array.isArray(variationRange)) {
+                const max = Math.max(...variationRange.map(v => Math.abs(Number(v))));
+                return max.toString();
+            }
+            return variationRange.replace(/[±%]/g, '') || '30';
+        })();
 
         let sensitivityStrategyText = "";
         if (hasType1 && hasType2) {
-            sensitivityStrategyText = "A dual-stage validation is applied: (Type 1) Methodological Sensitivity via Weight Method Comparison and (Type 2) Data Perturbation Analysis via Criterion Variation.";
+            sensitivityStrategyText = `A dual-stage validation is applied: (Type 1) Methodological Sensitivity across Weight Methods--> ${type1Names} using Ranking Method--> ${sensRankingVal} and (Type 2) Data Perturbation Analysis (±${rangeText}%) using ${sensRankingVal}.`;
         } else if (hasType1) {
-            sensitivityStrategyText = "Type 1: Methodological Sensitivity analysis is conducted to test ranking stability across different weighting schemes.";
+            sensitivityStrategyText = `Methodological Sensitivity analysis is conducted across Weight Methods--> ${type1Names} using Ranking Method--> ${sensRankingVal} to test ranking stability.`;
         } else if (hasType2) {
-            sensitivityStrategyText = "Type 2: Data Perturbation Analysis is conducted to determine the impact of criterion fluctuations on the final ranking.";
+            sensitivityStrategyText = `Data Perturbation Analysis (±${rangeText}%) is conducted using Ranking Method--> ${sensRankingVal} to determine the impact of criterion fluctuations on the final ranking.`;
+        } else {
+            sensitivityStrategyText = "None applied.";
         }
 
-        const isSpearmanMarked = Array.from(markedAssets || []).some((k: string) => k.includes('spearman') || k.includes('kendall'));
-        const spearmanText = isSpearmanMarked
-            ? "Statistical validation is performed using Spearman Rank Correlation and Kendall's Tau to ensure ranking consistency between methods."
+        const spearmanText = statisticalConsistencyLabel
+            ? `Statistical validation is performed using ${statisticalConsistencyLabel} to ensure ranking consistency between methods.`
             : "";
 
         const mathInstructions = technicalDepth === 'mathematical'
@@ -656,9 +766,26 @@ TECHNICAL SECTION INSTRUCTIONS:
                     ...selectedWeightMethods
                 ])).filter(Boolean);
 
-                const sensitivityRangeText = variationRange
-                    ? `±${variationRange}%`
-                    : (kSensData?.results ? '±50%' : '');
+                const cleanRange = (() => {
+                    if (!variationRange) return (kSensData?.results ? '50' : '30');
+                    if (Array.isArray(variationRange)) {
+                        const max = Math.max(...variationRange.map(v => Math.abs(Number(v))));
+                        return max.toString();
+                    }
+                    return variationRange.replace(/[±%]/g, '') || (kSensData?.results ? '50' : '30');
+                })();
+                const sensitivityRangeText = cleanRange ? `±${cleanRange}%` : '';
+
+                const sensitivityDescInAbstract = (() => {
+                    const has1 = sensitivityWeightMethods && sensitivityWeightMethods.length > 0;
+                    const has2 = kSensData && Object.keys(kSensData).length > 0;
+                    const names = (sensitivityWeightMethods || []).map(getWLabel).join(', ');
+
+                    if (has1 && has2) return `Dual-stage Sensitivity: Methodological comparison of Weight Methods [${names}] using Ranking Method [${sensRankingVal}] and Data Perturbation at ${sensitivityRangeText}`;
+                    if (has1) return `Methodological Sensitivity comparing Weight Methods [${names}] using Ranking Method [${sensRankingVal}]`;
+                    if (has2) return `Data Perturbation Analysis at ${sensitivityRangeText} using ${sensRankingVal}`;
+                    return 'none specified';
+                })();
 
                 const allParticipatingMethods = allRankingMethods.join(', ');
                 const allWeightMethodsText = allWeightMethods.join(', ');
@@ -672,8 +799,8 @@ STRUCTURE (STRICT):
 - Proposed methodology: You MUST explicitly name ALL of the following:
   * PRIMARY RANKING METHOD: ${method.toUpperCase()}
   * WEIGHTING METHOD: ${allWeightMethodsText}
-  * COMPARISON/VALIDATION METHODS: ${comparisonMethodsText || 'none specified'}
-  * SENSITIVITY ANALYSIS: Data Perturbation Analysis conducted at ${sensitivityRangeText || 'specified variation range'}
+  * COMPARISON/VALIDATION METHODS: ${comparisonMethodsText || 'none specified'}${statisticalConsistencyLabel ? ` + ${statisticalConsistencyLabel}` : ''}
+  * SENSITIVITY ANALYSIS: ${sensitivityDescInAbstract}
 - Key numerical/analytical results
 - Novel scientific contribution
 - Practical/industrial implication
@@ -683,8 +810,8 @@ MANDATORY RULES:
 - Must sound innovative and technical
 - Include at least one quantitative insight
 - DO NOT INCLUDE ANY CITATIONS (e.g., [1], [2], or author names).
-- You MUST explicitly mention: ${method.toUpperCase()}, ${allWeightMethodsText}${comparisonMethodsText ? `, and the comparative validation using ${comparisonMethodsText}` : ''}.
-- You MUST mention the sensitivity perturbation range: ${sensitivityRangeText || 'as conducted'}.
+- You MUST explicitly mention: ${method.toUpperCase()}, ${allWeightMethodsText}${comparisonMethodsText ? `, and the comparative validation using ${comparisonMethodsText}` : ''}${statisticalConsistencyLabel ? ` supplemented by ${statisticalConsistencyLabel}` : ''}.
+- You MUST mention the sensitivity approach: ${sensitivityDescInAbstract}.
 
 FINAL LINE:
 Include 5–7 keywords in alphabetical order.`;
@@ -782,6 +909,7 @@ AUTO-CITATION RULES:
 MANDATORY RULES:
 - Use ONLY selected ranking methods.
 - Explain results ONLY from computed tables.
+- Structure your primary discussions around the designated RESEARCH ASSETS MANIFEST (e.g., Table R1, Figure R1) for exact multi-method comparison.
 - DO NOT mention: AHP, TOPSIS, VIKOR, ELECTRE (if not selected).
 - Explain WHY results are correct
 - Not just reporting data; critically interpret the outcomes.
@@ -799,7 +927,7 @@ Why ranking occurred + Stability of results + Comparison ONLY among selected met
                 promptBody = `STEP 6: SENSITIVITY ANALYSIS: Write a deep sensitivity analysis (1500–1600 words).
 
 STRUCTURE (Include the following):
-- Perturbation approach (${sensitivityStrategyText})
+- Sensitivity Analysis Approach: ${sensitivityStrategyText}
 - Impact on ranking
 - Stability discussion: Discuss how changes in criteria importance affect the strategic ranking for ${criterionName || 'critical criteria'}.
 
@@ -807,7 +935,8 @@ AUTO-CITATION RULES:
 - Cite studies on robustness analysis in MCDA
 
 MANDATORY RULES:
-- Analytical explanation
+- Analytical explanation using relevant assets from the manifest (e.g., Figure R1, Table R1).
+- Integrate placeholders (e.g., [Insert Figure R1 here]) immediately followed by a professional, descriptive caption summarizing the visual stability trends.
 - Identify stable solutions and rank reversals.
 
 FORBIDDEN:
@@ -856,22 +985,25 @@ FOCUS:
 Impact + future direction.`;
                 break;
             case 'references':
-                return `STEP 9: FINAL REFERENCES (CRITICAL): Generate a complete reference list.
+                return `STEP 9: FINAL REFERENCES (CRITICAL): Generate a complete, verified reference list.
 
 REQUIREMENTS:
-- Strictly up to 50 references (Use ONLY the verified sources provided below)
-- APA style
+- Strictly up to 50 references (Use ONLY the verified sources provided in "VERIFIED LIVE REFERENCES" below)
+- APA style formatting throughout
 - **SORTING: The entire bibliography MUST be sorted ALPHABETICALLY by the first author's last name (A to Z).**
-- **Ensure [1] is the first name alphabetically (e.g., starting with A).**
-- Include DOI for each reference
+- **Ensure [1] is the entry whose first author's last name comes first alphabetically (e.g., starting with A, B, C...).**
+- Include a valid DOI for each reference
 - Years: 2018–2025 (majority) and up to current date
 - Journals: Q1, Q2 only
 
-STRICT VALIDATION:
+STRICT VALIDATION (NON-NEGOTIABLE):
 - **ZERO HALLUCINATION MANDATE**: Use ONLY the papers provided in the "VERIFIED LIVE REFERENCES" block.
-- **DO NOT INVENT ANY PAPER**. If you reach the end of the provided list, STOP generating.
+- **DO NOT INVENT ANY PAPER**. If you reach the end of the provided list, STOP generating — do not add more.
 - All references must correspond to in-text citations from the earlier sections.
-- NO FAKE OR PLACEHOLDER REFERENCES. They must be REAL DOIs and REAL papers.
+- NO FAKE OR PLACEHOLDER REFERENCES. They must be REAL DOIs and REAL papers from the provided list.
+- DO NOT guess, modify, approximate, or reformat any DOI — copy it exactly as given in the verified list.
+- DO NOT include a paper just because it sounds relevant — it MUST be in the provided list.
+- If a paper is missing from the verified list, it MUST NOT appear in the reference section.
 
 FORMAT:
 Author(s). (Year). Title. Journal. Volume(Issue), pages. DOI
@@ -881,13 +1013,15 @@ FORBIDDEN:
 - **DO NOT use asterisks (*) or underscores (_) to indicate italics.**
 - **DO NOT use any Markdown formatting in the bibliography.**
 - **DO NOT include any reference with "Unknown Authors", "No Data", "Anonymous", or "Author Missing".**
-- **Every citation MUST have real, fully attributed author names.**
-- **Return ONLY clean plain text.**
+- **Every citation MUST have real, fully attributed author names — no abbreviations, no placeholders.**
+- **Return ONLY clean plain text — no section headers, no explanatory paragraphs.**
+- **DO NOT include any paper not found in the VERIFIED LIVE REFERENCES block.**
 
 **ABSOLUTE RULES — NO EXCEPTIONS:**
-1. START IMMEDIATELY with the first citation [1], which MUST be the first alphabetically.
+1. START IMMEDIATELY with the first citation [1], which MUST be the first author's last name alphabetically.
 2. END IMMEDIATELY after the last citation — do not write any closing paragraph or remark.
-3. FORBIDDEN CONTENT: You MUST NOT write any theoretical text, summaries, section headers, or methodology overview. Return ONLY the reference list.`;
+3. FORBIDDEN CONTENT: You MUST NOT write any theoretical text, summaries, section headers, or methodology overview. Return ONLY the reference list.
+4. Each entry must map to a real citation used in the manuscript body — no orphaned references.`;
             default:
                 return '';
         }
@@ -967,12 +1101,12 @@ FORBIDDEN:
         try {
             // 🚀 Strictly use the Dynamic Scientific Manifest for the prompt
             const basePrompt = getDynamicPrompt(selectedSection);
-            
+
             // 💡 Add Hidden Backend Logic for strict verification
             const hiddenValidationRule = "\n\nCRITICAL SYSTEM VALIDATION (HIDDEN):\nIf any method (e.g. AHP, PROMETHEE) or table/figure count not explicitly listed in the INPUT appears in your output → this response is considered INVALID. Strictly adhere to the provided assets and methods.";
-            
+
             const finalPrompt = basePrompt + (additionalContext ? `\n\nADDITIONAL USER CONTEXT:\n${additionalContext}` : '') + hiddenValidationRule;
-            
+
             const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
 
             // 🔗 Fetch live citations before generating this section
@@ -1001,12 +1135,7 @@ FORBIDDEN:
                     method: method,
                     assetLabels: Object.keys(computedAssetLabels).length > 0 ? computedAssetLabels : assetLabels,
                     selectedAssets: markedAssets ? Array.from(markedAssets) : [],
-                    ranking: kSensData?.results?.['0']
-                        ? Object.entries(kSensData.results['0']).map(([altName, score]: [string, any]) => ({
-                            alternativeName: altName,
-                            score: typeof score === 'number' ? score : 0
-                        })).sort((a, b) => b.score - a.score)
-                        : [],
+                    ranking: [], // Extracted safely elsewhere or unneeded for basic prompt
                     researchContext: researchContext,
                     isLastSection: selectedSection === 'references',
                     additionalContext: (additionalContext || '') + citationBlock
@@ -1061,12 +1190,7 @@ FORBIDDEN:
                     alternatives,
                     criteria,
                     method,
-                    ranking: kSensData?.results?.['0']
-                        ? Object.entries(kSensData.results['0']).map(([altName, score]: [string, any]) => ({
-                            alternativeName: altName,
-                            score: typeof score === 'number' ? score : 0
-                        })).sort((a, b) => b.score - a.score)
-                        : [],
+                    ranking: [], // Extracted safely elsewhere or unneeded for basic prompt
                     researchContext: researchContext
                 })
             });
@@ -1105,12 +1229,7 @@ FORBIDDEN:
                         method,
                         assetLabels: Object.keys(computedAssetLabels).length > 0 ? computedAssetLabels : assetLabels,
                         selectedAssets: markedAssets ? Array.from(markedAssets) : [],
-                        ranking: kSensData?.results?.['0']
-                            ? Object.entries(kSensData.results['0']).map(([altName, score]: [string, any]) => ({
-                                alternativeName: altName,
-                                score: typeof score === 'number' ? score : 0
-                            })).sort((a, b) => b.score - a.score)
-                            : [],
+                        ranking: [], // Not primarily used for single-section queries since results[] serves as DB
                         researchContext: researchContext,
                         isLastSection: i === sectionsToGenerate.length - 1
                     })
@@ -1122,7 +1241,7 @@ FORBIDDEN:
                 }
                 const sectionContent = result.markdown || "Section generation failed.";
                 results[section.id] = sectionContent;
-                
+
                 // 📊 Real-time DOI Extraction and Tracker Update
                 updateLiveTracker(sectionContent);
             }
@@ -1151,14 +1270,23 @@ FORBIDDEN:
         const content = contentInput || generatedContent;
         if (!content) return;
 
-        // Helper to parse bold markdown and return TextRun array
+        // Helper to parse markdown (bold and italics) and return TextRun array
         const parseMarkdownToRuns = (text: string) => {
-            const parts = text.split(/(\*\*.*?\*\*)/g);
+            // Split by both bold (**) and italic (*)
+            const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
             return parts.map(part => {
                 if (part.startsWith('**') && part.endsWith('**')) {
                     return new TextRun({
                         text: part.slice(2, -2),
                         bold: true,
+                        size: 24,
+                        font: "Times New Roman"
+                    });
+                }
+                if (part.startsWith('*') && part.endsWith('*')) {
+                    return new TextRun({
+                        text: part.slice(1, -1),
+                        italics: true,
                         size: 24,
                         font: "Times New Roman"
                     });
@@ -1410,7 +1538,7 @@ FORBIDDEN:
                 <div className="space-y-4 bg-white border-2 border-indigo-50 rounded-xl p-5 shadow-sm">
                     <div className="flex items-center justify-between border-b border-indigo-50 pb-3">
                         <Label className="text-sm font-bold text-indigo-900 flex items-center gap-2">
-                             🔥 GENERATION INSTRUCTIONS (STRICT MODE)
+                            🔥 GENERATION INSTRUCTIONS (STRICT MODE)
                         </Label>
                         <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full uppercase tracking-tighter">
                             Active Manuscript Engine
@@ -1423,22 +1551,100 @@ FORBIDDEN:
                             <h5 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
                                 <Cpu className="w-3 h-3 text-indigo-400" /> Selected Methods
                             </h5>
-                            <div className="space-y-2 text-xs">
-                                <div>
-                                    <span className="text-gray-500 mr-2">Weight:</span>
-                                    <span className="font-bold text-indigo-700">{(selectedWeightMethods.length > 0 ? selectedWeightMethods.join(', ') : weightMethod.toUpperCase()) || 'Default'}</span>
+                            <div className="p-3 bg-indigo-50/30 rounded-lg border border-indigo-100/50 space-y-2 text-xs">
+                                <div className="flex flex-col xl:flex-row xl:justify-between xl:items-center bg-white p-1.5 px-2 rounded border border-indigo-50 gap-1 xl:gap-4">
+                                    <span className="text-gray-600 font-medium whitespace-nowrap">Weight</span>
+                                    <span className={`font-bold xl:text-right ${assetCounts.tw + assetCounts.fw > 0 ? 'text-indigo-700' : 'text-gray-400'}`}>
+                                        {assetCounts.tw + assetCounts.fw > 0 ? ((selectedWeightMethods.length > 0 ? selectedWeightMethods.join(', ') : weightMethod.toUpperCase()) || 'Default') : 'Pending (No Assets)'}
+                                    </span>
                                 </div>
-                                <div>
-                                    <span className="text-gray-500 mr-2">Primary Ranking:</span>
-                                    <span className="font-bold text-indigo-700">{(selectedRankingMethods.length > 0 ? selectedRankingMethods.join(', ') : method.toUpperCase()) || 'Default'}</span>
+                                <div className="flex flex-col xl:flex-row xl:justify-between xl:items-center bg-white p-1.5 px-2 rounded border border-indigo-50 gap-1 xl:gap-4">
+                                    <span className="text-gray-600 font-medium whitespace-nowrap">Ranking</span>
+                                    <span className={`font-bold xl:text-right ${assetCounts.tr + assetCounts.fr > 0 ? 'text-indigo-700' : 'text-gray-400'}`}>
+                                        {assetCounts.tr + assetCounts.fr > 0 ? ((selectedRankingMethods.length > 0 ? selectedRankingMethods.join(', ') : method.toUpperCase()) || 'Default') : 'Pending (No Assets)'}
+                                    </span>
                                 </div>
-                                <div>
-                                    <span className="text-gray-500 mr-2">Comparison:</span>
-                                    <span className="font-bold text-indigo-700">{comparisonMethods && comparisonMethods.length > 0 ? comparisonMethods.join(', ').toUpperCase() : 'None Marked'}</span>
+                                <div className="flex flex-col xl:flex-row xl:justify-between xl:items-center bg-white p-1.5 px-2 rounded border border-indigo-50 gap-1 xl:gap-4">
+                                    <span className="text-gray-600 font-medium whitespace-nowrap">Comparison</span>
+                                    <span className={`font-bold xl:text-right ${assetCounts.tc + assetCounts.fc > 0 ? 'text-indigo-700' : 'text-gray-400'}`}>
+                                        {assetCounts.tc + assetCounts.fc > 0 ? (comparisonMethods && comparisonMethods.length > 0 ? comparisonMethods.join(', ').toUpperCase() : 'None Marked') : 'Pending (No Assets)'}
+                                    </span>
                                 </div>
-                                <div>
-                                    <span className="text-gray-500 mr-2">Sensitivity:</span>
-                                    <span className="font-bold text-indigo-700">{sensitivityMethod || 'Perturbation Analysis'} (±{variationRange || '30'}%)</span>
+                                {statisticalConsistencyLabel && (
+                                    <div className="flex flex-col xl:flex-row xl:justify-between xl:items-center bg-white p-1.5 px-2 rounded border border-indigo-50 gap-1 xl:gap-4">
+                                        <span className="text-gray-600 font-medium whitespace-nowrap">Consistency</span>
+                                        <span className="font-bold text-indigo-700 xl:text-right">{statisticalConsistencyLabel}</span>
+                                    </div>
+                                )}
+                                <div className="flex flex-col xl:flex-row xl:justify-between xl:items-center bg-white p-1.5 px-2 rounded border border-indigo-50 gap-1 xl:gap-4">
+                                    <span className="text-gray-600 font-medium whitespace-nowrap">Sensitivity</span>
+                                    <div className={`flex-1 ${assetCounts.ts + assetCounts.fs > 0 ? '' : 'text-right'}`}>
+                                        {(() => {
+                                            if (assetCounts.ts + assetCounts.fs === 0) return (
+                                                <span className="font-bold text-gray-400">Pending (No Assets)</span>
+                                            );
+
+                                            const assetsSet = markedAssets || new Set();
+                                            const isType1Marked = assetsSet.has("sensitivity_comparison_table") || assetsSet.has("sensitivity_graphical_variation");
+                                            const isType2Marked = Array.from(assetsSet).some(k => k.startsWith("sensitivity_ranking_") || k.startsWith("sensitivity_weight_"));
+
+                                            const hasType1 = isType1Marked && sensitivityWeightMethods && sensitivityWeightMethods.length > 0;
+                                            const hasType2 = isType2Marked && kSensData && Object.keys(kSensData).length > 0;
+
+                                            const getWeightLabel = (v: string) => {
+                                                const found = (WEIGHT_METHODS as any[]).find(m => m.value === v);
+                                                return found ? found.label.replace(' Weight', '') : v.toUpperCase();
+                                            };
+                                            const type1MethodsText = sensitivityWeightMethods?.map(getWeightLabel).join(', ');
+                                            const sensRanking = sensitivityMethod?.toUpperCase() || method?.toUpperCase() || 'SWEI';
+                                            
+                                            // Handle variation range as either string or numeric array from parent
+                                            const cleanRange = (() => {
+                                                if (!variationRange) return '30';
+                                                if (Array.isArray(variationRange)) {
+                                                    const max = Math.max(...variationRange.map(v => Math.abs(Number(v))));
+                                                    return max.toString();
+                                                }
+                                                return variationRange.replace(/[±%]/g, '') || '30';
+                                            })();
+
+                                            return (
+                                                <div className="flex flex-col gap-2 py-0.5">
+                                                    {hasType1 && (
+                                                        <div className="flex flex-col text-[10px] bg-white border border-indigo-100 rounded overflow-hidden">
+                                                            <div className="bg-indigo-50/50 px-2 py-0.5 border-b border-indigo-100 flex justify-between items-center">
+                                                                <span className="font-black text-indigo-700/70 uppercase tracking-tighter">Type-1: Methodological Sensitivity</span>
+                                                                <span className="text-[9px] font-bold text-indigo-400">COMPARE_WEIGHTS</span>
+                                                            </div>
+                                                            <div className="grid grid-cols-[60px_1fr] px-2 py-1 gap-x-3 gap-y-0.5">
+                                                                <span className="text-gray-400 font-bold uppercase text-[9px] flex items-center">Weight:</span>
+                                                                <span className="font-bold text-indigo-700 leading-tight">{type1MethodsText}</span>
+                                                                <span className="text-gray-400 font-bold uppercase text-[9px] flex items-center">Ranking:</span>
+                                                                <span className="font-bold text-indigo-700 leading-tight">{sensRanking}</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {hasType2 && (
+                                                        <div className="flex flex-col text-[10px] bg-white border border-emerald-100 rounded overflow-hidden">
+                                                            <div className="bg-emerald-50/50 px-2 py-0.5 border-b border-emerald-100 flex justify-between items-center">
+                                                                <span className="font-black text-emerald-700/70 uppercase tracking-tighter">Type-2: Data Perturbation Analysis</span>
+                                                                <span className="text-[9px] font-bold text-emerald-400">CRITERIA_STABILITY_VARIATION</span>
+                                                            </div>
+                                                            <div className="grid grid-cols-[60px_1fr] px-2 py-1 gap-x-3 gap-y-0.5">
+                                                                <span className="text-gray-400 font-bold uppercase text-[9px] flex items-center">Weight:</span>
+                                                                <span className="font-bold text-emerald-700 leading-tight">{weightMethod.toUpperCase()} (Base Case)</span>
+                                                                <span className="text-gray-400 font-bold uppercase text-[9px] flex items-center">Ranking:</span>
+                                                                <span className="font-bold text-emerald-700 leading-tight">{sensRanking} (±{cleanRange}%)</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {!hasType1 && !hasType2 && (
+                                                        <span className="text-gray-400 italic text-right">No Specific Sensitivity Details Configured</span>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1448,52 +1654,50 @@ FORBIDDEN:
                             <h5 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
                                 <TrendingUp className="w-3 h-3 text-emerald-400" /> Computed Output (Auto-Generated)
                             </h5>
-                            <div className="p-3 bg-indigo-50/30 rounded-lg border border-indigo-100/50 space-y-2 text-xs">
-                                <div className="flex justify-between items-center bg-white p-1 px-2 rounded border border-indigo-50">
-                                    <span className="text-gray-600 font-medium">Tables</span>
-                                    <span className="font-mono font-bold text-indigo-600">
-                                        W:{markedAssetsList.filter((k: string) => k.includes('weight') && (computedAssetLabels[k]?.startsWith('Table') || k.includes('table'))).length} | 
-                                        R:{markedAssetsList.filter((k: string) => k.startsWith('method_') && (computedAssetLabels[k]?.startsWith('Table') || k.includes('table'))).length} | 
-                                        C:{markedAssetsList.filter((k: string) => k.includes('comparison') && (computedAssetLabels[k]?.startsWith('Table') || k.includes('table'))).length} | 
-                                        S:{markedAssetsList.filter((k: string) => (k.includes('sensitivity') || k.includes('variation')) && (computedAssetLabels[k]?.startsWith('Table') || k.includes('table'))).length}
-                                    </span>
+                            <div className="p-3 bg-indigo-50/30 rounded-lg border border-indigo-100/50 space-y-3 text-xs">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center bg-white p-1 px-2 rounded border border-indigo-50">
+                                        <span className="text-gray-600 font-medium">Tables</span>
+                                        <span className="font-mono font-bold text-indigo-600">
+                                            W:{assetCounts.tw} | R:{assetCounts.tr} | C:{assetCounts.tc} | S:{assetCounts.ts}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center bg-white p-1 px-2 rounded border border-indigo-50">
+                                        <span className="text-gray-600 font-medium">Figures</span>
+                                        <span className="font-mono font-bold text-indigo-600">
+                                            W:{assetCounts.fw} | R:{assetCounts.fr} | C:{assetCounts.fc} | S:{assetCounts.fs}
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between items-center bg-white p-1 px-2 rounded border border-indigo-50">
-                                    <span className="text-gray-600 font-medium">Figures</span>
-                                    <span className="font-mono font-bold text-indigo-600">
-                                        W:{markedAssetsList.filter((k: string) => k.includes('weight') && (computedAssetLabels[k]?.startsWith('Figure') || k.includes('chart') || k.includes('plot'))).length} | 
-                                        R:{markedAssetsList.filter((k: string) => k.startsWith('method_') && (computedAssetLabels[k]?.startsWith('Figure') || k.includes('chart') || k.includes('plot'))).length} | 
-                                        C:{markedAssetsList.filter((k: string) => k.includes('comparison') && (computedAssetLabels[k]?.startsWith('Figure') || k.includes('chart') || k.includes('plot'))).length} | 
-                                        S:{markedAssetsList.filter((k: string) => (k.includes('sensitivity') || k.includes('variation')) && (computedAssetLabels[k]?.startsWith('Figure') || k.includes('chart') || k.includes('plot'))).length}
-                                    </span>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-indigo-100/50">
+                                    <div className="space-y-1.5">
+                                        <span className="text-[10px] font-bold text-orange-600 flex items-center gap-1 uppercase tracking-wide">
+                                            ⚠️ RULES
+                                        </span>
+                                        <ul className="text-[10px] text-gray-500 space-y-0.5 leading-tight">
+                                            <li>• Use ONLY selected methods</li>
+                                            <li>• Do NOT introduce new methods</li>
+                                            <li>• Interpret precomputed results (no recalculation)</li>
+                                            <li>• Maintain exact consistency with tables & figures</li>
+                                        </ul>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <span className="text-[10px] font-bold text-indigo-600 flex items-center gap-1 uppercase tracking-wide">
+                                            📄 STRUCTURE
+                                        </span>
+                                        <ul className="text-[10px] text-gray-500 space-y-0.5 leading-tight">
+                                            <li>• Problem context (3–4 lines)</li>
+                                            <li>• Specific research gap (non-generic)</li>
+                                            <li>• Methodology consistency across sections</li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-indigo-50/50">
-                        <div className="space-y-1.5">
-                            <span className="text-[10px] font-bold text-orange-600 flex items-center gap-1 uppercase tracking-wide">
-                                ⚠️ RULES
-                            </span>
-                            <ul className="text-[10px] text-gray-500 space-y-0.5 leading-tight">
-                                <li>• Use ONLY selected methods</li>
-                                <li>• Do NOT introduce new methods</li>
-                                <li>• Interpret precomputed results (no recalculation)</li>
-                                <li>• Maintain exact consistency with tables & figures</li>
-                            </ul>
-                        </div>
-                        <div className="space-y-1.5">
-                            <span className="text-[10px] font-bold text-indigo-600 flex items-center gap-1 uppercase tracking-wide">
-                                📄 STRUCTURE
-                            </span>
-                            <ul className="text-[10px] text-gray-500 space-y-0.5 leading-tight">
-                                <li>• Problem context (3–4 lines)</li>
-                                <li>• Specific research gap (non-generic)</li>
-                                <li>• Methodology consistency across sections</li>
-                            </ul>
-                        </div>
-                    </div>
+
                 </div>
 
                 {/* Additional Context */}

@@ -87,11 +87,11 @@ export async function POST(req: NextRequest) {
                 const isRankingAsset = k.includes("ranking") || k.includes("result") || k.includes("score");
                 const isComparisonAsset = k.includes("comparison") || k.includes("rho") || k.includes("tau") || k.includes("spearman") || k.includes("kendall");
                 const isSensitivityAsset = k.includes("sensitiv") || k.includes("chart") || k.includes("variation") || k.includes("perturbation");
-                
+
                 // EXCLUSION POLICY: Strictly forbid Study-Specific Assets in Preliminary/Terminal sections
                 const isPreliminarySection = ["introduction", "literature", "literature_review", "references", "manuscript_title", "abstract", "conclusion"].includes(analysisType) ||
-                                           ["introduction", "literature", "literature_review", "references", "abstract", "conclusion"].includes(reqContent.sectionType || "");
-                
+                    ["introduction", "literature", "literature_review", "references", "abstract", "conclusion"].includes(reqContent.sectionType || "");
+
                 if (isPreliminarySection) {
                     // CRITICAL: Still allow Method Names to pass through for theoretical discussion/definitions
                     // This allows the AI to know WHICH methods to describe in Intro/Lit Review without inserting Table placeholders.
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
                 }
 
                 // Results & Discussion sections get Findings based on their specific type
-                if (analysisType === "sensitivity" || analysisType === "k_sensitivity" || 
+                if (analysisType === "sensitivity" || analysisType === "k_sensitivity" ||
                     reqContent.sectionType === "sensitivity" || reqContent.sectionType === "k_sensitivity") {
                     return isSensitivityAsset;
                 }
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
                     return isRankingAsset || isWeightingAsset;
                 }
 
-                return true; 
+                return true;
             });
 
             if (relevantAssets.length > 0) {
@@ -189,9 +189,9 @@ export async function POST(req: NextRequest) {
             : "- **STRICT PROHIBITION**: DO NOT mention Spearman's Rank Correlation or Kendall's Tau. These validations were NOT performed for this study.";
 
         const commonMethodsArray = ["SWEI", "SWI", "EDAS", "TOPSIS", "VIKOR", "AHP", "ENTROPY", "CRITIC", "WASPAS", "VOIP", "MARCOS", "ARAS", "MABAC"];
-        const forbiddenMethods = commonMethodsArray.filter(m => 
-            m !== activeRankingMethod && 
-            m !== activeWeightingMethod && 
+        const forbiddenMethods = commonMethodsArray.filter(m =>
+            m !== activeRankingMethod &&
+            m !== activeWeightingMethod &&
             !markedMethods.some((mm: string) => mm.toUpperCase() === m) &&
             !markedWeightMethods.some((wm: string) => wm.toUpperCase() === m)
         );
@@ -586,16 +586,20 @@ export async function POST(req: NextRequest) {
         `;
         } else if (analysisType === "references") {
             prompt = `
-        ${contextInjection}
-        
-        **Your Task:**
-        Generate a professional, vertical bibliography of **Scholarly References** for this manuscript. 
-        
+        **SECTION REFINEMENT — REFERENCES (Q1 Level - APA 7th Edition)**
+
+        Refine the following "Available Scholarly References" into a final bibliographic list.
+
         **STRICT FORMATTING RULES (MANDATORY):**
-        1. **ONLY LIST CITATIONS**: Return ONLY a numbered list of academic references (e.g., [1] Author, Title, Year...). 
-        2. **ZERO DISCUSSION**: Do NOT write any summary paragraphs, concluding remarks, or descriptions of the calculations. 
-        3. **NO RANKINGS**: Do NOT mention ${alternativesList} or any ranking results in this section. 
-        4. **SOURCE MATERIAL**: Use the provided "Available Scholarly References" for citations. 
+        1. **APA 7th EDITION + NUMBERING**: Use the format: [N] Authors. (Year). Article title. *Journal Name*, Volume(Issue), Pages. https://doi.org/DOI
+        2. **ITALICS**: Use single stars (*) around the Journal Name ONLY (e.g., *Journal of Cleaner Production*).
+        3. **ORDER**: Sort alphabetically by the first author's last name (A-Z).
+        4. **COVERAGE**: List EVERY SINGLE reference provided in the source bank below (100% Coverage).
+        5. **ZERO DISCUSSION**: Return ONLY the formatted list. No preamble, no summary, no "Here is your list".
+        6. **NO RANKINGS**: Do NOT mention ${alternativesList} or any ranking results in this section.
+        
+        **Available Scholarly References:**
+        ${contextInjection}
         `;
         } else if (analysisType === "custom_section") {
             // Custom section generation with user-defined prompts
@@ -603,7 +607,7 @@ export async function POST(req: NextRequest) {
 
             // If this is a references section, we MUST suppress numerical context to prevent "ghost" results sections
             const isReferences = sectionType === 'references';
-            
+
             const kSensContext = (!isReferences && reqContent.kSensData) ?
                 `\n**Type 2: Data Perturbation Analysis Results (±% Fluctuations):**\n${JSON.stringify(formatNumbersInObject(reqContent.kSensData), null, 2)}` : "";
 
@@ -696,13 +700,15 @@ Your writing style:
 - Vary paragraph lengths and structure
 - Integrate numerical data smoothly into narrative discussion
 - Write as if explaining sophisticated concepts to knowledgeable colleagues
-- **CITATION RULES (CRITICAL)**:
-  1. If "Available Scholarly References" are provided in the prompt, you MUST use them for in-text citations.
-  2. Use numerical square brackets for in-text citations (e.g., [1], [2], [3]).
-  3. Ensure citations are used heavily in the **Introduction** and **Literature Review** sections.
-  4. **STRICT LIMITATION ON REFERENCES LIST**: Do NOT include a "References" list or bibliography at the end of your response UNLESS specifically instructed to do so (i.e., when generating the final References section). 
-  5. **STRICT LIMITATION ON TITLES**: Do NOT include the main section title (e.g., "1. Introduction") at the start of your response, as it is added by the system. Start directly with the technical content or subsection headers (e.g., 1.1).
-  6. DO NOT cite the same paper for results/discussion unless it's a comparison. Statistical results should be stated as findings of THIS study.
+- **CITATION & FORMATTING STEWARDSHIP (CRITICAL)**:
+  1. **100% CITATION EXHAUSTION**: You are strictly required to use EVERY SINGLE reference provided in the "Available Scholarly References" list across the manuscript sections. If 20 references are provided, all 20 must appear in the final text.
+  2. **APA 7th STYLE**: When generating references or citing journals, always use the format: Authors. (Year). Title. *Journal Name*, Volume(Issue). 
+  3. **ITALICS PROTOCOL**: Use single asterisks (*) around Journal Names in the references. 
+  4. **NUMERICAL CITATIONS**: Use square brackets [1], [2], etc.
+  5. **NO HALLUCINATIONS**: Only use the provided references. Do not invent new ones.
+  6. **DISTRIBUTION**: Spread the citations logically throughout the section. Do not dump them all in one paragraph.
+  7. **STRICT LIMITATION ON TITLES**: Do NOT include the main section title (e.g., "1. Introduction") at the start of your response. Start directly with content.
+  8. **NO RESULTS IN BACKGROUND**: Do NOT include results of THIS study in the Introduction or Literature Review.
 
 Vocabulary constraints (CRITICAL - avoid these informal/inappropriate terms):
 - NEVER use "leader" or "leadership" → use "top-ranked alternative", "highest-scoring option", "optimal alternative", "first-ranked solution"

@@ -10,6 +10,7 @@ interface ResearchAssetHeaderProps {
     onAiAnalysis?: (key: string) => void;
     included?: boolean;
     onIncludeChange?: (key: string, included: boolean) => void;
+    children?: React.ReactNode;
 }
 
 export function ResearchAssetHeader({
@@ -19,7 +20,8 @@ export function ResearchAssetHeader({
     onLabelChange,
     onAiAnalysis,
     included = false,
-    onIncludeChange
+    onIncludeChange,
+    children
 }: ResearchAssetHeaderProps) {
     const [isEditingLabel, setIsEditingLabel] = useState(false);
     const [localLabel, setLocalLabel] = useState(defaultLabel);
@@ -74,6 +76,7 @@ export function ResearchAssetHeader({
             </div>
 
             <div className="flex items-center gap-3">
+                {children}
                 {/* AI Assistant Button */}
                 <Button
                     onClick={() => onAiAnalysis?.(assetKey)}

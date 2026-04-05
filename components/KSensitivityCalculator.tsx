@@ -48,7 +48,7 @@ interface KSensitivityCalculatorProps {
   onLabelChange?: (key: string, label: string) => void;
   onIncludeChange?: (key: string, included: boolean) => void;
   selectedAiAssets?: Set<string>;
-  onCalculationComplete?: (hasResults: boolean, results?: any) => void;
+  onCalculationComplete?: (hasResults: boolean, results?: any, usedRange?: number[]) => void;
   methodName?: string;
 }
 
@@ -70,14 +70,15 @@ export default function KSensitivityCalculator({
 }: KSensitivityCalculatorProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   let tableCounter = 1;
+  let figureCounter = 1;
   const [kSensVariationRange, setKSensVariationRange] = useState<number[]>([-30, -20, -10, 0, 10, 20, 30]);
   const [kSensChartType, setKSensChartType] = useState<string>('line');
   const [kSensResults, setKSensResults] = useState<any>(null);
-  const [kSensActiveTab, setKSensActiveTab] = useState<'results' | 'tables' | 'switching'>('results');
   const [kSensTableDisplayStyle, setKSensTableDisplayStyle] = useState<'both' | 'rank' | 'score'>('both');
   const [showConfig, setShowConfig] = useState<boolean>(true);
   const [selectedCriterionToVary, setSelectedCriterionToVary] = useState<string>(''); // New state for criterion selection
   const [kSensViewType, setKSensViewType] = useState<'ranking' | 'weight'>('ranking'); // New state for view type
+  const [kSensActiveTab, setKSensActiveTab] = useState<'config' | 'results'>('config');
 
   // Separate AI Analysis States for Reports and Abstracts
   const [aiReportResult, setAiReportResult] = useState<string | null>(null);
@@ -110,6 +111,7 @@ export default function KSensitivityCalculator({
   const [customWeights, setCustomWeights] = useState<{ [key: string]: number }>({});
   const [isCalculatingWeights, setIsCalculatingWeights] = useState<boolean>(false);
   const [selectedAltIds, setSelectedAltIds] = useState<string[]>(alternatives.map(a => a.id));
+  const [hasCalculatedOnce, setHasCalculatedOnce] = useState<boolean>(false);
 
   // Ranking method state
   const [selectedRankingMethod, setSelectedRankingMethod] = useState<string>('topsis');
@@ -296,16 +298,19 @@ export default function KSensitivityCalculator({
     }
   }, [workingCriteria]);
 
-  // Auto-calculate sensitivity analysis on load if data is valid
+  // Auto-calculate sensitivity analysis on load disabled as per user request
+  // Initial run MUST be manual. Subsequent runs are auto-triggered only if hasCalculatedOnce is true.
+  /*
   useEffect(() => {
-    if (hasValidData() && selectedCriterionToVary && !kSensResults && !isAnalyzing) {
-      performKSensitivityAnalysis();
+    if (hasValidData() && selectedCriterionToVary && !hasCalculatedOnce && !isAnalyzing) {
+      // performKSensitivityAnalysis(); // Stop auto-run on mount
     }
   }, [selectedCriterionToVary, criteria, alternatives, selectedRankingMethod, selectedWeightMethod]);
+  */
 
   // Auto-recalculate when weight method or actual weight values change (in results view)
   useEffect(() => {
-    if (kSensResults && hasValidData()) {
+    if (hasCalculatedOnce && hasValidData()) {
       setKSensResults(null); // Clear old results to prevent displaying stale data
       const timer = setTimeout(() => {
         performKSensitivityAnalysis();
@@ -316,7 +321,7 @@ export default function KSensitivityCalculator({
 
   // Auto-recalculate when ranking method changes (in results view)
   useEffect(() => {
-    if (kSensResults && hasValidData()) {
+    if (hasCalculatedOnce && hasValidData()) {
       setKSensResults(null); // Clear old results
       performKSensitivityAnalysis();
     }
@@ -324,7 +329,7 @@ export default function KSensitivityCalculator({
 
   // Auto-recalculate when criterion to vary changes (in results view)
   useEffect(() => {
-    if (kSensResults && hasValidData() && selectedCriterionToVary) {
+    if (hasCalculatedOnce && hasValidData() && selectedCriterionToVary) {
       setKSensResults(null); // Clear old results
       performKSensitivityAnalysis(undefined, undefined, selectedCriterionToVary);
     }
@@ -332,7 +337,7 @@ export default function KSensitivityCalculator({
 
   // Auto-recalculate when variation range changes (in results view)
   useEffect(() => {
-    if (kSensResults && hasValidData()) {
+    if (hasCalculatedOnce && hasValidData()) {
       setKSensResults(null); // Clear old results
       const timer = setTimeout(() => {
         performKSensitivityAnalysis();
@@ -340,6 +345,15 @@ export default function KSensitivityCalculator({
       return () => clearTimeout(timer);
     }
   }, [JSON.stringify(kSensVariationRange)]);
+
+  // Auto-recalculate when alternatives to analyze change (in results view)
+  useEffect(() => {
+    if (hasCalculatedOnce && hasValidData()) {
+      // Clear results and re-run immediately for alternatives toggle
+      setKSensResults(null);
+      performKSensitivityAnalysis();
+    }
+  }, [JSON.stringify(selectedAltIds)]);
 
   // Handle ranking method change
   const handleRankingMethodChange = (method: string) => {
@@ -706,8 +720,9 @@ export default function KSensitivityCalculator({
         });
 
         setKSensResults(results);
+        setHasCalculatedOnce(true);
         setIsAnalyzing(false);
-        if (onCalculationComplete) onCalculationComplete(true, results);
+        if (onCalculationComplete) onCalculationComplete(true, results, kSensVariationRange);
       } else {
         // Get error message from API response
         const errorData = await response.json();
@@ -1898,7 +1913,9 @@ export default function KSensitivityCalculator({
                     <label className="text-xs font-semibold text-gray-700 whitespace-nowrap">Perturbation (%)</label>
                     <Select value={selectedCriterionToVary} onValueChange={(value) => {
                       setSelectedCriterionToVary(value);
-                      setKSensResults(null); // Reset results when criterion changes
+                      if (hasCalculatedOnce) {
+                        setKSensResults(null); // Reset results when criterion changes
+                      }
                     }}>
                       <SelectTrigger className="w-full h-10 text-sm border-gray-300">
                         <SelectValue placeholder="Choose a criterion to analyze" />
@@ -2082,7 +2099,10 @@ export default function KSensitivityCalculator({
                             ? selectedAltIds.filter(id => id !== alt.id)
                             : [...selectedAltIds, alt.id];
                           setSelectedAltIds(newIds);
-                          if (kSensResults) setKSensResults(null);
+                          if (kSensResults) {
+                            setKSensResults(null);
+                            setHasCalculatedOnce(false);
+                          }
                         }}
                         className={`px-3 py-1 rounded text-xs transition-colors border ${selectedAltIds.includes(alt.id)
                           ? 'bg-blue-600 text-white border-blue-600'
@@ -2099,7 +2119,7 @@ export default function KSensitivityCalculator({
                 </div>
 
                 {/* Ready to Analyze Card - Only show before first analysis */}
-                {!kSensResults && (
+                {!hasCalculatedOnce && (
                   <Card className="border-2 border-dashed border-blue-200 bg-blue-50/30 rounded-xl overflow-hidden shadow-sm">
                     <CardContent className="p-6 sm:p-10">
                       <div className="text-center">
@@ -2151,7 +2171,7 @@ export default function KSensitivityCalculator({
 
 
             {/* Results Section */}
-            {kSensResults && (
+            {hasCalculatedOnce && (
               <div className="space-y-6">
                 {/* Show processing state */}
                 {isAnalyzing && (
@@ -2184,210 +2204,163 @@ export default function KSensitivityCalculator({
                       Weight Analysis
                     </button>
                   </div>
-
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setKSensActiveTab('results')}
-                        className={`px-4 py-2 font-semibold text-xs transition-colors ${kSensActiveTab === 'results' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}
-                      >
-                        📊 Charts
-                      </button>
-                      <button
-                        onClick={() => setKSensActiveTab('tables')}
-                        className={`px-4 py-2 font-semibold text-xs transition-colors ${kSensActiveTab === 'tables' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}
-                      >
-                        📋 Tables
-                      </button>
-                      <button
-                        onClick={() => setKSensActiveTab('switching')}
-                        className={`px-4 py-2 font-semibold text-xs transition-colors ${kSensActiveTab === 'switching' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}
-                      >
-                        🎯 Switching Points
-                      </button>
-                    </div>
-                  </div>
                 </div>
 
-                {kSensActiveTab === 'tables' && (
-                  <div className="flex items-center gap-2 pb-2 sm:pb-0">
-                    <span className="text-[10px] font-medium text-gray-500">Display:</span>
-                    <Select value={kSensTableDisplayStyle} onValueChange={(v: any) => setKSensTableDisplayStyle(v)}>
-                      <SelectTrigger className="w-32 h-7 text-[10px] border-gray-200">
-                        <SelectValue placeholder="Display Style" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="rank" className="text-[10px]">Rank Only</SelectItem>
-                        <SelectItem value="score" className="text-[10px]">Score Only</SelectItem>
-                        <SelectItem value="both" className="text-[10px]">Rank & Score</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      onClick={downloadAllTables}
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-[10px] border-gray-200 bg-white hover:bg-gray-50 text-black ml-1"
-                    >
-                      <Download className="w-3 h-3 mr-1" />
-                      Download Excel
-                    </Button>
-                  </div>
-                )}
-
-                {kSensActiveTab === 'results' && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-xs font-semibold text-black">Chart Type:</h4>
-                          <Select value={kSensChartType} onValueChange={setKSensChartType}>
-                            <SelectTrigger className="w-48 h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {kSensChartTypes.map(ct => (
-                                <SelectItem key={ct.value} value={ct.value} className="text-xs">
-                                  {ct.icon} {ct.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                <div className="space-y-12">
+                  {(() => {
+                    const selectedCrit = workingCriteria.find(c => c.id === selectedCriterionToVary);
+                    if (!selectedCrit) return (
+                      <div className="p-10 text-center border-2 border-dashed rounded-2xl bg-gray-50 text-gray-400 font-medium">
+                        Please select a criterion from the dropdown to visualize analysis.
                       </div>
-                      <Button
-                        onClick={downloadChartAsJpeg}
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs gap-1.5 border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
-                      >
-                        <Download className="w-3.5 h-3.5 text-blue-600" />
-                        Download JPG
-                      </Button>
-                    </div>
+                    );
 
-                    {selectedCriterionToVary && workingCriteria.find(c => c.id === selectedCriterionToVary) && (
-                      <Card className="border-gray-200 bg-white shadow-sm -mx-3 sm:mx-0 rounded-none sm:rounded-xl">
-                        <CardHeader className="pb-3 px-3 sm:px-6">
-                          <ResearchAssetHeader
-                            assetKey={`sensitivity_chart_${selectedCriterionToVary}`}
-                            defaultLabel={`Figure ${tableCounter++}`}
-                            title={`Sensitivity Analysis: ${workingCriteria.find(c => c.id === selectedCriterionToVary)?.name}`}
-                            onLabelChange={onLabelChange}
-                            included={selectedAiAssets.has(`sensitivity_chart_${selectedCriterionToVary}`)}
-                            onIncludeChange={onIncludeChange}
-                            onAiAnalysis={() => onAiAnalysis?.({
-                              kSensData: kSensResults[workingCriteria.find(c => c.id === selectedCriterionToVary)!.name],
-                              criterionName: workingCriteria.find(c => c.id === selectedCriterionToVary)!.name,
-                              variationRange: kSensVariationRange
-                            })}
-                          />
-                          <CardDescription className="text-xs">
-                            Base: {(workingCriteria.find(c => c.id === selectedCriterionToVary)!.weight * 100).toFixed(2)}% ({workingCriteria.find(c => c.id === selectedCriterionToVary)?.type === 'beneficial' ? 'Beneficial ↑' : 'Non-Beneficial ↓'})
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="px-0 sm:px-6">
-                          {renderKSensChart(workingCriteria.find(c => c.id === selectedCriterionToVary)!.name)}
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
-                )}
-
-                {kSensActiveTab === 'tables' && (
-                  <div className="space-y-6">
-                    {(() => {
-                      const selectedCrit = workingCriteria.find(c => c.id === selectedCriterionToVary);
-                      if (!selectedCrit) return <div className="text-center py-8 text-gray-500 text-xs">Please select a criterion to vary.</div>;
-
-                      return (
-                        <Card className="border-gray-200 bg-white shadow-sm -mx-3 sm:mx-0 rounded-none sm:rounded-xl">
-                          <CardHeader className="pb-3 px-3 sm:px-6">
+                    return (
+                      <div className="space-y-12">
+                        {/* 1. DATA TABLE */}
+                        <Card className="border-gray-200 bg-white shadow-sm -mx-3 sm:mx-0 rounded-none sm:rounded-xl overflow-hidden">
+                          <CardHeader className="pb-3 px-3 sm:px-6 bg-gray-50/50 border-b border-gray-100">
                             <ResearchAssetHeader
-                              assetKey={`sensitivity_table_${selectedCriterionToVary}`}
-                              defaultLabel={`Table ${tableCounter++}`}
-                              title={`Sensitivity Data: ${selectedCrit.name}`}
+                              assetKey={`sensitivity_${kSensViewType}_table_${selectedCriterionToVary}`}
+                              defaultLabel={`Table S${tableCounter++}`}
+                              title={`Sensitivity Data Table (${kSensViewType === 'ranking' ? 'Ranking' : 'Weight'}): ${selectedCrit.name}`}
                               onLabelChange={onLabelChange}
-                              included={selectedAiAssets.has(`sensitivity_table_${selectedCriterionToVary}`)}
+                              included={selectedAiAssets.has(`sensitivity_${kSensViewType}_table_${selectedCriterionToVary}`)}
                               onIncludeChange={onIncludeChange}
                               onAiAnalysis={() => onAiAnalysis?.({
                                 kSensData: kSensResults[selectedCrit.name],
                                 criterionName: selectedCrit.name,
-                                variationRange: kSensVariationRange
+                                variationRange: kSensVariationRange,
+                                analysisType: kSensViewType
                               })}
-                            />
+                            >
+                              <div className="flex items-center gap-2 mr-2">
+                                <Select value={kSensTableDisplayStyle} onValueChange={(v: any) => setKSensTableDisplayStyle(v)}>
+                                  <SelectTrigger className="w-28 h-8 text-[11px] bg-white border-gray-300">
+                                    <SelectValue placeholder="Display Style" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="rank" className="text-[11px]">Rank Only</SelectItem>
+                                    <SelectItem value="score" className="text-[11px]">Score Only</SelectItem>
+                                    <SelectItem value="both" className="text-[11px]">Rank & Score</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Button onClick={downloadAllTables} variant="outline" size="sm" className="h-8 text-[11px] bg-white border-gray-300 hover:bg-gray-100 text-gray-700">
+                                  <Download className="w-3 h-3 mr-1" />
+                                  Excel
+                                </Button>
+                              </div>
+                            </ResearchAssetHeader>
                           </CardHeader>
-                          <CardContent className="px-0 sm:px-6">
+                          <CardContent className="px-0 sm:px-6 pt-6">
                             {kSensViewType === 'weight'
                               ? renderWeightTable(selectedCrit)
                               : renderKSensTable(selectedCrit.name)}
                           </CardContent>
                         </Card>
-                      );
-                    })()}
-                  </div>
-                )}
 
-                {kSensActiveTab === 'switching' && (
-                  <div className="space-y-6">
-                    {(() => {
-                      const selectedCrit = workingCriteria.find(c => c.id === selectedCriterionToVary);
-                      if (!selectedCrit) return <div className="text-center py-8 text-gray-500 text-xs">Please select a criterion to vary.</div>;
-
-                      const points = calculateSwitchingPoints(selectedCrit.name);
-                      if (points.length === 0) {
-                        return (
-                          <div className="p-14 text-center border-2 border-dashed rounded-xl bg-gray-50/50">
-                            <div className="mx-auto w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border mb-4">
-                              <Check className="w-6 h-6 text-emerald-500" />
-                            </div>
-                            <h3 className="text-sm font-bold text-gray-900 mb-1 uppercase tracking-tight">Robustness Verified</h3>
-                            <p className="text-[11px] text-gray-500 max-w-xs mx-auto">No rank reversals detected within the tested variation range for <strong>{selectedCrit.name}</strong>. Your current ranking preference is highly stable.</p>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <Card className="border-indigo-100 bg-white shadow-sm overflow-hidden">
-                          <CardHeader className="pb-3 border-b bg-indigo-50/5">
-                            <CardTitle className="text-xs font-bold text-indigo-900 flex items-center gap-2 uppercase tracking-wider">
-                              <RefreshCw className="w-3.5 h-3.5 text-orange-600" />
-                              Rank Switching Analysis: {selectedCrit.name}
-                            </CardTitle>
-                            <CardDescription className="text-[10px] text-indigo-700 font-medium italic">
-                              Exact weight variation percentages where the relative ranking between any two alternatives swaps.
+                        {/* 2. CORRESPONDING FIGURE */}
+                        <Card className="border-gray-200 bg-white shadow-sm -mx-3 sm:mx-0 rounded-none sm:rounded-xl overflow-hidden">
+                          <CardHeader className="pb-3 px-3 sm:px-6 bg-gray-50/50 border-b border-gray-100">
+                            <ResearchAssetHeader
+                              assetKey={`sensitivity_${kSensViewType}_chart_${selectedCriterionToVary}`}
+                              defaultLabel={`Figure S${figureCounter++}`}
+                              title={`Sensitivity Visualization (${kSensViewType === 'ranking' ? 'Ranking' : 'Weight'}): ${selectedCrit.name}`}
+                              onLabelChange={onLabelChange}
+                              included={selectedAiAssets.has(`sensitivity_${kSensViewType}_chart_${selectedCriterionToVary}`)}
+                              onIncludeChange={onIncludeChange}
+                              onAiAnalysis={() => onAiAnalysis?.({
+                                kSensData: kSensResults[selectedCrit.name],
+                                criterionName: selectedCrit.name,
+                                variationRange: kSensVariationRange,
+                                analysisType: kSensViewType
+                              })}
+                            >
+                              <div className="flex items-center gap-2 mr-2">
+                                <Select value={kSensChartType} onValueChange={setKSensChartType}>
+                                  <SelectTrigger className="w-36 h-8 text-[11px] bg-white border-gray-300"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    {kSensChartTypes.map(ct => (
+                                      <SelectItem key={ct.value} value={ct.value} className="text-[11px]">
+                                        {ct.icon} {ct.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Button onClick={downloadChartAsJpeg} variant="outline" size="sm" className="h-8 text-[11px] bg-white border-gray-300 hover:bg-gray-100 text-gray-700">
+                                  <Download className="w-3 h-3 mr-1 text-blue-600" />
+                                  JPG Image
+                                </Button>
+                              </div>
+                            </ResearchAssetHeader>
+                            <CardDescription className="text-[10px]">
+                              Base Case Weight: {(selectedCrit.weight * 100).toFixed(4)}% | Optimality: {selectedCrit.type === 'beneficial' ? 'Higher is Better' : 'Lower is Better'}
                             </CardDescription>
                           </CardHeader>
-                          <CardContent className="p-4 sm:p-6">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                              {points.sort((a, b) => Math.abs(a.variation) - Math.abs(b.variation)).map((p, idx) => (
-                                <div key={idx} className="p-4 border border-gray-100 rounded-xl bg-gray-50/50 flex flex-col items-center justify-center text-center space-y-2 hover:border-indigo-200 transition-colors shadow-sm group">
-                                  <div className="flex items-center gap-2 text-[10px] font-bold text-gray-900 px-3 py-1 bg-white border rounded-full">
-                                    <span className="truncate max-w-[80px]">{p.alt1}</span>
-                                    <span className="text-orange-500 font-black">↔</span>
-                                    <span className="truncate max-w-[80px]">{p.alt2}</span>
-                                  </div>
-                                  <div className="flex flex-col items-center">
-                                    <div className={`text-xl font-black ${p.variation > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                      {p.variation > 0 ? '+' : ''}{p.variation.toFixed(2)}%
-                                    </div>
-                                    <div className="text-[9px] text-gray-400 uppercase font-bold tracking-widest mt-0.5">Critical Ratio</div>
-                                  </div>
-                                  <div className="text-[9px] text-gray-500 leading-tight border-t pt-2 w-full mt-1">
-                                    If {selectedCrit.name} weight {p.variation > 0 ? 'increases' : 'decreases'} by {Math.abs(p.variation).toFixed(2)}%, rankings swap.
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
+                          <CardContent className="px-0 sm:px-6 pt-6">
+                            {renderKSensChart(selectedCrit.name)}
                           </CardContent>
                         </Card>
-                      );
-                    })()}
-                  </div>
-                )}
+
+                        {/* 3. SWITCHING POINTS ANALYSIS (Integrated at Bottom) */}
+                        {kSensViewType === 'ranking' && (
+                          <div className="pt-8 border-t-2 border-dashed border-gray-100">
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className="p-2 bg-amber-50 rounded-lg border border-amber-200">
+                                <RefreshCw className="w-5 h-5 text-amber-600" />
+                              </div>
+                              <div>
+                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest">Rank Robustness Analysis</h4>
+                                <p className="text-[10px] text-gray-500 font-medium italic">Exact threshold points where alternative rankings intersect.</p>
+                              </div>
+                            </div>
+                            
+                            {(() => {
+                              const points = calculateSwitchingPoints(selectedCrit.name);
+                              if (points.length === 0) return (
+                                <div className="p-8 text-center border-2 border-dashed rounded-2xl bg-gray-50/30">
+                                  <div className="mx-auto w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border mb-3">
+                                    <Check className="w-5 h-5 text-emerald-500" />
+                                  </div>
+                                  <h5 className="text-[11px] font-bold text-gray-900 uppercase">Preference Stable</h5>
+                                  <p className="text-[10px] text-gray-500 max-w-xs mx-auto italic">No rank reversals detected within tested boundaries.</p>
+                                </div>
+                              );
+
+                              return (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                  {points.sort((a, b) => Math.abs(a.variation) - Math.abs(b.variation)).map((p, idx) => (
+                                    <Card key={idx} className="border-gray-100 bg-white shadow-sm hover:border-amber-400 transition-all">
+                                      <CardContent className="p-4 flex flex-col items-center justify-center text-center space-y-3">
+                                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-900 border rounded-full px-3 py-1 bg-gray-50/50">
+                                          <span>{p.alt1}</span>
+                                          <span className="text-amber-500">↔</span>
+                                          <span>{p.alt2}</span>
+                                        </div>
+                                        <div className="flex flex-col items-center">
+                                          <div className={`text-xl font-black ${p.variation > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            {p.variation > 0 ? '+' : ''}{p.variation.toFixed(2)}%
+                                          </div>
+                                          <span className="text-[9px] uppercase font-bold text-gray-400">Critical Threshold</span>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  ))}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
 
                 <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t items-center justify-start">
-                  <Button onClick={() => { setKSensResults(null); setShowConfig(true); }} variant="outline" className="text-xs h-8">
+                  <Button onClick={() => { setKSensResults(null); setHasCalculatedOnce(false); setShowConfig(true); }} variant="outline" className="text-xs h-8">
                     ← Modify Config
                   </Button>
-                  <Button onClick={() => { setKSensResults(null); setShowConfig(true); }} variant="outline" className="text-xs h-8">
+                  <Button onClick={() => { setKSensResults(null); setHasCalculatedOnce(false); setShowConfig(true); }} variant="outline" className="text-xs h-8">
                     🔄 Start Over
                   </Button>
                 </div>

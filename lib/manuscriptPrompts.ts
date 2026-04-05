@@ -60,44 +60,39 @@ OUTPUT:
 export const AI_AWARE_WRITING_PROMPT = `
 AI-AWARE WRITING MODE (Q1 LEVEL) — ANTI-DETECTION ACTIVE:
 
-You must continuously self-evaluate your writing for AI-like patterns and improve it during generation.
+You must continuously improve your writing for AI-like patterns during generation.
+
+STRICT MANDATES (MANDATORY):
+1. **100% CITATION COVERAGE**: Every single one of the "VERIFIED LIVE REFERENCES" provided in the prompt MUST be cited in the text for this section or throughout the manuscript. Do not leave any provided reference out.
+2. **ZERO META-TALK**: DO NOT output "Self-reflection", "Word count", "Constraint checks", or any internal thought process. Start directly with the scientific text.
+3. **SCIENTIFIC FORMATTING**: Use single asterisks (*) for italics ONLY for Journal names and book titles in the References section (APA 7th Edition).
+4. **DOI MATCHING**: Ensure that every in-text citation (e.g., [1]) refers to the correct DOI provided in the source bank.
 
 RULES:
+1. DISTRIBUTION PROTOCOL:
+   - For Sections (Intro, Lit Review, Discussion): Integrate the provided references naturally into the logical flow. 
+   - Every paragraph MUST contain at least one unique citation from the provided bank until the entire list is exhausted.
 
-1. AVOID AI-LIKE SENTENCES:
+2. AVOID AI-LIKE SENTENCES:
+   - Eliminate generic openers: "this study aims", "in conclusion", "overall", "it is worth noting", "furthermore", "moreover", "the results show"
+   - Break uniform sentence length patterns (the "AI signal").
+   - Replace passive voice ("It was found that...") with active, data-driven claims.
    - Avoid generic phrases: "this study aims", "in conclusion", "overall", "it is worth noting", "furthermore", "moreover", "the results show"
    - Avoid uniform sentence structures (every sentence same length = AI signal)
    - Avoid passive constructions like "It can be seen that..." or "It should be noted that..."
-
-2. ADD HUMAN EXPERT FEATURES:
-   - Include reasoning (WHY results occur, not just WHAT they are)
-   - Include dataset-specific references ("among the 8 alternatives evaluated...", "given the criteria weight distribution of...")
-   - Include numerical insights where relevant (scores, % differences, rank gaps)
-   - Use first-person plural sparingly: "our analysis reveals..." or "the present framework demonstrates..."
-
-3. SELF-CHECK LOOP:
-   After writing each paragraph:
-   - Identify sentences that are generic or vague
-   - Rewrite them with deeper analysis and specificity
-   - Ensure sentence lengths vary (mix short punchy sentences with longer analytical ones)
-
+3. ADD HUMAN EXPERT FEATURES:
+   - Provide depth: Explain WHY results occur, not just WHAT they are.
+   - Anchor to this data: Mention "these criteria weights" or "the specific scores in Table X".
 4. PRESERVE:
-   - All equations exactly as provided
-   - All numerical values exactly as computed
-   - All citations with author/year/DOI
-   - All technical terminology and method names
-
-5. STYLE:
-   - Write like a domain expert explaining their own research
-   - Mix sentence lengths: some short (8–12 words), some long (25–35 words)
-   - Use analytical connectors: however, therefore, whereas, consequently, notably, critically
-   - Avoid: "this study", "overall", "in conclusion", "it is important", "significant"
-
+   - All equations exactly as provided.
+   - All numerical values exactly as computed.
+   - All citations with author/year/DOI (formatted as plain text, no asterisks).
+   - All technical terminology and method names.
 OUTPUT:
-* High-quality Q1 journal writing
-* Low AI-detection patterns
-* Strong analytical depth
-* Burstiness in sentence structure (human fingerprint)
+- High-quality, professional Q1 manuscript language.
+- Use (*) for italics for Journal names in the References section.
+- 100% coverage of provided citations in strict APA 7th Edition style.
+- Absolutely zero self-reflection or status notes.
 `;
 
 // ─────────────────────────────────────────────────────────────
@@ -201,6 +196,18 @@ Refine Conclusion.
 - Concrete future work directions (data expansion, hybrid models, domain transfer, AI-augmented MCDM)
 - Maintain precision; no generic statements like "this study contributes to..."
 - No new citations unless critical
+`,
+
+  references: `
+SECTION REFINEMENT — REFERENCES (Q1 Level - APA 7th Edition):
+
+Refine the reference list to strict APA style.
+- MANDATORY FORMAT: Authors. (Year). Article title. *Journal Name*, Volume(Issue), Pages. https://doi.org/DOI
+- ITALICS: Use single stars (*) around the Journal Name ONLY (e.g., *Energy Policy*).
+- NO BOLD: Do not use double stars.
+- ORDER: Sort alphabetically by the first author's last name.
+- COVERAGE: Ensure 100% of the provided "VERIFIED LIVE REFERENCES" are listed.
+- DOIs: Every reference must include its full DOI URL.
 `,
 };
 

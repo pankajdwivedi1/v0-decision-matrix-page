@@ -1,0 +1,14 @@
+pcwm_weights: 2
+critic_decision_matrix: 2
+pcwm_decision_matrix: 2
+wsm_normalized_matrix: 2
+copras_normalized_matrix: 2
+promethee1_decision_matrix: 2
+electre1_decision_matrix: 3
+electre2_decision_matrix: 4
+aras_normalized_matrix: 2
+waspas_weighted_matrix: 2
+marcos_normalized_matrix: 2
+moora_normalized_matrix: 2
+multimoora_normalized_matrix: 2
+moosra_normalized_matrix: 2
