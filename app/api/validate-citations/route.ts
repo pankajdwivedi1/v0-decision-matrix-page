@@ -141,41 +141,87 @@ async function validateDoi(doi: string): Promise<DoiResult & { quartile?: string
 // ─── Route Handler ────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
     try {
-        const { text, dois, mode = "both" } = await req.json();
+        const { text, dois, referenceLibrary = "", targetCount = 0, mode = "both" } = await req.json();
+        
         if (!text && !dois) {
             return NextResponse.json({ error: "Provide text or dois array." }, { status: 400 });
         }
 
+        // Step 1: Pre-parse the library for fast matching
+        const libraryCitations = extractCitations(referenceLibrary);
+        const libraryDois = extractDoisFromText(referenceLibrary);
+
         const results: ValidationResult[] = [];
 
-        // Step 3: Full APA Author/Year validation
+        // Step 2: Full APA Author/Year validation
         if ((mode === "both" || mode === "author") && text) {
             const citations = extractCitations(text);
+            
+            // LIMIT to target count if requested
+            const citationsToValidate = targetCount > 0 ? citations.slice(0, targetCount) : citations;
+
             const CONCURRENCY = 4;
-            for (let i = 0; i < Math.min(citations.length, 60); i += CONCURRENCY) {
-                const batch = citations.slice(i, i + CONCURRENCY);
-                const batchResults = await Promise.all(batch.map(c => validateCitation(c.author, c.year)));
+            for (let i = 0; i < citationsToValidate.length; i += CONCURRENCY) {
+                const batch = citationsToValidate.slice(i, i + CONCURRENCY);
+                const batchResults = await Promise.all(batch.map(async (c) => {
+                    // LIBRARY MATCH FIRST
+                    const inLibrary = libraryCitations.find(lc => 
+                        lc.author.toLowerCase().includes(c.author.toLowerCase().split(',')[0]) && 
+                        lc.year === c.year
+                    );
+
+                    if (inLibrary) {
+                        return { 
+                            type: "author", 
+                            author: c.author, 
+                            year: c.year, 
+                            valid: true,
+                            suggestedTitle: "Verified in Source Library" 
+                        } as AuthorResult;
+                    }
+
+                    // FALLBACK TO CROSSREF
+                    return validateCitation(c.author, c.year);
+                }));
                 results.push(...batchResults);
             }
         }
 
-        // DOI validation
+        // Step 3: DOI validation
         if (mode === "both" || mode === "doi") {
-            const doisToCheck = dois && Array.isArray(dois) ? dois : (text ? extractDoisFromText(text) : []);
+            const rawDois = dois && Array.isArray(dois) ? dois : (text ? extractDoisFromText(text) : []);
+            
+            // Filter to only those in the text AND limit by targetCount relative to remaining space
+            const remainingCount = targetCount > 0 ? Math.max(0, targetCount - results.length) : rawDois.length;
+            const doisToCheck = rawDois.slice(0, remainingCount);
+
             const CONCURRENCY = 5;
-            for (let i = 0; i < Math.min(doisToCheck.length, 60); i += CONCURRENCY) {
+            for (let i = 0; i < doisToCheck.length; i += CONCURRENCY) {
                 const batch = doisToCheck.slice(i, i + CONCURRENCY);
-                const batchResults = await Promise.all(batch.map((doi: string) => validateDoi(doi)));
+                const batchResults = await Promise.all(batch.map(async (doi: string) => {
+                    // LIBRARY MATCH FIRST
+                    if (libraryDois.some(ld => ld.toLowerCase() === doi.toLowerCase())) {
+                        return { 
+                            type: "doi", 
+                            doi, 
+                            valid: true, 
+                            title: "Verified in Source Library" 
+                        } as DoiResult;
+                    }
+                    return validateDoi(doi);
+                }));
                 results.push(...batchResults);
             }
         }
 
-        const validCount = results.filter(r => r.valid).length;
-        const invalidCount = results.filter(r => !r.valid).length;
-        const fakeCount = results.filter(r => !r.valid && (r.reason?.includes("not found") || r.reason?.includes("fake"))).length;
+        // Final trimming to match targetCount exactly if exceeded
+        const finalResults = targetCount > 0 ? results.slice(0, targetCount) : results;
 
-        // Output matches user's requested format exactly
-        const output = results
+        const validCount = finalResults.filter(r => r.valid).length;
+        const invalidCount = finalResults.filter(r => !r.valid).length;
+        const fakeCount = finalResults.filter(r => !r.valid && (r.reason?.includes("not found") || r.reason?.includes("fake"))).length;
+
+        const output = finalResults
             .filter(r => r.type === "author")
             .map(r => {
                 const ar = r as AuthorResult;
@@ -183,16 +229,16 @@ export async function POST(req: NextRequest) {
             });
 
         return NextResponse.json({
-            results,
-            output,   // { author, year, valid } format as requested
+            results: finalResults,
+            output,
             summary: {
-                total: results.length,
+                total: finalResults.length,
                 valid: validCount,
                 invalid: invalidCount,
                 fake: fakeCount,
-                passRate: results.length > 0 ? ((validCount / results.length) * 100).toFixed(1) + "%" : "N/A"
+                passRate: finalResults.length > 0 ? ((validCount / finalResults.length) * 100).toFixed(1) + "%" : "N/A"
             },
-            invalidCitations: results
+            invalidCitations: finalResults
                 .filter(r => !r.valid && r.type === "author")
                 .map(r => {
                     const ar = r as AuthorResult;

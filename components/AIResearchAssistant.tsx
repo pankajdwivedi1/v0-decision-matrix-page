@@ -258,7 +258,11 @@ export function AIResearchAssistant({
             const res = await fetch('/api/validate-citations', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: content })
+                body: JSON.stringify({ 
+                    text: content,
+                    referenceLibrary: (researchContext?.references || '') + '\n' + (liveCitations || ''),
+                    targetCount: manuscriptConfig.citations
+                })
             });
             if (!res.ok) return;
             const data = await res.json();

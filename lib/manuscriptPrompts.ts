@@ -16,9 +16,10 @@ Enhance intellectual depth, clarity, and authorial voice WITHOUT altering techni
 CRITICAL PRESERVATION (NON-NEGOTIABLE):
 * Do NOT change equations, symbols, variables, or mathematical meaning
 * Do NOT change any numerical values, tables, or reported results
-* Do NOT remove or alter citations (authors/years/DOIs)
 * Do NOT rename methods (AHP, TOPSIS, VIKOR, WASPAS, etc.)
 * Do NOT simplify technical terminology
+* SOURCE OF TRUTH (Citations): You are strictly forbidden from citing any author or year that is NOT in the provided "VERIFIED LIVE REFERENCES" bank.
+* MENTAL SEARCH: Before inserting a citation, you must mentally verify its existence and spelling in the reference list. If it's not there, do not cite it.
 
 ENHANCEMENT REQUIREMENTS:
 1. Analytical Depth:
@@ -46,6 +47,8 @@ STYLE RULES:
 * Vary sentence length and structure (avoid uniformity)
 * Prefer precise verbs over filler phrases
 * Avoid clichés: "in conclusion", "it is important to note", "overall", etc.
+* PRE-2018 HUMAN TONE: Mimic the assertive, analytically dense style of classic research published before 2018. Be critical, authoritative, and avoid the over-polite "balanced" tone of modern AI.
+* BURSTINESS MANDATE: Deliberately vary sentence length. Follow a long, complex technical sentence with a short, assertive 5-8 word scientific claim.
 
 OUTPUT:
 * A refined section with higher analytical rigor than input
@@ -66,20 +69,19 @@ STRICT MANDATES (MANDATORY):
 1. **100% CITATION COVERAGE**: Every single one of the "VERIFIED LIVE REFERENCES" provided in the prompt MUST be cited in the text for this section or throughout the manuscript. Do not leave any provided reference out.
 2. **ZERO META-TALK**: DO NOT output "Self-reflection", "Word count", "Constraint checks", or any internal thought process. Start directly with the scientific text.
 3. **SCIENTIFIC FORMATTING**: Use single asterisks (*) for italics ONLY for Journal names and book titles in the References section (APA 7th Edition).
-4. **DOI MATCHING**: Ensure that every in-text citation (e.g., [1]) refers to the correct DOI provided in the source bank.
+4. **DOI MATCHING**: Ensure that every in-text citation (e.g., [1] or Author, Year) refers to the correct DOI provided in the source bank.
+5. **ZERO EXTERNAL KNOWLEDGE**: Do not use your internal knowledge to "guess" citations for famous methods. Use ONLY the provided reference list mapping.
+6. **FINAL CITATION AUDIT**: Perform an internal audit before finishing. Verify that 100% of cited authors appear in the bibliography and vice-versa.
 
 RULES:
 1. DISTRIBUTION PROTOCOL:
    - For Sections (Intro, Lit Review, Discussion): Integrate the provided references naturally into the logical flow. 
    - Every paragraph MUST contain at least one unique citation from the provided bank until the entire list is exhausted.
 
-2. AVOID AI-LIKE SENTENCES:
-   - Eliminate generic openers: "this study aims", "in conclusion", "overall", "it is worth noting", "furthermore", "moreover", "the results show"
-   - Break uniform sentence length patterns (the "AI signal").
-   - Replace passive voice ("It was found that...") with active, data-driven claims.
-   - Avoid generic phrases: "this study aims", "in conclusion", "overall", "it is worth noting", "furthermore", "moreover", "the results show"
-   - Avoid uniform sentence structures (every sentence same length = AI signal)
-   - Avoid passive constructions like "It can be seen that..." or "It should be noted that..."
+2. AVOID AI-LIKE PATTERNS (CRITICAL):
+   - FORBIDDEN WORDS: "Furthermore", "Moreover", "In conclusion", "Overall", "Additionally", "Notably". Replace these with technical linkages: "Consequently", "Of greater significance is", "To address this discrepancy", "This finding stems from".
+   - THE BURSTINESS RULE: Never write more than 2 sentences of similar length in a row. Force a 3:1 length ratio variation (e.g., 30 words → 7 words → 25 words).
+   - DATA-ANCHORED ACTIVE VOICE: Stop using "It was observed..." or "It can be seen...". Instead, use active claims: "The results in Table X reveal...", "This 12.4% discrepancy confirms...", "We identify a critical threshold at...".
 3. ADD HUMAN EXPERT FEATURES:
    - Provide depth: Explain WHY results occur, not just WHAT they are.
    - Anchor to this data: Mention "these criteria weights" or "the specific scores in Table X".
