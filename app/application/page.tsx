@@ -3747,20 +3747,20 @@ export default function MCDMCalculator() {
                 <SelectTrigger className="h-9 text-[11px] w-48 border-gray-300 bg-white hover:bg-gray-50 transition-colors font-medium text-black">
                   <span className="flex items-center gap-2">
                     {weightResultsChartType === 'bar' && '📊 Horizontal Ranking'}
-                    {weightResultsChartType === 'pie' && 'ðŸ• Pie Chart'}
+                    {weightResultsChartType === 'pie' && '🥧 Pie Chart'}
                     {weightResultsChartType === 'line' && '📈 Line Plot'}
-                    {weightResultsChartType === 'area' && 'ðŸŸ¦ Area Chart'}
-                    {weightResultsChartType === 'radar' && 'ðŸ•¸Ã¯Â¸Â Radar Chart'}
-                    {weightResultsChartType === 'heatmap' && 'ðŸŒ¡Ã¯Â¸Â Heatmap'}
+                    {weightResultsChartType === 'area' && '🟦 Area Chart'}
+                    {weightResultsChartType === 'radar' && '🕸️ Radar Chart'}
+                    {weightResultsChartType === 'heatmap' && '🌡️ Heatmap'}
                   </span>
                 </SelectTrigger>
                 <SelectContent className="border-gray-300 shadow-md">
                   <SelectItem value="bar" className="text-[11px]">📊 Horizontal Bar (Ranking)</SelectItem>
-                  <SelectItem value="pie" className="text-[11px]">ðŸ• Pie Chart</SelectItem>
+                  <SelectItem value="pie" className="text-[11px]">🥧 Pie Chart</SelectItem>
                   <SelectItem value="line" className="text-[11px]">📈 Line Plot</SelectItem>
-                  <SelectItem value="area" className="text-[11px]">ðŸŸ¦ Area Chart</SelectItem>
-                  <SelectItem value="radar" className="text-[11px]">ðŸ•¸Ã¯Â¸Â Radar Chart</SelectItem>
-                  <SelectItem value="heatmap" className="text-[11px]">ðŸŒ¡Ã¯Â¸Â Heatmap</SelectItem>
+                  <SelectItem value="area" className="text-[11px]">🟦 Area Chart</SelectItem>
+                  <SelectItem value="radar" className="text-[11px]">🕸️ Radar Chart</SelectItem>
+                  <SelectItem value="heatmap" className="text-[11px]">🌡️ Heatmap</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -3927,7 +3927,13 @@ export default function MCDMCalculator() {
           className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${isAnyWeightCalculated ? "bg-green-50 border-green-200" : homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
           onClick={() => {
             setHomeTab("weightMethods");
-            if (currentStep !== "home") setCurrentStep("home");
+            // If weight results already exist, go to matrix view to show them
+            // Otherwise go to home to show the input form
+            if (isAnyWeightCalculated) {
+              setCurrentStep("matrix");
+            } else {
+              setCurrentStep("home");
+            }
           }}
         >
           {isAnyWeightCalculated ? (
@@ -3942,7 +3948,13 @@ export default function MCDMCalculator() {
           className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${apiResults ? "bg-green-50 border-green-200" : homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
           onClick={() => {
             setHomeTab("rankingMethods");
-            if (currentStep !== "home") setCurrentStep("home");
+            // Ranking results live in "calculate" view, weight results in "matrix" view
+            // Navigate to the correct view based on what results exist
+            if (apiResults) {
+              setCurrentStep("calculate");
+            } else {
+              setCurrentStep("home");
+            }
           }}
         >
           {apiResults ? (
@@ -4022,7 +4034,7 @@ export default function MCDMCalculator() {
             onClick={() => setAiResearchContext(prev => ({ ...prev, extractionMode: 'manual' }))}
             className="flex-1 text-xs h-9"
           >
-            âÅ“ÂÃ¯Â¸Â Manual Entry
+            ✏️ Manual Entry
           </Button>
           <Button
             variant={aiResearchContext.extractionMode === 'smart' ? 'default' : 'outline'}
@@ -4030,7 +4042,7 @@ export default function MCDMCalculator() {
             onClick={() => setAiResearchContext(prev => ({ ...prev, extractionMode: 'smart' }))}
             className="flex-1 text-xs h-9 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 border-0 text-white"
           >
-            ðŸ¤– Smart Extract from Paper
+            🤖– Smart Extract from Paper
           </Button>
         </div>
 
@@ -4152,7 +4164,7 @@ export default function MCDMCalculator() {
                     }))
                   }}
                 >
-                  ðŸª„ Generate Sample
+                  🍂 Generate Sample
                 </Button>
               </div>
               <Textarea
@@ -4210,7 +4222,7 @@ export default function MCDMCalculator() {
                         ? 'bg-blue-100 text-blue-700 border border-blue-200'
                         : 'bg-red-100 text-red-700 border border-red-200'
                         }`}>
-                        {c.type === 'beneficial' ? 'â†‘ Higher is better' : 'â†“ Lower is better'}
+                        {c.type === 'beneficial' ? '↑ Higher is better' : '↓ Lower is better'}
                       </span>
                     </div>
                     <Textarea
@@ -4232,13 +4244,13 @@ export default function MCDMCalculator() {
 
             {/* Additional Tips Section */}
             <div className="bg-purple-50 border border-purple-200 rounded-md p-3">
-              <p className="text-xs font-semibold text-purple-900 mb-2">âÅ“Â¨ Quality Tips for Best AI Results:</p>
+              <p className="text-xs font-semibold text-purple-900 mb-2">✨ Quality Tips for Best AI Results:</p>
               <ul className="text-xs text-purple-800 space-y-1">
-                <li>âÅ“… <strong>Be Specific:</strong> Include dollar amounts, timeframes, industry details</li>
-                <li>âÅ“… <strong>Mention Literature:</strong> Reference existing studies if known (e.g., "Smith et al., 2020")</li>
-                <li>âÅ“… <strong>State Novelty:</strong> Clearly identify what's unique about your approach</li>
-                <li>âÅ“… <strong>Define Impact:</strong> Explain real-world consequences and significance</li>
-                <li>âÅ“… <strong>Use Complete Sentences:</strong> A write properly for professional AI output</li>
+                <li>✅ <strong>Be Specific:</strong> Include dollar amounts, timeframes, industry details</li>
+                <li>✅ <strong>Mention Literature:</strong> Reference existing studies if known (e.g., "Smith et al., 2020")</li>
+                <li>✅ <strong>State Novelty:</strong> Clearly identify what's unique about your approach</li>
+                <li>✅ <strong>Define Impact:</strong> Explain real-world consequences and significance</li>
+                <li>✅ <strong>Use Complete Sentences:</strong> A write properly for professional AI output</li>
               </ul>
             </div>
           </div>
@@ -4376,7 +4388,7 @@ export default function MCDMCalculator() {
               <>
                 {!isFullyDataFilled && (
                   <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded mb-6">
-                    <p className="font-semibold">âÅ¡Â Ã¯Â¸Â No data available</p>
+                    <p className="font-semibold">⚠️ No data available</p>
                     <p className="mt-1">
                       Please add alternatives and criteria using the "Get Started" section above.
                     </p>
@@ -4390,7 +4402,7 @@ export default function MCDMCalculator() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
-                        <p className="font-semibold">âÅ““ Data has uploaded</p>
+                        <p className="font-semibold">✓ Data has uploaded</p>
                         <p className="mt-1">
                           {alternatives.length} alternatives × {criteria.length} criteria
                         </p>
@@ -4539,7 +4551,7 @@ export default function MCDMCalculator() {
               <>
                 {!isFullyDataFilled && (
                   <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded mb-6">
-                    <p className="font-semibold">âÅ¡Â Ã¯Â¸Â No data available</p>
+                    <p className="font-semibold">⚠️ No data available</p>
                     <p className="mt-1">
                       Please add alternatives and criteria using the "Get Started" section above.
                     </p>
@@ -4556,7 +4568,7 @@ export default function MCDMCalculator() {
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded mx-3 sm:mx-0">
-                          <p className="font-semibold">âÅ““ Data has uploaded</p>
+                          <p className="font-semibold">✓ Data has uploaded</p>
                           <p className="mt-1">
                             {alternatives.length} alternatives × {criteria.length} criteria
                           </p>
@@ -5857,7 +5869,7 @@ export default function MCDMCalculator() {
                     {isFullyDataFilled ? (
                       <div className="space-y-3">
                         <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded mx-3 sm:mx-0">
-                          <p className="font-semibold">âÅ““ Data has uploaded</p>
+                          <p className="font-semibold">✓ Data has uploaded</p>
                           <p className="mt-1">
                             {alternatives.length} alternatives × {criteria.length} criteria
                           </p>
@@ -5916,7 +5928,7 @@ export default function MCDMCalculator() {
                       </div>
                     ) : (
                       <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded">
-                        <p className="font-semibold">âÅ¡Â Ã¯Â¸Â No data available</p>
+                        <p className="font-semibold">⚠️ No data available</p>
                         <p className="mt-1">
                           Please add alternatives and criteria using the "Get Started" section above.
                         </p>
@@ -7799,7 +7811,7 @@ export default function MCDMCalculator() {
                     {isFullyDataFilled ? (
                       <>
                         <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
-                          <p className="font-semibold">âÅ““ Data has uploaded</p>
+                          <p className="font-semibold">✓ Data has uploaded</p>
                           <p className="mt-1">
                             {alternatives.length} alternatives × {criteria.length} criteria
                           </p>
@@ -7858,7 +7870,7 @@ export default function MCDMCalculator() {
                       </>
                     ) : (
                       <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded">
-                        <p className="font-semibold">âÅ¡Â Ã¯Â¸Â No data available</p>
+                        <p className="font-semibold">⚠️ No data available</p>
                         <p className="mt-1">
                           Please add alternatives and criteria using the "Get Started" section above.
                         </p>
@@ -9542,7 +9554,7 @@ export default function MCDMCalculator() {
                   <DialogHeader>
                     <DialogTitle className="text-base sm:text-lg font-bold text-black">Select Data to Import</DialogTitle>
                     <DialogDescription className="text-[10px] sm:text-xs text-gray-700">
-                      Click and drag to select the complete table including: <strong>Headers â†’ Max/Min row â†’ Weights row â†’ Data rows</strong>
+                      Click and drag to select the complete table including: <strong>Headers → Max/Min row → Weights row → Data rows</strong>
                     </DialogDescription>
                   </DialogHeader>
 
@@ -9580,10 +9592,10 @@ export default function MCDMCalculator() {
                       <div className="text-xs text-blue-900">
                         <strong>📋 How to select data:</strong>
                         <ol className="ml-4 mt-1 space-y-1">
-                          <li>1Ã¯Â¸ÂâÆ’Â£ Scroll through the sheet to find your table</li>
-                          <li>2Ã¯Â¸ÂâÆ’Â£ Click on the first cell (top-left corner)</li>
-                          <li>3Ã¯Â¸ÂâÆ’Â£ Drag to the last cell (bottom-right corner)</li>
-                          <li>4Ã¯Â¸ÂâÆ’Â£ Include: Headers, Max/Min, Weights, and Data rows</li>
+                          <li>1️⃣ Scroll through the sheet to find your table</li>
+                          <li>2️⃣ Click on the first cell (top-left corner)</li>
+                          <li>3️⃣ Drag to the last cell (bottom-right corner)</li>
+                          <li>4️⃣ Include: Headers, Max/Min, Weights, and Data rows</li>
                         </ol>
                       </div>
                     </div>
@@ -9593,12 +9605,12 @@ export default function MCDMCalculator() {
                     <div className="text-xs text-gray-600">
                       {selectedDataRange.startRow !== selectedDataRange.endRow || selectedDataRange.startCol !== selectedDataRange.endCol ? (
                         <span className="font-medium">
-                          âÅ“… Selected: Row {selectedDataRange.startRow}-{selectedDataRange.endRow},
+                          ✅ Selected: Row {selectedDataRange.startRow}-{selectedDataRange.endRow},
                           Col {selectedDataRange.startCol}-{selectedDataRange.endCol}
                           {' '}({(selectedDataRange.endRow - selectedDataRange.startRow + 1)} rows × {(selectedDataRange.endCol - selectedDataRange.startCol + 1)} cols)
                         </span>
                       ) : (
-                        <span className="text-amber-600">âÅ¡Â Ã¯Â¸Â Click and drag to select your data table</span>
+                        <span className="text-amber-600">⚠️ Click and drag to select your data table</span>
                       )}
                     </div>
                     <Button
@@ -14100,9 +14112,9 @@ export default function MCDMCalculator() {
                         <div className="flex flex-wrap gap-1.5 p-1 bg-indigo-50/50 rounded-lg border border-indigo-100 w-full overflow-x-auto scrollbar-hide">
                           {[
                             { id: "research_abstract", label: "📄 Abstract", icon: <FileText className="w-3 h-3" /> },
-                            { id: "introduction", label: "âÅ“ÂÃ¯Â¸Â Introduction", icon: <Pencil className="w-3 h-3" /> },
-                            { id: "literature_review", label: "ðŸ“š Lit. Review", icon: <Book className="w-3 h-3" /> },
-                            { id: "methodology", label: "âÅ¡™Ã¯Â¸Â Methodology", icon: <Settings className="w-3 h-3" /> },
+                            { id: "introduction", label: "✏️ Introduction", icon: <Pencil className="w-3 h-3" /> },
+                            { id: "literature_review", label: "📚 Lit. Review", icon: <Book className="w-3 h-3" /> },
+                            { id: "methodology", label: "⚙️ Methodology", icon: <Settings className="w-3 h-3" /> },
                             { id: "full_report", label: "📊 Discussion", icon: <MessageCircle className="w-3 h-3" /> }
                           ].map((tab) => (
                             <Button
@@ -14393,13 +14405,13 @@ export default function MCDMCalculator() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="border-gray-200 shadow-xl">
-                              <SelectItem value="dualScoreRank" className="text-[11px] font-bold text-blue-700">ðŸ† Dual-Axis (Score & Rank)</SelectItem>
+                              <SelectItem value="dualScoreRank" className="text-[11px] font-bold text-blue-700">🏆 Dual-Axis (Score & Rank)</SelectItem>
                               <SelectItem value="barScore" className="text-[11px] font-medium">📊 Scores (Bar Chart)</SelectItem>
                               <SelectItem value="lineScore" className="text-[11px] font-medium">📈 Scores (Line Chart)</SelectItem>
                               <SelectItem value="radarScore" className="text-[11px] font-medium">🎯 Scores (Radar Chart)</SelectItem>
                               <SelectItem value="radialScore" className="text-[11px] font-medium">💠 Performance (Radial Chart)</SelectItem>
                               <SelectItem value="horizontalBarScore" className="text-[11px] font-medium">📋 Rankings (Horizontal Bar)</SelectItem>
-                              <SelectItem value="dumbbellScoreRank" className="text-[11px] font-medium">ââ€º“Ã¯Â¸Â Score vs Rank (Dumbbell)</SelectItem>
+                              <SelectItem value="dumbbellScoreRank" className="text-[11px] font-medium">⛓️ Score vs Rank (Dumbbell)</SelectItem>
                               <SelectItem value="lineRank" className="text-[11px] font-medium">📈 Rankings (Line Chart)</SelectItem>
                               <SelectItem value="barRank" className="text-[11px] font-medium">📊 Rankings (Bar Chart)</SelectItem>
                             </SelectContent>
@@ -14611,13 +14623,13 @@ export default function MCDMCalculator() {
                                   barCategoryGap="25%"
                                 >
                                   <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke="#eee" />
-                                  <XAxis 
+                                  <XAxis
                                     xAxisId="top"
-                                    orientation="top" 
-                                    type="number" 
-                                    tick={false} 
-                                    axisLine={{ stroke: "#000", strokeWidth: 2 }} 
-                                    dy={1} 
+                                    orientation="top"
+                                    type="number"
+                                    tick={false}
+                                    axisLine={{ stroke: "#000", strokeWidth: 2 }}
+                                    dy={1}
                                   />
                                   <XAxis
                                     xAxisId="bottom"
