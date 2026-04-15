@@ -6967,20 +6967,211 @@ export default function MCDMCalculator() {
                                   })() : (() => {
                                     const renderedChart = (() => {
                                       switch (comparisonChartType) {
-                                          case "radar":
-                                            return (
-                                              <RadarChart margin={{ top: 5, right: 120, left: 120, bottom: 60 }} cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
-                                                <PolarGrid />
-                                                <PolarAngleAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                                <PolarRadiusAxis />
-                                                <Legend wrapperStyle={{
+                                        case "radar":
+                                          return (
+                                            <RadarChart margin={{ top: 5, right: 120, left: 120, bottom: 60 }} cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
+                                              <PolarGrid />
+                                              <PolarAngleAxis dataKey="method" tick={{ fontSize: 10 }} />
+                                              <PolarRadiusAxis />
+                                              <Legend wrapperStyle={{
+                                                fontSize: "10px",
+                                                color: "#000",
+                                                fontWeight: 700,
+                                                backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                                border: "1px solid #000",
+                                                padding: "4px 8px",
+                                                top: 5,
+                                                left: "50%",
+                                                transform: "translateX(-50%)",
+                                                width: "max-content",
+                                                maxWidth: "95%",
+                                                zIndex: 50,
+                                                boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                                display: "flex",
+                                                justifyContent: "center",
+                                                whiteSpace: "nowrap"
+                                              }} />
+                                              <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                              {comparisonChartAlternatives.map((alt, idx) => (
+                                                <Radar key={alt} name={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.1} />
+                                              ))}
+                                            </RadarChart>
+                                          );
+                                        case "scientific":
+                                          const maxPossibleRank = Math.max(...comparisonResults.flatMap(r => r.ranking?.map(i => i.rank) || [0]), 1);
+                                          return (
+                                            <div className="flex flex-col h-full bg-white relative">
+                                              <div className="flex-1 w-full h-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                  <RadarChart cx="50%" cy="50%" outerRadius="95%" data={scientificRadialData} margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
+                                                    <PolarGrid stroke="#cbd5e1" strokeWidth={1} gridType="circle" />
+                                                    <PolarAngleAxis
+                                                      dataKey="method"
+                                                      tick={false}
+                                                    />
+                                                    <PolarRadiusAxis
+                                                      angle={45}
+                                                      domain={[0, maxPossibleRank]}
+                                                      tickCount={maxPossibleRank + 1}
+                                                      tick={(props) => {
+                                                        const { x, y, payload } = props;
+                                                        if (payload.value === 0) return <g />;
+                                                        const displayRank = maxPossibleRank - payload.value + 1;
+                                                        return (
+                                                          <text
+                                                            x={x}
+                                                            y={y}
+                                                            dy={-5}
+                                                            dx={5}
+                                                            fontSize={14}
+                                                            fontWeight="900"
+                                                            fill="#ef4444"
+                                                            stroke="#fff"
+                                                            strokeWidth={4}
+                                                            paintOrder="stroke"
+                                                            textAnchor="start"
+                                                            dominantBaseline="middle"
+                                                          >
+                                                            {displayRank}
+                                                          </text>
+                                                        );
+                                                      }}
+                                                      axisLine={false}
+                                                    />
+                                                    {comparisonResults.map((res, idx) => (
+                                                      <Radar
+                                                        key={`sector-${res.label}`}
+                                                        name={res.label}
+                                                        dataKey={(d: any) => (d.method === res.label || d.parentMethod === res.label) ? maxPossibleRank : 0}
+                                                        stroke="none"
+                                                        fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                                                        fillOpacity={0.10}
+                                                        isAnimationActive={false}
+                                                        legendType="rect"
+                                                        tooltipType="none"
+                                                      />
+                                                    ))}
+                                                    <Tooltip
+                                                      content={({ active, payload, label }) => {
+                                                        const realLabel = label?.includes('_sub_') ? label.split('_sub_')[0] : label;
+                                                        if (active && payload && payload.length) {
+                                                          const realPayload = payload.filter((p: any) =>
+                                                            p.name &&
+                                                            typeof p.name === 'string' &&
+                                                            !comparisonResults.some(r => r.label === p.name)
+                                                          );
+                                                          if (realPayload.length === 0) return null;
+
+                                                          return (
+                                                            <div className="bg-white border-2 border-black p-3 shadow-2xl text-[11px] font-mono leading-tight">
+                                                              <p className="font-black border-b-2 border-black mb-2 pb-1 text-center uppercase">{realLabel}</p>
+                                                              {realPayload.map((entry: any, index: number) => (
+                                                                <div key={index} className="flex justify-between py-1 gap-6">
+                                                                  <span className="font-bold underline" style={{ color: entry.color }}>{entry.name}</span>
+                                                                  <span className="font-black">RANK {entry.payload[`${entry.name}_actual_rank`] || "N/A"}</span>
+                                                                </div>
+                                                              ))}
+                                                            </div>
+                                                          );
+                                                        }
+                                                        return null;
+                                                      }}
+                                                    />
+                                                    <Legend wrapperStyle={{
+                                                      fontSize: "10px",
+                                                      color: "#000",
+                                                      fontWeight: 700,
+                                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                                      border: "1px solid #000",
+                                                      padding: "4px 8px",
+                                                      top: 10,
+                                                      left: "50%",
+                                                      transform: "translateX(-50%)",
+                                                      width: "max-content",
+                                                      maxWidth: "95%",
+                                                      zIndex: 50,
+                                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                                      display: "flex",
+                                                      justifyContent: "center",
+                                                      whiteSpace: "nowrap"
+                                                    }}
+                                                      verticalAlign="bottom"
+                                                      content={(props) => {
+                                                        const { payload } = props;
+                                                        if (!payload) return null;
+                                                        const alternatives = payload.filter(p => !comparisonResults.some(r => r.label === p.value));
+                                                        const methods = payload.filter(p => comparisonResults.some(r => r.label === p.value));
+
+                                                        return (
+                                                          <div className="flex flex-col items-center">
+                                                            <div className="flex flex-wrap justify-center gap-x-2 gap-y-0.2">
+                                                              {alternatives.map((entry, index) => (
+                                                                <div key={`alt-${index}`} className="flex items-center gap-1">
+                                                                  <div className="w-4 h-0.5" style={{ backgroundColor: entry.color }}></div>
+                                                                  <span className="text-[10px] font-black uppercase text-gray-800 tracking-tight">{entry.value}</span>
+                                                                </div>
+                                                              ))}
+                                                            </div>
+                                                            <div className="flex flex-wrap justify-center gap-x-3 gap-y-0.5 w-full max-w-2xl">
+                                                              {methods.map((entry, index) => (
+                                                                <div key={`meth-${index}`} className="flex items-center gap-1.5">
+                                                                  <div className="w-3 h-3" style={{ backgroundColor: entry.color, opacity: 0.25 }}></div>
+                                                                  <span className="text-[10px] font-black uppercase text-gray-900 tracking-tight">{entry.value}</span>
+                                                                </div>
+                                                              ))}
+                                                            </div>
+                                                          </div>
+                                                        );
+                                                      }}
+                                                    />
+                                                    {comparisonChartAlternatives.map((alt, idx) => (
+                                                      <Radar
+                                                        key={alt}
+                                                        name={alt}
+                                                        dataKey={alt}
+                                                        stroke={CHART_COLORS[idx % CHART_COLORS.length]}
+                                                        fill="none"
+                                                        strokeWidth={3}
+                                                        dot={false}
+                                                        activeDot={{ r: 5, strokeWidth: 2, fill: '#fff' }}
+                                                        isAnimationActive={false}
+                                                      />
+                                                    ))}
+                                                  </RadarChart>
+                                                </ResponsiveContainer>
+                                              </div>
+                                              <div className="absolute bottom-1 right-2 pointer-events-none">
+                                                <p className="text-[9px] font-black text-gray-300 tracking-tighter uppercase whitespace-nowrap">Concentric Ranking Matrix</p>
+                                              </div>
+                                            </div>
+                                          );
+                                        case "bar":
+                                          return (
+                                            <BarChart data={comparisonChartData} margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
+                                              <CartesianGrid strokeDasharray="3 3" />
+                                              <XAxis
+                                                dataKey="method"
+                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
+                                                label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                                              <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                              <YAxis
+                                                label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
+                                              <YAxis orientation="right" yAxisId="right_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                              <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                              <Legend
+                                                verticalAlign="top"
+                                                align="center"
+                                                layout="horizontal"
+                                                wrapperStyle={{
                                                   fontSize: "10px",
                                                   color: "#000",
                                                   fontWeight: 700,
                                                   backgroundColor: "rgba(255, 255, 255, 0.95)",
                                                   border: "1px solid #000",
                                                   padding: "4px 8px",
-                                                  top: 5,
+                                                  top: 70,
                                                   left: "50%",
                                                   transform: "translateX(-50%)",
                                                   width: "max-content",
@@ -6990,625 +7181,430 @@ export default function MCDMCalculator() {
                                                   display: "flex",
                                                   justifyContent: "center",
                                                   whiteSpace: "nowrap"
-                                                }} />
-                                                <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                                {comparisonChartAlternatives.map((alt, idx) => (
-                                                  <Radar key={alt} name={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.1} />
-                                                ))}
-                                              </RadarChart>
-                                            );
-                                          case "scientific":
-                                            const maxPossibleRank = Math.max(...comparisonResults.flatMap(r => r.ranking?.map(i => i.rank) || [0]), 1);
-                                            return (
-                                              <div className="flex flex-col h-full bg-white relative">
-                                                <div className="flex-1 w-full h-full">
-                                                  <ResponsiveContainer width="100%" height="100%">
-                                                    <RadarChart cx="50%" cy="50%" outerRadius="95%" data={scientificRadialData} margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
-                                                      <PolarGrid stroke="#cbd5e1" strokeWidth={1} gridType="circle" />
-                                                      <PolarAngleAxis
-                                                        dataKey="method"
-                                                        tick={false}
-                                                      />
-                                                      <PolarRadiusAxis
-                                                        angle={45}
-                                                        domain={[0, maxPossibleRank]}
-                                                        tickCount={maxPossibleRank + 1}
-                                                        tick={(props) => {
-                                                          const { x, y, payload } = props;
-                                                          if (payload.value === 0) return <g />;
-                                                          const displayRank = maxPossibleRank - payload.value + 1;
-                                                          return (
-                                                            <text
-                                                              x={x}
-                                                              y={y}
-                                                              dy={-5}
-                                                              dx={5}
-                                                              fontSize={14}
-                                                              fontWeight="900"
-                                                              fill="#ef4444"
-                                                              stroke="#fff"
-                                                              strokeWidth={4}
-                                                              paintOrder="stroke"
-                                                              textAnchor="start"
-                                                              dominantBaseline="middle"
-                                                            >
-                                                              {displayRank}
-                                                            </text>
-                                                          );
-                                                        }}
-                                                        axisLine={false}
-                                                      />
-                                                      {comparisonResults.map((res, idx) => (
-                                                        <Radar
-                                                          key={`sector-${res.label}`}
-                                                          name={res.label}
-                                                          dataKey={(d: any) => (d.method === res.label || d.parentMethod === res.label) ? maxPossibleRank : 0}
-                                                          stroke="none"
-                                                          fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                                                          fillOpacity={0.10}
-                                                          isAnimationActive={false}
-                                                          legendType="rect"
-                                                          tooltipType="none"
-                                                        />
-                                                      ))}
-                                                      <Tooltip
-                                                        content={({ active, payload, label }) => {
-                                                          const realLabel = label?.includes('_sub_') ? label.split('_sub_')[0] : label;
-                                                          if (active && payload && payload.length) {
-                                                            const realPayload = payload.filter((p: any) =>
-                                                              p.name &&
-                                                              typeof p.name === 'string' &&
-                                                              !comparisonResults.some(r => r.label === p.name)
-                                                            );
-                                                            if (realPayload.length === 0) return null;
-
-                                                            return (
-                                                              <div className="bg-white border-2 border-black p-3 shadow-2xl text-[11px] font-mono leading-tight">
-                                                                <p className="font-black border-b-2 border-black mb-2 pb-1 text-center uppercase">{realLabel}</p>
-                                                                {realPayload.map((entry: any, index: number) => (
-                                                                  <div key={index} className="flex justify-between py-1 gap-6">
-                                                                    <span className="font-bold underline" style={{ color: entry.color }}>{entry.name}</span>
-                                                                    <span className="font-black">RANK {entry.payload[`${entry.name}_actual_rank`] || "N/A"}</span>
-                                                                  </div>
-                                                                ))}
-                                                              </div>
-                                                            );
-                                                          }
-                                                          return null;
-                                                        }}
-                                                      />
-                                                      <Legend wrapperStyle={{
-                                                        fontSize: "10px",
-                                                        color: "#000",
-                                                        fontWeight: 700,
-                                                        backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                        border: "1px solid #000",
-                                                        padding: "4px 8px",
-                                                        top: 10,
-                                                        left: "50%",
-                                                        transform: "translateX(-50%)",
-                                                        width: "max-content",
-                                                        maxWidth: "95%",
-                                                        zIndex: 50,
-                                                        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                        display: "flex",
-                                                        justifyContent: "center",
-                                                        whiteSpace: "nowrap"
-                                                      }}
-                                                        verticalAlign="bottom"
-                                                        content={(props) => {
-                                                          const { payload } = props;
-                                                          if (!payload) return null;
-                                                          const alternatives = payload.filter(p => !comparisonResults.some(r => r.label === p.value));
-                                                          const methods = payload.filter(p => comparisonResults.some(r => r.label === p.value));
-
-                                                          return (
-                                                            <div className="flex flex-col items-center">
-                                                              <div className="flex flex-wrap justify-center gap-x-2 gap-y-0.2">
-                                                                {alternatives.map((entry, index) => (
-                                                                  <div key={`alt-${index}`} className="flex items-center gap-1">
-                                                                    <div className="w-4 h-0.5" style={{ backgroundColor: entry.color }}></div>
-                                                                    <span className="text-[10px] font-black uppercase text-gray-800 tracking-tight">{entry.value}</span>
-                                                                  </div>
-                                                                ))}
-                                                              </div>
-                                                              <div className="flex flex-wrap justify-center gap-x-3 gap-y-0.5 w-full max-w-2xl">
-                                                                {methods.map((entry, index) => (
-                                                                  <div key={`meth-${index}`} className="flex items-center gap-1.5">
-                                                                    <div className="w-3 h-3" style={{ backgroundColor: entry.color, opacity: 0.25 }}></div>
-                                                                    <span className="text-[10px] font-black uppercase text-gray-900 tracking-tight">{entry.value}</span>
-                                                                  </div>
-                                                                ))}
-                                                              </div>
-                                                            </div>
-                                                          );
-                                                        }}
-                                                      />
-                                                      {comparisonChartAlternatives.map((alt, idx) => (
-                                                        <Radar
-                                                          key={alt}
-                                                          name={alt}
-                                                          dataKey={alt}
-                                                          stroke={CHART_COLORS[idx % CHART_COLORS.length]}
-                                                          fill="none"
-                                                          strokeWidth={3}
-                                                          dot={false}
-                                                          activeDot={{ r: 5, strokeWidth: 2, fill: '#fff' }}
-                                                          isAnimationActive={false}
-                                                        />
-                                                      ))}
-                                                    </RadarChart>
-                                                  </ResponsiveContainer>
-                                                </div>
-                                                <div className="absolute bottom-1 right-2 pointer-events-none">
-                                                  <p className="text-[9px] font-black text-gray-300 tracking-tighter uppercase whitespace-nowrap">Concentric Ranking Matrix</p>
-                                                </div>
-                                              </div>
-                                            );
-                                          case "bar":
-                                            return (
-                                              <BarChart data={comparisonChartData} margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
-                                                <CartesianGrid strokeDasharray="3 3" />
-                                                <XAxis
-                                                  dataKey="method"
-                                                  tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                  label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                                <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                                <YAxis
-                                                  label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
-                                                <YAxis orientation="right" yAxisId="right_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                                <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                                <Legend
-                                                  verticalAlign="top"
-                                                  align="center"
-                                                  layout="horizontal"
-                                                  wrapperStyle={{
-                                                    fontSize: "10px",
-                                                    color: "#000",
-                                                    fontWeight: 700,
-                                                    backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                    border: "1px solid #000",
-                                                    padding: "4px 8px",
-                                                    top: 70,
-                                                    left: "50%",
-                                                    transform: "translateX(-50%)",
-                                                    width: "max-content",
-                                                    maxWidth: "95%",
-                                                    zIndex: 50,
-                                                    boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                    display: "flex",
-                                                    justifyContent: "center",
-                                                    whiteSpace: "nowrap"
-                                                  }}
-                                                  iconSize={8}
-                                                />
-                                                {comparisonChartAlternatives.map((alt, idx) => (
-                                                  <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
-                                                ))}
-                                              </BarChart>
-                                            );
-                                          case "stackedBar":
-                                            return (
-                                              <BarChart data={comparisonChartData} margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
-                                                <CartesianGrid strokeDasharray="3 3" />
-                                                <XAxis
-                                                  dataKey="method"
-                                                  tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                  label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                                <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                                <YAxis
-                                                  label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
-                                                <YAxis orientation="right" yAxisId="right_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                                <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                                <Legend
-                                                  verticalAlign="top"
-                                                  align="center"
-                                                  layout="horizontal"
-                                                  wrapperStyle={{
-                                                    fontSize: "10px",
-                                                    color: "#000",
-                                                    fontWeight: 700,
-                                                    backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                    border: "1px solid #000",
-                                                    padding: "4px 8px",
-                                                    top: 70,
-                                                    left: "50%",
-                                                    transform: "translateX(-50%)",
-                                                    width: "max-content",
-                                                    maxWidth: "95%",
-                                                    zIndex: 50,
-                                                    boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                    display: "flex",
-                                                    justifyContent: "center",
-                                                    whiteSpace: "nowrap"
-                                                  }}
-                                                  iconSize={8}
-                                                />
-                                                {comparisonChartAlternatives.map((alt, idx) => (
-                                                  <Bar key={alt} stackId="a" dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
-                                                ))}
-                                              </BarChart>
-                                            );
-                                          case "area":
-                                            return (
-                                              <AreaChart data={comparisonChartData} margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
-                                                <CartesianGrid strokeDasharray="3 3" />
-                                                <XAxis
-                                                  dataKey="method"
-                                                  tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                  label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                                <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                                <YAxis
-                                                  label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
-                                                <YAxis orientation="right" yAxisId="right_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                                <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                                <Legend
-                                                  verticalAlign="top"
-                                                  align="center"
-                                                  layout="horizontal"
-                                                  wrapperStyle={{
-                                                    fontSize: "10px",
-                                                    color: "#000",
-                                                    fontWeight: 700,
-                                                    backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                    border: "1px solid #000",
-                                                    padding: "4px 8px",
-                                                    top: 70,
-                                                    left: "50%",
-                                                    transform: "translateX(-50%)",
-                                                    width: "max-content",
-                                                    maxWidth: "95%",
-                                                    zIndex: 50,
-                                                    boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                    display: "flex",
-                                                    justifyContent: "center",
-                                                    whiteSpace: "nowrap"
-                                                  }}
-                                                  iconSize={8}
-                                                />
-                                                {comparisonChartAlternatives.map((alt, idx) => (
-                                                  <Area type="monotone" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
-                                                ))}
-                                              </AreaChart>
-                                            );
-                                          case "stackedArea":
-                                            return (
-                                              <AreaChart data={comparisonChartData} margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
-                                                <CartesianGrid strokeDasharray="3 3" />
-                                                <XAxis
-                                                  dataKey="method"
-                                                  tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                  label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                                <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                                <YAxis
-                                                  label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
-                                                <YAxis orientation="right" yAxisId="right_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                                <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                                <Legend
-                                                  verticalAlign="top"
-                                                  align="center"
-                                                  layout="horizontal"
-                                                  wrapperStyle={{
-                                                    fontSize: "10px",
-                                                    color: "#000",
-                                                    fontWeight: 700,
-                                                    backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                    border: "1px solid #000",
-                                                    padding: "4px 8px",
-                                                    top: 70,
-                                                    left: "50%",
-                                                    transform: "translateX(-50%)",
-                                                    width: "max-content",
-                                                    maxWidth: "95%",
-                                                    zIndex: 50,
-                                                    boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                    display: "flex",
-                                                    justifyContent: "center",
-                                                    whiteSpace: "nowrap"
-                                                  }}
-                                                  iconSize={8}
-                                                />
-                                                {comparisonChartAlternatives.map((alt, idx) => (
-                                                  <Area type="monotone" stackId="1" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
-                                                ))}
-                                              </AreaChart>
-                                            );
-                                          case "composed":
-                                            const hybridData = comparisonChartAlternatives.map(alt => {
-                                              const item: any = { alternative: alt };
-                                              comparisonResults.forEach(res => {
-                                                const rankItem = res.ranking.find(r => r.alternativeName === alt);
-                                                item[res.label] = rankItem ? rankItem.rank : null;
-                                                item[res.label + "_score"] = rankItem ? (typeof rankItem.score === "string" ? parseFloat(rankItem.score) : rankItem.score) : 0;
-                                              });
-                                              return item;
+                                                }}
+                                                iconSize={8}
+                                              />
+                                              {comparisonChartAlternatives.map((alt, idx) => (
+                                                <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
+                                              ))}
+                                            </BarChart>
+                                          );
+                                        case "stackedBar":
+                                          return (
+                                            <BarChart data={comparisonChartData} margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
+                                              <CartesianGrid strokeDasharray="3 3" />
+                                              <XAxis
+                                                dataKey="method"
+                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
+                                                label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                                              <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                              <YAxis
+                                                label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
+                                              <YAxis orientation="right" yAxisId="right_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                              <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                              <Legend
+                                                verticalAlign="top"
+                                                align="center"
+                                                layout="horizontal"
+                                                wrapperStyle={{
+                                                  fontSize: "10px",
+                                                  color: "#000",
+                                                  fontWeight: 700,
+                                                  backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                                  border: "1px solid #000",
+                                                  padding: "4px 8px",
+                                                  top: 70,
+                                                  left: "50%",
+                                                  transform: "translateX(-50%)",
+                                                  width: "max-content",
+                                                  maxWidth: "95%",
+                                                  zIndex: 50,
+                                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                                  display: "flex",
+                                                  justifyContent: "center",
+                                                  whiteSpace: "nowrap"
+                                                }}
+                                                iconSize={8}
+                                              />
+                                              {comparisonChartAlternatives.map((alt, idx) => (
+                                                <Bar key={alt} stackId="a" dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
+                                              ))}
+                                            </BarChart>
+                                          );
+                                        case "area":
+                                          return (
+                                            <AreaChart data={comparisonChartData} margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
+                                              <CartesianGrid strokeDasharray="3 3" />
+                                              <XAxis
+                                                dataKey="method"
+                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
+                                                label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                                              <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                              <YAxis
+                                                label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
+                                              <YAxis orientation="right" yAxisId="right_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                              <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                              <Legend
+                                                verticalAlign="top"
+                                                align="center"
+                                                layout="horizontal"
+                                                wrapperStyle={{
+                                                  fontSize: "10px",
+                                                  color: "#000",
+                                                  fontWeight: 700,
+                                                  backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                                  border: "1px solid #000",
+                                                  padding: "4px 8px",
+                                                  top: 70,
+                                                  left: "50%",
+                                                  transform: "translateX(-50%)",
+                                                  width: "max-content",
+                                                  maxWidth: "95%",
+                                                  zIndex: 50,
+                                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                                  display: "flex",
+                                                  justifyContent: "center",
+                                                  whiteSpace: "nowrap"
+                                                }}
+                                                iconSize={8}
+                                              />
+                                              {comparisonChartAlternatives.map((alt, idx) => (
+                                                <Area type="monotone" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
+                                              ))}
+                                            </AreaChart>
+                                          );
+                                        case "stackedArea":
+                                          return (
+                                            <AreaChart data={comparisonChartData} margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
+                                              <CartesianGrid strokeDasharray="3 3" />
+                                              <XAxis
+                                                dataKey="method"
+                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
+                                                label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                                              <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                              <YAxis
+                                                label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
+                                              <YAxis orientation="right" yAxisId="right_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                              <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                              <Legend
+                                                verticalAlign="top"
+                                                align="center"
+                                                layout="horizontal"
+                                                wrapperStyle={{
+                                                  fontSize: "10px",
+                                                  color: "#000",
+                                                  fontWeight: 700,
+                                                  backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                                  border: "1px solid #000",
+                                                  padding: "4px 8px",
+                                                  top: 70,
+                                                  left: "50%",
+                                                  transform: "translateX(-50%)",
+                                                  width: "max-content",
+                                                  maxWidth: "95%",
+                                                  zIndex: 50,
+                                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                                  display: "flex",
+                                                  justifyContent: "center",
+                                                  whiteSpace: "nowrap"
+                                                }}
+                                                iconSize={8}
+                                              />
+                                              {comparisonChartAlternatives.map((alt, idx) => (
+                                                <Area type="monotone" stackId="1" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
+                                              ))}
+                                            </AreaChart>
+                                          );
+                                        case "composed":
+                                          const hybridData = comparisonChartAlternatives.map(alt => {
+                                            const item: any = { alternative: alt };
+                                            comparisonResults.forEach(res => {
+                                              const rankItem = res.ranking.find(r => r.alternativeName === alt);
+                                              item[res.label] = rankItem ? rankItem.rank : null;
+                                              item[res.label + "_score"] = rankItem ? (typeof rankItem.score === "string" ? parseFloat(rankItem.score) : rankItem.score) : 0;
                                             });
+                                            return item;
+                                          });
 
-                                            return (
-                                              <ComposedChart data={hybridData} margin={{ top: 10, right: 120, left: 120, bottom: 80 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                                                <XAxis
-                                                  dataKey="alternative"
-                                                  tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                  label={{ value: "Alternatives", position: "insideBottom", offset: -45, style: { fontSize: "12px", fontWeight: 700, fill: "#000" } }}
-                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                                  tickLine={{ stroke: "#000", strokeWidth: 1 }}
-                                                  interval={0}
-                                                  angle={-45}
-                                                  textAnchor="end"
-                                                />
-                                                <XAxis orientation="top" xAxisId="top_axis" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                                <YAxis
+                                          return (
+                                            <ComposedChart data={hybridData} margin={{ top: 10, right: 120, left: 120, bottom: 80 }}>
+                                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                                              <XAxis
+                                                dataKey="alternative"
+                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
+                                                label={{ value: "Alternatives", position: "insideBottom", offset: -45, style: { fontSize: "12px", fontWeight: 700, fill: "#000" } }}
+                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
+                                                tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                                interval={0}
+                                                angle={-45}
+                                                textAnchor="end"
+                                              />
+                                              <XAxis orientation="top" xAxisId="top_axis" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                              <YAxis
+                                                yAxisId="rank"
+                                                reversed={true}
+                                                domain={[0, "auto"]}
+                                                allowDecimals={false}
+                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
+                                                label={{ value: "Ordinal Ranking (1 = Top)", angle: -90, position: "insideLeft", style: { fontSize: "12px", fontWeight: 700, fill: "#000" } }}
+                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
+                                                tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                              />
+                                              <YAxis
+                                                yAxisId="score"
+                                                orientation="right"
+                                                domain={[0, "auto"]}
+                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#666" }}
+                                                label={{ value: "Algorithm Performance Scores", angle: 90, position: "insideRight", style: { fontSize: "12px", fontWeight: 700, fill: "#666" } }}
+                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
+                                                tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                              />
+                                              <Tooltip
+                                                contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }}
+                                                cursor={{ fill: "rgba(0,0,0,0.05)" }}
+                                              />
+                                              <Legend
+                                                verticalAlign="middle"
+                                                align="left"
+                                                layout="vertical"
+                                                wrapperStyle={{
+                                                  fontSize: "9px",
+                                                  color: "#000",
+                                                  fontWeight: 700,
+                                                  backgroundColor: "rgba(255, 255, 255, 0.9)",
+                                                  border: "1.5px solid #000",
+                                                  padding: "6px 10px",
+                                                  left: 300,
+                                                  zIndex: 100,
+                                                  boxShadow: "3px 3px 0px rgba(0,0,0,1)",
+                                                  display: "flex",
+                                                  flexDirection: "column",
+                                                  gap: "4px",
+                                                  width: "max-content"
+                                                }}
+                                              />
+                                              {comparisonResults.map((res, idx) => (
+                                                <Bar
+                                                  key={`${res.label}_bar`}
                                                   yAxisId="rank"
-                                                  reversed={true}
-                                                  domain={[0, "auto"]}
-                                                  allowDecimals={false}
-                                                  tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                  label={{ value: "Ordinal Ranking (1 = Top)", angle: -90, position: "insideLeft", style: { fontSize: "12px", fontWeight: 700, fill: "#000" } }}
-                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                                  tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                                  dataKey={res.label}
+                                                  name={`${res.label} Rank`}
+                                                  fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                                                  barSize={15}
                                                 />
-                                                <YAxis
+                                              ))}
+                                              {comparisonResults.map((res, idx) => (
+                                                <Line
+                                                  key={`${res.label}_score_line`}
                                                   yAxisId="score"
-                                                  orientation="right"
-                                                  domain={[0, "auto"]}
-                                                  tick={{ fontSize: 10, fontWeight: 700, fill: "#666" }}
-                                                  label={{ value: "Algorithm Performance Scores", angle: 90, position: "insideRight", style: { fontSize: "12px", fontWeight: 700, fill: "#666" } }}
-                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                                  tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                                  type="monotone"
+                                                  dataKey={`${res.label}_score`}
+                                                  name={`${res.label} Score`}
+                                                  stroke={CHART_COLORS[idx % CHART_COLORS.length]}
+                                                  strokeWidth={2}
+                                                  dot={{ r: 4, fill: CHART_COLORS[idx % CHART_COLORS.length], strokeWidth: 1.5, stroke: "#fff" }}
+                                                  activeDot={{ r: 6 }}
                                                 />
-                                                <Tooltip
-                                                  contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }}
-                                                  cursor={{ fill: "rgba(0,0,0,0.05)" }}
-                                                />
-                                                <Legend
-                                                  verticalAlign="top"
-                                                  align="center"
-                                                  layout="horizontal"
-                                                  wrapperStyle={{
-                                                    fontSize: "9px",
-                                                    color: "#000",
-                                                    fontWeight: 700,
-                                                    backgroundColor: "rgba(255, 255, 255, 0.98)",
-                                                    border: "1.5px solid #000",
-                                                    padding: "6px 10px",
-                                                    top: 80,
-                                                    left: "50%",
-                                                    transform: "translateX(-50%)",
-                                                    width: "85%",
-                                                    maxWidth: "1000px",
-                                                    zIndex: 100,
-                                                    boxShadow: "3px 3px 0px rgba(0,0,0,1)",
-                                                    display: "flex",
-                                                    flexWrap: "wrap",
-                                                    justifyContent: "center",
-                                                    gap: "4px"
-                                                  }}
-                                                />
-                                                {comparisonResults.map((res, idx) => (
-                                                  <Bar
-                                                    key={`${res.label}_bar`}
-                                                    yAxisId="rank"
-                                                    dataKey={res.label}
-                                                    name={`${res.label} Rank`}
-                                                    fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                                                    barSize={15}
-                                                  />
-                                                ))}
-                                                {comparisonResults.map((res, idx) => (
-                                                  <Line
-                                                    key={`${res.label}_score_line`}
-                                                    yAxisId="score"
-                                                    type="monotone"
-                                                    dataKey={`${res.label}_score`}
-                                                    name={`${res.label} Score`}
-                                                    stroke={CHART_COLORS[idx % CHART_COLORS.length]}
-                                                    strokeWidth={2}
-                                                    dot={{ r: 4, fill: CHART_COLORS[idx % CHART_COLORS.length], strokeWidth: 1.5, stroke: "#fff" }}
-                                                    activeDot={{ r: 6 }}
-                                                  />
-                                                ))}
-                                              </ComposedChart>
-                                            );
-                                          case "scatter":
-                                            return (
-                                              <ScatterChart margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
-                                                <CartesianGrid strokeDasharray="3 3" />
-                                                <XAxis
-                                                  dataKey="x"
-                                                  type="category"
-                                                  allowDuplicatedCategory={false}
-                                                  tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                  name="Method"
-                                                  label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                                <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                                <YAxis
-                                                  dataKey="y"
-                                                  type="number"
-                                                  name="Rank"
-                                                  label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
-                                                <YAxis orientation="right" yAxisId="right_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                                <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                                <Legend
-                                                  verticalAlign="top"
-                                                  align="center"
-                                                  layout="horizontal"
-                                                  wrapperStyle={{
-                                                    fontSize: "10px",
-                                                    color: "#000",
-                                                    fontWeight: 700,
-                                                    backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                    border: "1px solid #000",
-                                                    padding: "4px 8px",
-                                                    top: 70,
-                                                    left: "50%",
-                                                    transform: "translateX(-50%)",
-                                                    width: "max-content",
-                                                    maxWidth: "95%",
-                                                    zIndex: 50,
-                                                    boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                    display: "flex",
-                                                    justifyContent: "center",
-                                                    whiteSpace: "nowrap"
-                                                  }}
-                                                  iconSize={8}
-                                                />
-                                                {comparisonChartAlternatives.map((alt, idx) => (
-                                                  <Scatter key={alt} name={alt} data={comparisonChartData.map((d) => ({ x: d.method, y: d[alt] }))} fill={CHART_COLORS[idx % CHART_COLORS.length]} shape={["circle", "cross", "diamond", "square", "star", "triangle", "wye"][idx % 7] as any} line />
-                                                ))}
-                                              </ScatterChart>
-                                            );
-                                          case "boxPlot":
-                                            const boxData = comparisonChartAlternatives.map((alt) => {
-                                              const values = comparisonChartData.map((r) => r[alt]).filter((v) => v != null).sort((a, b) => a - b)
-                                              if (values.length === 0) return null
-                                              const q1 = values[Math.floor(values.length * 0.25)]
-                                              const median = values[Math.floor(values.length * 0.5)]
-                                              const q3 = values[Math.floor(values.length * 0.75)]
-                                              const min = Math.min(...values)
-                                              const max = Math.max(...values)
-                                              const iqr = q3 - q1
-                                              const whiskerLow = Math.max(min, q1 - 1.5 * iqr)
-                                              const whiskerHigh = Math.min(max, q3 + 1.5 * iqr)
-                                              return { alt, min, q1, median, q3, max, whiskerLow, whiskerHigh, n: values.length }
-                                            }).filter((d): d is any => d !== null)
+                                              ))}
+                                            </ComposedChart>
+                                          );
+                                        case "scatter":
+                                          return (
+                                            <ScatterChart margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
+                                              <CartesianGrid strokeDasharray="3 3" />
+                                              <XAxis
+                                                dataKey="x"
+                                                type="category"
+                                                allowDuplicatedCategory={false}
+                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
+                                                name="Method"
+                                                label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                                              <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                              <YAxis
+                                                dataKey="y"
+                                                type="number"
+                                                name="Rank"
+                                                label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
+                                              <YAxis orientation="right" yAxisId="right_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                              <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                              <Legend
+                                                verticalAlign="top"
+                                                align="center"
+                                                layout="horizontal"
+                                                wrapperStyle={{
+                                                  fontSize: "10px",
+                                                  color: "#000",
+                                                  fontWeight: 700,
+                                                  backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                                  border: "1px solid #000",
+                                                  padding: "4px 8px",
+                                                  top: 70,
+                                                  left: "50%",
+                                                  transform: "translateX(-50%)",
+                                                  width: "max-content",
+                                                  maxWidth: "95%",
+                                                  zIndex: 50,
+                                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                                  display: "flex",
+                                                  justifyContent: "center",
+                                                  whiteSpace: "nowrap"
+                                                }}
+                                                iconSize={8}
+                                              />
+                                              {comparisonChartAlternatives.map((alt, idx) => (
+                                                <Scatter key={alt} name={alt} data={comparisonChartData.map((d) => ({ x: d.method, y: d[alt] }))} fill={CHART_COLORS[idx % CHART_COLORS.length]} shape={["circle", "cross", "diamond", "square", "star", "triangle", "wye"][idx % 7] as any} line />
+                                              ))}
+                                            </ScatterChart>
+                                          );
+                                        case "boxPlot":
+                                          const boxData = comparisonChartAlternatives.map((alt) => {
+                                            const values = comparisonChartData.map((r) => r[alt]).filter((v) => v != null).sort((a, b) => a - b)
+                                            if (values.length === 0) return null
+                                            const q1 = values[Math.floor(values.length * 0.25)]
+                                            const median = values[Math.floor(values.length * 0.5)]
+                                            const q3 = values[Math.floor(values.length * 0.75)]
+                                            const min = Math.min(...values)
+                                            const max = Math.max(...values)
+                                            const iqr = q3 - q1
+                                            const whiskerLow = Math.max(min, q1 - 1.5 * iqr)
+                                            const whiskerHigh = Math.min(max, q3 + 1.5 * iqr)
+                                            return { alt, min, q1, median, q3, max, whiskerLow, whiskerHigh, n: values.length }
+                                          }).filter((d): d is any => d !== null)
 
-                                            if (boxData.length === 0) return <div />
-                                            const allVals = boxData.flatMap(d => [d.whiskerLow, d.whiskerHigh])
-                                            const minV = Math.min(...allVals)
-                                            const maxV = Math.max(...allVals)
-                                            const yR = maxV - minV || 1
-                                            const pad = { top: 10, right: 120, bottom: 60, left: 120 }
-                                            const cW = 800 - pad.left - pad.right
-                                            const cH = 400 - pad.top - pad.bottom
-                                            const bW = Math.max(15, (cW / boxData.length) * 0.6)
-                                            const sp = cW / boxData.length
-                                            const gY = (v: number) => pad.top + cH - ((v - minV) / yR) * cH
-                                            const gX = (idx: number) => pad.left + (idx + 0.5) * sp
+                                          if (boxData.length === 0) return <div />
+                                          const allVals = boxData.flatMap(d => [d.whiskerLow, d.whiskerHigh])
+                                          const minV = Math.min(...allVals)
+                                          const maxV = Math.max(...allVals)
+                                          const yR = maxV - minV || 1
+                                          const pad = { top: 10, right: 120, bottom: 60, left: 120 }
+                                          const cW = 800 - pad.left - pad.right
+                                          const cH = 400 - pad.top - pad.bottom
+                                          const bW = Math.max(15, (cW / boxData.length) * 0.6)
+                                          const sp = cW / boxData.length
+                                          const gY = (v: number) => pad.top + cH - ((v - minV) / yR) * cH
+                                          const gX = (idx: number) => pad.left + (idx + 0.5) * sp
 
-                                            return (
-                                              <div className="w-full h-full relative">
-                                                <div
-                                                  style={{
-                                                    position: 'absolute',
-                                                    top: '100px',
-                                                    left: '50%',
-                                                    transform: 'translateX(-50%)',
-                                                    zIndex: 10,
-                                                    fontSize: '10px',
-                                                    color: '#000',
-                                                    fontWeight: 700,
-                                                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                                    border: '1px solid #000',
-                                                    padding: '4px 8px',
-                                                    boxShadow: '2px 2px 0px rgba(0,0,0,1)',
-                                                    display: 'flex',
-                                                    gap: '12px',
-                                                    whiteSpace: 'nowrap'
-                                                  }}
-                                                >
-                                                  <div className="flex items-center gap-1.5">
-                                                    <div style={{ width: 12, height: 12, backgroundColor: '#ff3333' }}></div>
-                                                    <span>Median Rank</span>
-                                                  </div>
-                                                  <div className="flex items-center gap-1.5">
-                                                    <div style={{ width: 12, height: 12, border: '1px solid #666', opacity: 0.4 }}></div>
-                                                    <span>Interquartile Range (IQR)</span>
-                                                  </div>
+                                          return (
+                                            <div className="w-full h-full relative">
+                                              <div
+                                                style={{
+                                                  position: 'absolute',
+                                                  top: '100px',
+                                                  left: '50%',
+                                                  transform: 'translateX(-50%)',
+                                                  zIndex: 10,
+                                                  fontSize: '10px',
+                                                  color: '#000',
+                                                  fontWeight: 700,
+                                                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                                  border: '1px solid #000',
+                                                  padding: '4px 8px',
+                                                  boxShadow: '2px 2px 0px rgba(0,0,0,1)',
+                                                  display: 'flex',
+                                                  gap: '12px',
+                                                  whiteSpace: 'nowrap'
+                                                }}
+                                              >
+                                                <div className="flex items-center gap-1.5">
+                                                  <div style={{ width: 12, height: 12, backgroundColor: '#ff3333' }}></div>
+                                                  <span>Median Rank</span>
                                                 </div>
-
-                                                <svg viewBox="0 0 800 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-                                                  <line x1={pad.left} y1={pad.top} x2={pad.left} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
-                                                  <line x1={pad.left} y1={pad.top + cH} x2={800 - pad.right} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
-                                                  {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
-                                                    <g key={`ylabel-${pct}`}>
-                                                      <line x1={pad.left - 5} y1={gY(minV + pct * yR)} x2={pad.left} y2={gY(minV + pct * yR)} stroke="#999" strokeWidth="1" />
-                                                      <text x={pad.left - 10} y={gY(minV + pct * yR) + 4} fontSize="11" textAnchor="end" fill="#666">{(minV + pct * yR).toFixed(1)}</text>
-                                                      <line x1={pad.left} y1={gY(minV + pct * yR)} x2={800 - pad.right} y2={gY(minV + pct * yR)} stroke="#eee" strokeWidth="1" strokeDasharray="2,2" />
-                                                    </g>
-                                                  ))}
-                                                  {boxData.map((data, idx) => {
-                                                    const x = gX(idx)
-                                                    const color = CHART_COLORS[idx % CHART_COLORS.length]
-                                                    return (
-                                                      <g key={`box-${data.alt}`}>
-                                                        <line x1={x} y1={gY(data.whiskerLow)} x2={x} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2" opacity="0.8" />
-                                                        <line x1={x - bW / 3} y1={gY(data.whiskerLow)} x2={x + bW / 3} y2={gY(data.whiskerLow)} stroke={color} strokeWidth="2.5" opacity="0.8" />
-                                                        <line x1={x - bW / 3} y1={gY(data.whiskerHigh)} x2={x + bW / 3} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2.5" opacity="0.8" />
-                                                        <rect x={x - bW / 2} y={gY(data.q3)} width={bW} height={Math.max(1, gY(data.q1) - gY(data.q3))} fill={color} fillOpacity="0.4" stroke={color} strokeWidth="2" />
-                                                        <line x1={x - bW / 2} y1={gY(data.median)} x2={x + bW / 2} y2={gY(data.median)} stroke="#ff3333" strokeWidth="3" />
-                                                        <circle cx={x} cy={gY(data.min)} r="3" fill={color} opacity="0.6" />
-                                                        <circle cx={x} cy={gY(data.max)} r="3" fill={color} opacity="0.6" />
-                                                        <text x={x} y={pad.top + cH + 25} fontSize="12" textAnchor="middle" fill="#333" fontWeight="500">{data.alt.substring(0, 8)}</text>
-                                                      </g>
-                                                    )
-                                                  })}
-                                                  <text x={pad.left - 45} y={pad.top + cH / 2} fontSize="12" fontWeight="700" fill="#000" transform={`rotate(-90, ${pad.left - 45}, ${pad.top + cH / 2})`} textAnchor="middle">Ordinal Ranking</text>
-                                                  <text x={pad.left + cW / 2} y={395} fontSize="12" fontWeight="700" fill="#000" textAnchor="middle">MCDM Methods</text>
-                                                </svg>
+                                                <div className="flex items-center gap-1.5">
+                                                  <div style={{ width: 12, height: 12, border: '1px solid #666', opacity: 0.4 }}></div>
+                                                  <span>Interquartile Range (IQR)</span>
+                                                </div>
                                               </div>
-                                            );
-                                          default:
-                                            return (
-                                              <LineChart data={comparisonChartData} margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
-                                                <CartesianGrid strokeDasharray="3 3" />
-                                                <XAxis
-                                                  dataKey="method"
-                                                  tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                  label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                                <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                                <YAxis
-                                                  allowDecimals={false}
-                                                  tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                  label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                                <YAxis orientation="right" yAxisId="right_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                                <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                                <Legend
-                                                  verticalAlign="top"
-                                                  align="center"
-                                                  layout="horizontal"
-                                                  wrapperStyle={{
-                                                    fontSize: "10px",
-                                                    color: "#000",
-                                                    fontWeight: 700,
-                                                    backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                    border: "1px solid #000",
-                                                    padding: "4px 8px",
-                                                    top: 70,
-                                                    left: "50%",
-                                                    transform: "translateX(-50%)",
-                                                    width: "max-content",
-                                                    maxWidth: "95%",
-                                                    zIndex: 50,
-                                                    boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                    display: "flex",
-                                                    justifyContent: "center",
-                                                    whiteSpace: "nowrap"
-                                                  }}
-                                                  iconSize={8}
-                                                />
-                                                {comparisonChartAlternatives.map((alt, idx) => (
-                                                  <Line key={alt} type={comparisonChartType === "step" ? "step" : "monotone"} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2} strokeDasharray={["0", "5 5", "3 3", "10 5", "2 2", "15 5"][idx % 6]} activeDot={{ r: 6 }} dot={{ r: 4, strokeWidth: 1, fill: "white", stroke: CHART_COLORS[idx % CHART_COLORS.length] }} />
+
+                                              <svg viewBox="0 0 800 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+                                                <line x1={pad.left} y1={pad.top} x2={pad.left} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
+                                                <line x1={pad.left} y1={pad.top + cH} x2={800 - pad.right} y2={pad.top + cH} stroke="#999" strokeWidth="2" />
+                                                {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
+                                                  <g key={`ylabel-${pct}`}>
+                                                    <line x1={pad.left - 5} y1={gY(minV + pct * yR)} x2={pad.left} y2={gY(minV + pct * yR)} stroke="#999" strokeWidth="1" />
+                                                    <text x={pad.left - 10} y={gY(minV + pct * yR) + 4} fontSize="11" textAnchor="end" fill="#666">{(minV + pct * yR).toFixed(1)}</text>
+                                                    <line x1={pad.left} y1={gY(minV + pct * yR)} x2={800 - pad.right} y2={gY(minV + pct * yR)} stroke="#eee" strokeWidth="1" strokeDasharray="2,2" />
+                                                  </g>
                                                 ))}
-                                              </LineChart>
-                                            );
+                                                {boxData.map((data, idx) => {
+                                                  const x = gX(idx)
+                                                  const color = CHART_COLORS[idx % CHART_COLORS.length]
+                                                  return (
+                                                    <g key={`box-${data.alt}`}>
+                                                      <line x1={x} y1={gY(data.whiskerLow)} x2={x} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2" opacity="0.8" />
+                                                      <line x1={x - bW / 3} y1={gY(data.whiskerLow)} x2={x + bW / 3} y2={gY(data.whiskerLow)} stroke={color} strokeWidth="2.5" opacity="0.8" />
+                                                      <line x1={x - bW / 3} y1={gY(data.whiskerHigh)} x2={x + bW / 3} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2.5" opacity="0.8" />
+                                                      <rect x={x - bW / 2} y={gY(data.q3)} width={bW} height={Math.max(1, gY(data.q1) - gY(data.q3))} fill={color} fillOpacity="0.4" stroke={color} strokeWidth="2" />
+                                                      <line x1={x - bW / 2} y1={gY(data.median)} x2={x + bW / 2} y2={gY(data.median)} stroke="#ff3333" strokeWidth="3" />
+                                                      <circle cx={x} cy={gY(data.min)} r="3" fill={color} opacity="0.6" />
+                                                      <circle cx={x} cy={gY(data.max)} r="3" fill={color} opacity="0.6" />
+                                                      <text x={x} y={pad.top + cH + 25} fontSize="12" textAnchor="middle" fill="#333" fontWeight="500">{data.alt.substring(0, 8)}</text>
+                                                    </g>
+                                                  )
+                                                })}
+                                                <text x={pad.left - 45} y={pad.top + cH / 2} fontSize="12" fontWeight="700" fill="#000" transform={`rotate(-90, ${pad.left - 45}, ${pad.top + cH / 2})`} textAnchor="middle">Ordinal Ranking</text>
+                                                <text x={pad.left + cW / 2} y={395} fontSize="12" fontWeight="700" fill="#000" textAnchor="middle">MCDM Methods</text>
+                                              </svg>
+                                            </div>
+                                          );
+                                        default:
+                                          return (
+                                            <LineChart data={comparisonChartData} margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
+                                              <CartesianGrid strokeDasharray="3 3" />
+                                              <XAxis
+                                                dataKey="method"
+                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
+                                                label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                                              <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                              <YAxis
+                                                allowDecimals={false}
+                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
+                                                label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                                              <YAxis orientation="right" yAxisId="right_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                              <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                              <Legend
+                                                verticalAlign="top"
+                                                align="center"
+                                                layout="horizontal"
+                                                wrapperStyle={{
+                                                  fontSize: "10px",
+                                                  color: "#000",
+                                                  fontWeight: 700,
+                                                  backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                                  border: "1px solid #000",
+                                                  padding: "4px 8px",
+                                                  top: 70,
+                                                  left: "50%",
+                                                  transform: "translateX(-50%)",
+                                                  width: "max-content",
+                                                  maxWidth: "95%",
+                                                  zIndex: 50,
+                                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                                  display: "flex",
+                                                  justifyContent: "center",
+                                                  whiteSpace: "nowrap"
+                                                }}
+                                                iconSize={8}
+                                              />
+                                              {comparisonChartAlternatives.map((alt, idx) => (
+                                                <Line key={alt} type={comparisonChartType === "step" ? "step" : "monotone"} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2} strokeDasharray={["0", "5 5", "3 3", "10 5", "2 2", "15 5"][idx % 6]} activeDot={{ r: 6 }} dot={{ r: 4, strokeWidth: 1, fill: "white", stroke: CHART_COLORS[idx % CHART_COLORS.length] }} />
+                                              ))}
+                                            </LineChart>
+                                          );
                                       }
                                     })();
                                     return (
                                       <ResponsiveContainer width="100%" height="100%">
-                                        {renderedChart }
+                                        {renderedChart}
                                       </ResponsiveContainer>
                                     );
                                   })()}
