@@ -3838,7 +3838,7 @@ export default function MCDMCalculator() {
                     tickLine={{ stroke: "#000", strokeWidth: 1 }}
                     domain={[0, academicMax]}
                     ticks={Array.from({ length: Math.round(academicMax / 0.15) + 1 }, (_, i) => i * 0.15)}
-                    tickFormatter={(val) => parseFloat(val.toFixed(3))}
+                    tickFormatter={(val) => parseFloat(val.toFixed(3)).toString()}
                   />
                   <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 2 }} domain={[0, academicMax]} />
                   <YAxis
