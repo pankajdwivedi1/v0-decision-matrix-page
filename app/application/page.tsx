@@ -3765,6 +3765,7 @@ export default function MCDMCalculator() {
     };
 
     const maxValue = Math.max(...data.map(d => d.value), 0.0001);
+    const academicMax = Math.max(Math.ceil(maxValue / 0.15) * 0.15, 0.15);
     const chartTitle = weightResultsChartType === 'bar' ? `Ranking (${weightMethod.charAt(0).toUpperCase() + weightMethod.slice(1)} Weights)` :
       weightResultsChartType === 'pie' ? "Weight Distribution" :
         weightResultsChartType === 'line' ? "Weight Trend" :
@@ -3835,9 +3836,11 @@ export default function MCDMCalculator() {
                     label={{ value: 'Normalized Criterion Weight (ω)', position: 'bottom', offset: 0, fontSize: 10, fontWeight: 800, fill: '#000' }}
                     axisLine={{ stroke: "#000", strokeWidth: 2 }}
                     tickLine={{ stroke: "#000", strokeWidth: 1 }}
-                    domain={[0, Math.max(...data.map(d => d.value), 0.15)]}
+                    domain={[0, academicMax]}
+                    ticks={Array.from({ length: Math.round(academicMax / 0.15) + 1 }, (_, i) => i * 0.15)}
+                    tickFormatter={(val) => parseFloat(val.toFixed(3))}
                   />
-                  <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 2 }} />
+                  <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 2 }} domain={[0, academicMax]} />
                   <YAxis
                     dataKey="name"
                     type="category"
