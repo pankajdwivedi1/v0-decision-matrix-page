@@ -338,15 +338,22 @@ export default function MCDMCalculator() {
         const isFigure = (key.includes("chart") || key.includes("plot") || key.includes("radar") || key.includes("graph") || key.includes("composed") || key.includes("variation")) && !key.includes("table") && !key.includes("matrix");
 
         // Step 2: Determine Forensic Prefix (W/R/C/S)
-        let prefix = "R" // Default to Ranking
+        // High-Priority Hierarchy:
+        // 1. Ranking Methods (Ensures R-Method tables stay in R even if they contain 'weight')
+        // 2. Sensitivity Methods (Ensures S-Tab items stay in S)
+        // 3. Comparison Methods
+        // 4. Standalone Weight Methods
+        let prefix = "R"
 
-        if (key.includes("comparison") || key.includes("correlation") || key.includes("spearman") || key.includes("kendall") || key.includes("rank_reversal") || key.includes("ranking_variation")) {
-          prefix = "C"
-        } else if (key.includes("sensitivity") || key.includes("variation") || key.includes("k_sens_")) {
-          prefix = "S"
-        } else if (rankingMethods.some(m => key.startsWith(m + "_"))) {
+        if (rankingMethods.some((m: string) => key.startsWith(m + "_"))) {
           prefix = "R"
-        } else if (key === "decision_matrix" || key === "normalized_decision_matrix" || key.includes("criteria_weight") || weightMethods.some(m => key.startsWith(m + "_")) || key.includes("weight")) {
+        } else if (key.startsWith("sensitivity_") || key.includes("k_sens_")) {
+          prefix = "S"
+        } else if (key.includes("comparison") || key.includes("correlation") || key.includes("spearman") || key.includes("kendall") || key.includes("rank_reversal") || key.includes("ranking_variation")) {
+          prefix = "C"
+        } else if (key.includes("sensitivity") || key.includes("variation")) {
+          prefix = "S"
+        } else if (key === "decision_matrix" || key === "normalized_decision_matrix" || key.includes("criteria_weight") || weightMethods.some((m: string) => key.startsWith(m + "_")) || key.includes("weight")) {
           prefix = "W"
         }
 
@@ -3319,15 +3326,50 @@ export default function MCDMCalculator() {
               : weightMethodInfo?.description
     : methodInfo?.description
 
+  const sweepMethodAssets = (type: 'ranking' | 'weighting') => {
+    setSelectedAiAssets(prev => {
+      const prevArray = Array.from(prev);
+      const sharedRankingKeys = ["result_data_table", "result_data_chart"];
+      const sharedWeightingKeys = ["weight_results_chart", "criteria_weight_chart", "criteria_weight_table"];
+
+      const toRemove: string[] = [];
+      const nextArray = prevArray.filter(key => {
+        const lowKey = key.toLowerCase();
+        let shouldRemove = false;
+
+        if (type === 'ranking') {
+          if (sharedRankingKeys.includes(key)) shouldRemove = true;
+          if (MCDM_METHODS.some(m => lowKey.startsWith(m.value.toLowerCase() + "_") || lowKey === `method_${m.value.toLowerCase()}`)) shouldRemove = true;
+        } else {
+          if (sharedWeightingKeys.includes(key)) shouldRemove = true;
+          if (WEIGHT_METHODS.some(m => lowKey.startsWith(m.value.toLowerCase() + "_") || lowKey === `weight_method_${m.value.toLowerCase()}`)) shouldRemove = true;
+        }
+
+        if (shouldRemove) toRemove.push(key);
+        return !shouldRemove;
+      });
+
+      // Synchronize with localStorage
+      toRemove.forEach(key => localStorage.removeItem(`ai_selected_assets_${key}`));
+      // Update global set in storage if needed (assuming ai_selected_assets is stored as JSON string)
+      const nextSet = new Set(nextArray);
+      localStorage.setItem("ai_selected_assets", JSON.stringify(nextArray));
+
+      return nextSet;
+    });
+  };
+
   // Result page handlers
   const handleRankingMethodChange = async (newMethod: MCDMMethod) => {
-    setIsLoading(true); // Start loading immediately
+    setIsLoading(true);
+    sweepMethodAssets('ranking');
     setMethod(newMethod)
     await handleCalculate(newMethod)
   }
 
   const handleWeightMethodChange = async (newWeightMethod: WeightMethod) => {
-    setIsLoading(true); // Start loading immediately
+    setIsLoading(true);
+    sweepMethodAssets('weighting');
     setWeightMethod(newWeightMethod)
 
     // Handle subjective methods by opening their respective dialogs
@@ -3746,7 +3788,7 @@ export default function MCDMCalculator() {
               <Select value={weightResultsChartType} onValueChange={setWeightResultsChartType}>
                 <SelectTrigger className="h-9 text-[11px] w-48 border-gray-300 bg-white hover:bg-gray-50 transition-colors font-medium text-black">
                   <span className="flex items-center gap-2">
-                    {weightResultsChartType === 'bar' && '📊 Horizontal Ranking'}
+                    {weightResultsChartType === 'bar' && '📊 Academic Ranking'}
                     {weightResultsChartType === 'pie' && '🥧 Pie Chart'}
                     {weightResultsChartType === 'line' && '📈 Line Plot'}
                     {weightResultsChartType === 'area' && '🟦 Area Chart'}
@@ -3755,7 +3797,7 @@ export default function MCDMCalculator() {
                   </span>
                 </SelectTrigger>
                 <SelectContent className="border-gray-300 shadow-md">
-                  <SelectItem value="bar" className="text-[11px]">📊 Horizontal Bar (Ranking)</SelectItem>
+                  <SelectItem value="bar" className="text-[11px]">📊 Academic Weight Ranking</SelectItem>
                   <SelectItem value="pie" className="text-[11px]">🥧 Pie Chart</SelectItem>
                   <SelectItem value="line" className="text-[11px]">📈 Line Plot</SelectItem>
                   <SelectItem value="area" className="text-[11px]">🟦 Area Chart</SelectItem>
@@ -3780,16 +3822,79 @@ export default function MCDMCalculator() {
           <div ref={weightResultsChartRef} className="w-full h-full relative">
             <ResponsiveContainer width="100%" height="100%">
               {weightResultsChartType === 'bar' ? (
-                <BarChart data={data} layout="horizontal" margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="none" stroke="#eee" vertical={false} horizontal={false} />
-                  <XAxis type="number" stroke="#000" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} label={{ value: 'Weight', position: 'bottom', offset: -10, fontSize: 10, fill: '#000' }} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                  <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                  <YAxis dataKey="name" type="category" stroke="#000" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} width={80} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                  <YAxis orientation="right" yAxisId="rb" width={1} tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                  <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                  <Bar dataKey="value" fill="#1f77b4" barSize={25} />
-                  <Bar yAxisId="rb" dataKey="value" fill="transparent" stroke="transparent" barSize={0} legendType="none" isAnimationActive={false} />
-                </BarChart>
+                <ComposedChart
+                  data={[...data].sort((a, b) => b.value - a.value)}
+                  layout="vertical"
+                  margin={{ top: 20, right: 120, left: 140, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#eee" />
+                  <XAxis
+                    type="number"
+                    stroke="#000"
+                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
+                    label={{ value: 'Normalized Criterion Weight (ω)', position: 'bottom', offset: 0, fontSize: 10, fontWeight: 800, fill: '#000' }}
+                    axisLine={{ stroke: "#000", strokeWidth: 2 }}
+                    tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                    domain={[0, Math.max(...data.map(d => d.value), 0.15)]}
+                  />
+                  <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 2 }} />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    stroke="#000"
+                    tick={{ fontSize: 10, fontWeight: 800, fill: "#000" }}
+                    width={120}
+                    axisLine={{ stroke: "#000", strokeWidth: 2 }}
+                    tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                  />
+                  <YAxis orientation="right" yAxisId="rb_border" width={1} tick={false} axisLine={{ stroke: "#000", strokeWidth: 2 }} />
+
+                  {/* Reference line for the mean weight (Equal Weight scenario) */}
+                  <ReferenceLine x={1 / data.length} stroke="#d62728" strokeDasharray="5 5" strokeWidth={1.5} label={{ position: 'top', value: 'Mean', fill: '#d62728', fontSize: 9, fontWeight: 700 }} />
+
+                  <Tooltip
+                    cursor={{ fill: "rgba(0,0,0,0.04)" }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length && payload[0].value !== undefined) {
+                        const val = Number(payload[0].value);
+                        const mean = 1 / data.length;
+                        const sortedData = [...data].sort((a, b) => b.value - a.value);
+                        return (
+                          <div className="bg-white border-2 border-black p-2 shadow-lg text-[10px] font-sans">
+                            <div className="font-bold uppercase tracking-tight border-b border-gray-200 pb-1 mb-1">{payload[0].payload.name}</div>
+                            <div className="flex justify-between gap-4">
+                              <span>Exact Weight:</span>
+                              <span className="font-mono font-bold">{val.toFixed(6)}</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span>Global Rank:</span>
+                              <span className="font-bold">#{sortedData.findIndex(x => x.name === payload[0].payload.name) + 1}</span>
+                            </div>
+                            <div className="mt-1 pt-1 border-t border-gray-100 italic text-gray-500 text-[8px]">
+                              Scientific Index: {(val / mean).toFixed(2)}x Mean
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+
+                  {/* The Stick of the Lollipop - Associated with rb_border to satisfy Recharts secondary axis requirement */}
+                  <Bar dataKey="value" barSize={2} fill="#000" yAxisId="rb_border" />
+
+                  {/* The Head of the Lollipop */}
+                  <Bar dataKey="value" barSize={12} radius={[0, 6, 6, 0]}>
+                    {[...data].sort((a, b) => b.value - a.value).map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={getViridisColor(entry.value)}
+                        stroke="#000"
+                        strokeWidth={1}
+                      />
+                    ))}
+                  </Bar>
+                </ComposedChart>
               ) : weightResultsChartType === 'pie' ? (
                 <PieChart>
                   <Pie
@@ -3838,57 +3943,48 @@ export default function MCDMCalculator() {
                   <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                 </RadarChart>
               ) : (
-                /* --- Matplotlib Heatmap Reconstruction (FINAL MATCH) --- */
-                <div className="flex flex-col items-center h-full w-full py-2">
-                  <div className="flex flex-row items-start justify-center gap-8 px-8 overflow-visible mt-4">
-                    {/* Grid + Title Container */}
-                    <div className="flex flex-col items-center">
-                      <div className="text-[12px] font-sans font-bold text-black mb-4 uppercase tracking-wider">Heatmap</div>
+                <div className="flex flex-col items-center justify-center h-full w-full py-2 animate-in fade-in duration-500">
 
-                      <div className="flex h-[280px] w-[450px] border border-black relative bg-white">
-                        {data.map((d, i) => (
-                          <div
-                            key={i}
-                            className="flex-1 h-full border-r border-black/20 last:border-r-0 relative group"
-                            style={{ backgroundColor: getViridisColor(d.value) }}
-                          >
-                            {/* X-Axis Tick Dash */}
-                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full h-1.5 w-[1px] bg-black" />
-
-                            {/* X-Axis Label (Placed BELOW tick, pointing down-right) */}
-                            <div
-                              className="absolute top-full left-1/2 translate-y-[10px] -translate-x-[15%] rotate-[45deg] origin-top-left text-[9px] font-medium text-black whitespace-nowrap"
-                            >
-                              {d.name}
+                  <div className="flex flex-col md:flex-row items-start justify-center gap-12 px-12 w-full max-w-5xl">
+                    <div className="flex flex-col items-center flex-1 w-full">
+                      <div className="flex h-[450px] w-full border-2 border-black relative bg-white shadow-[8px_8px_0px_rgba(0,0,0,0.05)]">
+                        {data.map((d, i) => {
+                          const dynamicMax = Math.max(...data.map(x => x.value), 0.01);
+                          const f = Math.min(Math.max(d.value / dynamicMax, 0), 1);
+                          let color = "";
+                          if (f <= 0.25) {
+                            const t = f / 0.25; color = `rgb(${Math.round(68 + t * (59 - 68))}, ${Math.round(1 + t * (82 - 1))}, ${Math.round(84 + t * (139 - 84))})`;
+                          } else if (f <= 0.5) {
+                            const t = (f - 0.25) / 0.25; color = `rgb(${Math.round(59 + t * (33 - 59))}, ${Math.round(82 + t * (144 - 82))}, ${Math.round(139 + t * (141 - 139))})`;
+                          } else if (f <= 0.75) {
+                            const t = (f - 0.5) / 0.25; color = `rgb(${Math.round(33 + t * (93 - 33))}, ${Math.round(144 + t * (201 - 144))}, ${Math.round(141 + t * (99 - 141))})`;
+                          } else {
+                            const t = (f - 0.75) / 0.25; color = `rgb(${Math.round(93 + t * (253 - 93))}, ${Math.round(201 + t * (231 - 201))}, ${Math.round(99 + t * (37 - 99))})`;
+                          }
+                          return (
+                            <div key={i} className="flex-1 h-full border-r border-black/20 last:border-r-0 relative group transition-all" style={{ backgroundColor: color }}>
+                              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full h-2 w-[1.5px] bg-black" />
+                              <div className="absolute top-full left-1/2 translate-y-[15px] -translate-x-[20%] rotate-[45deg] origin-top-left text-[10px] font-bold text-black whitespace-nowrap">{d.name}</div>
+                              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-2 py-1 rounded text-[10px] shadow-sm font-mono border border-white/20">{d.value.toFixed(4)}</div>
                             </div>
-                          </div>
-                        ))}
-
-                        {/* Y-Axis Label 'Weights' (Centered and Horizontal) */}
-                        <div className="absolute left-0 top-1/2 -translate-x-full pr-3 flex items-center">
-                          <span className="text-[10px] font-sans text-black">Weights</span>
-                          <div className="w-1.5 h-[1px] bg-black ml-1" />
+                          );
+                        })}
+                        <div className="absolute left-0 top-1/2 -translate-x-full pr-10 flex items-center">
+                          <span className="text-[11px] font-bold text-black uppercase tracking-widest -rotate-90">Weights</span>
+                          <div className="w-6 h-[2px] bg-black ml-2" />
                         </div>
                       </div>
                     </div>
-
-                    {/* Colorbar: Explicitly matched height and position to Top of Grid area */}
-                    <div className="flex flex-col items-center" style={{ marginTop: '32px' }}>
-                      <div className="flex items-center h-[280px] gap-2 pr-1">
-                        {/* 5-Point Viridis Gradient matching getViridisColor logic */}
-                        <div
-                          className="w-[18px] h-full border border-black"
-                          style={{
-                            background: 'linear-gradient(to top, #440154 0%, #3b528b 25%, #21908d 50%, #5dc963 75%, #fde725 100%)'
-                          }}
-                        />
-                        <div className="flex flex-col justify-between h-full py-0 text-[8.5px] font-sans font-medium text-black">
-                          <span>{SCIENTIFIC_MAX_WEIGHT.toFixed(2)}</span>
-                          <span>{(SCIENTIFIC_MAX_WEIGHT * 0.8).toFixed(2)}</span>
-                          <span>{(SCIENTIFIC_MAX_WEIGHT * 0.6).toFixed(2)}</span>
-                          <span>{(SCIENTIFIC_MAX_WEIGHT * 0.4).toFixed(2)}</span>
-                          <span>{(SCIENTIFIC_MAX_WEIGHT * 0.2).toFixed(2)}</span>
-                          <span>0.00</span>
+                    <div className="flex flex-col items-center">
+                      <div className="flex items-start h-[450px] gap-4 pl-4">
+                        <div className="w-[30px] min-w-[30px] h-full border-2 border-black relative" style={{ backgroundImage: 'linear-gradient(to top, #440154 0%, #3b528b 25%, #21908d 50%, #5dc963 75%, #fde725 100%)' }}>
+                          <div className="absolute -top-7 left-1/2 -translate-x-1/2 text-[12px] font-bold text-black uppercase tracking-tighter">ω</div>
+                        </div>
+                        <div className="flex flex-col justify-between h-full py-0 text-[11px] font-sans font-bold text-black">
+                          {(() => {
+                            const dMax = Math.max(...data.map(x => x.value), 0.01);
+                            return [1, 0.8, 0.6, 0.4, 0.2, 0].map(p => <span key={p}>{(dMax * p).toFixed(3)}</span>);
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -3904,6 +4000,7 @@ export default function MCDMCalculator() {
       </Card>
     );
   };
+
   const renderWorkflowNavigation = () => {
     return (
       <div className="grid grid-cols-2 sm:flex sm:flex-nowrap items-stretch gap-1 mb-4">
@@ -4488,7 +4585,7 @@ export default function MCDMCalculator() {
                         <div
                           key={m.value}
                           onClick={() => {
-                            setMethod(m.value)
+                            handleRankingMethodChange(m.value)
                             setActiveFormulaType("method")
                             setIsDialogOpen(true)
                           }}
@@ -4848,7 +4945,7 @@ export default function MCDMCalculator() {
                         <div
                           key={w.value}
                           onClick={() => {
-                            setWeightMethod(w.value)
+                            handleWeightMethodChange(w.value)
                             if (w.value === "hybrid") {
                               setIsHybridDialogOpen(true)
                             } else {
@@ -6645,7 +6742,7 @@ export default function MCDMCalculator() {
                                     <SelectItem value="area">Area Chart</SelectItem>
                                     <SelectItem value="stackedArea">Stacked Area Chart</SelectItem>
                                     <SelectItem value="scatter">Scatter Plot</SelectItem>
-                                    <SelectItem value="composed">Diverging Bar Chart</SelectItem>
+                                    <SelectItem value="composed">Hybrid Rank–Score Comparison</SelectItem>
                                     <SelectItem value="radar">Radar Chart</SelectItem>
                                     <SelectItem value="scientific">Scientific Polar Plot</SelectItem>
                                     <SelectItem value="heatmap">Heatmap</SelectItem>
@@ -6660,7 +6757,7 @@ export default function MCDMCalculator() {
                             </ResearchAssetHeader>
                             <CardDescription className="text-xs text-gray-700 mt-1">
                               {comparisonChartType === "composed"
-                                ? "Deviation from average rank - bars extending left are better than average."
+                                ? "Hybrid visualization of ordinal rankings (bars) and primary performance scores (line)."
                                 : comparisonChartType === "scientific"
                                   ? "Academic polar area visualization comparing method rankings across all alternatives simultaneously."
                                   : comparisonChartType === "dual"
@@ -6668,7 +6765,7 @@ export default function MCDMCalculator() {
                                     : "Chart comparing alternative ranks across selected methods."}
                             </CardDescription>
                           </CardHeader>
-                          <CardContent className={`${comparisonChartType === "heatmap" ? "h-auto" : "h-[800px] sm:h-[600px]"} p-0 sm:px-6 sm:py-2 mt-0`}>
+                          <CardContent className={`${comparisonChartType === "heatmap" ? "h-auto" : comparisonChartType === "composed" ? "h-[1200px] sm:h-[1000px]" : "h-[800px] sm:h-[600px]"} p-0 sm:px-6 sm:py-2 mt-0`}>
                             {(() => {
                               if (comparisonChartType === "heatmap") {
                                 return (
@@ -6867,10 +6964,9 @@ export default function MCDMCalculator() {
                                         </ComposedChart>
                                       </ResponsiveContainer>
                                     )
-                                  })() : (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                      {(() => {
-                                        switch (comparisonChartType) {
+                                  })() : (() => {
+                                    const renderedChart = (() => {
+                                      switch (comparisonChartType) {
                                           case "radar":
                                             return (
                                               <RadarChart margin={{ top: 5, right: 120, left: 120, bottom: 60 }} cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
@@ -6942,7 +7038,6 @@ export default function MCDMCalculator() {
                                                         }}
                                                         axisLine={false}
                                                       />
-                                                      {/* Method-Zone Background Fills (Colored Sectors) */}
                                                       {comparisonResults.map((res, idx) => (
                                                         <Radar
                                                           key={`sector-${res.label}`}
@@ -6960,8 +7055,6 @@ export default function MCDMCalculator() {
                                                         content={({ active, payload, label }) => {
                                                           const realLabel = label?.includes('_sub_') ? label.split('_sub_')[0] : label;
                                                           if (active && payload && payload.length) {
-                                                            // Filter out background sectors from tooltip
-                                                            // We check if it's one of the methods in comparisonResults
                                                             const realPayload = payload.filter((p: any) =>
                                                               p.name &&
                                                               typeof p.name === 'string' &&
@@ -7006,14 +7099,11 @@ export default function MCDMCalculator() {
                                                         content={(props) => {
                                                           const { payload } = props;
                                                           if (!payload) return null;
-
-                                                          // Split payload into Alternatives and Methods
                                                           const alternatives = payload.filter(p => !comparisonResults.some(r => r.label === p.value));
                                                           const methods = payload.filter(p => comparisonResults.some(r => r.label === p.value));
 
                                                           return (
                                                             <div className="flex flex-col items-center">
-                                                              {/* Row 1: Alternatives */}
                                                               <div className="flex flex-wrap justify-center gap-x-2 gap-y-0.2">
                                                                 {alternatives.map((entry, index) => (
                                                                   <div key={`alt-${index}`} className="flex items-center gap-1">
@@ -7022,7 +7112,6 @@ export default function MCDMCalculator() {
                                                                   </div>
                                                                 ))}
                                                               </div>
-                                                              {/* Row 2: Ranking Methods (Zones) */}
                                                               <div className="flex flex-wrap justify-center gap-x-3 gap-y-0.5 w-full max-w-2xl">
                                                                 {methods.map((entry, index) => (
                                                                   <div key={`meth-${index}`} className="flex items-center gap-1.5">
@@ -7233,46 +7322,101 @@ export default function MCDMCalculator() {
                                               </AreaChart>
                                             );
                                           case "composed":
-                                            const composedData = comparisonChartData.map(d => {
-                                              const avgRank = comparisonChartAlternatives.reduce((sum, alt) => sum + (d[alt] || 0), 0) / comparisonChartAlternatives.length;
-                                              const divergingData: any = { method: d.method };
-                                              comparisonChartAlternatives.forEach(alt => {
-                                                const rank = d[alt] || 0;
-                                                divergingData[alt] = rank - avgRank;
+                                            const hybridData = comparisonChartAlternatives.map(alt => {
+                                              const item: any = { alternative: alt };
+                                              comparisonResults.forEach(res => {
+                                                const rankItem = res.ranking.find(r => r.alternativeName === alt);
+                                                item[res.label] = rankItem ? rankItem.rank : null;
+                                                item[res.label + "_score"] = rankItem ? (typeof rankItem.score === "string" ? parseFloat(rankItem.score) : rankItem.score) : 0;
                                               });
-                                              return divergingData;
+                                              return item;
                                             });
+
                                             return (
-                                              <BarChart data={composedData} layout="horizontal" margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
-                                                <CartesianGrid strokeDasharray="3 3" />
-                                                <XAxis type="number" label={{ value: "Deviation from Average Rank", position: "insideBottom", offset: -10 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                                <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                                <YAxis type="category" dataKey="method" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} width={90} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                                <YAxis orientation="right" yAxisId="right_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                                <Tooltip formatter={(value: any, name: string) => [`${parseFloat(value) > 0 ? '+' : ''}${parseFloat(value).toFixed(2)} (${parseFloat(value) < 0 ? 'Better' : 'Worse'} than avg)`, name]} />
-                                                <Legend wrapperStyle={{
-                                                  fontSize: "10px",
-                                                  color: "#000",
-                                                  fontWeight: 700,
-                                                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                  border: "1px solid #000",
-                                                  padding: "4px 8px",
-                                                  top: 5,
-                                                  left: "50%",
-                                                  transform: "translateX(-50%)",
-                                                  width: "max-content",
-                                                  maxWidth: "95%",
-                                                  zIndex: 50,
-                                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                  display: "flex",
-                                                  justifyContent: "center",
-                                                  whiteSpace: "nowrap"
-                                                }} layout="horizontal" align="center" verticalAlign="bottom" iconType="square" />
-                                                <ReferenceLine x={0} stroke="#666" strokeWidth={2} />
-                                                {comparisonChartAlternatives.map((alt, idx) => (
-                                                  <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} stackId="stack" />
+                                              <ComposedChart data={hybridData} margin={{ top: 10, right: 120, left: 120, bottom: 80 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                                                <XAxis
+                                                  dataKey="alternative"
+                                                  tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
+                                                  label={{ value: "Alternatives", position: "insideBottom", offset: -45, style: { fontSize: "12px", fontWeight: 700, fill: "#000" } }}
+                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
+                                                  tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                                  interval={0}
+                                                  angle={-45}
+                                                  textAnchor="end"
+                                                />
+                                                <XAxis orientation="top" xAxisId="top_axis" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                                <YAxis
+                                                  yAxisId="rank"
+                                                  reversed={true}
+                                                  domain={[0, "auto"]}
+                                                  allowDecimals={false}
+                                                  tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
+                                                  label={{ value: "Ordinal Ranking (1 = Top)", angle: -90, position: "insideLeft", style: { fontSize: "12px", fontWeight: 700, fill: "#000" } }}
+                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
+                                                  tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                                />
+                                                <YAxis
+                                                  yAxisId="score"
+                                                  orientation="right"
+                                                  domain={[0, "auto"]}
+                                                  tick={{ fontSize: 10, fontWeight: 700, fill: "#666" }}
+                                                  label={{ value: "Algorithm Performance Scores", angle: 90, position: "insideRight", style: { fontSize: "12px", fontWeight: 700, fill: "#666" } }}
+                                                  axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
+                                                  tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                                />
+                                                <Tooltip
+                                                  contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }}
+                                                  cursor={{ fill: "rgba(0,0,0,0.05)" }}
+                                                />
+                                                <Legend
+                                                  verticalAlign="top"
+                                                  align="center"
+                                                  layout="horizontal"
+                                                  wrapperStyle={{
+                                                    fontSize: "9px",
+                                                    color: "#000",
+                                                    fontWeight: 700,
+                                                    backgroundColor: "rgba(255, 255, 255, 0.98)",
+                                                    border: "1.5px solid #000",
+                                                    padding: "6px 10px",
+                                                    top: 80,
+                                                    left: "50%",
+                                                    transform: "translateX(-50%)",
+                                                    width: "85%",
+                                                    maxWidth: "1000px",
+                                                    zIndex: 100,
+                                                    boxShadow: "3px 3px 0px rgba(0,0,0,1)",
+                                                    display: "flex",
+                                                    flexWrap: "wrap",
+                                                    justifyContent: "center",
+                                                    gap: "4px"
+                                                  }}
+                                                />
+                                                {comparisonResults.map((res, idx) => (
+                                                  <Bar
+                                                    key={`${res.label}_bar`}
+                                                    yAxisId="rank"
+                                                    dataKey={res.label}
+                                                    name={`${res.label} Rank`}
+                                                    fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                                                    barSize={15}
+                                                  />
                                                 ))}
-                                              </BarChart>
+                                                {comparisonResults.map((res, idx) => (
+                                                  <Line
+                                                    key={`${res.label}_score_line`}
+                                                    yAxisId="score"
+                                                    type="monotone"
+                                                    dataKey={`${res.label}_score`}
+                                                    name={`${res.label} Score`}
+                                                    stroke={CHART_COLORS[idx % CHART_COLORS.length]}
+                                                    strokeWidth={2}
+                                                    dot={{ r: 4, fill: CHART_COLORS[idx % CHART_COLORS.length], strokeWidth: 1.5, stroke: "#fff" }}
+                                                    activeDot={{ r: 6 }}
+                                                  />
+                                                ))}
+                                              </ComposedChart>
                                             );
                                           case "scatter":
                                             return (
@@ -7354,7 +7498,6 @@ export default function MCDMCalculator() {
 
                                             return (
                                               <div className="w-full h-full relative">
-                                                {/* Box Plot Legend */}
                                                 <div
                                                   style={{
                                                     position: 'absolute',
@@ -7410,23 +7553,8 @@ export default function MCDMCalculator() {
                                                       </g>
                                                     )
                                                   })}
-                                                  <text
-                                                    x={pad.left - 45}
-                                                    y={pad.top + cH / 2}
-                                                    fontSize="12"
-                                                    fontWeight="700"
-                                                    fill="#000"
-                                                    transform={`rotate(-90, ${pad.left - 45}, ${pad.top + cH / 2})`}
-                                                    textAnchor="middle"
-                                                  >Ordinal Ranking</text>
-                                                  <text
-                                                    x={pad.left + cW / 2}
-                                                    y={395}
-                                                    fontSize="12"
-                                                    fontWeight="700"
-                                                    fill="#000"
-                                                    textAnchor="middle"
-                                                  >MCDM Methods</text>
+                                                  <text x={pad.left - 45} y={pad.top + cH / 2} fontSize="12" fontWeight="700" fill="#000" transform={`rotate(-90, ${pad.left - 45}, ${pad.top + cH / 2})`} textAnchor="middle">Ordinal Ranking</text>
+                                                  <text x={pad.left + cW / 2} y={395} fontSize="12" fontWeight="700" fill="#000" textAnchor="middle">MCDM Methods</text>
                                                 </svg>
                                               </div>
                                             );
@@ -7476,10 +7604,14 @@ export default function MCDMCalculator() {
                                                 ))}
                                               </LineChart>
                                             );
-                                        }
-                                      })()}
-                                    </ResponsiveContainer>
-                                  )}
+                                      }
+                                    })();
+                                    return (
+                                      <ResponsiveContainer width="100%" height="100%">
+                                        {renderedChart }
+                                      </ResponsiveContainer>
+                                    );
+                                  })()}
                                 </div>
                               );
                             })()}
@@ -19069,6 +19201,7 @@ export default function MCDMCalculator() {
                 setIsAhpDialogOpen(false)
                 const updatedCriteria = criteria.map(c => ({ ...c, weight: weights[c.id] || 0 }))
                 setCriteria(updatedCriteria)
+                sweepMethodAssets('weighting')
                 setWeightMethod("ahp")
                 handleCalculate(method, updatedCriteria)
               }}
@@ -19089,6 +19222,7 @@ export default function MCDMCalculator() {
                 setIsPipreciaDialogOpen(false)
                 const updatedCriteria = criteria.map(c => ({ ...c, weight: weights[c.id] || 0 }))
                 setCriteria(updatedCriteria)
+                sweepMethodAssets('weighting')
                 setWeightMethod("piprecia")
                 handleCalculate(method, updatedCriteria)
               }}
@@ -19166,6 +19300,7 @@ export default function MCDMCalculator() {
                     setIsSwaraDialogOpen(false)
                     const updatedCriteria = criteria.map(c => ({ ...c, weight: data.weights[c.id] || 0 }))
                     setCriteria(updatedCriteria)
+                    sweepMethodAssets('weighting')
                     setWeightMethod("swara")
                     handleCalculate(method, updatedCriteria)
                   } catch (error) {
@@ -19328,6 +19463,7 @@ export default function MCDMCalculator() {
                       }))
                       setCriteria(updatedCriteria)
                       setIsMainCustomWeightsDialogOpen(false)
+                      sweepMethodAssets('weighting')
                       setWeightMethod("custom")
 
                       // Trigger calculation

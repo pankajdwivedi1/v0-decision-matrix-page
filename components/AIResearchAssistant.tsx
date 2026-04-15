@@ -333,25 +333,30 @@ export function AIResearchAssistant({
             const weightMethodsKeys = ['entropy', 'merec', 'critic', 'ahp', 'piprecia', 'swara', 'roc', 'rr', 'wenslo', 'lopcow', 'dematel', 'sd', 'variance', 'mad', 'dbw', 'svp', 'mdm', 'lsw', 'gpow', 'lpwm', 'pcwm', 'seca', 'idocriw'];
             const rankingMethodsKeys = ['topsis', 'waspas', 'moora', 'multimoora', 'vikor', 'edas', 'copras', 'todim', 'codas', 'moosra', 'mairca', 'marcos', 'swei', 'swi', 'ocra', 'electre', 'oresme', 'pivia'];
 
-            // Priority 1: Comparison & Correlation (Forensic C)
+            // Priority 1: Ranking Methods (Forensic R)
+            // We check this first so that ranking method internal tables (like "weighted matrix") 
+            // aren't stolen by the "Weight (W)" category.
+            if (rankingMethodsKeys.some(m => lowKey.startsWith(m + "_"))) return 'R';
+
+            // Priority 2: Standalone Sensitivity (Forensic S)
+            if (lowKey.startsWith("sensitivity_") || lowKey.includes("k_sens_") || lowKey.includes("oat_variation")) return 'S';
+            
+            // Priority 3: Comparison & Correlation (Forensic C)
             if (lowKey.includes("comparison") || lowKey.includes("correlation") || lowKey.includes("spearman") || lowKey.includes("kendall") || lowKey.includes("rank_reversal")) {
-                // Special case: sensitivity comparison belongs to S
-                if (lowKey.startsWith("sensitivity_comparison")) return 'S';
                 return 'C';
             }
             
-            // Priority 2: Ranking Variation charts (from Comparison tab, belongs to C)
+            // Priority 4: Ranking Variation (Comparison Tab)
             if (lowKey.includes("ranking_variation")) return 'C';
             
-            // Priority 3: Sensitivity & Perturbation (Forensic S)
-            if (lowKey.includes("sensitivity") || lowKey.includes("k_sens_") || lowKey.includes("oat_variation")) return 'S';
+            // Priority 5: Objective/Subjective Weight Methods (Category W)
+            if (lowKey === "decision_matrix" || lowKey === "normalized_decision_matrix" || 
+                lowKey.includes("criteria_weight") || 
+                weightMethodsKeys.some(m => lowKey.startsWith(m + "_")) || 
+                (lowKey.includes("weight") && !rankingMethodsKeys.some(m => lowKey.includes(m)))) return 'W';
             
-            // Priority 4: Direct Weight Methods (Forensic W)
-            if (lowKey === "decision_matrix" || lowKey === "normalized_decision_matrix" || lowKey.includes("criteria_weight") || 
-                weightMethodsKeys.some(m => lowKey.startsWith(m + "_")) || lowKey.includes("weight")) return 'W';
-            
-            // Priority 5: Direct Ranking Methods (Forensic R)
-            if (rankingMethodsKeys.some(m => lowKey.startsWith(m + "_"))) return 'R';
+            // Priority 6: Fallback Sensitivity
+            if (lowKey.includes("sensitivity")) return 'S';
             
             return 'R'; // Default fallback
         };
@@ -464,13 +469,18 @@ export function AIResearchAssistant({
                 const isFigure = (lowKey.includes("chart") || lowKey.includes("plot") || lowKey.includes("radar") || lowKey.includes("graph") || lowKey.includes("composed") || lowKey.includes("variation")) && !lowKey.includes("table") && !lowKey.includes("matrix");
 
                 // Step 2: Determine Forensic Prefix (W/R/C/S) using consistent priority
+                // IMPORTANT: Sensitivity keys must be checked FIRST because some keys
+                // (e.g. "sensitivity_weight_comparison_table") contain the word "comparison"
+                // and would otherwise be wrongly classified as 'C'.
                 let prefix = "R"; 
 
-                if (lowKey.includes("comparison") || lowKey.includes("correlation") || lowKey.includes("spearman") || lowKey.includes("kendall") || lowKey.includes("rank_reversal")) {
-                    prefix = lowKey.startsWith("sensitivity_comparison") ? "S" : "C";
+                if (lowKey.startsWith("sensitivity_") || lowKey.includes("k_sens_") || lowKey.includes("oat_variation")) {
+                    prefix = "S";
+                } else if (lowKey.includes("comparison") || lowKey.includes("correlation") || lowKey.includes("spearman") || lowKey.includes("kendall") || lowKey.includes("rank_reversal")) {
+                    prefix = "C";
                 } else if (lowKey.includes("ranking_variation")) {
                     prefix = "C";
-                } else if (lowKey.includes("sensitivity") || lowKey.includes("k_sens_") || lowKey.includes("oat_variation")) {
+                } else if (lowKey.includes("sensitivity")) {
                     prefix = "S";
                 } else if (lowKey === "decision_matrix" || lowKey === "normalized_decision_matrix" || lowKey.includes("criteria_weight") || 
                            weightMethods.some(m => lowKey.startsWith(m + "_")) || lowKey.includes("weight")) {
