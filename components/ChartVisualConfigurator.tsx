@@ -16,7 +16,12 @@ import {
   BarChart2,
   Hash,
   Box,
-  Monitor
+  Monitor,
+  ChevronUp,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Circle
 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -70,6 +75,10 @@ export interface ChartSettings {
   // Axis Placement
   xAxisOffset: number;
   yAxisOffset: number;
+
+  // Legend Fine-tuning
+  legendOffsetX: number;
+  legendOffsetY: number;
 }
 
 interface ChartVisualConfiguratorProps {
@@ -92,47 +101,82 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
     default: ['#8884d8', '#82ca9d', '#ffc658', '#0088fe', '#00c49f']
   };
 
+  const intervalRef = React.useRef<any>(null);
+
+  const startNudging = (dx: number, dy: number) => {
+    if (intervalRef.current) return;
+    
+    // 1. Move immediately by 15px (0.5cm) for responsiveness
+    onSettingsChange({
+      ...settings,
+      legendOffsetX: settings.legendOffsetX + (dx > 0 ? 15 : dx < 0 ? -15 : 0),
+      legendOffsetY: settings.legendOffsetY + (dy > 0 ? 15 : dy < 0 ? -15 : 0)
+    });
+
+    // 2. Start the continuous glide if they keep holding (slight delay like a keyboard repeat)
+    const performCrawl = () => {
+      onSettingsChange({
+        ...settings,
+        legendOffsetX: settings.legendOffsetX + (dx > 0 ? 2 : dx < 0 ? -2 : 0),
+        legendOffsetY: settings.legendOffsetY + (dy > 0 ? 2 : dy < 0 ? -2 : 0)
+      });
+    };
+
+    // Wait 250ms before repeating (prevents accidentally gliding on a quick tap)
+    intervalRef.current = setTimeout(() => {
+      intervalRef.current = setInterval(performCrawl, 30);
+    }, 250);
+  };
+
+  const stopNudging = () => {
+    if (intervalRef.current) {
+      clearTimeout(intervalRef.current);
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
+
   return (
-    <div className="w-full bg-[#f8fafc] border-x border-b border-gray-200 animate-in fade-in slide-in-from-top-2 duration-500 shadow-sm overflow-hidden rounded-b-xl">
-      <Tabs defaultValue="style" className="w-full">
-        <div className="flex items-center justify-between px-4 bg-white border-b border-gray-100">
-          <TabsList className="bg-transparent h-12 gap-6">
-            <TabsTrigger value="elements" className="data-[state=active]:bg-blue-100/50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none data-[state=active]:border-b-[3px] data-[state=active]:border-blue-600 rounded-none h-12 text-[11px] font-black tracking-tight gap-2 transition-all">
-              <Box className="w-4 h-4" /> CHART ELEMENTS
+    <div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+      <Tabs defaultValue="elements" className="w-full">
+        <div className="bg-slate-50/50 border-b border-slate-100 px-4 pt-4 flex items-center justify-between">
+          <TabsList className="grid grid-cols-3 w-[350px] h-10 bg-slate-100/50 p-1 rounded-lg">
+            <TabsTrigger value="elements" className="text-[10px] font-black uppercase tracking-widest gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <Box className="w-3.5 h-3.5" /> Elements
             </TabsTrigger>
-            <TabsTrigger value="style" className="data-[state=active]:bg-blue-100/50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none data-[state=active]:border-b-[3px] data-[state=active]:border-blue-600 rounded-none h-12 text-[11px] font-black tracking-tight gap-2 transition-all">
-              <Brush className="w-4 h-4" /> STYLE & COLOR
+            <TabsTrigger value="style" className="text-[10px] font-black uppercase tracking-widest gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <Brush className="w-3.5 h-3.5" /> Style
             </TabsTrigger>
-            <TabsTrigger value="layout" className="data-[state=active]:bg-blue-100/50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none data-[state=active]:border-b-[3px] data-[state=active]:border-blue-600 rounded-none h-12 text-[11px] font-black tracking-tight gap-2 transition-all">
-              <Layout className="w-4 h-4" /> AXIS & LAYOUT
+            <TabsTrigger value="layout" className="text-[10px] font-black uppercase tracking-widest gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <Layout className="w-3.5 h-3.5" /> Layout
             </TabsTrigger>
           </TabsList>
-
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100">
+          
+          <div className="flex items-center gap-2 pr-2">
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100 shadow-sm">
               <Settings className="w-3 h-3 animate-spin-slow" />
               <span className="text-[10px] font-black uppercase tracking-wider">Editor Active</span>
             </div>
           </div>
         </div>
 
-        <div className="p-4 sm:p-5">
+        <div className="p-4 sm:p-6 min-h-[420px]">
           {/* ELEMENTS TAB */}
           <TabsContent value="elements" className="mt-0 space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-3">
                 <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Visibility</Label>
                 <div className="grid gap-2">
-                  <div className="flex flex-col gap-2 p-2 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors">
+                  <div className="space-y-2 p-2.5 bg-white border border-slate-200 rounded-lg group hover:border-blue-300 transition-all duration-300">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Grid3X3 className="w-3.5 h-3.5 text-slate-400" />
+                        <Grid3X3 className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
                         <span className="text-xs font-bold text-slate-700">Grid Lines</span>
                       </div>
                       <Switch checked={settings.showGridLines} onCheckedChange={(val: boolean) => updateSetting('showGridLines', val)} />
                     </div>
                     {settings.showGridLines && (
-                      <div className="pt-2 border-t border-slate-50 flex gap-1">
+                      <div className="flex gap-1 pt-1">
                         <Button
                           variant={settings.gridLinesMode === 'horizontal' ? 'default' : 'outline'}
                           size="sm"
@@ -174,21 +218,86 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     </div>
                     <Switch checked={settings.showAxisTitles} onCheckedChange={(val: boolean) => updateSetting('showAxisTitles', val)} />
                   </div>
-                  <Select value={settings.legendPosition} onValueChange={(val: any) => updateSetting('legendPosition', val)}>
-                    <SelectTrigger className="h-9 text-xs font-bold bg-white">
-                      <div className="flex items-center gap-2 text-slate-700 uppercase">
-                        <Monitor className="w-3.5 h-3.5" />
-                        <SelectValue />
+                  
+                  <div className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg group hover:border-blue-400 transition-all duration-300">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <Monitor className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                        <span className="text-xs font-black text-slate-700 uppercase tracking-tighter">Legend Pos</span>
                       </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="top">Top Header</SelectItem>
-                      <SelectItem value="middle">Overlay UI</SelectItem>
-                      <SelectItem value="bottom">Bottom Footer</SelectItem>
-                      <SelectItem value="left">Left Sidebar</SelectItem>
-                      <SelectItem value="right">Right Sidebar</SelectItem>
-                    </SelectContent>
-                  </Select>
+                      <div className="flex flex-col text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-tight">
+                        <span>{settings.legendPosition}</span>
+                        <div className="flex gap-2">
+                          <span>X: {settings.legendOffsetX}</span>
+                          <span>Y: {settings.legendOffsetY}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-1 bg-slate-50 p-1 rounded-lg border border-slate-100 shadow-inner">
+                      <div />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
+                        onMouseDown={() => startNudging(0, -1)}
+                        onMouseUp={stopNudging}
+                        onMouseLeave={stopNudging}
+                        title="Move Up (Tap: 0.5cm / Hold: Smooth)"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </Button>
+                      <div />
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
+                        onMouseDown={() => startNudging(-1, 0)}
+                        onMouseUp={stopNudging}
+                        onMouseLeave={stopNudging}
+                        title="Move Left (Tap: 0.5cm / Hold: Smooth)"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant={settings.legendPosition === 'middle' && settings.legendOffsetX === 0 && settings.legendOffsetY === 0 ? 'default' : 'ghost'}
+                        size="icon"
+                        className={`h-7 w-7 rounded-sm transition-all ${settings.legendPosition === 'middle' && settings.legendOffsetX === 0 && settings.legendOffsetY === 0 ? 'bg-blue-600 text-white' : 'hover:bg-white text-slate-400 active:scale-90'}`}
+                        onClick={() => {
+                          onSettingsChange({ ...settings, legendPosition: 'middle', legendOffsetX: 0, legendOffsetY: 0 });
+                        }}
+                        title="Reset to Center"
+                      >
+                        <Circle className="w-2.5 h-2.5 fill-current opacity-70" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
+                        onMouseDown={() => startNudging(1, 0)}
+                        onMouseUp={stopNudging}
+                        onMouseLeave={stopNudging}
+                        title="Move Right (Tap: 0.5cm / Hold: Smooth)"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+
+                      <div />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
+                        onMouseDown={() => startNudging(0, 1)}
+                        onMouseUp={stopNudging}
+                        onMouseLeave={stopNudging}
+                        title="Move Down (Tap: 0.5cm / Hold: Smooth)"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                      <div />
+                    </div>
+                  </div>
 
                   <div className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg">
                     <span className="text-xs font-bold text-slate-700 uppercase tracking-tighter">Legend Style</span>
@@ -196,13 +305,13 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                       <Button
                         variant={settings.legendLayout === 'horizontal' ? 'secondary' : 'ghost'}
                         size="sm"
-                        className="h-6 text-[9px]"
+                        className="h-6 text-[9px] px-2 font-bold"
                         onClick={() => updateSetting('legendLayout', 'horizontal')}
                       >HORIZ</Button>
                       <Button
                         variant={settings.legendLayout === 'vertical' ? 'secondary' : 'ghost'}
                         size="sm"
-                        className="h-6 text-[9px]"
+                        className="h-6 text-[9px] px-2 font-bold"
                         onClick={() => updateSetting('legendLayout', 'vertical')}
                       >VERT</Button>
                     </div>
@@ -210,29 +319,29 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                 </div>
               </div>
 
-              <div className="space-y-3 col-span-2">
-                <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Axis Label Editor</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-blue-500 uppercase">X</span>
-                    <Input
-                      value={settings.xAxisTitle}
-                      onChange={(e) => updateSetting('xAxisTitle', e.target.value)}
-                      disabled={!settings.showAxisTitles}
-                      placeholder="X-Axis Title"
-                      className="pl-7 h-9 text-xs font-bold"
-                    />
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-green-500 uppercase">Y</span>
-                    <Input
-                      value={settings.yAxisTitle}
-                      onChange={(e) => updateSetting('yAxisTitle', e.target.value)}
-                      disabled={!settings.showAxisTitles}
-                      placeholder="Y-Axis Title"
-                      className="pl-7 h-9 text-xs font-bold"
-                    />
-                  </div>
+              <div className="space-y-3 col-span-2 md:col-span-1">
+                <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Axis Labels</Label>
+                <div className="grid gap-2">
+                   <div className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-lg">
+                      <span className="text-[10px] font-black text-blue-500 w-4">X</span>
+                      <Input
+                        value={settings.xAxisTitle}
+                        onChange={(e) => updateSetting('xAxisTitle', e.target.value)}
+                        disabled={!settings.showAxisTitles}
+                        placeholder="X-Axis Title"
+                        className="h-7 text-[11px] font-bold border-none shadow-none focus-visible:ring-0 p-0"
+                      />
+                   </div>
+                   <div className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-lg">
+                      <span className="text-[10px] font-black text-green-500 w-4">Y</span>
+                      <Input
+                        value={settings.yAxisTitle}
+                        onChange={(e) => updateSetting('yAxisTitle', e.target.value)}
+                        disabled={!settings.showAxisTitles}
+                        placeholder="Y-Axis Title"
+                        className="h-7 text-[11px] font-bold border-none shadow-none focus-visible:ring-0 p-0"
+                      />
+                   </div>
                 </div>
               </div>
             </div>
@@ -242,7 +351,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
           <TabsContent value="style" className="mt-0 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-4 pt-1">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between underline decoration-slate-200 underline-offset-4">
                   <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Master Palette</Label>
                   <Palette className="w-3.5 h-3.5 text-blue-500" />
                 </div>
@@ -265,37 +374,25 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
               </div>
 
               <div className="space-y-4 border-l border-slate-100 pl-8">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between underline decoration-slate-200 underline-offset-4">
                   <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Visual Theme</Label>
                   <Brush className="w-3.5 h-3.5 text-indigo-500" />
                 </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-600">Background</span>
-                    <Select value={settings.backgroundTheme} onValueChange={(val: any) => updateSetting('backgroundTheme', val)}>
-                      <SelectTrigger className="h-8 text-xs font-bold w-32 bg-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="white">Pristine White</SelectItem>
-                        <SelectItem value="slate">Light Slate</SelectItem>
-                        <SelectItem value="dark">Journal Dark</SelectItem>
-                        <SelectItem value="glass">Soft Glass</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-600">Grid Color</span>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={settings.gridColor}
-                        onChange={(e) => updateSetting('gridColor', e.target.value)}
-                        className="w-6 h-6 rounded-md cursor-pointer border-none p-0"
-                      />
-                      <span className="text-[10px] font-mono text-slate-400">{settings.gridColor.toUpperCase()}</span>
-                    </div>
-                  </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['white', 'slate', 'dark', 'glass'] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => updateSetting('backgroundTheme', t)}
+                      className={`p-2 rounded-xl border text-left transition-all ${settings.backgroundTheme === t ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                    >
+                      <div className="text-[9px] font-black uppercase mb-1.5 text-slate-400 tracking-tighter">{t}</div>
+                      <div className="w-full h-3 rounded border border-slate-100" style={{
+                        backgroundColor: t === 'white' ? '#fff' : t === 'slate' ? '#f8fafc' : t === 'dark' ? '#0f172a' : 'rgba(255,255,255,0.7)'
+                      }} />
+                    </button>
+                  ))}
+                </div>
+                <div className="pt-4 space-y-4 border-t border-slate-50">
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-[10px] font-black text-slate-400">
                       <span>FILL OPACITY</span>
@@ -344,8 +441,8 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
 
           {/* LAYOUT TAB */}
           <TabsContent value="layout" className="mt-0 space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              <div className="space-y-4">
+            <div className="flex flex-col md:flex-row gap-8">
+              <div className="w-full md:w-[20%] space-y-4">
                 <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Typography</Label>
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-bold text-slate-600">Base Font</span>
@@ -357,184 +454,123 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                 </div>
               </div>
 
-              <div className="space-y-4 border-l border-slate-100 pl-8">
-                <div className="space-y-4 pb-4">
-                  <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Data Markers</Label>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-600">Type</span>
-                      <Select value={settings.markerType} onValueChange={(val: any) => updateSetting('markerType', val)}>
-                        <SelectTrigger className="h-8 text-xs font-bold w-24 bg-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="circle">Circle</SelectItem>
-                          <SelectItem value="square">Square</SelectItem>
-                          <SelectItem value="triangle">Triangle</SelectItem>
-                          <SelectItem value="diamond">Diamond</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-600">Size</span>
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateSetting('markerSize', Math.max(1, settings.markerSize - 1))}>-</Button>
-                        <span className="text-[10px] font-black text-slate-700">{settings.markerSize}px</span>
-                        <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateSetting('markerSize', Math.min(10, settings.markerSize + 1))}>+</Button>
-                      </div>
-                    </div>
+              <div className="w-full md:w-[20%] space-y-4 border-l border-slate-100 pl-8">
+                <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Data Markers</Label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-600">Type</span>
+                    <Select value={settings.markerType} onValueChange={(val: any) => updateSetting('markerType', val)}>
+                      <SelectTrigger className="h-8 text-xs font-bold w-24 bg-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="circle">Circle</SelectItem>
+                        <SelectItem value="square">Square</SelectItem>
+                        <SelectItem value="triangle">Triangle</SelectItem>
+                        <SelectItem value="diamond">Diamond</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-
-                <div className="space-y-4 pt-4 border-t border-slate-50">
-                  <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Label Placement</Label>
-                  <div className="space-y-3">
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-black text-slate-400">
-                        <span>X-AXIS (Y)</span>
-                        <span>{settings.xAxisOffset}px</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="-100" max="0" step="1"
-                        value={settings.xAxisOffset}
-                        onChange={(e) => updateSetting('xAxisOffset', parseInt(e.target.value))}
-                        className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-black text-slate-400">
-                        <span>Y-AXIS (X)</span>
-                        <span>{settings.yAxisOffset}px</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="-100" max="100" step="1"
-                        value={settings.yAxisOffset}
-                        onChange={(e) => updateSetting('yAxisOffset', parseInt(e.target.value))}
-                        className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-600">Size</span>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateSetting('markerSize', Math.max(1, settings.markerSize - 1))}>-</Button>
+                      <span className="text-[10px] font-black text-slate-700">{settings.markerSize}px</span>
+                      <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateSetting('markerSize', Math.min(10, settings.markerSize + 1))}>+</Button>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-4 border-l border-slate-100 pl-8 col-span-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Scientific Layout</Label>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-[9px] text-blue-600 font-black"
-                    onClick={() => {
-                      onSettingsChange({
-                        ...settings,
-                        marginTop: 40,
-                        marginRight: 30,
-                        marginBottom: 38,
-                        marginLeft: 30,
-                        showMirrorTicks: true,
-                        xAxisOffset: -25,
-                        yAxisOffset: 0
-                      });
-                    }}
-                  >RESET TO 30/40/38</Button>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-3">
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-black text-slate-400">
-                        <span className="flex items-center gap-1.5">TOP <Maximize2 className="w-2.5 h-2.5 rotate-90" /></span>
-                        <span>{settings.marginTop}px</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0" max="100" step="1"
-                        value={settings.marginTop}
-                        onChange={(e) => updateSetting('marginTop', parseInt(e.target.value))}
-                        className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
+              <div className="w-full md:w-[20%] space-y-4 border-l border-slate-100 pl-8">
+                <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Placement Ofts</Label>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[10px] font-black text-slate-400">
+                      <span>X-AXIS</span>
+                      <span>{settings.xAxisOffset}px</span>
                     </div>
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-black text-slate-400">
-                        <span className="flex items-center gap-1.5">BOTTOM <Maximize2 className="w-2.5 h-2.5 rotate-90" /></span>
-                        <span>{settings.marginBottom}px</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0" max="100" step="1"
-                        value={settings.marginBottom}
-                        onChange={(e) => updateSetting('marginBottom', parseInt(e.target.value))}
-                        className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
-                    </div>
+                    <input
+                      type="range"
+                      min="-50" max="50" step="1"
+                      value={settings.xAxisOffset}
+                      onChange={(e) => updateSetting('xAxisOffset', parseInt(e.target.value))}
+                      className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
                   </div>
-                  <div className="space-y-3">
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-black text-slate-400">
-                        <span className="flex items-center gap-1.5">LEFT <Maximize2 className="w-2.5 h-2.5" /></span>
-                        <span>{settings.marginLeft}px</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0" max="100" step="1"
-                        value={settings.marginLeft}
-                        onChange={(e) => updateSetting('marginLeft', parseInt(e.target.value))}
-                        className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[10px] font-black text-slate-400">
+                      <span>Y-AXIS</span>
+                      <span>{settings.yAxisOffset}px</span>
                     </div>
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-black text-slate-400">
-                        <span className="flex items-center gap-1.5">RIGHT <Maximize2 className="w-2.5 h-2.5" /></span>
-                        <span>{settings.marginRight}px</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0" max="100" step="1"
-                        value={settings.marginRight}
-                        onChange={(e) => updateSetting('marginRight', parseInt(e.target.value))}
-                        className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
-                    </div>
+                    <input
+                      type="range"
+                      min="-50" max="50" step="1"
+                      value={settings.yAxisOffset}
+                      onChange={(e) => updateSetting('yAxisOffset', parseInt(e.target.value))}
+                      className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
                   </div>
                 </div>
               </div>
-            </div>
-            <div className="pt-4 border-t border-slate-100 flex items-center gap-4">
-              <Button
-                variant="outline"
-                onClick={() => updateSetting('showMirrorTicks', !settings.showMirrorTicks)}
-                className={`h-10 flex-1 flex items-center justify-center gap-2 border-2 transition-all ${settings.showMirrorTicks ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-100 text-slate-400'}`}
-              >
-                <AlignJustify className="w-4 h-4" />
-                <span className="text-[10px] font-black uppercase">Mirrored Ticks</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-10 flex-1 flex items-center justify-center gap-2 border-2 border-slate-100 text-slate-400"
-                onClick={() => {
-                  onSettingsChange({
-                    ...settings,
-                    colorPalette: 'academic',
-                    borderWidth: 1.5,
-                    fontSize: 10,
-                    showGridLines: false,
-                    showMirrorTicks: true,
-                    markerType: 'circle',
-                    markerSize: 4,
-                    backgroundTheme: 'white',
-                    marginTop: 40,
-                    marginRight: 30,
-                    marginBottom: 38,
-                    marginLeft: 30,
-                    xAxisOffset: -25,
-                    yAxisOffset: 0
-                  });
-                }}
-              >
-                <BarChart2 className="w-4 h-4" />
-                <span className="text-[10px] font-black uppercase tracking-tighter">Auto Journal Std</span>
-              </Button>
+
+              <div className="w-full md:w-[40%] space-y-4 border-l border-slate-100 pl-8">
+                <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Scientific Layout</Label>
+                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[10px] font-black text-slate-400">
+                      <span>TOP</span>
+                      <span>{settings.marginTop}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0" max="150" step="5"
+                      value={settings.marginTop}
+                      onChange={(e) => updateSetting('marginTop', parseInt(e.target.value))}
+                      className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[10px] font-black text-slate-400">
+                      <span>BOTTOM</span>
+                      <span>{settings.marginBottom}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0" max="150" step="5"
+                      value={settings.marginBottom}
+                      onChange={(e) => updateSetting('marginBottom', parseInt(e.target.value))}
+                      className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[10px] font-black text-slate-400">
+                      <span>LEFT</span>
+                      <span>{settings.marginLeft}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0" max="150" step="5"
+                      value={settings.marginLeft}
+                      onChange={(e) => updateSetting('marginLeft', parseInt(e.target.value))}
+                      className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[10px] font-black text-slate-400">
+                      <span>RIGHT</span>
+                      <span>{settings.marginRight}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0" max="150" step="5"
+                      value={settings.marginRight}
+                      onChange={(e) => updateSetting('marginRight', parseInt(e.target.value))}
+                      className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </TabsContent>
         </div>
@@ -543,10 +579,10 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
       <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <MousePointer2 className="w-3 h-3 text-slate-400" />
-          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">Live Preview Sync Enabled</span>
+          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic tracking-tighter">Live Preview Sync Enabled</span>
         </div>
-        <div className="text-[9px] font-medium text-slate-400 uppercase">
-          Active Palette: <span className="text-blue-600 font-bold">{settings.colorPalette}</span>
+        <div className="text-[9px] font-medium text-slate-400 uppercase tracking-tighter">
+          Palette: <span className="text-blue-600 font-black">{settings.colorPalette}</span>
         </div>
       </div>
     </div>

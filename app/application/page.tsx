@@ -227,7 +227,9 @@ export default function MCDMCalculator() {
 
     // Axis Placement
     xAxisOffset: -25,
-    yAxisOffset: 0
+    yAxisOffset: 0,
+    legendOffsetX: 0,
+    legendOffsetY: 0
   })
 
   // Persistence for navigation state
@@ -1583,30 +1585,32 @@ export default function MCDMCalculator() {
     const originalAttr = element.getAttribute("style");
     const originalClasses = Array.from(element.classList);
 
+    const targetWidth = element.clientWidth;
+    const targetHeight = element.clientHeight;
+
     // Apply export-only high-fidelity styling
-    // We use a fixed 1200x675 (16:9) aspect ratio for professional journal figures
-    element.style.width = '1200px';
-    element.style.height = '675px';
+    // We preserve the user's current aspect ratio and layout for WYSIWYG results
+    element.style.width = `${targetWidth}px`;
+    element.style.height = `${targetHeight}px`;
     element.style.maxWidth = 'none';
     element.style.margin = '0px';
     element.style.padding = '0px';
     element.style.backgroundColor = themeBg;
-    element.style.overflow = 'hidden'; // Strict clipping to prevent axis leakage
+    element.style.overflow = 'hidden'; 
     element.style.position = 'relative';
     
     // Remove responsive classes that might interfere with fixed sizing
     element.classList.remove('max-w-7xl', 'mx-auto', 'w-full', 'h-full', 'sm:px-6', 'sm:py-2');
 
-    // Wait for Recharts to fully reflow the SVG to the new 1200px container
-    // Journals require exact dimensions; 500ms ensures all transitions/reflows are finished
+    // Wait for Recharts to fully reflow the SVG to the container
     setTimeout(async () => {
       try {
         const options = {
           quality: 1.0,
           backgroundColor: themeBg,
-          pixelRatio: 4, // Ultra-high 4x resolution for publication
-          width: 1200,
-          height: 675,
+          pixelRatio: 4, 
+          width: targetWidth,
+          height: targetHeight,
           style: {
             margin: '0px',
             padding: '0px',
@@ -4079,28 +4083,45 @@ export default function MCDMCalculator() {
                   <Tooltip />
                 </PieChart>
               ) : weightResultsChartType === 'line' ? (
-                <LineChart data={data} margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="none" stroke="#ddd" />
-                  <XAxis dataKey="name" stroke="#000" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} angle={-45} textAnchor="end" interval={0} height={60} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                <LineChart data={data} margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
+                   {chartSettings.showGridLines && (
+                     <CartesianGrid
+                       strokeDasharray="3 3"
+                       horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                       vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                       stroke={chartSettings.gridColor}
+                       opacity={chartSettings.gridOpacity}
+                     />
+                   )}
+                   <XAxis label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: 10, fontWeight: 700, fill: '#000' } } : undefined} dataKey="name" stroke="#000" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} angle={-45} textAnchor="end" interval={0} height={60} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                   <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                  <YAxis stroke="#000" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                  <YAxis label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: 10, fontWeight: 700, fill: '#000' } } : undefined} stroke="#000" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                   <YAxis orientation="right" yAxisId="rb" width={1} tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
                   <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                   <Line type="linear" dataKey="value" stroke="#1f77b4" strokeWidth={1.5} dot={{ r: 4, fill: '#1f77b4', strokeWidth: 1, stroke: '#fff' }} isAnimationActive={false} />
                   <Line yAxisId="rb" type="linear" dataKey="value" stroke="transparent" strokeWidth={0} dot={false} isAnimationActive={false} legendType="none" />
                 </LineChart>
               ) : weightResultsChartType === 'area' ? (
-                <AreaChart data={data} margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
-                  <XAxis dataKey="name" stroke="#000" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} angle={-45} textAnchor="end" interval={0} height={60} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                <AreaChart data={data} margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
+                  {chartSettings.showGridLines && (
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                      stroke={chartSettings.gridColor}
+                      opacity={chartSettings.gridOpacity}
+                    />
+                  )}
+                  <XAxis label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: 10, fontWeight: 700, fill: '#000' } } : undefined} dataKey="name" stroke="#000" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} angle={-45} textAnchor="end" interval={0} height={60} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                   <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                  <YAxis stroke="#000" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                  <YAxis label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: 10, fontWeight: 700, fill: '#000' } } : undefined} stroke="#000" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                   <YAxis orientation="right" yAxisId="rb" width={1} tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
                   <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                   <Area type="linear" dataKey="value" stroke="#1f77b4" fill="#1f77b4" fillOpacity={1} isAnimationActive={false} />
                   <Area yAxisId="rb" type="linear" dataKey="value" fill="none" stroke="none" fillOpacity={0} isAnimationActive={false} legendType="none" />
                 </AreaChart>
               ) : weightResultsChartType === 'radar' ? (
-                <RadarChart margin={{ top: 5, right: 120, left: 120, bottom: 60 }} cx="50%" cy="50%" outerRadius="80%" data={data}>
+                <RadarChart margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} cx="50%" cy="50%" outerRadius="80%" data={data}>
                   <PolarGrid stroke="#ccc" />
                   <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: '#000' }} />
                   <PolarRadiusAxis stroke="#666" tick={{ fontSize: 8 }} />
@@ -4486,6 +4507,12 @@ export default function MCDMCalculator() {
                         }`}>
                         {c.type === 'beneficial' ? '↑ Higher is better' : '↓ Lower is better'}
                       </span>
+                    </div>
+                    <div className="w-full mt-2">
+                      <ChartVisualConfigurator
+                        settings={chartSettings}
+                        onSettingsChange={setChartSettings}
+                      />
                     </div>
                     <Textarea
                       placeholder={`Explain what ${c.name} represents, why it matters, how it's measured, and its impact on decisions...`}
@@ -5761,7 +5788,7 @@ export default function MCDMCalculator() {
                                 );
                               })()
                             ) : weightChartType === 'scatter' ? (
-                              <ScatterChart margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
+                              <ScatterChart margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="name" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                                 <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
@@ -6021,7 +6048,7 @@ export default function MCDMCalculator() {
                             ) : (
 
                               sensitivityWeightComparisonResults.length > 0 ? (
-                                <RadialBarChart margin={{ top: 5, right: 120, left: 120, bottom: 60 }} cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" barSize={10} data={sensitivityCriteriaWeights}>
+                                <RadialBarChart margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" barSize={10} data={sensitivityCriteriaWeights}>
                                   <RadialBar
                                     label={{ position: 'insideStart', fill: '#fff' }}
                                     background
@@ -7024,7 +7051,15 @@ export default function MCDMCalculator() {
                                           barGap={0}
                                           barCategoryGap="25%"
                                         >
-                                          <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#e5e7eb" opacity={0.5} />
+                                          {chartSettings.showGridLines && (
+                                            <CartesianGrid
+                                              strokeDasharray="3 3"
+                                              horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                              vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                              stroke={chartSettings.gridColor}
+                                              opacity={chartSettings.gridOpacity}
+                                            />
+                                          )}
                                           <XAxis
                                             dataKey="name"
                                             xAxisId="main"
@@ -7033,14 +7068,14 @@ export default function MCDMCalculator() {
                                             tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
                                             axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
                                             tickLine={{ stroke: "#000", strokeWidth: 1 }}
-                                            label={{ value: 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }} />
+                                            label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }} />
                                           <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
                                           <YAxis
                                             yAxisId="left"
                                             tick={{ fontSize: 10, fill: '#000', fontWeight: 700 }}
                                             axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
                                             tickLine={{ stroke: "#000", strokeWidth: 1 }}
-                                            label={{ value: isNormChart ? 'Rank' : 'Performance Score', angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }}
+                                            label={{ value: chartSettings.yAxisTitle || (isNormChart ? 'Rank' : 'Performance Score'), angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }}
                                             domain={isNormChart ? [0, totalAlts] : [0, (max: number) => Math.ceil(max * 10) / 10]}
                                             reversed={isNormChart}
                                             ticks={isNormChart ? rankingTicks : undefined}
@@ -7174,7 +7209,7 @@ export default function MCDMCalculator() {
                                       switch (comparisonChartType) {
                                         case "radar":
                                           return (
-                                            <RadarChart margin={{ top: 5, right: 120, left: 120, bottom: 60 }} cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
+                                            <RadarChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
                                               <PolarGrid />
                                               <PolarAngleAxis dataKey="method" tick={{ fontSize: 10 }} />
                                               <PolarRadiusAxis />
@@ -7208,7 +7243,7 @@ export default function MCDMCalculator() {
                                             <div className="flex flex-col h-full bg-white relative">
                                               <div className="flex-1 w-full h-full">
                                                 <ResponsiveContainer width="100%" height="100%">
-                                                  <RadarChart cx="50%" cy="50%" outerRadius="95%" data={scientificRadialData} margin={{ top: 5, right: 120, left: 120, bottom: 60 }}>
+                                                  <RadarChart cx="50%" cy="50%" outerRadius="95%" data={scientificRadialData} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
                                                     <PolarGrid stroke="#cbd5e1" strokeWidth={1} gridType="circle" />
                                                     <PolarAngleAxis
                                                       dataKey="method"
@@ -7357,11 +7392,11 @@ export default function MCDMCalculator() {
                                               <XAxis
                                                 dataKey="method"
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                label={{ value: chartSettings.xAxisTitle || 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                                               <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
                                               <YAxis
-                                                label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                label={{ value: chartSettings.yAxisTitle || 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
                                               <YAxis {...rightAxisProps} />
                                               <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
@@ -7401,11 +7436,11 @@ export default function MCDMCalculator() {
                                               <XAxis
                                                 dataKey="method"
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                label={{ value: chartSettings.xAxisTitle || 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                                               <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
                                               <YAxis
-                                                label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                label={{ value: chartSettings.yAxisTitle || 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
                                               <YAxis {...rightAxisProps} />
                                               <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
@@ -7445,11 +7480,11 @@ export default function MCDMCalculator() {
                                               <XAxis
                                                 dataKey="method"
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                label={{ value: chartSettings.xAxisTitle || 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                                               <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
                                               <YAxis
-                                                label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                label={{ value: chartSettings.yAxisTitle || 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
                                               <YAxis {...rightAxisProps} />
                                               <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
@@ -7489,11 +7524,11 @@ export default function MCDMCalculator() {
                                               <XAxis
                                                 dataKey="method"
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                label={{ value: chartSettings.xAxisTitle || 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                                               <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
                                               <YAxis
-                                                label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                label={{ value: chartSettings.yAxisTitle || 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
                                               <YAxis {...rightAxisProps} />
                                               <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
@@ -7539,11 +7574,19 @@ export default function MCDMCalculator() {
 
                                           return (
                                             <ComposedChart data={hybridData} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-                                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                                              {chartSettings.showGridLines && (
+                                     <CartesianGrid
+                                       strokeDasharray="3 3"
+                                       horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                       vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                       stroke={chartSettings.gridColor}
+                                       opacity={chartSettings.gridOpacity}
+                                     />
+                                   )}
                                               <XAxis
                                                 dataKey="alternative"
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: "Alternatives", position: "insideBottom", offset: -45, style: { fontSize: "12px", fontWeight: 700, fill: "#000" } }}
+                                                label={{ value: chartSettings.xAxisTitle || "Alternatives", position: "insideBottom", offset: -45, style: { fontSize: "12px", fontWeight: 700, fill: "#000" } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
                                                 tickLine={{ stroke: "#000", strokeWidth: 1 }}
                                                 interval={0}
@@ -7557,7 +7600,7 @@ export default function MCDMCalculator() {
                                                 domain={[0, "auto"]}
                                                 allowDecimals={false}
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: "Ordinal Ranking (1 = Top)", angle: -90, position: "insideLeft", style: { fontSize: "12px", fontWeight: 700, fill: "#000" } }}
+                                                label={{ value: chartSettings.yAxisTitle || "Ordinal Ranking (1 = Top)", angle: -90, position: "insideLeft", style: { fontSize: "12px", fontWeight: 700, fill: "#000" } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
                                                 tickLine={{ stroke: "#000", strokeWidth: 1 }}
                                               />
@@ -7630,14 +7673,14 @@ export default function MCDMCalculator() {
                                                 allowDuplicatedCategory={false}
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
                                                 name="Method"
-                                                label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                label={{ value: chartSettings.xAxisTitle || 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                                               <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
                                               <YAxis
                                                 dataKey="y"
                                                 type="number"
                                                 name="Rank"
-                                                label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                label={{ value: chartSettings.yAxisTitle || 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
                                               <YAxis {...rightAxisProps} />
                                               <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
@@ -7773,13 +7816,13 @@ export default function MCDMCalculator() {
                                               <XAxis
                                                 dataKey="method"
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                label={{ value: chartSettings.xAxisTitle || 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                                               <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
                                               <YAxis
                                                 allowDecimals={false}
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
+                                                label={{ value: chartSettings.yAxisTitle || 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                                               <YAxis {...rightAxisProps} />
                                               <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
@@ -8747,16 +8790,18 @@ export default function MCDMCalculator() {
                                     </div>
                                   </div>
                                 </ResearchAssetHeader>
+                                <div className="w-full mt-3 px-4 border-t pt-2">
+                                  <ChartVisualConfigurator
+                                    settings={chartSettings}
+                                    onSettingsChange={setChartSettings}
+                                  />
+                                </div>
                               </CardHeader>
-                              <ChartVisualConfigurator
-                                settings={chartSettings}
-                                onSettingsChange={setChartSettings}
-                              />
                               <CardContent className="h-[800px] sm:h-[600px] p-0 sm:px-6 sm:py-2 mt-0">
                                 <div className={`w-full h-full max-w-7xl mx-auto transition-all duration-500 ${chartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }} ref={sensitivityGraphicalVariationRef}>
                                   <ResponsiveContainer width="100%" height="100%">
                                     {sensitivityChartType === 'radar' ? (
-                                      <RadarChart margin={{ top: chartSettings.legendPosition === 'top' ? 40 : 10, right: 30, left: 30, bottom: 38 }} cx="50%" cy="50%" outerRadius="80%" data={sensitivityWeightChartData}>
+                                      <RadarChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} cx="50%" cy="50%" outerRadius="80%" data={sensitivityWeightChartData}>
                                         {chartSettings.showGridLines && <PolarGrid stroke={theme.text} strokeWidth={0.5} opacity={chartSettings.gridOpacity} />}
                                         <PolarAngleAxis dataKey="name" tick={{ fontSize: chartSettings.fontSize, fill: theme.text, fontWeight: 'bold' }} />
                                         <PolarRadiusAxis angle={30} domain={[0, 'dataMax']} tick={{ fontSize: chartSettings.fontSize - 2, fill: theme.text }} />
@@ -8800,7 +8845,7 @@ export default function MCDMCalculator() {
                                     ) : sensitivityChartType === "bar" ? (
                                       <BarChart
                                         data={sensitivityWeightChartData}
-                                        margin={{ top: chartSettings.legendPosition === 'top' ? 70 : 10, right: 120, left: 120, bottom: 60 }}
+                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                       >
                                         {chartSettings.showGridLines && (
                                           <CartesianGrid
@@ -8874,7 +8919,7 @@ export default function MCDMCalculator() {
                                     ) : sensitivityChartType === "stackedBar" ? (
                                       <BarChart
                                         data={sensitivityWeightChartData}
-                                        margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                       >
                                         {chartSettings.showGridLines && (
                                           <CartesianGrid
@@ -8890,7 +8935,7 @@ export default function MCDMCalculator() {
                                           tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
                                           axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
                                           tickLine={{ stroke: "#000", strokeWidth: 1 }}
-                                          label={{ value: 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }} />
+                                          label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }} />
                                         <XAxis
                                           orientation="top"
                                           xAxisId="top_border"
@@ -8900,7 +8945,7 @@ export default function MCDMCalculator() {
                                           tickLine={false}
                                         />
                                         <YAxis
-                                          label={{ value: 'Rank', angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }}
+                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } } : undefined}
                                           interval={0}
                                           domain={[0, 'dataMax']}
                                           tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
@@ -8950,15 +8995,23 @@ export default function MCDMCalculator() {
                                     ) : sensitivityChartType === "area" ? (
                                       <AreaChart
                                         data={sensitivityWeightChartData}
-                                        margin={{ top: chartSettings.legendPosition === 'top' ? 70 : 10, right: 120, left: 120, bottom: 60 }}
+                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                       >
-                                        {chartSettings.showGridLines && <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.5} />}
+                                        {chartSettings.showGridLines && (
+                                          <CartesianGrid
+                                            strokeDasharray="3 3"
+                                            horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                            vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                            stroke={chartSettings.gridColor}
+                                            opacity={chartSettings.gridOpacity}
+                                          />
+                                        )}
                                         <XAxis
                                           dataKey="name"
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: "#000" }}
                                           axisLine={{ stroke: "#000", strokeWidth: chartSettings.borderWidth }}
                                           tickLine={{ stroke: "#000", strokeWidth: 1 }}
-                                          label={{ value: 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } }} />
+                                          label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } }} />
                                         <XAxis
                                           orientation="top"
                                           xAxisId="top_border"
@@ -8968,7 +9021,7 @@ export default function MCDMCalculator() {
                                           tickLine={false}
                                         />
                                         <YAxis
-                                          label={{ value: 'Rank', angle: -90, position: 'insideLeft', style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } }}
+                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } } : undefined}
                                           interval={0}
                                           domain={[0, 'dataMax']}
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: "#000" }}
@@ -9018,15 +9071,23 @@ export default function MCDMCalculator() {
                                     ) : sensitivityChartType === "stackedArea" ? (
                                       <AreaChart
                                         data={sensitivityWeightChartData}
-                                        margin={{ top: chartSettings.legendPosition === 'top' ? 70 : 10, right: 120, left: 120, bottom: 60 }}
+                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                       >
-                                        {chartSettings.showGridLines && <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.5} />}
+                                        {chartSettings.showGridLines && (
+                                          <CartesianGrid
+                                            strokeDasharray="3 3"
+                                            horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                            vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                            stroke={chartSettings.gridColor}
+                                            opacity={chartSettings.gridOpacity}
+                                          />
+                                        )}
                                         <XAxis
                                           dataKey="name"
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: "#000" }}
                                           axisLine={{ stroke: "#000", strokeWidth: chartSettings.borderWidth }}
                                           tickLine={{ stroke: "#000", strokeWidth: 1 }}
-                                          label={{ value: 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } }} />
+                                          label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } }} />
                                         <XAxis
                                           orientation="top"
                                           xAxisId="top_border"
@@ -9036,7 +9097,7 @@ export default function MCDMCalculator() {
                                           tickLine={false}
                                         />
                                         <YAxis
-                                          label={{ value: 'Rank', angle: -90, position: 'insideLeft', style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } }}
+                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } } : undefined}
                                           interval={0}
                                           domain={[0, 'dataMax']}
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: "#000" }}
@@ -9104,15 +9165,23 @@ export default function MCDMCalculator() {
                                             max
                                           };
                                         })}
-                                        margin={{ top: chartSettings.legendPosition === 'top' ? 70 : 10, right: 120, left: 120, bottom: 60 }}
+                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                       >
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e7eb" opacity={0.5} />
+                                        {chartSettings.showGridLines && (
+                                          <CartesianGrid
+                                            strokeDasharray="3 3"
+                                            horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                            vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                            stroke={chartSettings.gridColor}
+                                            opacity={chartSettings.gridOpacity}
+                                          />
+                                        )}
                                         <XAxis
                                           type="number"
                                           domain={[1, alternatives.length]}
                                           reversed
                                           label={{
-                                            value: "Rank Variation (1 = Best)",
+                                            value: chartSettings.xAxisTitle || "Rank Variation (1 = Best)",
                                             position: "insideBottom",
                                             offset: -45,
                                             style: { fontSize: 11, fontWeight: 500, fontStyle: 'italic', fill: '#000' }
@@ -9190,9 +9259,17 @@ export default function MCDMCalculator() {
                                     ) : sensitivityChartType === "scatter" ? (
                                       <ScatterChart
                                         data={sensitivityWeightChartData}
-                                        margin={{ top: chartSettings.legendPosition === 'top' ? 70 : 10, right: 120, left: 120, bottom: 60 }}
+                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                       >
-                                        {chartSettings.showGridLines && <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.5} />}
+                                        {chartSettings.showGridLines && (
+                                          <CartesianGrid
+                                            strokeDasharray="3 3"
+                                            horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                            vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                            stroke={chartSettings.gridColor}
+                                            opacity={chartSettings.gridOpacity}
+                                          />
+                                        )}
                                         <XAxis
                                           dataKey="name"
                                           type="category"
@@ -9200,7 +9277,7 @@ export default function MCDMCalculator() {
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: "#000" }}
                                           axisLine={{ stroke: "#000", strokeWidth: chartSettings.borderWidth }}
                                           tickLine={{ stroke: "#000", strokeWidth: 1 }}
-                                          label={{ value: 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } }} />
+                                          label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } }} />
                                         <XAxis
                                           orientation="top"
                                           xAxisId="top_border"
@@ -9214,7 +9291,7 @@ export default function MCDMCalculator() {
                                           reversed
                                           dataKey="rank"
                                           name="Rank"
-                                          label={{ value: 'Rank', angle: -90, position: 'insideLeft', style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } }}
+                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } } : undefined}
                                           interval={0}
                                           domain={[1, alternatives.length || 'dataMax']}
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: "#000" }}
@@ -9280,7 +9357,7 @@ export default function MCDMCalculator() {
                                         })).sort((a, b) => b.value - a.value);
 
                                         return (
-                                          <RadialBarChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                          <RadialBarChart margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                             cx="50%"
                                             cy="50%"
                                             innerRadius="15%"
@@ -9371,7 +9448,7 @@ export default function MCDMCalculator() {
                                         <ResponsiveContainer width="100%" height="100%">
                                           <ComposedChart
                                             data={sensitivityWeightChartData}
-                                            margin={{ top: chartSettings.legendPosition === 'top' ? 70 : 10, right: 120, left: 120, bottom: 60 }}
+                                            margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                             barGap={0}
                                             barCategoryGap="25%"
                                           >
@@ -9408,7 +9485,7 @@ export default function MCDMCalculator() {
                                               tick={{ fontSize: chartSettings.fontSize, fill: theme.text }}
                                               axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                               tickLine={{ stroke: theme.border, strokeWidth: 1 }}
-                                              label={chartSettings.showAxisTitles ? { value: `${MCDM_METHODS.find(m => m.value === sensitivityMethod)?.label || sensitivityMethod.toUpperCase()} Score`, angle: -90, position: 'insideLeft', offset: 0, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                              label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
                                               domain={[0, (max: number) => Math.ceil(max * 10) / 10]}
                                               tickFormatter={(val: number) => val.toFixed(1)}
                                               padding={{ top: 40 }}
@@ -9527,7 +9604,15 @@ export default function MCDMCalculator() {
                                         data={sensitivityWeightChartData}
                                         margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                       >
-                                        {chartSettings.showGridLines && <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartSettings.gridColor} opacity={chartSettings.gridOpacity} />}
+                                        {chartSettings.showGridLines && (
+                                          <CartesianGrid
+                                            strokeDasharray="3 3"
+                                            horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                            vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                            stroke={chartSettings.gridColor}
+                                            opacity={chartSettings.gridOpacity}
+                                          />
+                                        )}
                                         <XAxis
                                           dataKey="name"
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
@@ -10245,7 +10330,7 @@ export default function MCDMCalculator() {
             <div className="max-w-7xl mx-auto">
               {sweiSwiValidationWarning && (
                 <div className="mb-3 p-3 bg-amber-50 border border-amber-300 rounded-lg text-amber-800 text-xs">
-                  <p className="font-semibold">âÅ¡Â Ã¯Â¸Â {sweiSwiValidationWarning.message}</p>
+                  <p className="font-semibold">âÅ¡Â Ã¯Â¸Â  {sweiSwiValidationWarning.message}</p>
                   <p className="mt-1 text-amber-700">
                     Invalid values found in: {sweiSwiValidationWarning.invalidCells.slice(0, 5).join(", ")}
                     {sweiSwiValidationWarning.invalidCells.length > 5 && ` and ${sweiSwiValidationWarning.invalidCells.length - 5} more...`}
@@ -14846,6 +14931,12 @@ export default function MCDMCalculator() {
                           </div>
                         </div>
                       </ResearchAssetHeader>
+                      <div className="px-6 mb-4">
+                        <ChartVisualConfigurator
+                          settings={chartSettings}
+                          onSettingsChange={setChartSettings}
+                        />
+                      </div>
                       <CardDescription className="text-xs text-gray-500 font-medium mt-1">Graphical representation of results for {method.toUpperCase()} method</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[800px] sm:h-[600px] p-0 sm:px-6 sm:py-2 mt-0">
@@ -14856,36 +14947,56 @@ export default function MCDMCalculator() {
                             const isRadar = rankingChartType === "radarScore";
                             const isDual = rankingChartType === "dualScoreRank";
 
+                            const activeColors = chartSettings.colorPalette === 'academic'
+                              ? ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+                              : chartSettings.colorPalette === 'grayscale'
+                                ? ['#333333', '#666666', '#999999', '#cccccc', '#444444', '#777777', '#aaaaaa', '#dddddd', '#111111', '#999999']
+                                : chartSettings.colorPalette === 'vibrant'
+                                  ? ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#a855f7', '#6366f1']
+                                  : CHART_COLORS;
+
+                            const themeColors = {
+                              white: { bg: '#ffffff', text: '#000000', border: '#000000' },
+                              slate: { bg: '#f8fafc', text: '#334155', border: '#475569' },
+                              dark: { bg: '#0f172a', text: '#f1f5f9', border: '#cbd5e1' },
+                              glass: { bg: 'rgba(255, 255, 255, 0.7)', text: '#000000', border: '#000000' }
+                            }[chartSettings.backgroundTheme] || { bg: '#ffffff', text: '#000000', border: '#000000' };
+
+                            const legCfg = {
+                              top: { verticalAlign: 'top' as const, align: 'center' as const, layout: 'horizontal' as const },
+                              bottom: { verticalAlign: 'bottom' as const, align: 'center' as const, layout: 'horizontal' as const },
+                              left: { verticalAlign: 'middle' as const, align: 'left' as const, layout: 'vertical' as const },
+                              right: { verticalAlign: 'middle' as const, align: 'right' as const, layout: 'vertical' as const },
+                              middle: { verticalAlign: 'middle' as const, align: 'center' as const, layout: 'horizontal' as const },
+                            }[chartSettings.legendPosition] || { verticalAlign: 'top' as const, align: 'center' as const, layout: 'horizontal' as const };
+
+                            const legLayout = chartSettings.legendLayout || legCfg.layout;
+
                             if (isRadar) {
                               return (
-                                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={apiResults.ranking} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
+                                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={apiResults.ranking} margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
                                   <PolarGrid stroke="#000" />
                                   <PolarAngleAxis dataKey="alternativeName" tick={{ fontSize: 10, fontWeight: 700, fill: '#000' }} />
                                   <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fontSize: 9, fontWeight: 700, fill: '#000' }} />
                                   <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                   <Legend
-                                    verticalAlign="top"
-                                    align="center"
-                                    layout="horizontal"
+                                    {...legCfg}
+                                    layout={legLayout}
                                     wrapperStyle={{
-                                      fontSize: "10px",
-                                      color: "#000",
+                                      fontSize: `${chartSettings.fontSize - 1}px`,
+                                      color: themeColors.text,
                                       fontWeight: 700,
                                       backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                      border: "1px solid #000",
+                                      border: `1px solid ${themeColors.border}`,
                                       padding: "4px 8px",
-                                      top: 5,
-                                      left: "50%",
-                                      transform: "translateX(-50%)",
-                                      width: "max-content",
-                                      maxWidth: "95%",
                                       zIndex: 50,
                                       boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                      display: "flex",
-                                      justifyContent: "center",
-                                      whiteSpace: "nowrap"
+                                      whiteSpace: "nowrap",
+                                      width: "fit-content",
+                                      left: legCfg.align === 'center' ? '50%' : undefined,
+                                      transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
                                     }}
-                                    iconSize={12}
+                                    iconSize={chartSettings.markerSize + 4}
                                   />
                                   <Radar
                                     name="Performance Score"
@@ -14908,108 +15019,111 @@ export default function MCDMCalculator() {
                                   outerRadius="80%"
                                   barSize={20}
                                   data={apiResults.ranking}
-                                  margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                  margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                  style={{ backgroundColor: themeColors.bg }}
                                 >
                                   <RadialBar
-                                    label={{ position: 'insideStart', fill: '#000', fontSize: 10, fontWeight: 700 }}
-                                    background
+                                    label={{ position: 'insideStart', fill: themeColors.text, fontSize: chartSettings.fontSize - 1, fontWeight: 700 }}
+                                    background={{ fill: themeColors.bg, stroke: themeColors.border, strokeWidth: 0.5 }}
                                     dataKey="score"
-                                  />
-                                  <Legend
-                                    verticalAlign="top"
-                                    align="center"
-                                    layout="horizontal"
-                                    wrapperStyle={{
-                                      fontSize: "10px",
-                                      color: "#000",
-                                      fontWeight: 700,
-                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                      border: "1px solid #000",
-                                      padding: "4px 8px",
-                                      top: 70,
-                                      left: "50%",
-                                      transform: "translateX(-50%)",
-                                      width: "max-content",
-                                      maxWidth: "95%",
-                                      zIndex: 50,
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                      display: "flex",
-                                      justifyContent: "center",
-                                      whiteSpace: "nowrap"
-                                    }}
-                                    iconSize={8}
-                                  />
-                                  <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                  >
+                                    {apiResults.ranking.map((entry: any, index: number) => (
+                                      <Cell key={`cell-${index}`} fill={activeColors[index % activeColors.length]} fillOpacity={chartSettings.barOpacity} stroke={themeColors.border} strokeWidth={chartSettings.borderWidth} />
+                                    ))}
+                                  </RadialBar>
+                                  <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: "rgba(255,255,255,0.9)" }} />
+                                    <Legend
+                                      {...legCfg}
+                                      layout={legLayout}
+                                      iconSize={chartSettings.markerSize + 4}
+                                      wrapperStyle={{
+                                        fontSize: `${chartSettings.fontSize - 1}px`,
+                                        color: themeColors.text,
+                                        fontWeight: 700,
+                                        backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                        border: `1px solid ${themeColors.border}`,
+                                        padding: "4px 8px",
+                                        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                        borderRadius: "4px",
+                                        width: "fit-content",
+                                        left: legCfg.align === 'center' ? '50%' : undefined,
+                                        transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                      }}
+                                    />
                                 </RadialBarChart>
                               );
                             }
 
                             if (isDual) {
                               return (
-                                <ComposedChart data={apiResults.ranking} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.6} />
+                                <ComposedChart data={apiResults.ranking} margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
+                                  {chartSettings.showGridLines && (
+                                     <CartesianGrid
+                                       strokeDasharray="3 3"
+                                       horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                       vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                       stroke={chartSettings.gridColor}
+                                       opacity={chartSettings.gridOpacity}
+                                     />
+                                   )}
                                   <ReferenceLine y={1} yAxisId="right" stroke="#000" strokeWidth={1.5} />
                                   <XAxis
                                     dataKey="alternativeName"
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    label={{ value: 'Robot Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: 12, fontWeight: 700, fill: '#000' } }}
+                                    tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                    label={chartSettings.showAxisTitles ? { value: 'Robot Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text } } : undefined}
                                     height={30}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                  <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} />
+                                  <XAxis orientation="top" xAxisId="top_border" tick={false} tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
                                   <YAxis
                                     yAxisId="left"
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                    tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
                                     domain={[0, 'auto']}
-                                    label={{
+                                    label={chartSettings.showAxisTitles ? {
                                       value: `Performance Score`,
                                       angle: -90,
                                       position: 'insideLeft',
                                       offset: chartSettings.yAxisOffset,
-                                      style: { fontSize: 12, fontWeight: 700, fill: '#000' }
-                                    }} />
+                                      style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text }
+                                    } : undefined} />
                                   <YAxis
                                     yAxisId="right"
                                     orientation="right"
                                     reversed
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                    tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text } : false}
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false}
                                     domain={[1, apiResults.ranking.length]}
                                     tickCount={apiResults.ranking.length}
-                                    label={{
+                                    label={chartSettings.showAxisTitles ? {
                                       value: 'Ranking (1 = Best)',
                                       angle: 90,
                                       position: 'insideRight',
-                                      style: { fontSize: 12, fontWeight: 700, fill: '#000' }
-                                    }} />
+                                      offset: chartSettings.yAxisOffset,
+                                      style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text }
+                                    } : undefined} />
                                   <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                  <Legend
-                                    verticalAlign="top"
-                                    align="center"
-                                    layout="horizontal"
-                                    wrapperStyle={{
-                                      fontSize: "10px",
-                                      color: "#000",
-                                      fontWeight: 700,
-                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                      border: "1px solid #000",
-                                      padding: "4px 8px",
-                                      top: 70,
-                                      left: "50%",
-                                      transform: "translateX(-50%)",
-                                      width: "max-content",
-                                      maxWidth: "95%",
-                                      zIndex: 50,
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                      display: "flex",
-                                      justifyContent: "center",
-                                      whiteSpace: "nowrap"
-                                    }}
-                                    iconSize={8}
-                                  />
+                                    <Legend
+                                      {...legCfg}
+                                      layout={legLayout}
+                                      wrapperStyle={{
+                                        fontSize: `${chartSettings.fontSize - 1}px`,
+                                        color: themeColors.text,
+                                        fontWeight: 700,
+                                        backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                        border: `1px solid ${themeColors.border}`,
+                                        padding: "4px 8px",
+                                        zIndex: 50,
+                                        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                        whiteSpace: "nowrap",
+                                        width: "fit-content",
+                                        left: legCfg.align === 'center' ? '50%' : undefined,
+                                        transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                      }}
+                                      iconSize={chartSettings.markerSize + 4}
+                                    />
                                   <Bar
                                     yAxisId="left"
                                     dataKey="score"
@@ -15039,38 +15153,45 @@ export default function MCDMCalculator() {
                                 <BarChart
                                   layout="vertical"
                                   data={sortedData}
-                                  margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                  margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                   barCategoryGap="25%"
+                                  style={{ backgroundColor: themeColors.bg }}
                                 >
-                                  <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke="#eee" />
+                                  {chartSettings.showGridLines && (
+                                     <CartesianGrid
+                                       strokeDasharray="3 3"
+                                       horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                       vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                       stroke={chartSettings.gridColor}
+                                       opacity={chartSettings.gridOpacity}
+                                     />
+                                   )}
                                   <XAxis
                                     xAxisId="top"
                                     orientation="top"
                                     type="number"
-                                    tick={false}
-                                    axisLine={{ stroke: "#000", strokeWidth: 2 }}
+                                    tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fill: themeColors.text } : false}
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                     dy={1}
                                   />
                                   <XAxis
                                     xAxisId="bottom"
                                     type="number"
                                     height={50}
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    label={{ value: 'Performance Score', position: 'insideBottom', offset: -15, style: { fontSize: 12, fontWeight: 700, fill: '#000' } }}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                                    tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                    label={chartSettings.showAxisTitles ? { value: 'Performance Score', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text } } : undefined}
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} />
 
-                                  {/* Left Y-axis for Names */}
                                   <YAxis
                                     yAxisId="left"
                                     dataKey="alternativeName"
                                     type="category"
                                     width={100}
                                     padding={{ top: 20, bottom: 20 }}
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    label={{ value: 'Robot Alternatives', angle: -90, position: 'insideLeft', offset: -10, style: { fontSize: 12, fontWeight: 700, fill: '#000' } }}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                                    tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                    label={chartSettings.showAxisTitles ? { value: 'Alternatives', angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text } } : undefined}
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} />
 
-                                  {/* Right Y-axis for Rankings */}
                                   <YAxis
                                     yAxisId="right"
                                     orientation="right"
@@ -15078,36 +15199,31 @@ export default function MCDMCalculator() {
                                     dataKey="rank"
                                     width={100}
                                     padding={{ top: 20, bottom: 20 }}
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
+                                    tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text } : false}
                                     tickFormatter={(val) => `Rank ${val}`}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false} />
 
-                                  <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                  <Legend
-                                    verticalAlign="top"
-                                    align="center"
-                                    layout="horizontal"
-                                    wrapperStyle={{
-                                      fontSize: "10px",
-                                      color: "#000",
-                                      fontWeight: 700,
-                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                      border: "1px solid #000",
-                                      padding: "4px 8px",
-                                      top: 70,
-                                      left: "50%",
-                                      transform: "translateX(-50%)",
-                                      width: "max-content",
-                                      maxWidth: "95%",
-                                      zIndex: 50,
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                      display: "flex",
-                                      justifyContent: "center",
-                                      whiteSpace: "nowrap"
-                                    }}
-                                    iconSize={8}
-                                  />
-                                  <Bar xAxisId="bottom" yAxisId="left" dataKey="score" fill="#1f77b4" stroke="#000" strokeWidth={1} name="Performance Score" radius={[0, 4, 4, 0]} />
+                                  <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: "rgba(255,255,255,0.9)" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                    <Legend
+                                      {...legCfg}
+                                      layout={legLayout}
+                                      wrapperStyle={{
+                                        fontSize: `${chartSettings.fontSize - 1}px`,
+                                        color: themeColors.text,
+                                        fontWeight: 700,
+                                        backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                        border: `1px solid ${themeColors.border}`,
+                                        padding: "4px 8px",
+                                        zIndex: 50,
+                                        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                        whiteSpace: "nowrap",
+                                        width: "fit-content",
+                                        left: legCfg.align === 'center' ? '50%' : undefined,
+                                        transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                      }}
+                                      iconSize={chartSettings.markerSize + 4}
+                                    />
+                                  <Bar xAxisId="bottom" yAxisId="left" dataKey="score" fill={activeColors[0]} fillOpacity={chartSettings.barOpacity} stroke={themeColors.border} strokeWidth={chartSettings.borderWidth} name="Performance Score" radius={[0, 4, 4, 0]} />
                                 </BarChart>
                               );
                             }
@@ -15121,17 +15237,25 @@ export default function MCDMCalculator() {
                               }));
 
                               return (
-                                <ComposedChart data={dumbbellData} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-                                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                  <XAxis dataKey="alternativeName" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                  <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                <ComposedChart data={dumbbellData} margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} style={{ backgroundColor: themeColors.bg }}>
+                                  {chartSettings.showGridLines && (
+                                     <CartesianGrid
+                                       strokeDasharray="3 3"
+                                       horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                       vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                       stroke={chartSettings.gridColor}
+                                       opacity={chartSettings.gridOpacity}
+                                     />
+                                   )}
+                                  <XAxis dataKey="alternativeName" tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} />
+                                  <XAxis orientation="top" xAxisId="top_border" tick={false} tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
 
                                   {/* Left Axis for Percentage Scale */}
                                   <YAxis
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    label={{ value: 'Percentage Scale (%)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fontWeight: 700, fill: '#000' } }}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                                    tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                    label={chartSettings.showAxisTitles ? { value: 'Relative Scale (%)', angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text } } : undefined}
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} />
 
                                   {/* Right Axis for Ranking Translation */}
                                   <YAxis
@@ -15141,43 +15265,34 @@ export default function MCDMCalculator() {
                                     domain={[1, apiResults.ranking.length]}
                                     tickCount={apiResults.ranking.length}
                                     interval={0}
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    label={{ value: 'Ranking (1 = Best)', angle: 90, position: 'insideRight', style: { fontSize: 12, fontWeight: 700, fill: '#000' } }}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                                    tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text } : false}
+                                    label={chartSettings.showAxisTitles ? { value: 'Ranking (1 = Best)', angle: 90, position: 'insideRight', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text } } : undefined}
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false} />
 
-                                  <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                  <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: "rgba(255,255,255,0.9)" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                   <Legend
-                                    verticalAlign="top"
-                                    align="center"
-                                    layout="horizontal"
+                                    {...legCfg}
+                                    layout={legLayout}
                                     wrapperStyle={{
-                                      fontSize: "10px",
-                                      color: "#000",
+                                      fontSize: `${chartSettings.fontSize - 1}px`,
+                                      color: themeColors.text,
                                       fontWeight: 700,
                                       backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                      border: "1px solid #000",
+                                      border: `1px solid ${themeColors.border}`,
                                       padding: "4px 8px",
-                                      top: 70,
-                                      left: "50%",
-                                      transform: "translateX(-50%)",
-                                      width: "max-content",
-                                      maxWidth: "95%",
-                                      zIndex: 50,
                                       boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                      display: "flex",
-                                      justifyContent: "center",
+                                      zIndex: 50,
                                       whiteSpace: "nowrap"
                                     }}
-                                    iconSize={8}
+                                    iconSize={chartSettings.markerSize + 4}
                                   />
-                                  {/* Improved Visibility for Background Bar */}
                                   <Bar dataKey="normalizedScore" fill="transparent" stackId="a" />
-                                  <Bar dataKey="invertedRank" name="Inverted Rank" fill="#9ca3af" stackId="a" barSize={2} />
+                                  <Bar dataKey="invertedRank" name="Inverted Rank" fill={activeColors[2] || "#9ca3af"} fillOpacity={chartSettings.barOpacity} stackId="a" barSize={2} />
 
                                   {/* Data Points */}
-                                  <Scatter name="Normalized Score" dataKey="normalizedScore" fill="#3b82f6" shape="circle" />
-                                  <Scatter name="Ranking Position" dataKey="invertedRank" fill="#ef4444" shape="diamond" />
+                                  <Scatter name="Normalized Score" dataKey="normalizedScore" fill={activeColors[0]} shape={chartSettings.markerType} />
+                                  <Scatter name="Ranking Position" dataKey="invertedRank" fill={activeColors[1]} shape="diamond" />
 
                                   {/* Hidden Line for Right Axis Stability */}
                                   <Line yAxisId="right" dataKey="rank" stroke="transparent" strokeWidth={0} dot={false} isAnimationActive={false} legendType="none" activeDot={false} />
@@ -15189,92 +15304,97 @@ export default function MCDMCalculator() {
                               return (
                                 <ComposedChart
                                   data={apiResults.ranking}
-                                  margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                  margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                   barGap={0}
                                   barCategoryGap="25%"
+                                  style={{ backgroundColor: themeColors.bg }}
                                 >
-                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                                  {chartSettings.showGridLines && (
+                                    <CartesianGrid
+                                      strokeDasharray="3 3"
+                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                      stroke={chartSettings.gridColor}
+                                      opacity={chartSettings.gridOpacity}
+                                    />
+                                  )}
                                   <XAxis
                                     dataKey="alternativeName"
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    label={{ value: 'Robot Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: 12, fontWeight: 700, fill: '#000' } }}
+                                    tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                    label={{ value: 'Robot Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text } }}
                                     height={50}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                  <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} />
+                                  <XAxis orientation="top" xAxisId="top_border" tick={false} tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
 
                                   {/* Left Y-axis for Score */}
                                   <YAxis
                                     yAxisId="left"
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                    tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
                                     domain={[0, 'auto']}
-                                    label={{
+                                    label={chartSettings.showAxisTitles ? {
                                       value: 'Performance Score',
                                       angle: -90,
                                       position: 'insideLeft',
                                       offset: chartSettings.yAxisOffset,
-                                      style: { fontSize: 12, fontWeight: 700, fill: '#000' }
-                                    }} />
+                                      style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text }
+                                    } : undefined} />
 
                                   {/* Right Y-axis for Ranking */}
                                   <YAxis
                                     yAxisId="right"
                                     orientation="right"
                                     reversed
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                    tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text } : false}
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false}
                                     domain={[1, apiResults.ranking.length]}
                                     tickCount={apiResults.ranking.length}
                                     interval={0}
-                                    label={{
+                                    label={chartSettings.showAxisTitles ? {
                                       value: 'Ranking (1 = Best)',
                                       angle: 90,
                                       position: 'insideRight',
                                       offset: chartSettings.yAxisOffset,
-                                      style: { fontSize: 12, fontWeight: 700, fill: '#000' }
-                                    }} />
+                                      style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text }
+                                    } : undefined} />
 
                                   <Tooltip
-                                    contentStyle={{ fontSize: '11px', borderRadius: '4px', border: '1px solid #000', boxShadow: 'none' }}
+                                    contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: '4px', border: `1px solid ${themeColors.border}`, backgroundColor: "rgba(255,255,255,0.9)" }}
                                     cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                                     formatter={(value: any, name: string) => name === "Rank" ? value : value.toFixed(resultsDecimalPlaces)}
                                   />
 
-                                  <Legend
-                                    verticalAlign="top"
-                                    align="center"
-                                    layout="horizontal"
-                                    wrapperStyle={{
-                                      fontSize: "10px",
-                                      color: "#000",
-                                      fontWeight: 700,
-                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                      border: "1px solid #000",
-                                      padding: "4px 8px",
-                                      top: 70,
-                                      left: "50%",
-                                      transform: "translateX(-50%)",
-                                      width: "max-content",
-                                      maxWidth: "95%",
-                                      zIndex: 50,
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                      display: "flex",
-                                      justifyContent: "center",
-                                      whiteSpace: "nowrap"
-                                    }}
-                                    iconSize={8}
-                                  />
+                                    <Legend
+                                      {...legCfg}
+                                      layout={legLayout}
+                                      wrapperStyle={{
+                                        fontSize: `${chartSettings.fontSize - 1}px`,
+                                        color: themeColors.text,
+                                        fontWeight: 700,
+                                        backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                        border: `1px solid ${themeColors.border}`,
+                                        padding: "4px 8px",
+                                        zIndex: 50,
+                                        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                        whiteSpace: "nowrap",
+                                        width: "fit-content",
+                                        left: legCfg.align === 'center' ? '50%' : undefined,
+                                        transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                      }}
+                                      iconSize={chartSettings.markerSize + 4}
+                                    />
 
                                   {/* Performance Score Bar (Left Axis) */}
                                   <Bar
                                     yAxisId="left"
                                     dataKey="score"
-                                    fill="#1f77b4"
-                                    stroke="#000"
-                                    strokeWidth={1}
+                                    fill={activeColors[0]}
+                                    fillOpacity={chartSettings.barOpacity}
+                                    stroke={themeColors.border}
+                                    strokeWidth={chartSettings.borderWidth}
                                     radius={[4, 4, 0, 0]}
                                     barSize={20}
                                     name="Score"
@@ -15284,9 +15404,10 @@ export default function MCDMCalculator() {
                                   <Bar
                                     yAxisId="right"
                                     dataKey="rank"
-                                    fill="#ff7f0e"
-                                    stroke="#000"
-                                    strokeWidth={1}
+                                    fill={activeColors[1] || "#ff7f0e"}
+                                    fillOpacity={chartSettings.barOpacity}
+                                    stroke={themeColors.border}
+                                    strokeWidth={chartSettings.borderWidth}
                                     radius={[4, 4, 0, 0]}
                                     barSize={20}
                                     name="Rank"
@@ -15299,32 +15420,42 @@ export default function MCDMCalculator() {
                               return (
                                 <ComposedChart
                                   data={apiResults.ranking}
-                                  margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                  margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                  style={{ backgroundColor: themeColors.bg }}
                                 >
-                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                                  {chartSettings.showGridLines && (
+                                    <CartesianGrid
+                                      strokeDasharray="3 3"
+                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                      stroke={chartSettings.gridColor}
+                                      opacity={chartSettings.gridOpacity}
+                                    />
+                                  )}
                                   <XAxis
                                     dataKey="alternativeName"
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    label={{ value: 'Robot Alternatives', position: 'insideBottom', offset: -15, style: { fontSize: 12, fontWeight: 700, fill: '#000' } }}
+                                    tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                    label={{ value: 'Robot Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text } }}
                                     height={50}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                  <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} />
+                                  <XAxis orientation="top" xAxisId="top_border" tick={false} tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
 
                                   {/* Left Y-axis for Score */}
                                   <YAxis
                                     yAxisId="left"
                                     width={100}
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                    tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
                                     domain={[0, 'auto']}
-                                    label={{
+                                    label={chartSettings.showAxisTitles ? {
                                       value: 'Performance Score',
                                       angle: -90,
                                       position: 'insideLeft',
-                                      style: { fontSize: 12, fontWeight: 700, fill: '#000' }
-                                    }} />
+                                      offset: chartSettings.yAxisOffset,
+                                      style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text }
+                                    } : undefined} />
 
                                   {/* Right Y-axis for Ranking */}
                                   <YAxis
@@ -15332,59 +15463,55 @@ export default function MCDMCalculator() {
                                     orientation="right"
                                     width={100}
                                     reversed
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                    tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text } : false}
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false}
                                     domain={[1, apiResults.ranking.length]}
                                     tickCount={apiResults.ranking.length}
                                     interval={0}
-                                    label={{
+                                    label={chartSettings.showAxisTitles ? {
                                       value: 'Ranking (1 = Best)',
                                       angle: 90,
                                       position: 'insideRight',
-                                      style: { fontSize: 12, fontWeight: 700, fill: '#000' }
-                                    }} />
+                                      offset: chartSettings.yAxisOffset,
+                                      style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text }
+                                    } : undefined} />
 
                                   <Tooltip
-                                    contentStyle={{ fontSize: '11px', borderRadius: '4px', border: '1px solid #000', boxShadow: 'none' }}
+                                    contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: '4px', border: `1px solid ${themeColors.border}`, backgroundColor: "rgba(255,255,255,0.9)" }}
                                     cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                                     formatter={(value: any, name: string) => name === "Rank" ? value : value.toFixed(resultsDecimalPlaces)}
                                   />
 
-                                  <Legend
-                                    verticalAlign="top"
-                                    align="center"
-                                    layout="horizontal"
-                                    wrapperStyle={{
-                                      fontSize: "10px",
-                                      color: "#000",
-                                      fontWeight: 700,
-                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                      border: "1px solid #000",
-                                      padding: "4px 8px",
-                                      top: 70,
-                                      left: "50%",
-                                      transform: "translateX(-50%)",
-                                      width: "max-content",
-                                      maxWidth: "95%",
-                                      zIndex: 50,
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                      display: "flex",
-                                      justifyContent: "center",
-                                      whiteSpace: "nowrap"
-                                    }}
-                                    iconSize={8}
-                                  />
+                                    <Legend
+                                      {...legCfg}
+                                      layout={legLayout}
+                                      wrapperStyle={{
+                                        fontSize: `${chartSettings.fontSize - 1}px`,
+                                        color: themeColors.text,
+                                        fontWeight: 700,
+                                        backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                        border: `1px solid ${themeColors.border}`,
+                                        padding: "4px 8px",
+                                        zIndex: 50,
+                                        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                        whiteSpace: "nowrap",
+                                        width: "fit-content",
+                                        left: legCfg.align === 'center' ? '50%' : undefined,
+                                        transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                      }}
+                                      iconSize={chartSettings.markerSize + 4}
+                                    />
 
                                   {/* Performance Score Line (Left Axis) */}
                                   <Line
                                     yAxisId="left"
                                     type="linear"
                                     dataKey="score"
-                                    stroke="#1f77b4"
-                                    strokeWidth={2.5}
-                                    dot={{ r: 5, fill: '#1f77b4', strokeWidth: 2, stroke: '#fff' }}
-                                    activeDot={{ r: 7 }}
+                                    stroke={activeColors[0]}
+                                    strokeWidth={chartSettings.borderWidth + 1}
+                                    dot={{ r: chartSettings.markerSize, fill: activeColors[0], strokeWidth: 1.5, stroke: themeColors.bg }}
+                                    activeDot={{ r: chartSettings.markerSize + 2 }}
                                     name="Score"
                                   />
 
@@ -15393,10 +15520,10 @@ export default function MCDMCalculator() {
                                     yAxisId="right"
                                     type="linear"
                                     dataKey="rank"
-                                    stroke="#ff7f0e"
-                                    strokeWidth={2.5}
-                                    dot={{ r: 5, fill: '#ff7f0e', strokeWidth: 2, stroke: '#fff' }}
-                                    activeDot={{ r: 7 }}
+                                    stroke={activeColors[1] || "#ff7f0e"}
+                                    strokeWidth={chartSettings.borderWidth + 1}
+                                    dot={{ r: chartSettings.markerSize, fill: activeColors[1] || "#ff7f0e", strokeWidth: 1.5, stroke: themeColors.bg }}
+                                    activeDot={{ r: chartSettings.markerSize + 2 }}
                                     name="Rank"
                                   />
                                 </ComposedChart>
@@ -15407,90 +15534,97 @@ export default function MCDMCalculator() {
                               return (
                                 <ComposedChart
                                   data={apiResults.ranking}
-                                  margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                  margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                   barGap={0}
                                   barCategoryGap="25%"
+                                  style={{ backgroundColor: themeColors.bg }}
                                 >
-                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                                  {chartSettings.showGridLines && (
+                                    <CartesianGrid
+                                      strokeDasharray="3 3"
+                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                      stroke={chartSettings.gridColor}
+                                      opacity={chartSettings.gridOpacity}
+                                    />
+                                  )}
                                   <XAxis
                                     dataKey="alternativeName"
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    label={{ value: 'Robot Alternatives', position: 'insideBottom', offset: -15, style: { fontSize: 12, fontWeight: 700, fill: '#000' } }}
+                                    tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                    label={{ value: 'Robot Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text } }}
                                     height={50}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                  <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} />
+                                  <XAxis orientation="top" xAxisId="top_border" tick={false} tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
 
                                   {/* Left Y-axis for Score (Line) */}
                                   <YAxis
                                     yAxisId="left"
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                    tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
                                     domain={[0, 'auto']}
-                                    label={{
+                                    label={chartSettings.showAxisTitles ? {
                                       value: 'Performance Score',
                                       angle: -90,
                                       position: 'insideLeft',
-                                      style: { fontSize: 12, fontWeight: 700, fill: '#000' }
-                                    }} />
+                                      offset: chartSettings.yAxisOffset,
+                                      style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text }
+                                    } : undefined} />
 
                                   {/* Right Y-axis for Ranking (Bar) */}
                                   <YAxis
                                     yAxisId="right"
                                     orientation="right"
                                     reversed
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                    tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text } : false}
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false}
                                     domain={[1, apiResults.ranking.length]}
                                     tickCount={apiResults.ranking.length}
                                     interval={0}
-                                    label={{
+                                    label={chartSettings.showAxisTitles ? {
                                       value: 'Ranking (1 = Best)',
                                       angle: 90,
                                       position: 'insideRight',
-                                      style: { fontSize: 12, fontWeight: 700, fill: '#000' }
-                                    }} />
+                                      offset: chartSettings.yAxisOffset,
+                                      style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text }
+                                    } : undefined} />
 
                                   <Tooltip
-                                    contentStyle={{ fontSize: '11px', borderRadius: '4px', border: '1px solid #000', boxShadow: 'none' }}
+                                    contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: '4px', border: `1px solid ${themeColors.border}`, backgroundColor: "rgba(255,255,255,0.9)" }}
                                     cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                                     formatter={(value: any, name: string) => name === "Rank" ? value : value.toFixed(resultsDecimalPlaces)}
                                   />
 
-                                  <Legend
-                                    verticalAlign="top"
-                                    align="center"
-                                    layout="horizontal"
-                                    wrapperStyle={{
-                                      fontSize: "10px",
-                                      color: "#000",
-                                      fontWeight: 700,
-                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                      border: "1px solid #000",
-                                      padding: "4px 8px",
-                                      top: 70,
-                                      left: "50%",
-                                      transform: "translateX(-50%)",
-                                      width: "max-content",
-                                      maxWidth: "95%",
-                                      zIndex: 50,
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                      display: "flex",
-                                      justifyContent: "center",
-                                      whiteSpace: "nowrap"
-                                    }}
-                                    iconSize={8}
-                                  />
+                                    <Legend
+                                      {...legCfg}
+                                      layout={legLayout}
+                                      wrapperStyle={{
+                                        fontSize: `${chartSettings.fontSize - 1}px`,
+                                        color: themeColors.text,
+                                        fontWeight: 700,
+                                        backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                        border: `1px solid ${themeColors.border}`,
+                                        padding: "4px 8px",
+                                        zIndex: 50,
+                                        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                        whiteSpace: "nowrap",
+                                        width: "fit-content",
+                                        left: legCfg.align === 'center' ? '50%' : undefined,
+                                        transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                      }}
+                                      iconSize={chartSettings.markerSize + 4}
+                                    />
 
                                   {/* Ranking Column (Bar - Right Axis) */}
                                   <Bar
                                     yAxisId="right"
                                     dataKey="rank"
-                                    fill="#ff7f0e"
-                                    stroke="#000"
-                                    strokeWidth={1}
+                                    fill={activeColors[1] || "#ff7f0e"}
+                                    fillOpacity={chartSettings.barOpacity}
+                                    stroke={themeColors.border}
+                                    strokeWidth={chartSettings.borderWidth}
                                     radius={[4, 4, 0, 0]}
                                     barSize={20}
                                     name="Rank"
@@ -15501,10 +15635,10 @@ export default function MCDMCalculator() {
                                     yAxisId="left"
                                     type="linear"
                                     dataKey="score"
-                                    stroke="#1f77b4"
-                                    strokeWidth={2.5}
-                                    dot={{ r: 5, fill: '#1f77b4', strokeWidth: 2, stroke: '#fff' }}
-                                    activeDot={{ r: 7 }}
+                                    stroke={activeColors[0]}
+                                    strokeWidth={chartSettings.borderWidth + 1}
+                                    dot={{ r: chartSettings.markerSize, fill: activeColors[0], strokeWidth: 1.5, stroke: themeColors.bg }}
+                                    activeDot={{ r: chartSettings.markerSize + 2 }}
                                     name="Score"
                                   />
                                 </ComposedChart>
@@ -15515,96 +15649,103 @@ export default function MCDMCalculator() {
                               return (
                                 <ComposedChart
                                   data={apiResults.ranking}
-                                  margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                  margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                   barGap={0}
                                   barCategoryGap="25%"
+                                  style={{ backgroundColor: themeColors.bg }}
                                 >
                                   <defs>
                                     <linearGradient id="colorScoreArea" x1="0" y1="0" x2="0" y2="1">
-                                      <stop offset="5%" stopColor="#1f77b4" stopOpacity={0.3} />
-                                      <stop offset="95%" stopColor="#1f77b4" stopOpacity={0} />
+                                      <stop offset="5%" stopColor={activeColors[0]} stopOpacity={chartSettings.barOpacity} />
+                                      <stop offset="95%" stopColor={activeColors[0]} stopOpacity={0} />
                                     </linearGradient>
                                   </defs>
-                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                                  {chartSettings.showGridLines && (
+                                    <CartesianGrid
+                                      strokeDasharray="3 3"
+                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                      stroke={chartSettings.gridColor}
+                                      opacity={chartSettings.gridOpacity}
+                                    />
+                                  )}
                                   <XAxis
                                     dataKey="alternativeName"
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    label={{ value: 'Robot Alternatives', position: 'insideBottom', offset: -15, style: { fontSize: 12, fontWeight: 700, fill: '#000' } }}
+                                    tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                    label={{ value: 'Robot Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text } }}
                                     height={50}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                  <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} />
+                                  <XAxis orientation="top" xAxisId="top_border" tick={false} tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
 
                                   {/* Left Y-axis for Score (Area) */}
                                   <YAxis
                                     yAxisId="left"
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                    tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
                                     domain={[0, 'auto']}
-                                    label={{
+                                    label={chartSettings.showAxisTitles ? {
                                       value: 'Performance Score',
                                       angle: -90,
                                       position: 'insideLeft',
-                                      style: { fontSize: 12, fontWeight: 700, fill: '#000' }
-                                    }} />
+                                      offset: chartSettings.yAxisOffset,
+                                      style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text }
+                                    } : undefined} />
 
                                   {/* Right Y-axis for Ranking (Bar) */}
                                   <YAxis
                                     yAxisId="right"
                                     orientation="right"
                                     reversed
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                    axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                    tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                                    tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text } : false}
+                                    axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                    tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false}
                                     domain={[1, apiResults.ranking.length]}
                                     tickCount={apiResults.ranking.length}
                                     interval={0}
-                                    label={{
+                                    label={chartSettings.showAxisTitles ? {
                                       value: 'Ranking (1 = Best)',
                                       angle: 90,
                                       position: 'insideRight',
-                                      style: { fontSize: 12, fontWeight: 700, fill: '#000' }
-                                    }} />
+                                      offset: chartSettings.yAxisOffset,
+                                      style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text }
+                                    } : undefined} />
 
                                   <Tooltip
-                                    contentStyle={{ fontSize: '11px', borderRadius: '4px', border: '1px solid #000', boxShadow: 'none' }}
+                                    contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: '4px', border: `1px solid ${themeColors.border}`, backgroundColor: "rgba(255,255,255,0.9)" }}
                                     cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                                     formatter={(value: any, name: string) => name === "Rank" ? value : value.toFixed(resultsDecimalPlaces)}
                                   />
 
-                                  <Legend
-                                    verticalAlign="top"
-                                    align="center"
-                                    layout="horizontal"
-                                    wrapperStyle={{
-                                      fontSize: "10px",
-                                      color: "#000",
-                                      fontWeight: 700,
-                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                      border: "1px solid #000",
-                                      padding: "4px 8px",
-                                      top: 70,
-                                      left: "50%",
-                                      transform: "translateX(-50%)",
-                                      width: "max-content",
-                                      maxWidth: "95%",
-                                      zIndex: 50,
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                      display: "flex",
-                                      justifyContent: "center",
-                                      whiteSpace: "nowrap"
-                                    }}
-                                    iconSize={8}
-                                  />
+                                    <Legend
+                                      {...legCfg}
+                                      layout={legLayout}
+                                      wrapperStyle={{
+                                        fontSize: `${chartSettings.fontSize - 1}px`,
+                                        color: themeColors.text,
+                                        fontWeight: 700,
+                                        backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                        border: `1px solid ${themeColors.border}`,
+                                        padding: "4px 8px",
+                                        zIndex: 50,
+                                        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                        whiteSpace: "nowrap",
+                                        width: "fit-content",
+                                        left: legCfg.align === 'center' ? '50%' : undefined,
+                                        transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                      }}
+                                      iconSize={chartSettings.markerSize + 4}
+                                    />
 
                                   {/* Ranking Column (Bar - Right Axis) */}
                                   <Bar
                                     yAxisId="right"
                                     dataKey="rank"
-                                    fill="#ff7f0e"
-                                    stroke="#000"
-                                    strokeWidth={1}
+                                    fill={activeColors[1] || "#ff7f0e"}
+                                    fillOpacity={chartSettings.barOpacity}
+                                    stroke={themeColors.border}
+                                    strokeWidth={chartSettings.borderWidth}
                                     radius={[4, 4, 0, 0]}
                                     barSize={20}
                                     name="Rank"
@@ -15615,8 +15756,9 @@ export default function MCDMCalculator() {
                                     yAxisId="left"
                                     type="monotone"
                                     dataKey="score"
-                                    stroke="#1f77b4"
-                                    strokeWidth={2.5}
+                                    stroke={activeColors[0]}
+                                    strokeWidth={chartSettings.borderWidth + 1}
+                                    fillOpacity={1}
                                     fill="url(#colorScoreArea)"
                                     name="Score"
                                   />
@@ -15625,7 +15767,7 @@ export default function MCDMCalculator() {
                             }
 
                             return (
-                              <ComposedChart data={apiResults.ranking} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
+                              <ComposedChart data={apiResults.ranking} margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
                                 <XAxis
                                   dataKey="alternativeName"
@@ -15676,30 +15818,25 @@ export default function MCDMCalculator() {
                                     name={isRankView ? "Rank" : "Score"}
                                   />
                                 )}
-                                <Legend
-                                  verticalAlign="top"
-                                  align="center"
-                                  layout="horizontal"
-                                  wrapperStyle={{
-                                    fontSize: "10px",
-                                    color: "#000",
-                                    fontWeight: 700,
-                                    backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                    border: "1px solid #000",
-                                    padding: "4px 8px",
-                                    top: 70,
-                                    left: "50%",
-                                    transform: "translateX(-50%)",
-                                    width: "max-content",
-                                    maxWidth: "95%",
-                                    zIndex: 50,
-                                    boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                    display: "flex",
-                                    justifyContent: "center",
-                                    whiteSpace: "nowrap"
-                                  }}
-                                  iconSize={8}
-                                />
+                                 <Legend
+                                   {...legCfg}
+                                   layout={legLayout}
+                                   wrapperStyle={{
+                                     fontSize: `${chartSettings.fontSize - 1}px`,
+                                     color: themeColors.text,
+                                     fontWeight: 700,
+                                     backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                     border: `1px solid ${themeColors.border}`,
+                                     padding: "4px 8px",
+                                     zIndex: 50,
+                                     boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                     whiteSpace: "nowrap",
+                                     width: "fit-content",
+                                     left: legCfg.align === 'center' ? '50%' : undefined,
+                                     transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                   }}
+                                   iconSize={chartSettings.markerSize + 4}
+                                 />
                                 <Line yAxisId="rb" dataKey={isRankView ? 'rank' : 'score'} stroke="transparent" strokeWidth={0} dot={false} isAnimationActive={false} legendType="none" activeDot={false} />
                               </ComposedChart>
                             );
