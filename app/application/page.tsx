@@ -48,7 +48,7 @@ import { Upload, ChevronDown, ChevronRight, ArrowLeft, ArrowRight, ArrowDown, Ho
 import ReactMarkdown from "react-markdown"
 import PaperExtractor from "@/components/PaperExtractor"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar, PieChart, Pie, ReferenceLine } from "recharts"
-import { toJpeg } from "html-to-image"
+import { toJpeg, toPng, toSvg } from "html-to-image"
 import SWEIFormula from "@/components/SWEIFormula"
 import WSMFormula from "@/components/WSMFormula"
 import WPMFormula from "@/components/WPMFormula"
@@ -1567,7 +1567,7 @@ export default function MCDMCalculator() {
     copyToLatex(data, headers, "Methodological Robustness Scores");
   };
 
-  const downloadChartAsJpeg = (ref: React.RefObject<HTMLDivElement | null>, prefix: string) => {
+  const downloadChartAsJpeg = (ref: React.RefObject<HTMLDivElement | null>, prefix: string, format: 'jpeg' | 'png' | 'svg' = 'jpeg') => {
     if (!ref.current) return
     const element = ref.current;
 
@@ -1579,56 +1579,72 @@ export default function MCDMCalculator() {
       glass: '#ffffff'
     }[chartSettings.backgroundTheme] || '#ffffff';
 
-    // Temporary styles for tight export
+    // Store original state to restore later
     const originalAttr = element.getAttribute("style");
     const originalClasses = Array.from(element.classList);
 
-    // Apply export-only "Tight" styling
-    element.style.width = '1050px';
-    element.style.height = '500px';
+    // Apply export-only high-fidelity styling
+    // We use a fixed 1200x675 (16:9) aspect ratio for professional journal figures
+    element.style.width = '1200px';
+    element.style.height = '675px';
     element.style.maxWidth = 'none';
     element.style.margin = '0px';
     element.style.padding = '0px';
     element.style.backgroundColor = themeBg;
+    element.style.overflow = 'hidden'; // Strict clipping to prevent axis leakage
+    element.style.position = 'relative';
+    
+    // Remove responsive classes that might interfere with fixed sizing
     element.classList.remove('max-w-7xl', 'mx-auto', 'w-full', 'h-full', 'sm:px-6', 'sm:py-2');
 
-    // Wait for Recharts to reflow to the new 1050px container dimensions
-    setTimeout(() => {
-      toJpeg(element, {
-        quality: 1.0,
-        backgroundColor: themeBg,
-        pixelRatio: 3, // High-quality print resolution
-        width: 1050,
-        height: 500,
-        style: {
-          margin: '0px',
-          padding: '0px',
-          left: '0px',
-          top: '0px'
-        }
-      })
-        .then((dataUrl) => {
-          const link = document.createElement("a");
-          link.download = `${prefix}-${new Date().getTime()}.jpg`;
-          link.href = dataUrl;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        })
-        .catch((err) => {
-          console.error("Failed to export chart", err);
-          toast.error("Failed to export figure. Please try again.");
-        })
-        .finally(() => {
-          // Restore original state exactly
-          if (originalAttr) {
-            element.setAttribute("style", originalAttr);
-          } else {
-            element.removeAttribute("style");
+    // Wait for Recharts to fully reflow the SVG to the new 1200px container
+    // Journals require exact dimensions; 500ms ensures all transitions/reflows are finished
+    setTimeout(async () => {
+      try {
+        const options = {
+          quality: 1.0,
+          backgroundColor: themeBg,
+          pixelRatio: 4, // Ultra-high 4x resolution for publication
+          width: 1200,
+          height: 675,
+          style: {
+            margin: '0px',
+            padding: '0px',
+            left: '0px',
+            top: '0px'
           }
-          originalClasses.forEach(cls => element.classList.add(cls));
-        });
-    }, 200); // 200ms is usually enough for a full SVG reflow
+        };
+
+        let dataUrl = "";
+        const filename = `${prefix}-${new Date().getTime()}.${format}`;
+
+        if (format === 'svg') {
+          dataUrl = await toSvg(element, options);
+        } else if (format === 'png') {
+          dataUrl = await toPng(element, options);
+        } else {
+          dataUrl = await toJpeg(element, options);
+        }
+
+        const link = document.createElement("a");
+        link.download = filename;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        console.error("Failed to export chart", err);
+        toast.error("Failed to export high-fidelity figure. Please try again.");
+      } finally {
+        // Restore original state exactly
+        if (originalAttr) {
+          element.setAttribute("style", originalAttr);
+        } else {
+          element.removeAttribute("style");
+        }
+        originalClasses.forEach(cls => element.classList.add(cls));
+      }
+    }, 500); 
   }
 
   const downloadComparisonChartAsJpeg = () => {
@@ -5456,9 +5472,25 @@ export default function MCDMCalculator() {
                               </SelectContent>
                             </Select>
 
-                            <Button onClick={() => downloadChartAsJpeg(weightChartRef, 'weight-analysis')} variant="outline" size="sm" className="h-7 text-xs">
-                              <Download className="w-3 h-3 mr-1" /> JPG
-                            </Button>
+                            <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-md border border-gray-200">
+                              <Button 
+                                onClick={() => downloadChartAsJpeg(weightChartRef, 'weight-analysis', 'jpeg')} 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all"
+                              >
+                                <Download className="w-3 h-3 mr-1 text-blue-600" /> JPEG
+                              </Button>
+                              <div className="w-[1px] h-3 bg-gray-300 mx-0.5" />
+                              <Button 
+                                onClick={() => downloadChartAsJpeg(weightChartRef, 'weight-analysis', 'svg')} 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all text-indigo-600"
+                              >
+                                <Sparkles className="w-3 h-3 mr-1" /> SVG
+                              </Button>
+                            </div>
                           </div>
                         </ResearchAssetHeader>
                         <CardDescription className="text-xs text-gray-700">Visualizing weights across different methods</CardDescription>
@@ -7991,9 +8023,25 @@ export default function MCDMCalculator() {
                         onIncludeChange={handleIncludeChange}
                         onAiAnalysis={() => handleAiAnalysis("ranking_comparison", { frontierData: comparisonResults })}
                       >
-                        <Button variant="outline" size="sm" onClick={() => downloadChartAsJpeg(decisionFrontierRef, 'decision-frontier')} className="h-7 text-[10px]">
-                          <Download className="w-3 h-3 mr-1" /> JPG
-                        </Button>
+                        <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-md border border-gray-200">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => downloadChartAsJpeg(decisionFrontierRef, 'decision-frontier', 'jpeg')} 
+                            className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all"
+                          >
+                            <Download className="w-3 h-3 mr-1 text-blue-600" /> JPEG
+                          </Button>
+                          <div className="w-[1px] h-3 bg-gray-300 mx-0.5" />
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => downloadChartAsJpeg(decisionFrontierRef, 'decision-frontier', 'svg')} 
+                            className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all text-indigo-600"
+                          >
+                            <Sparkles className="w-3 h-3 mr-1" /> SVG
+                          </Button>
+                        </div>
                       </ResearchAssetHeader>
                       <CardDescription className="text-[11px] text-indigo-700 font-medium mt-1">
                         Multidimensional comparison of the top ranked alternatives across all key criteria.
@@ -8678,9 +8726,25 @@ export default function MCDMCalculator() {
                                         <SelectItem value="dual">Dual-Axis (Score & Rank)</SelectItem>
                                       </SelectContent>
                                     </Select>
-                                    <Button onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation")} variant="outline" size="sm" className="h-7 text-xs">
-                                      <Download className="w-3 h-3 mr-1" /> JPG
-                                    </Button>
+                                    <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-md border border-gray-200">
+                                      <Button 
+                                        onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation", 'jpeg')} 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all"
+                                      >
+                                        <Download className="w-3 h-3 mr-1 text-blue-600" /> JPEG
+                                      </Button>
+                                      <div className="w-[1px] h-3 bg-gray-300 mx-0.5" />
+                                      <Button 
+                                        onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation", 'svg')} 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all text-indigo-600"
+                                      >
+                                        <Sparkles className="w-3 h-3 mr-1" /> SVG (VECTOR)
+                                      </Button>
+                                    </div>
                                   </div>
                                 </ResearchAssetHeader>
                               </CardHeader>
@@ -14761,14 +14825,25 @@ export default function MCDMCalculator() {
                             </SelectContent>
                           </Select>
 
-                          <Button
-                            onClick={() => downloadChartAsJpeg(rankingChartRef, `${method}-ranking-chart`)}
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-[10px] font-bold gap-1.5 border-gray-200 bg-white hover:bg-gray-50 transition-all shadow-sm ring-1 ring-black/5"
-                          >
-                            <Download className="w-3.5 h-3.5 text-blue-600" /> Export JPG
-                          </Button>
+                          <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-md border border-gray-200">
+                            <Button
+                              onClick={() => downloadChartAsJpeg(rankingChartRef, `${method}-ranking-chart`, 'jpeg')}
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all"
+                            >
+                              <Download className="w-3.5 h-3.5 text-blue-600 mr-1" /> JPEG
+                            </Button>
+                            <div className="w-[1px] h-3 bg-gray-300 mx-0.5" />
+                            <Button
+                              onClick={() => downloadChartAsJpeg(rankingChartRef, `${method}-ranking-chart`, 'svg')}
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all text-indigo-600"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 mr-1" /> SVG
+                            </Button>
+                          </div>
                         </div>
                       </ResearchAssetHeader>
                       <CardDescription className="text-xs text-gray-500 font-medium mt-1">Graphical representation of results for {method.toUpperCase()} method</CardDescription>

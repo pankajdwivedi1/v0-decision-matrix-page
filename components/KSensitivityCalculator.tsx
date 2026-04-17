@@ -17,7 +17,7 @@ import { AIResearchAssistant } from './AIResearchAssistant';
 import { AssetLabel } from './AssetLabel';
 import { ResearchAssetHeader } from './ResearchAssetHeader';
 import { Tag } from 'lucide-react';
-import { toJpeg } from 'html-to-image';
+import { toJpeg, toPng, toSvg } from 'html-to-image';
 import { MCDM_METHODS } from "@/constants/mcdm";
 import { MCDMMethod } from "@/types/mcdm";
 
@@ -610,31 +610,65 @@ export default function KSensitivityCalculator({
     }, 0);
   };
 
-  const downloadChartAsJpeg = () => {
+  const downloadChartAsJpeg = async (format: 'jpeg' | 'png' | 'svg' = 'jpeg') => {
     if (!chartRef.current) return;
 
-    // Use a high pixel ratio for publication quality (approx 600 DPI)
-    toJpeg(chartRef.current, {
-      quality: 1.0,
-      backgroundColor: "#ffffff",
-      pixelRatio: 6,
-      style: {
-        padding: '20px'
-      }
-    })
-      .then((dataUrl) => {
-        const link = document.createElement("a");
+    const element = chartRef.current;
+    
+    // Store original state
+    const originalAttr = element.getAttribute("style");
+    
+    // Professional 1200x675 (16:9) aspect ratio for publication
+    element.style.width = '1200px';
+    element.style.height = '675px';
+    element.style.maxWidth = 'none';
+    element.style.backgroundColor = '#ffffff';
+    element.style.overflow = 'hidden'; // Strict clipping
+    element.style.position = 'relative';
+
+    // Wait for Recharts reflow
+    setTimeout(async () => {
+      try {
+        const options = {
+          quality: 1.0,
+          backgroundColor: "#ffffff",
+          pixelRatio: 4, // 4x high density for journals
+          width: 1200,
+          height: 675,
+          style: {
+            padding: '20px'
+          }
+        };
+
+        let dataUrl = "";
         const criterionName = workingCriteria.find(c => c.id === selectedCriterionToVary)?.name || "Sensitivity";
-        link.download = `sensitivity-analysis-${criterionName.replace(/\s+/g, '_').toLowerCase()}-${Date.now()}.jpg`;
+        const filename = `sensitivity-analysis-${criterionName.replace(/\s+/g, '_').toLowerCase()}-${Date.now()}.${format}`;
+
+        if (format === 'svg') {
+          dataUrl = await toSvg(element, options);
+        } else if (format === 'png') {
+          dataUrl = await toPng(element, options);
+        } else {
+          dataUrl = await toJpeg(element, options);
+        }
+
+        const link = document.createElement("a");
+        link.download = filename;
         link.href = dataUrl;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error("Error exporting chart", err);
-        alert("Failed to export chart. Please try again.");
-      });
+        alert("Failed to export figure. Please try again.");
+      } finally {
+        if (originalAttr) {
+          element.setAttribute("style", originalAttr);
+        } else {
+          element.removeAttribute("style");
+        }
+      }
+    }, 500);
   };
 
   const performKSensitivityAnalysis = async (altIdsOverride?: string[], rankingMethodOverride?: string, criterionIdOverride?: string) => {
@@ -2943,10 +2977,25 @@ export default function KSensitivityCalculator({
                                     ))}
                                   </SelectContent>
                                 </Select>
-                                <Button onClick={downloadChartAsJpeg} variant="outline" size="sm" className="h-8 text-[11px] bg-white border-gray-300 hover:bg-gray-100 text-gray-700">
-                                  <Download className="w-3 h-3 mr-1 text-blue-600" />
-                                  JPG Image
-                                </Button>
+                                <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-md border border-gray-200">
+                                  <Button 
+                                    onClick={() => downloadChartAsJpeg('jpeg')} 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all text-blue-600"
+                                  >
+                                    <Download className="w-3 h-3 mr-1" /> JPEG
+                                  </Button>
+                                  <div className="w-[1px] h-3 bg-gray-300 mx-0.5" />
+                                  <Button 
+                                    onClick={() => downloadChartAsJpeg('svg')} 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all text-indigo-600"
+                                  >
+                                    <Sparkles className="w-3 h-3 mr-1" /> SVG (Vector)
+                                  </Button>
+                                </div>
                               </div>
                             </ResearchAssetHeader>
                             <CardDescription className="text-[10px]">
