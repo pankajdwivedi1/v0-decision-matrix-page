@@ -160,11 +160,11 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 min-h-[420px]">
+        <div className="p-4 sm:p-4 min-h-0">
           {/* ELEMENTS TAB */}
-          <TabsContent value="elements" className="mt-0 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-3">
+          <TabsContent value="elements" className="mt-0 space-y-4 h-full">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr] gap-6 items-stretch">
+              <div className="flex flex-col justify-between h-full space-y-3">
                 <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Visibility</Label>
                 <div className="grid gap-2">
                   <div className="space-y-2 p-2.5 bg-white border border-slate-200 rounded-lg group hover:border-blue-300 transition-all duration-300">
@@ -180,19 +180,19 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                         <Button
                           variant={settings.gridLinesMode === 'horizontal' ? 'default' : 'outline'}
                           size="sm"
-                          className="h-6 text-[9px] flex-1 px-1"
+                          className="h-5 text-[9px] px-2"
                           onClick={() => updateSetting('gridLinesMode', 'horizontal')}
                         >HORZ</Button>
                         <Button
                           variant={settings.gridLinesMode === 'vertical' ? 'default' : 'outline'}
                           size="sm"
-                          className="h-6 text-[9px] flex-1 px-1"
+                          className="h-5 text-[9px] px-2"
                           onClick={() => updateSetting('gridLinesMode', 'vertical')}
                         >VERT</Button>
                         <Button
                           variant={settings.gridLinesMode === 'both' ? 'default' : 'outline'}
                           size="sm"
-                          className="h-6 text-[9px] flex-1 px-1"
+                          className="h-5 text-[9px] px-2"
                           onClick={() => updateSetting('gridLinesMode', 'both')}
                         >BOTH</Button>
                       </div>
@@ -208,18 +208,10 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="flex flex-col justify-between h-full space-y-3">
                 <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Titles & Legend</Label>
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <Type className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="text-xs font-bold text-slate-700">Axis Titles</span>
-                    </div>
-                    <Switch checked={settings.showAxisTitles} onCheckedChange={(val: boolean) => updateSetting('showAxisTitles', val)} />
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg group hover:border-blue-400 transition-all duration-300">
+                <div className="flex flex-col md:flex-row items-stretch justify-between w-full gap-4">
+                  <div className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg group hover:border-blue-400 transition-all duration-300 flex-1">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
                         <Monitor className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
@@ -239,87 +231,97 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
+                        className="h-6 w-6 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
                         onMouseDown={() => startNudging(0, -1)}
                         onMouseUp={stopNudging}
                         onMouseLeave={stopNudging}
                         title="Move Up (Tap: 0.5cm / Hold: Smooth)"
                       >
-                        <ChevronUp className="w-4 h-4" />
+                        <ChevronUp className="w-3.5 h-3.5" />
                       </Button>
                       <div />
 
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
+                        className="h-6 w-6 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
                         onMouseDown={() => startNudging(-1, 0)}
                         onMouseUp={stopNudging}
                         onMouseLeave={stopNudging}
                         title="Move Left (Tap: 0.5cm / Hold: Smooth)"
                       >
-                        <ChevronLeft className="w-4 h-4" />
+                        <ChevronLeft className="w-3.5 h-3.5" />
                       </Button>
                       <Button
                         variant={settings.legendPosition === 'middle' && settings.legendOffsetX === 0 && settings.legendOffsetY === 0 ? 'default' : 'ghost'}
                         size="icon"
-                        className={`h-7 w-7 rounded-sm transition-all ${settings.legendPosition === 'middle' && settings.legendOffsetX === 0 && settings.legendOffsetY === 0 ? 'bg-blue-600 text-white' : 'hover:bg-white text-slate-400 active:scale-90'}`}
+                        className={`h-6 w-6 rounded-sm transition-all ${settings.legendPosition === 'middle' && settings.legendOffsetX === 0 && settings.legendOffsetY === 0 ? 'bg-blue-600 text-white' : 'hover:bg-white text-slate-400 active:scale-90'}`}
                         onClick={() => {
                           onSettingsChange({ ...settings, legendPosition: 'middle', legendOffsetX: 0, legendOffsetY: 0 });
                         }}
                         title="Reset to Center"
                       >
-                        <Circle className="w-2.5 h-2.5 fill-current opacity-70" />
+                        <Circle className="w-2 h-2 fill-current opacity-70" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
+                        className="h-6 w-6 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
                         onMouseDown={() => startNudging(1, 0)}
                         onMouseUp={stopNudging}
                         onMouseLeave={stopNudging}
                         title="Move Right (Tap: 0.5cm / Hold: Smooth)"
                       >
-                        <ChevronRight className="w-4 h-4" />
+                        <ChevronRight className="w-3.5 h-3.5" />
                       </Button>
 
                       <div />
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
+                        className="h-6 w-6 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
                         onMouseDown={() => startNudging(0, 1)}
                         onMouseUp={stopNudging}
                         onMouseLeave={stopNudging}
                         title="Move Down (Tap: 0.5cm / Hold: Smooth)"
                       >
-                        <ChevronDown className="w-4 h-4" />
+                        <ChevronDown className="w-3.5 h-3.5" />
                       </Button>
                       <div />
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg">
-                    <span className="text-xs font-bold text-slate-700 uppercase tracking-tighter">Legend Style</span>
-                    <div className="flex gap-1">
-                      <Button
-                        variant={settings.legendLayout === 'horizontal' ? 'secondary' : 'ghost'}
-                        size="sm"
-                        className="h-6 text-[9px] px-2 font-bold"
-                        onClick={() => updateSetting('legendLayout', 'horizontal')}
-                      >HORIZ</Button>
-                      <Button
-                        variant={settings.legendLayout === 'vertical' ? 'secondary' : 'ghost'}
-                        size="sm"
-                        className="h-6 text-[9px] px-2 font-bold"
-                        onClick={() => updateSetting('legendLayout', 'vertical')}
-                      >VERT</Button>
+                  <div className="flex flex-col gap-2 flex-1">
+                    <div className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors w-full">
+                      <div className="flex items-center gap-2">
+                        <Type className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="text-xs font-bold text-slate-700">Axis Titles</span>
+                      </div>
+                      <Switch checked={settings.showAxisTitles} onCheckedChange={(val: boolean) => updateSetting('showAxisTitles', val)} />
+                    </div>
+
+                    <div className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg w-full">
+                      <span className="text-xs font-bold text-slate-700 uppercase tracking-tighter">Legend Style</span>
+                      <div className="flex gap-1">
+                        <Button
+                          variant={settings.legendLayout === 'horizontal' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className="h-5 text-[9px] px-2 font-bold"
+                          onClick={() => updateSetting('legendLayout', 'horizontal')}
+                        >HORIZ</Button>
+                        <Button
+                          variant={settings.legendLayout === 'vertical' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className="h-5 text-[9px] px-2 font-bold"
+                          onClick={() => updateSetting('legendLayout', 'vertical')}
+                        >VERT</Button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-3 col-span-2 md:col-span-1">
+              <div className="flex flex-col justify-between h-full space-y-3 col-span-2 md:col-span-1">
                 <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Axis Labels</Label>
                 <div className="grid gap-2">
                    <div className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-lg">
@@ -348,7 +350,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
           </TabsContent>
 
           {/* STYLE TAB */}
-          <TabsContent value="style" className="mt-0 space-y-6">
+          <TabsContent value="style" className="mt-0 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-4 pt-1">
                 <div className="flex items-center justify-between underline decoration-slate-200 underline-offset-4">
@@ -440,7 +442,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
           </TabsContent>
 
           {/* LAYOUT TAB */}
-          <TabsContent value="layout" className="mt-0 space-y-6">
+          <TabsContent value="layout" className="mt-0 space-y-4">
             <div className="flex flex-col md:flex-row gap-8">
               <div className="w-full md:w-[20%] space-y-4">
                 <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Typography</Label>

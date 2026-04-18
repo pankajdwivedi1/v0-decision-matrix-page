@@ -1596,9 +1596,9 @@ export default function MCDMCalculator() {
     element.style.margin = '0px';
     element.style.padding = '0px';
     element.style.backgroundColor = themeBg;
-    element.style.overflow = 'hidden'; 
+    element.style.overflow = 'hidden';
     element.style.position = 'relative';
-    
+
     // Remove responsive classes that might interfere with fixed sizing
     element.classList.remove('max-w-7xl', 'mx-auto', 'w-full', 'h-full', 'sm:px-6', 'sm:py-2');
 
@@ -1608,7 +1608,7 @@ export default function MCDMCalculator() {
         const options = {
           quality: 1.0,
           backgroundColor: themeBg,
-          pixelRatio: 4, 
+          pixelRatio: 4,
           width: targetWidth,
           height: targetHeight,
           style: {
@@ -1648,7 +1648,7 @@ export default function MCDMCalculator() {
         }
         originalClasses.forEach(cls => element.classList.add(cls));
       }
-    }, 500); 
+    }, 500);
   }
 
   const downloadComparisonChartAsJpeg = () => {
@@ -4084,16 +4084,16 @@ export default function MCDMCalculator() {
                 </PieChart>
               ) : weightResultsChartType === 'line' ? (
                 <LineChart data={data} margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-                   {chartSettings.showGridLines && (
-                     <CartesianGrid
-                       strokeDasharray="3 3"
-                       horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                       vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                       stroke={chartSettings.gridColor}
-                       opacity={chartSettings.gridOpacity}
-                     />
-                   )}
-                   <XAxis label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: 10, fontWeight: 700, fill: '#000' } } : undefined} dataKey="name" stroke="#000" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} angle={-45} textAnchor="end" interval={0} height={60} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
+                  {chartSettings.showGridLines && (
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                      stroke={chartSettings.gridColor}
+                      opacity={chartSettings.gridOpacity}
+                    />
+                  )}
+                  <XAxis label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: 10, fontWeight: 700, fill: '#000' } } : undefined} dataKey="name" stroke="#000" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} angle={-45} textAnchor="end" interval={0} height={60} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                   <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
                   <YAxis label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: 10, fontWeight: 700, fill: '#000' } } : undefined} stroke="#000" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                   <YAxis orientation="right" yAxisId="rb" width={1} tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
@@ -5500,19 +5500,19 @@ export default function MCDMCalculator() {
                             </Select>
 
                             <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-md border border-gray-200">
-                              <Button 
-                                onClick={() => downloadChartAsJpeg(weightChartRef, 'weight-analysis', 'jpeg')} 
-                                variant="ghost" 
-                                size="sm" 
+                              <Button
+                                onClick={() => downloadChartAsJpeg(weightChartRef, 'weight-analysis', 'jpeg')}
+                                variant="ghost"
+                                size="sm"
                                 className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all"
                               >
                                 <Download className="w-3 h-3 mr-1 text-blue-600" /> JPEG
                               </Button>
                               <div className="w-[1px] h-3 bg-gray-300 mx-0.5" />
-                              <Button 
-                                onClick={() => downloadChartAsJpeg(weightChartRef, 'weight-analysis', 'svg')} 
-                                variant="ghost" 
-                                size="sm" 
+                              <Button
+                                onClick={() => downloadChartAsJpeg(weightChartRef, 'weight-analysis', 'svg')}
+                                variant="ghost"
+                                size="sm"
                                 className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all text-indigo-600"
                               >
                                 <Sparkles className="w-3 h-3 mr-1" /> SVG
@@ -6976,7 +6976,7 @@ export default function MCDMCalculator() {
                                       : "Chart comparing alternative ranks across selected methods."}
                             </CardDescription>
                           </CardHeader>
-                          <CardContent className={`${comparisonChartType === "heatmap" ? "h-auto" : comparisonChartType === "composed" ? "h-[1200px] sm:h-[1000px]" : "h-[800px] sm:h-[600px]"} p-0 sm:px-6 sm:py-2 mt-0`}>
+                          <CardContent className={`${comparisonChartType === "heatmap" ? "h-auto" : "h-[800px] sm:h-[600px]"} p-0 sm:px-6 sm:py-2 mt-0`}>
                             {(() => {
                               if (comparisonChartType === "heatmap") {
                                 return (
@@ -7573,34 +7573,40 @@ export default function MCDMCalculator() {
                                           });
 
                                           return (
-                                            <ComposedChart data={hybridData} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
+                                            <ComposedChart
+                                              data={hybridData}
+                                              margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                              barGap={0}
+                                              barCategoryGap="25%"
+                                            >
                                               {chartSettings.showGridLines && (
-                                     <CartesianGrid
-                                       strokeDasharray="3 3"
-                                       horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                       vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                       stroke={chartSettings.gridColor}
-                                       opacity={chartSettings.gridOpacity}
-                                     />
-                                   )}
+                                                <CartesianGrid
+                                                  strokeDasharray="3 3"
+                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                                  stroke={chartSettings.gridColor}
+                                                  opacity={chartSettings.gridOpacity}
+                                                />
+                                              )}
                                               <XAxis
                                                 dataKey="alternative"
+                                                xAxisId="main"
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: chartSettings.xAxisTitle || "Alternatives", position: "insideBottom", offset: -45, style: { fontSize: "12px", fontWeight: 700, fill: "#000" } }}
+                                                label={{ value: chartSettings.xAxisTitle || "Alternatives", position: "insideBottom", offset: chartSettings.xAxisOffset, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
                                                 tickLine={{ stroke: "#000", strokeWidth: 1 }}
                                                 interval={0}
                                                 angle={-45}
                                                 textAnchor="end"
                                               />
-                                              <XAxis orientation="top" xAxisId="top_axis" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
+                                              <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
                                               <YAxis
                                                 yAxisId="rank"
                                                 reversed={true}
                                                 domain={[0, "auto"]}
                                                 allowDecimals={false}
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: chartSettings.yAxisTitle || "Ordinal Ranking (1 = Top)", angle: -90, position: "insideLeft", style: { fontSize: "12px", fontWeight: 700, fill: "#000" } }}
+                                                label={{ value: chartSettings.yAxisTitle || "Ordinal Ranking (1 = Top)", angle: -90, position: "insideLeft", offset: chartSettings.yAxisOffset, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
                                                 tickLine={{ stroke: "#000", strokeWidth: 1 }}
                                               />
@@ -7608,8 +7614,8 @@ export default function MCDMCalculator() {
                                                 yAxisId="score"
                                                 orientation="right"
                                                 domain={[0, "auto"]}
-                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#666" }}
-                                                label={{ value: "Algorithm Performance Scores", angle: 90, position: "insideRight", style: { fontSize: "12px", fontWeight: 700, fill: "#666" } }}
+                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
+                                                label={{ value: "Algorithm Performance Scores", angle: 90, position: "insideRight", offset: 0, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }}
                                                 axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
                                                 tickLine={{ stroke: "#000", strokeWidth: 1 }}
                                               />
@@ -7618,28 +7624,33 @@ export default function MCDMCalculator() {
                                                 cursor={{ fill: "rgba(0,0,0,0.05)" }}
                                               />
                                               <Legend
-                                                verticalAlign="middle"
-                                                align="left"
-                                                layout="vertical"
+                                                verticalAlign="top"
+                                                align="center"
+                                                layout="horizontal"
                                                 wrapperStyle={{
-                                                  fontSize: "9px",
+                                                  fontSize: "10px",
                                                   color: "#000",
                                                   fontWeight: 700,
-                                                  backgroundColor: "rgba(255, 255, 255, 0.9)",
-                                                  border: "1.5px solid #000",
-                                                  padding: "6px 10px",
-                                                  left: 300,
-                                                  zIndex: 100,
-                                                  boxShadow: "3px 3px 0px rgba(0,0,0,1)",
+                                                  backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                                  border: "1px solid #000",
+                                                  padding: "4px 8px",
+                                                  top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 45 : undefined,
+                                                  left: "50%",
+                                                  transform: "translateX(-50%)",
+                                                  width: "max-content",
+                                                  maxWidth: "95%",
+                                                  zIndex: 50,
+                                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
                                                   display: "flex",
-                                                  flexDirection: "column",
-                                                  gap: "4px",
-                                                  width: "max-content"
+                                                  justifyContent: "center",
+                                                  whiteSpace: "nowrap"
                                                 }}
+                                                iconSize={8}
                                               />
                                               {comparisonResults.map((res, idx) => (
                                                 <Bar
                                                   key={`${res.label}_bar`}
+                                                  xAxisId="main"
                                                   yAxisId="rank"
                                                   dataKey={res.label}
                                                   name={`${res.label} Rank`}
@@ -7650,6 +7661,7 @@ export default function MCDMCalculator() {
                                               {comparisonResults.map((res, idx) => (
                                                 <Line
                                                   key={`${res.label}_score_line`}
+                                                  xAxisId="main"
                                                   yAxisId="score"
                                                   type="monotone"
                                                   dataKey={`${res.label}_score`}
@@ -8067,19 +8079,19 @@ export default function MCDMCalculator() {
                         onAiAnalysis={() => handleAiAnalysis("ranking_comparison", { frontierData: comparisonResults })}
                       >
                         <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-md border border-gray-200">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => downloadChartAsJpeg(decisionFrontierRef, 'decision-frontier', 'jpeg')} 
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => downloadChartAsJpeg(decisionFrontierRef, 'decision-frontier', 'jpeg')}
                             className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all"
                           >
                             <Download className="w-3 h-3 mr-1 text-blue-600" /> JPEG
                           </Button>
                           <div className="w-[1px] h-3 bg-gray-300 mx-0.5" />
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => downloadChartAsJpeg(decisionFrontierRef, 'decision-frontier', 'svg')} 
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => downloadChartAsJpeg(decisionFrontierRef, 'decision-frontier', 'svg')}
                             className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all text-indigo-600"
                           >
                             <Sparkles className="w-3 h-3 mr-1" /> SVG
@@ -8770,19 +8782,19 @@ export default function MCDMCalculator() {
                                       </SelectContent>
                                     </Select>
                                     <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-md border border-gray-200">
-                                      <Button 
-                                        onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation", 'jpeg')} 
-                                        variant="ghost" 
-                                        size="sm" 
+                                      <Button
+                                        onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation", 'jpeg')}
+                                        variant="ghost"
+                                        size="sm"
                                         className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all"
                                       >
                                         <Download className="w-3 h-3 mr-1 text-blue-600" /> JPEG
                                       </Button>
                                       <div className="w-[1px] h-3 bg-gray-300 mx-0.5" />
-                                      <Button 
-                                        onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation", 'svg')} 
-                                        variant="ghost" 
-                                        size="sm" 
+                                      <Button
+                                        onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation", 'svg')}
+                                        variant="ghost"
+                                        size="sm"
                                         className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all text-indigo-600"
                                       >
                                         <Sparkles className="w-3 h-3 mr-1" /> SVG (VECTOR)
@@ -8902,7 +8914,7 @@ export default function MCDMCalculator() {
                                             top: 70,
                                             left: chartSettings.legendPosition === 'left' ? 10 : chartSettings.legendPosition === 'right' ? undefined : "50%",
                                             right: chartSettings.legendPosition === 'right' ? 10 : undefined,
-                                            transform: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "none" : "translateX(-50%)",
+                                            transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                             zIndex: 50,
                                             boxShadow: "2px 2px 0px rgba(0,0,0,1)",
@@ -8972,9 +8984,11 @@ export default function MCDMCalculator() {
                                             backgroundColor: "rgba(255, 255, 255, 0.95)",
                                             border: "1px solid #000",
                                             padding: "4px 8px",
-                                            top: 70,
-                                            left: "50%",
-                                            transform: "translateX(-50%)",
+                                            top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
+                                            bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
+                                            left: chartSettings.legendPosition === 'left' ? 30 : chartSettings.legendPosition === 'right' ? undefined : "50%",
+                                            right: chartSettings.legendPosition === 'right' ? 30 : undefined,
+                                            transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: "max-content",
                                             maxWidth: "95%",
                                             zIndex: 50,
@@ -9053,7 +9067,7 @@ export default function MCDMCalculator() {
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
                                             left: chartSettings.legendPosition === 'left' ? 10 : chartSettings.legendPosition === 'right' ? undefined : "50%",
                                             right: chartSettings.legendPosition === 'right' ? 10 : undefined,
-                                            transform: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "none" : "translateX(-50%)",
+                                            transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                             maxWidth: "95%",
                                             zIndex: 50,
@@ -9129,7 +9143,7 @@ export default function MCDMCalculator() {
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
                                             left: chartSettings.legendPosition === 'left' ? 10 : chartSettings.legendPosition === 'right' ? undefined : "50%",
                                             right: chartSettings.legendPosition === 'right' ? 10 : undefined,
-                                            transform: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "none" : "translateX(-50%)",
+                                            transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                             maxWidth: "95%",
                                             zIndex: 50,
@@ -9239,7 +9253,7 @@ export default function MCDMCalculator() {
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
                                             left: chartSettings.legendPosition === 'left' ? 30 : chartSettings.legendPosition === 'right' ? undefined : "50%",
                                             right: chartSettings.legendPosition === 'right' ? 30 : undefined,
-                                            transform: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "none" : "translateX(-50%)",
+                                            transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                             maxWidth: "95%",
                                             zIndex: 50,
@@ -9324,7 +9338,7 @@ export default function MCDMCalculator() {
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
                                             left: chartSettings.legendPosition === 'left' ? 30 : chartSettings.legendPosition === 'right' ? undefined : "50%",
                                             right: chartSettings.legendPosition === 'right' ? 30 : undefined,
-                                            transform: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "none" : "translateX(-50%)",
+                                            transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                             maxWidth: "95%",
                                             zIndex: 50,
@@ -9398,7 +9412,7 @@ export default function MCDMCalculator() {
                                                 bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
                                                 left: chartSettings.legendPosition === 'left' ? 30 : chartSettings.legendPosition === 'right' ? undefined : "50%",
                                                 right: chartSettings.legendPosition === 'right' ? 30 : undefined,
-                                                transform: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "none" : "translateX(-50%)",
+                                                transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                                 width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                                 maxWidth: "95%",
                                                 zIndex: 50,
@@ -9541,7 +9555,7 @@ export default function MCDMCalculator() {
                                                 bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
                                                 left: chartSettings.legendPosition === 'left' ? 30 : chartSettings.legendPosition === 'right' ? undefined : "50%",
                                                 right: chartSettings.legendPosition === 'right' ? 30 : undefined,
-                                                transform: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "none" : "translateX(-50%)",
+                                                transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                                 width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                                 maxWidth: "95%",
                                                 zIndex: 50,
@@ -15032,24 +15046,24 @@ export default function MCDMCalculator() {
                                     ))}
                                   </RadialBar>
                                   <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: "rgba(255,255,255,0.9)" }} />
-                                    <Legend
-                                      {...legCfg}
-                                      layout={legLayout}
-                                      iconSize={chartSettings.markerSize + 4}
-                                      wrapperStyle={{
-                                        fontSize: `${chartSettings.fontSize - 1}px`,
-                                        color: themeColors.text,
-                                        fontWeight: 700,
-                                        backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                        border: `1px solid ${themeColors.border}`,
-                                        padding: "4px 8px",
-                                        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                        borderRadius: "4px",
-                                        width: "fit-content",
-                                        left: legCfg.align === 'center' ? '50%' : undefined,
-                                        transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
-                                      }}
-                                    />
+                                  <Legend
+                                    {...legCfg}
+                                    layout={legLayout}
+                                    iconSize={chartSettings.markerSize + 4}
+                                    wrapperStyle={{
+                                      fontSize: `${chartSettings.fontSize - 1}px`,
+                                      color: themeColors.text,
+                                      fontWeight: 700,
+                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                      border: `1px solid ${themeColors.border}`,
+                                      padding: "4px 8px",
+                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      borderRadius: "4px",
+                                      width: "fit-content",
+                                      left: legCfg.align === 'center' ? '50%' : undefined,
+                                      transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                    }}
+                                  />
                                 </RadialBarChart>
                               );
                             }
@@ -15058,14 +15072,14 @@ export default function MCDMCalculator() {
                               return (
                                 <ComposedChart data={apiResults.ranking} margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
                                   {chartSettings.showGridLines && (
-                                     <CartesianGrid
-                                       strokeDasharray="3 3"
-                                       horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                       vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                       stroke={chartSettings.gridColor}
-                                       opacity={chartSettings.gridOpacity}
-                                     />
-                                   )}
+                                    <CartesianGrid
+                                      strokeDasharray="3 3"
+                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                      stroke={chartSettings.gridColor}
+                                      opacity={chartSettings.gridOpacity}
+                                    />
+                                  )}
                                   <ReferenceLine y={1} yAxisId="right" stroke="#000" strokeWidth={1.5} />
                                   <XAxis
                                     dataKey="alternativeName"
@@ -15105,25 +15119,25 @@ export default function MCDMCalculator() {
                                       style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text }
                                     } : undefined} />
                                   <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                    <Legend
-                                      {...legCfg}
-                                      layout={legLayout}
-                                      wrapperStyle={{
-                                        fontSize: `${chartSettings.fontSize - 1}px`,
-                                        color: themeColors.text,
-                                        fontWeight: 700,
-                                        backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                        border: `1px solid ${themeColors.border}`,
-                                        padding: "4px 8px",
-                                        zIndex: 50,
-                                        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                        whiteSpace: "nowrap",
-                                        width: "fit-content",
-                                        left: legCfg.align === 'center' ? '50%' : undefined,
-                                        transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
-                                      }}
-                                      iconSize={chartSettings.markerSize + 4}
-                                    />
+                                  <Legend
+                                    {...legCfg}
+                                    layout={legLayout}
+                                    wrapperStyle={{
+                                      fontSize: `${chartSettings.fontSize - 1}px`,
+                                      color: themeColors.text,
+                                      fontWeight: 700,
+                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                      border: `1px solid ${themeColors.border}`,
+                                      padding: "4px 8px",
+                                      zIndex: 50,
+                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      whiteSpace: "nowrap",
+                                      width: "fit-content",
+                                      left: legCfg.align === 'center' ? '50%' : undefined,
+                                      transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                    }}
+                                    iconSize={chartSettings.markerSize + 4}
+                                  />
                                   <Bar
                                     yAxisId="left"
                                     dataKey="score"
@@ -15158,14 +15172,14 @@ export default function MCDMCalculator() {
                                   style={{ backgroundColor: themeColors.bg }}
                                 >
                                   {chartSettings.showGridLines && (
-                                     <CartesianGrid
-                                       strokeDasharray="3 3"
-                                       horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                       vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                       stroke={chartSettings.gridColor}
-                                       opacity={chartSettings.gridOpacity}
-                                     />
-                                   )}
+                                    <CartesianGrid
+                                      strokeDasharray="3 3"
+                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                      stroke={chartSettings.gridColor}
+                                      opacity={chartSettings.gridOpacity}
+                                    />
+                                  )}
                                   <XAxis
                                     xAxisId="top"
                                     orientation="top"
@@ -15204,25 +15218,25 @@ export default function MCDMCalculator() {
                                     axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false} />
 
                                   <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: "rgba(255,255,255,0.9)" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                    <Legend
-                                      {...legCfg}
-                                      layout={legLayout}
-                                      wrapperStyle={{
-                                        fontSize: `${chartSettings.fontSize - 1}px`,
-                                        color: themeColors.text,
-                                        fontWeight: 700,
-                                        backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                        border: `1px solid ${themeColors.border}`,
-                                        padding: "4px 8px",
-                                        zIndex: 50,
-                                        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                        whiteSpace: "nowrap",
-                                        width: "fit-content",
-                                        left: legCfg.align === 'center' ? '50%' : undefined,
-                                        transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
-                                      }}
-                                      iconSize={chartSettings.markerSize + 4}
-                                    />
+                                  <Legend
+                                    {...legCfg}
+                                    layout={legLayout}
+                                    wrapperStyle={{
+                                      fontSize: `${chartSettings.fontSize - 1}px`,
+                                      color: themeColors.text,
+                                      fontWeight: 700,
+                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                      border: `1px solid ${themeColors.border}`,
+                                      padding: "4px 8px",
+                                      zIndex: 50,
+                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      whiteSpace: "nowrap",
+                                      width: "fit-content",
+                                      left: legCfg.align === 'center' ? '50%' : undefined,
+                                      transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                    }}
+                                    iconSize={chartSettings.markerSize + 4}
+                                  />
                                   <Bar xAxisId="bottom" yAxisId="left" dataKey="score" fill={activeColors[0]} fillOpacity={chartSettings.barOpacity} stroke={themeColors.border} strokeWidth={chartSettings.borderWidth} name="Performance Score" radius={[0, 4, 4, 0]} />
                                 </BarChart>
                               );
@@ -15239,14 +15253,14 @@ export default function MCDMCalculator() {
                               return (
                                 <ComposedChart data={dumbbellData} margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} style={{ backgroundColor: themeColors.bg }}>
                                   {chartSettings.showGridLines && (
-                                     <CartesianGrid
-                                       strokeDasharray="3 3"
-                                       horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                       vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                       stroke={chartSettings.gridColor}
-                                       opacity={chartSettings.gridOpacity}
-                                     />
-                                   )}
+                                    <CartesianGrid
+                                      strokeDasharray="3 3"
+                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                      stroke={chartSettings.gridColor}
+                                      opacity={chartSettings.gridOpacity}
+                                    />
+                                  )}
                                   <XAxis dataKey="alternativeName" tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} />
                                   <XAxis orientation="top" xAxisId="top_border" tick={false} tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
 
@@ -15367,25 +15381,25 @@ export default function MCDMCalculator() {
                                     formatter={(value: any, name: string) => name === "Rank" ? value : value.toFixed(resultsDecimalPlaces)}
                                   />
 
-                                    <Legend
-                                      {...legCfg}
-                                      layout={legLayout}
-                                      wrapperStyle={{
-                                        fontSize: `${chartSettings.fontSize - 1}px`,
-                                        color: themeColors.text,
-                                        fontWeight: 700,
-                                        backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                        border: `1px solid ${themeColors.border}`,
-                                        padding: "4px 8px",
-                                        zIndex: 50,
-                                        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                        whiteSpace: "nowrap",
-                                        width: "fit-content",
-                                        left: legCfg.align === 'center' ? '50%' : undefined,
-                                        transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
-                                      }}
-                                      iconSize={chartSettings.markerSize + 4}
-                                    />
+                                  <Legend
+                                    {...legCfg}
+                                    layout={legLayout}
+                                    wrapperStyle={{
+                                      fontSize: `${chartSettings.fontSize - 1}px`,
+                                      color: themeColors.text,
+                                      fontWeight: 700,
+                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                      border: `1px solid ${themeColors.border}`,
+                                      padding: "4px 8px",
+                                      zIndex: 50,
+                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      whiteSpace: "nowrap",
+                                      width: "fit-content",
+                                      left: legCfg.align === 'center' ? '50%' : undefined,
+                                      transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                    }}
+                                    iconSize={chartSettings.markerSize + 4}
+                                  />
 
                                   {/* Performance Score Bar (Left Axis) */}
                                   <Bar
@@ -15483,25 +15497,25 @@ export default function MCDMCalculator() {
                                     formatter={(value: any, name: string) => name === "Rank" ? value : value.toFixed(resultsDecimalPlaces)}
                                   />
 
-                                    <Legend
-                                      {...legCfg}
-                                      layout={legLayout}
-                                      wrapperStyle={{
-                                        fontSize: `${chartSettings.fontSize - 1}px`,
-                                        color: themeColors.text,
-                                        fontWeight: 700,
-                                        backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                        border: `1px solid ${themeColors.border}`,
-                                        padding: "4px 8px",
-                                        zIndex: 50,
-                                        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                        whiteSpace: "nowrap",
-                                        width: "fit-content",
-                                        left: legCfg.align === 'center' ? '50%' : undefined,
-                                        transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
-                                      }}
-                                      iconSize={chartSettings.markerSize + 4}
-                                    />
+                                  <Legend
+                                    {...legCfg}
+                                    layout={legLayout}
+                                    wrapperStyle={{
+                                      fontSize: `${chartSettings.fontSize - 1}px`,
+                                      color: themeColors.text,
+                                      fontWeight: 700,
+                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                      border: `1px solid ${themeColors.border}`,
+                                      padding: "4px 8px",
+                                      zIndex: 50,
+                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      whiteSpace: "nowrap",
+                                      width: "fit-content",
+                                      left: legCfg.align === 'center' ? '50%' : undefined,
+                                      transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                    }}
+                                    iconSize={chartSettings.markerSize + 4}
+                                  />
 
                                   {/* Performance Score Line (Left Axis) */}
                                   <Line
@@ -15597,25 +15611,25 @@ export default function MCDMCalculator() {
                                     formatter={(value: any, name: string) => name === "Rank" ? value : value.toFixed(resultsDecimalPlaces)}
                                   />
 
-                                    <Legend
-                                      {...legCfg}
-                                      layout={legLayout}
-                                      wrapperStyle={{
-                                        fontSize: `${chartSettings.fontSize - 1}px`,
-                                        color: themeColors.text,
-                                        fontWeight: 700,
-                                        backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                        border: `1px solid ${themeColors.border}`,
-                                        padding: "4px 8px",
-                                        zIndex: 50,
-                                        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                        whiteSpace: "nowrap",
-                                        width: "fit-content",
-                                        left: legCfg.align === 'center' ? '50%' : undefined,
-                                        transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
-                                      }}
-                                      iconSize={chartSettings.markerSize + 4}
-                                    />
+                                  <Legend
+                                    {...legCfg}
+                                    layout={legLayout}
+                                    wrapperStyle={{
+                                      fontSize: `${chartSettings.fontSize - 1}px`,
+                                      color: themeColors.text,
+                                      fontWeight: 700,
+                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                      border: `1px solid ${themeColors.border}`,
+                                      padding: "4px 8px",
+                                      zIndex: 50,
+                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      whiteSpace: "nowrap",
+                                      width: "fit-content",
+                                      left: legCfg.align === 'center' ? '50%' : undefined,
+                                      transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                    }}
+                                    iconSize={chartSettings.markerSize + 4}
+                                  />
 
                                   {/* Ranking Column (Bar - Right Axis) */}
                                   <Bar
@@ -15718,25 +15732,25 @@ export default function MCDMCalculator() {
                                     formatter={(value: any, name: string) => name === "Rank" ? value : value.toFixed(resultsDecimalPlaces)}
                                   />
 
-                                    <Legend
-                                      {...legCfg}
-                                      layout={legLayout}
-                                      wrapperStyle={{
-                                        fontSize: `${chartSettings.fontSize - 1}px`,
-                                        color: themeColors.text,
-                                        fontWeight: 700,
-                                        backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                        border: `1px solid ${themeColors.border}`,
-                                        padding: "4px 8px",
-                                        zIndex: 50,
-                                        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                        whiteSpace: "nowrap",
-                                        width: "fit-content",
-                                        left: legCfg.align === 'center' ? '50%' : undefined,
-                                        transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
-                                      }}
-                                      iconSize={chartSettings.markerSize + 4}
-                                    />
+                                  <Legend
+                                    {...legCfg}
+                                    layout={legLayout}
+                                    wrapperStyle={{
+                                      fontSize: `${chartSettings.fontSize - 1}px`,
+                                      color: themeColors.text,
+                                      fontWeight: 700,
+                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                      border: `1px solid ${themeColors.border}`,
+                                      padding: "4px 8px",
+                                      zIndex: 50,
+                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      whiteSpace: "nowrap",
+                                      width: "fit-content",
+                                      left: legCfg.align === 'center' ? '50%' : undefined,
+                                      transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                    }}
+                                    iconSize={chartSettings.markerSize + 4}
+                                  />
 
                                   {/* Ranking Column (Bar - Right Axis) */}
                                   <Bar
@@ -15818,25 +15832,25 @@ export default function MCDMCalculator() {
                                     name={isRankView ? "Rank" : "Score"}
                                   />
                                 )}
-                                 <Legend
-                                   {...legCfg}
-                                   layout={legLayout}
-                                   wrapperStyle={{
-                                     fontSize: `${chartSettings.fontSize - 1}px`,
-                                     color: themeColors.text,
-                                     fontWeight: 700,
-                                     backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                     border: `1px solid ${themeColors.border}`,
-                                     padding: "4px 8px",
-                                     zIndex: 50,
-                                     boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                     whiteSpace: "nowrap",
-                                     width: "fit-content",
-                                     left: legCfg.align === 'center' ? '50%' : undefined,
-                                     transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
-                                   }}
-                                   iconSize={chartSettings.markerSize + 4}
-                                 />
+                                <Legend
+                                  {...legCfg}
+                                  layout={legLayout}
+                                  wrapperStyle={{
+                                    fontSize: `${chartSettings.fontSize - 1}px`,
+                                    color: themeColors.text,
+                                    fontWeight: 700,
+                                    backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                    border: `1px solid ${themeColors.border}`,
+                                    padding: "4px 8px",
+                                    zIndex: 50,
+                                    boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                    whiteSpace: "nowrap",
+                                    width: "fit-content",
+                                    left: legCfg.align === 'center' ? '50%' : undefined,
+                                    transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`
+                                  }}
+                                  iconSize={chartSettings.markerSize + 4}
+                                />
                                 <Line yAxisId="rb" dataKey={isRankView ? 'rank' : 'score'} stroke="transparent" strokeWidth={0} dot={false} isAnimationActive={false} legendType="none" activeDot={false} />
                               </ComposedChart>
                             );

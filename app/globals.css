@@ -478,6 +478,7 @@ body {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -1108,6 +1109,7 @@ body {
     background: rgba(255, 255, 255, 0.2);
   }
 }
+
 @keyframes running-dashed {
   to {
     background-position: 200% 0, 0 200%, 0 0, 100% 0;
@@ -1115,10 +1117,10 @@ body {
 }
 
 .running-border {
-  background-image: linear-gradient(90deg, #3b82f6 50%, transparent 50%), 
-                    linear-gradient(180deg, #3b82f6 50%, transparent 50%),
-                    linear-gradient(90deg, #3b82f6 50%, transparent 50%),
-                    linear-gradient(180deg, #3b82f6 50%, transparent 50%);
+  background-image: linear-gradient(90deg, #3b82f6 50%, transparent 50%),
+    linear-gradient(180deg, #3b82f6 50%, transparent 50%),
+    linear-gradient(90deg, #3b82f6 50%, transparent 50%),
+    linear-gradient(180deg, #3b82f6 50%, transparent 50%);
   background-size: 12px 2px, 2px 12px, 12px 2px, 2px 12px;
   background-position: 0 0, 100% 0, 100% 100%, 0 100%;
   background-repeat: repeat-x, repeat-y, repeat-x, repeat-y;
@@ -1127,7 +1129,9 @@ body {
 }
 
 @keyframes stroke-dance {
-  to { stroke-dashoffset: -100; }
+  to {
+    stroke-dashoffset: -100;
+  }
 }
 
 .animated-dashed-border rect {
@@ -1148,15 +1152,16 @@ body {
   bottom: 0;
   pointer-events: none;
   background-image: linear-gradient(90deg, #2563eb 50%, transparent 50%),
-                    linear-gradient(180deg, #2563eb 50%, transparent 50%),
-                    linear-gradient(90deg, #2563eb 50%, transparent 50%),
-                    linear-gradient(180deg, #2563eb 50%, transparent 50%);
+    linear-gradient(180deg, #2563eb 50%, transparent 50%),
+    linear-gradient(90deg, #2563eb 50%, transparent 50%),
+    linear-gradient(180deg, #2563eb 50%, transparent 50%);
   background-size: 16px 2px, 2px 16px, 16px 2px, 2px 16px;
   background-position: 0 0, 100% 0, 100% 100%, 0 100%;
   background-repeat: repeat-x, repeat-y, repeat-x, repeat-y;
   animation: bg-dance 0.8s linear infinite;
   border-radius: 6px;
 }
+
 .running-white-border {
   position: absolute;
   top: 0;
@@ -1165,12 +1170,12 @@ body {
   bottom: 0;
   pointer-events: none;
   background-image: linear-gradient(90deg, #ffffff 50%, transparent 50%),
-                    linear-gradient(180deg, #ffffff 50%, transparent 50%),
-                    linear-gradient(90deg, #ffffff 50%, transparent 50%),
-                    linear-gradient(180deg, #ffffff 50%, transparent 50%);
+    linear-gradient(180deg, #ffffff 50%, transparent 50%),
+    linear-gradient(90deg, #ffffff 50%, transparent 50%),
+    linear-gradient(180deg, #ffffff 50%, transparent 50%);
   background-size: 16px 2px, 2px 16px, 16px 2px, 2px 16px;
   background-position: 0 0, 100% 0, 100% 100%, 0 100%;
   background-repeat: repeat-x, repeat-y, repeat-x, repeat-y;
   animation: bg-dance 0.8s linear infinite;
   border-radius: 6px;
-}
+}
