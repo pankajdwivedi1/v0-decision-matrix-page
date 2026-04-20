@@ -95,10 +95,10 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
   };
 
   const paletteColors = {
-    academic: ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd'],
-    vibrant: ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'],
-    grayscale: ['#333', '#666', '#999', '#aaa', '#ccc'],
-    default: ['#8884d8', '#82ca9d', '#ffc658', '#0088fe', '#00c49f']
+    academic: ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'],
+    vibrant: ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#a855f7', '#64748b'],
+    grayscale: ['#333', '#666', '#999', '#aaa', '#ccc', '#777', '#555', '#444', '#888', '#999'],
+    default: ['#8884d8', '#82ca9d', '#ffc658', '#0088fe', '#00c49f', '#ff8042', '#a4de6c', '#d0ed57', '#83a6ed', '#8dd1e1']
   };
 
   const intervalRef = React.useRef<any>(null);
@@ -204,6 +204,13 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                       <span className="text-xs font-bold text-slate-700">Data Labels</span>
                     </div>
                     <Switch checked={settings.showDataLabels} onCheckedChange={(val: boolean) => updateSetting('showDataLabels', val)} />
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <Maximize2 className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-xs font-bold text-slate-700">Mirror Ticks</span>
+                    </div>
+                    <Switch checked={settings.showMirrorTicks} onCheckedChange={(val: boolean) => updateSetting('showMirrorTicks', val)} />
                   </div>
                 </div>
               </div>

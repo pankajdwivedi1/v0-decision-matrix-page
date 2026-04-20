@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import AHPFormula from "./AHPFormula";
 import PIPRECIAFormula from "./PIPRECIAFormula";
-import { ComposedChart, LineChart, Line, BarChart, Bar, AreaChart, Area, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label } from 'recharts';
+import { ComposedChart, LineChart, Line, BarChart, Bar, AreaChart, Area, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label, LabelList } from 'recharts';
 import { Check, ChevronRight, Download, RefreshCw, Loader2, Sparkles, Bot, FileText, LayoutGrid } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import ReactMarkdown from 'react-markdown';
@@ -20,6 +20,7 @@ import { Tag } from 'lucide-react';
 import { toJpeg, toPng, toSvg } from 'html-to-image';
 import { MCDM_METHODS } from "@/constants/mcdm";
 import { MCDMMethod } from "@/types/mcdm";
+import { ChartVisualConfigurator, ChartSettings } from "@/components/ChartVisualConfigurator";
 
 
 interface Criterion {
@@ -50,6 +51,7 @@ interface KSensitivityCalculatorProps {
   selectedAiAssets?: Set<string>;
   onCalculationComplete?: (hasResults: boolean, results?: any, usedRange?: number[]) => void;
   methodName?: string;
+  chartSettings?: any;
 }
 
 export default function KSensitivityCalculator({
@@ -66,7 +68,8 @@ export default function KSensitivityCalculator({
   onIncludeChange,
   selectedAiAssets = new Set(),
   onCalculationComplete,
-  methodName = "Method"
+  methodName = "Method",
+  chartSettings = {}
 }: KSensitivityCalculatorProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   let tableCounter = 1;
@@ -91,6 +94,37 @@ export default function KSensitivityCalculator({
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [kSensVariationInput, setKSensVariationInput] = useState<string>('-30, -20, -10, 0, 10, 20, 30');
 
+  // Add state for internal chart settings
+  const [kSensChartSettings, setKSensChartSettings] = useState<ChartSettings>(chartSettings && Object.keys(chartSettings).length > 0 ? chartSettings : {
+    colorPalette: 'academic',
+    backgroundTheme: 'white',
+    borderWidth: 2,
+    barOpacity: 0.8,
+    gridColor: '#e2e8f0',
+    gridOpacity: 0.5,
+    showMirrorTicks: false,
+    showGridLines: true,
+    gridLinesMode: 'both',
+    showDataLabels: false,
+    showAxisTitles: true,
+    legendPosition: 'top',
+    legendLayout: 'horizontal',
+    fontSize: 12,
+    markerSize: 4,
+    markerType: 'circle',
+    resultsDecimalPlaces: 2,
+    xAxisTitle: 'Perturbation Strength (%)',
+    yAxisTitle: 'Alternative Rank',
+    marginTop: 20,
+    marginRight: 100,
+    marginBottom: 80,
+    marginLeft: 80,
+    xAxisOffset: 0,
+    yAxisOffset: 0,
+    legendOffsetX: 0,
+    legendOffsetY: 0,
+  });
+
   useEffect(() => {
     // Sync the input string when the range array changes (e.g., from presets)
     // but only if it's not currently being edited to avoid cursor jumping
@@ -103,6 +137,30 @@ export default function KSensitivityCalculator({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Sync chart titles based on view type and chart type to maintain UI-mapping integrity
+  useEffect(() => {
+    let xTitle = 'Perturbation Strength (%)';
+    let yTitle = 'Alternative Rank';
+
+    if (kSensViewType === 'weight') {
+      xTitle = 'Weight Variation (%)';
+      yTitle = 'Weight (%)';
+    } else {
+      // Ranking Analysis defaults
+      if (kSensChartType === 'stackedBar' || kSensChartType === 'stackedArea') {
+        yTitle = 'Alternative Score';
+      } else if (kSensChartType === 'dual') {
+        yTitle = 'Scores & Rankings';
+      }
+    }
+
+    setKSensChartSettings(prev => ({
+      ...prev,
+      xAxisTitle: xTitle,
+      yAxisTitle: yTitle
+    }));
+  }, [kSensViewType, kSensChartType]);
 
 
   // Weight method state
@@ -617,13 +675,16 @@ export default function KSensitivityCalculator({
     
     // Store original state
     const originalAttr = element.getAttribute("style");
+    const rect = element.getBoundingClientRect();
+    const currentWidth = rect.width || 1200;
+    const currentHeight = rect.height || 600;
     
-    // Professional 1200x675 (16:9) aspect ratio for publication
-    element.style.width = '1200px';
-    element.style.height = '675px';
+    // Use actual app dimensions for parity
+    element.style.width = `${currentWidth}px`;
+    element.style.height = `${currentHeight}px`;
     element.style.maxWidth = 'none';
     element.style.backgroundColor = '#ffffff';
-    element.style.overflow = 'hidden'; // Strict clipping
+    element.style.overflow = 'hidden';
     element.style.position = 'relative';
 
     // Wait for Recharts reflow
@@ -632,11 +693,11 @@ export default function KSensitivityCalculator({
         const options = {
           quality: 1.0,
           backgroundColor: "#ffffff",
-          pixelRatio: 4, // 4x high density for journals
-          width: 1200,
-          height: 675,
+          pixelRatio: 5, // Ultra-high 5x density for Q1 journal publishing (600 DPI equivalent)
+          width: currentWidth,
+          height: currentHeight,
           style: {
-            padding: '20px'
+            padding: '15px'
           }
         };
 
@@ -969,6 +1030,11 @@ export default function KSensitivityCalculator({
     const targetCrit = workingCriteria.find(c => c.name === criterionName);
     const data = isWeightView ? calculateWeightSensitivityData(targetCrit?.id || '') : generateKSensChartData(criterionName);
 
+    const colorsArr = kSensChartSettings.colorPalette === 'academic' ? ['#2563eb', '#dc2626', '#16a34a', '#ea580c', '#9333ea', '#92400e', '#db2777', '#4b5563', '#a16207', '#0891b2'] :
+      kSensChartSettings.colorPalette === 'vibrant' ? ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#a855f7', '#64748b'] :
+      kSensChartSettings.colorPalette === 'grayscale' ? ['#333', '#666', '#999', '#aaa', '#ccc', '#777', '#555', '#444', '#888', '#999'] :
+      ['#8884d8', '#82ca9d', '#ffc658', '#0088fe', '#00c49f', '#ff8042', '#a4de6c', '#d0ed57', '#83a6ed', '#8dd1e1'];
+
     // Show a themed loading state when analyzing
     if (isAnalyzing) {
       return (
@@ -979,22 +1045,88 @@ export default function KSensitivityCalculator({
         </div>
       );
     }
-    const commonProps = {
-      data,
-      margin: isMobile
-        ? { top: 10, right: 5, left: 30, bottom: 55 }
-        : { top: 20, right: 50, left: 60, bottom: 60 }
+
+    const theme = {
+      bg: kSensChartSettings.backgroundTheme === 'dark' ? '#1e293b' : 
+          kSensChartSettings.backgroundTheme === 'slate' ? '#f8fafc' : 
+          kSensChartSettings.backgroundTheme === 'glass' ? 'transparent' : '#ffffff',
+      text: kSensChartSettings.backgroundTheme === 'dark' ? '#f8fafc' : '#1e293b',
+      border: kSensChartSettings.backgroundTheme === 'dark' ? '#334155' : '#e2e8f0',
+      chartBorder: kSensChartSettings.backgroundTheme === 'dark' ? '#64748b' : '#000000',
+      tooltipBg: kSensChartSettings.backgroundTheme === 'dark' ? '#0f172a' : '#ffffff',
     };
 
-    if (kSensChartType === 'dual' && isWeightView) {
-      return <div className="p-4 text-center text-gray-500 font-bold text-xs mt-10">Dual-Axis chart is not available for Weight Analysis. Please use another chart type.</div>;
-    }
+    const tickStyle = { 
+      fontSize: kSensChartSettings.fontSize, 
+      fill: theme.text,
+      fontWeight: 'bold'
+    };
 
-    if (kSensChartType === 'heatmap' && isWeightView) {
-      return <div className="p-4 text-center text-gray-500 font-bold text-xs mt-10">Heatmap is not available for Weight Analysis. Please use another chart type.</div>;
-    }
+    const labelStyle = (value: string, isVertical = false) => ({
+      value,
+      fontSize: kSensChartSettings.fontSize + 1,
+      fill: theme.text,
+      fontWeight: 'bold',
+      position: (isVertical ? 'insideLeft' : 'insideBottom') as 'insideLeft' | 'insideBottom',
+      offset: isVertical ? kSensChartSettings.yAxisOffset || -5 : kSensChartSettings.xAxisOffset || -10,
+      angle: isVertical ? -90 : 0
+    });
+
+    const gridProps = kSensChartSettings.showGridLines ? {
+      strokeDasharray: "3 3",
+      horizontal: kSensChartSettings.gridLinesMode === 'horizontal' || kSensChartSettings.gridLinesMode === 'both',
+      vertical: kSensChartSettings.gridLinesMode === 'vertical' || kSensChartSettings.gridLinesMode === 'both',
+      stroke: kSensChartSettings.gridColor,
+      opacity: kSensChartSettings.gridOpacity,
+      style: { pointerEvents: 'none' }
+    } : null;
+
+    const commonChartProps = {
+      margin: {
+        top: Number(kSensChartSettings.marginTop || 40),
+        right: Number(kSensChartSettings.marginRight || 100),
+        left: Number(kSensChartSettings.marginLeft || 80),
+        bottom: Number(kSensChartSettings.marginBottom || 80)
+      }
+    };
+
+    const legendProps: any = {
+      verticalAlign: (kSensChartSettings.legendPosition === 'left' || kSensChartSettings.legendPosition === 'right' ? 'middle' : kSensChartSettings.legendPosition) as 'top' | 'bottom' | 'middle',
+      align: (kSensChartSettings.legendPosition === 'left' ? 'left' : kSensChartSettings.legendPosition === 'right' ? 'right' : 'center') as 'left' | 'center' | 'right',
+      layout: kSensChartSettings.legendLayout as 'horizontal' | 'vertical',
+      wrapperStyle: {
+        fontSize: `${kSensChartSettings.fontSize - 1}px`,
+        color: theme.text,
+        backgroundColor: kSensChartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+        border: `${kSensChartSettings.borderWidth}px solid ${theme.border}`,
+        padding: "4px 8px",
+        top: 70,
+        left: kSensChartSettings.legendPosition === 'left' ? 10 : kSensChartSettings.legendPosition === 'right' ? undefined : "50%",
+        right: kSensChartSettings.legendPosition === 'right' ? 10 : undefined,
+        transform: `${(kSensChartSettings.legendPosition === 'left' || kSensChartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${kSensChartSettings.legendOffsetX || 0}px, ${kSensChartSettings.legendOffsetY || 0}px)`,
+        width: (kSensChartSettings.legendPosition === 'left' || kSensChartSettings.legendPosition === 'right') ? "150px" : "max-content",
+        zIndex: 50,
+        boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+        display: "flex",
+        justifyContent: "center",
+        whiteSpace: "nowrap"
+      }
+    };
+
+    const dataLabelComponent = kSensChartSettings.showDataLabels ? (
+      <LabelList 
+        position="top" 
+        offset={10}
+        formatter={(val: any) => {
+          if (typeof val !== 'number') return val;
+          return val > 1 ? Math.round(val).toString() : val.toFixed(2);
+        }}
+        style={{ fontSize: kSensChartSettings.fontSize - 3, fill: theme.text, fontWeight: 'bold' }} 
+      />
+    ) : null;
 
     if (kSensChartType === 'radar') {
+
       if (isWeightView) {
         // Radar for Weight Analysis: Axes are variations, Radar areas are Criteria weights.
         const radarData = kSensVariationRange.map((v, vIdx) => {
@@ -1006,66 +1138,40 @@ export default function KSensitivityCalculator({
         });
 
         return (
-          <div ref={chartRef} className="bg-white max-w-7xl mx-auto relative">
+          <div ref={chartRef} className={`max-w-7xl mx-auto relative transition-all duration-500 ${kSensChartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }}>
             <ResponsiveContainer width="100%" height={750}>
-              <RadarChart data={radarData} outerRadius="80%" margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
-                {isWeightView && <text x="50%" y="20" textAnchor="middle" fontSize="14" fontWeight="normal" fill="#000">Weight Stability Forensic Radar</text>}
-                <PolarGrid gridType="polygon" stroke="#000" strokeOpacity={0.2} />
-                <PolarAngleAxis dataKey="scenario" tick={{ fontSize: 11, fontWeight: '900', fill: '#000' }} />
+              <RadarChart data={radarData} outerRadius="80%" margin={commonChartProps.margin}>
+                {isWeightView && <text x="50%" y="20" textAnchor="middle" fontSize={kSensChartSettings.fontSize + 4} fontWeight="bold" fill={theme.text}>Weight Stability Forensic Radar</text>}
+                {kSensChartSettings.showGridLines && (
+                  <PolarGrid
+                    gridType="polygon"
+                    stroke={kSensChartSettings.gridColor}
+                    opacity={kSensChartSettings.gridOpacity}
+                    strokeWidth={1}
+                  />
+                )}
+                <PolarAngleAxis dataKey="scenario" tick={tickStyle} />
                 <PolarRadiusAxis
                   angle={90}
                   domain={[0, 'auto']}
-                  tick={{ fontSize: 10, fill: '#000', fontWeight: '900' }}
+                  tick={tickStyle}
                   tickFormatter={(val) => val.toFixed(2)}
                 />
                 <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-white border-2 border-black p-2 shadow-xl text-[10px]">
-                          <p className="font-black border-b border-black mb-1 pb-1">Scenario: {payload[0].payload.scenario}</p>
-                          {payload.map((entry: any) => (
-                            <div key={entry.dataKey} className="flex justify-between gap-4 py-0.5">
-                              <span className="font-bold" style={{ color: entry.color }}>{entry.name}:</span>
-                              <span className="font-black">{Number(entry.value).toFixed(4)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
+                  contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }}
                 />
-                <Legend
-                  verticalAlign="top"
-                  align="right"
-                  layout="vertical"
-                  wrapperStyle={{
-                    fontSize: "9px",
-                    color: '#000',
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    border: '1px solid #999',
-                    padding: '8px',
-                    lineHeight: '12px',
-                    top: 70,
-                    right: 280,
-                    width: 'auto',
-                    zIndex: 100,
-                    boxShadow: '1px 1px 2px rgba(0,0,0,0.1)'
-                  }}
-                  iconSize={8}
-                  iconType="circle"
-                />
+                <Legend {...legendProps} iconSize={8} iconType="circle" />
                 {workingCriteria.map((crit, idx) => (
                   <Radar
                     key={crit.name}
                     name={crit.name}
                     dataKey={crit.name}
-                    stroke={colors[idx % colors.length]}
-                    fill="transparent"
-                    strokeWidth={crit.id === selectedCriterionToVary ? 4 : 2}
+                    stroke={colorsArr[idx % colorsArr.length]}
+                    fill={colorsArr[idx % colorsArr.length]}
+                    fillOpacity={kSensChartSettings.barOpacity || 0.3}
+                    strokeWidth={crit.id === selectedCriterionToVary ? (kSensChartSettings.borderWidth + 2) : kSensChartSettings.borderWidth}
                     strokeDasharray={crit.id === selectedCriterionToVary ? "" : "5 5"}
-                    dot={{ r: 3, fill: colors[idx % colors.length] }}
+                    dot={{ r: kSensChartSettings.markerSize || 3, fill: colorsArr[idx % colorsArr.length] }}
                   />
                 ))}
               </RadarChart>
@@ -1092,99 +1198,68 @@ export default function KSensitivityCalculator({
       };
 
       // TRANSPOSE DATA: Axes = Variation Scenarios
+      if (!kSensResults) return <div className="h-[400px] flex items-center justify-center text-gray-500">Run analysis to view radar chart</div>;
+
       const radarData = kSensVariationRange.map((v, vIdx) => {
         const row: any = { scenario: `${v}%` };
         alternatives.forEach(alt => {
-          // Safety check: ensure the result exists for this variation index
-          const resultAtStep = kSensResults[criterionName]?.[vIdx];
+          const resultAtStep = kSensResults?.[criterionName]?.[vIdx];
           const actualRank = resultAtStep?.rankings?.[alt.name]?.rank || maxRank;
-          row[alt.name] = maxRank + 1 - actualRank; // Perimeter is Best
+          row[alt.name] = maxRank + 1 - actualRank;
         });
         return row;
       });
 
       return (
-        <div ref={chartRef} className="bg-white max-w-7xl mx-auto relative">
+        <div ref={chartRef} className={`max-w-7xl mx-auto relative transition-all duration-500 ${kSensChartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }}>
           <ResponsiveContainer width="100%" height={750}>
-            <RadarChart data={radarData} outerRadius="80%" margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
-              <text x="50%" y="20" textAnchor="middle" fontSize="14" fontWeight="normal" fill="#000">Alternative Stability Forensic Radar</text>
-              <PolarGrid gridType="polygon" stroke="#000" strokeOpacity={0.2} />
+            <RadarChart data={radarData} outerRadius="80%" margin={commonChartProps.margin}>
+              <text x="50%" y="20" textAnchor="middle" fontSize={kSensChartSettings.fontSize + 4} fontWeight="bold" fill={theme.text}>Alternative Stability Forensic Radar</text>
+              {kSensChartSettings.showGridLines && (
+                <PolarGrid
+                  gridType="polygon"
+                  stroke={kSensChartSettings.gridColor}
+                  opacity={kSensChartSettings.gridOpacity}
+                  strokeWidth={1}
+                />
+              )}
               <PolarAngleAxis
                 dataKey="scenario"
-                tick={{ fontSize: 11, fontWeight: '900', fill: '#000' }}
+                tick={tickStyle}
               />
               <PolarRadiusAxis
                 angle={90}
                 domain={[1, maxRank]}
-                tick={{ fontSize: 10, fill: '#000', fontWeight: '900' }}
+                tick={tickStyle}
                 tickFormatter={(val) => {
                   const originalRank = Math.round(maxRank + 1 - val);
                   return originalRank > 0 ? originalRank.toString() : '';
                 }}
               />
               <Tooltip
-                content={({ active, payload }) => {
-                  if (active && payload && payload.length) {
-                    return (
-                      <div className="bg-white border-2 border-black p-2 shadow-xl text-[10px]">
-                        <p className="font-black border-b border-black mb-1 pb-1">Scenario: {payload[0].payload.scenario}</p>
-                        {payload.map((entry: any) => (
-                          <div key={entry.dataKey} className="flex justify-between gap-4 py-0.5">
-                            <span className="font-bold" style={{ color: entry.color }}>{entry.name}:</span>
-                            <span className="font-black">Rank {Math.round(maxRank + 1 - entry.value)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
+                contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }}
+                formatter={(val: number) => `Rank ${Math.round(maxRank + 1 - val)}`}
               />
-              <Legend
-                verticalAlign="top"
-                align="right"
-                layout="vertical"
-                wrapperStyle={{
-                  fontSize: "9px",
-                  color: '#000',
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                  border: '1px solid #999',
-                  padding: '8px',
-                  lineHeight: '12px',
-                  top: 70,
-                  right: 280,
-                  width: 'auto',
-                  zIndex: 100,
-                  boxShadow: '1px 1px 2px rgba(0,0,0,0.1)'
-                }}
-                iconSize={8}
-                iconType="circle"
-              />
+              <Legend {...legendProps} iconSize={8} iconType="circle" />
               {alternatives.map((alt, altIdx) => (
                 <Radar
                   key={alt.name}
                   name={alt.name}
                   dataKey={alt.name}
                   stroke={getScientificColor(altIdx / (Math.max(1, alternatives.length - 1)))}
-                  fill="transparent"
-                  strokeWidth={altIdx % 2 === 0 ? 3 : 2}
-                  strokeDasharray={altIdx % 3 === 0 ? "" : altIdx % 3 === 1 ? "5 5" : "3 1"}
-                  dot={{ r: 3, fill: getScientificColor(altIdx / (Math.max(1, alternatives.length - 1))) }}
+                  fill="none"
+                  fillOpacity={0}
+                  strokeWidth={2.5}
+                  strokeDasharray={altIdx % 4 === 0 ? "" : altIdx % 4 === 1 ? "5 5" : altIdx % 4 === 2 ? "3 3" : "1 4"}
+                  dot={{ r: 4, fill: getScientificColor(altIdx / (Math.max(1, alternatives.length - 1))), strokeWidth: 0 }}
                 />
               ))}
             </RadarChart>
           </ResponsiveContainer>
-          <div className="mt-6 p-4 bg-gray-50 border-t-2 border-black text-[10px] items-center flex gap-4">
-            <div className="h-full bg-black text-white px-2 py-1 font-black uppercase text-[8px] vertical-text">VERIFIED</div>
-            <div className="flex-1 leading-relaxed text-gray-800 font-bold">
-              <span className="text-black uppercase block mb-1">TRANSPOSITIONAL FORENSIC ANALYSIS:</span>
-              V2.5-STABILITY: Each unique line trace tracks an individual alternative. Overlapping lines indicate identical rank-sensitivity signatures.
-              Different line weights and dash patterns distinguish tied alternatives.
-            </div>
-          </div>
         </div>
       );
     }
+
     if (kSensChartType === 'parallel') {
       if (!isWeightView) {
         return <div className="p-4 text-center text-gray-500 font-bold text-xs mt-10">Parallel Coordinates Plot is only available for Weight Analysis.</div>;
@@ -1200,69 +1275,47 @@ export default function KSensitivityCalculator({
       });
 
       return (
-        <div ref={chartRef} className="bg-white max-w-7xl mx-auto relative">
+        <div ref={chartRef} className={`max-w-7xl mx-auto relative transition-all duration-500 ${kSensChartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }}>
           <ResponsiveContainer width="100%" height={600}>
-            <LineChart data={parallelData} margin={{ top: 40, right: 100, left: 80, bottom: 80 }}>
-              {isWeightView && <text x="50%" y="20" textAnchor="middle" fontSize="14" fontWeight="normal" fill="#000">Sensitivity Analysis of Criteria Weights (Parallel Plot)</text>}
-              <CartesianGrid stroke="#b0b0b0" strokeDasharray="none" vertical={true} horizontal={true} />
+            <LineChart data={parallelData} margin={commonChartProps.margin}>
+              {isWeightView && <text x="50%" y="20" textAnchor="middle" fontSize={kSensChartSettings.fontSize + 4} fontWeight="bold" fill={theme.text}>Sensitivity Analysis of Criteria Weights (Parallel Plot)</text>}
+
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 11, fontWeight: 'bold', fill: '#000' }}
-                axisLine={{ stroke: '#000', strokeWidth: 1 }}
-                tickLine={{ stroke: '#000' }}
-                label={{ value: 'Criteria', position: 'insideBottom', offset: -10, style: { fontSize: 11, fill: '#000' } }}
+                tick={tickStyle}
+                axisLine={{ stroke: theme.border, strokeWidth: 1 }}
+                tickLine={{ stroke: theme.border }}
+                label={kSensChartSettings.showAxisTitles ? (labelStyle('Criteria') as any) : undefined}
               />
               <YAxis
-                label={{ value: 'Weight (%)', angle: -90, position: 'insideLeft', offset: -5, style: { fontSize: 11, fill: '#000' } }}
-                tick={{ fontSize: 10, fill: '#000' }}
-                axisLine={{ stroke: '#000' }}
-                tickLine={{ stroke: '#000' }}
+                label={kSensChartSettings.showAxisTitles ? (labelStyle('Weight (%)', true) as any) : undefined}
+                tick={tickStyle}
+                axisLine={{ stroke: theme.border }}
+                tickLine={{ stroke: theme.border }}
                 tickFormatter={(val) => (val * 100).toFixed(0)}
               />
               <Tooltip
                 formatter={(value: number) => (value * 100).toFixed(2) + '%'}
-                contentStyle={{ border: '1px solid #000', borderRadius: '0px', fontSize: '10px' }}
+                contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }}
               />
-              <Legend
-                verticalAlign="top"
-                align="left"
-                layout="vertical"
-                wrapperStyle={{
-                  fontSize: "9px",
-                  color: '#000',
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                  border: '1px solid #999',
-                  padding: '5px',
-                  lineHeight: '12px',
-                  marginTop: '55px',
-                  marginLeft: '130px',
-                  width: 'auto',
-                  zIndex: 50,
-                  boxShadow: '1px 1px 2px rgba(0,0,0,0.1)'
-                }}
-                iconSize={8}
-                iconType="circle"
-              />
+              <Legend {...legendProps} iconSize={8} iconType="circle" />
               {kSensVariationRange.map((v, idx) => {
                 const label = `${v}%`;
-                // Scientific colors for scenarios
-                const scenarioColors = [
-                  '#8fbbaf', '#82ac06', '#640280', '#82ac06', '#f699ff',
-                  '#32cd32', '#f699ff', '#00ced1', '#f0fff0'
-                ];
-                const color = scenarioColors[idx % scenarioColors.length];
                 return (
                   <Line
                     key={label}
                     type="linear"
                     dataKey={label}
-                    stroke={color}
-                    strokeWidth={1.5}
+                    stroke={colorsArr[idx % colorsArr.length]}
+                    strokeWidth={kSensChartSettings.borderWidth || 1.5}
                     dot={false}
-                    activeDot={{ r: 4 }}
-                  />
+                    activeDot={{ r: (kSensChartSettings.markerSize || 4) + 1 }}
+                  >
+                    {dataLabelComponent}
+                  </Line>
                 );
               })}
+              {kSensChartSettings.showGridLines && <CartesianGrid {...(gridProps as any)} />}
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -1271,144 +1324,106 @@ export default function KSensitivityCalculator({
 
 
     return (
-      <div ref={chartRef} className="bg-white max-w-7xl mx-auto">
+      <div ref={chartRef} className={`max-w-7xl mx-auto transition-all duration-500 ${kSensChartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }}>
         {['line', 'area', 'stackedArea'].includes(kSensChartType) ? (
           <ResponsiveContainer width="100%" height={600}>
             {['area', 'stackedArea'].includes(kSensChartType) ? (
-              <AreaChart data={data} margin={{ top: 40, right: 100, left: 80, bottom: 80 }}>
-                {isWeightView && <text x="50%" y="20" textAnchor="middle" fontSize="14" fontWeight="normal" fill="#000">Sensitivity Analysis of Criteria Weights</text>}
-                <CartesianGrid strokeDasharray={isWeightView ? "none" : "3 3"} vertical={isWeightView ? true : false} stroke={isWeightView ? "#b0b0b0" : "#e5e7eb"} opacity={isWeightView ? 0.7 : 0.5} />
-                <XAxis dataKey="variation" tick={{ fontSize: 10, fill: '#000' }} axisLine={{ stroke: '#000' }} tickLine={{ stroke: '#000' }} interval={0} padding={{ left: 10, right: 10 }} tickFormatter={isWeightView ? (val: string) => val.replace('%', '') : undefined} label={{ value: isWeightView ? 'Weight Variation (%)' : 'Perturbation Strength (%)', position: 'insideBottom', offset: -10, style: { fontSize: 11, fill: '#000', fontWeight: isWeightView ? 'normal' : 'bold', fontStyle: isWeightView ? 'normal' : 'italic' } }} />
-                <XAxis orientation="top" xAxisId="top_border" axisLine={{ stroke: isWeightView ? '#999' : '#000' }} tick={false} tickLine={false} />
-                <YAxis reversed={!isWeightView} tick={{ fontSize: 10, fill: '#000' }} axisLine={{ stroke: isWeightView ? '#999' : '#000' }} tickLine={{ stroke: isWeightView ? '#999' : '#000' }} domain={isWeightView ? (kSensChartType === 'stackedArea' ? [0, 1] : [0, 'auto']) : [1, alternatives.length]} allowDecimals={isWeightView} ticks={!isWeightView ? Array.from({ length: alternatives.length }, (_, i) => i + 1) : undefined} tickFormatter={isWeightView ? (val: number) => Number(val.toFixed(2)).toString() : undefined} label={{ value: isWeightView ? 'Weight (%)' : 'Alternative Rank', angle: -90, position: 'insideLeft', offset: -5, style: { fontSize: 11, fill: '#000', fontWeight: isWeightView ? 'normal' : 'bold', fontStyle: isWeightView ? 'normal' : 'italic' } }} />
-                <YAxis orientation="right" yAxisId="right_border" width={1} axisLine={{ stroke: isWeightView ? '#999' : '#000' }} tick={false} tickLine={false} domain={isWeightView ? (kSensChartType === 'stackedArea' ? [0, 1] : [0, 'auto']) : [1, alternatives.length]} />
-                <Tooltip />
-                <Legend verticalAlign="top" align={isWeightView ? "left" : "right"} layout="vertical" wrapperStyle={isWeightView ? { fontSize: "9px", color: '#000', backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #999', padding: '5px', lineHeight: '12px', marginTop: '55px', marginLeft: '130px', width: 'auto', zIndex: 50, boxShadow: '1px 1px 2px rgba(0,0,0,0.1)' } : { fontSize: "8px", color: '#000', backgroundColor: 'rgba(255, 255, 255, 0.9)', border: '1px solid #333', padding: '4px', top: 73, right: 230, width: 'auto', zIndex: 50, boxShadow: '1px 1px 3px rgba(0,0,0,0.1)' }} iconSize={8} iconType={isWeightView ? "circle" : "square"} />
-                {isWeightView ? (
-                  workingCriteria.map((crit, idx) => (
+              <AreaChart data={data} margin={commonChartProps.margin}>
+                {isWeightView && <text x="50%" y="20" textAnchor="middle" fontSize={kSensChartSettings.fontSize + 4} fontWeight="bold" fill={theme.text}>Sensitivity Analysis of Criteria Weights</text>}
+
+                <XAxis dataKey="variation" tick={tickStyle} axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tickLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} interval={0} padding={{ left: 10, right: 10 }} tickFormatter={isWeightView ? (val: string) => val.replace('%', '') : undefined} label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.xAxisTitle) as any) : undefined} />
+                <XAxis orientation="top" xAxisId="top_border" axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={false} tickLine={false} />
+                <YAxis reversed={!isWeightView} tick={tickStyle} axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tickLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} domain={isWeightView ? (kSensChartType === 'stackedArea' ? [0, 1] : [0, 'auto']) : [1, alternatives.length]} allowDecimals={isWeightView} ticks={!isWeightView ? Array.from({ length: alternatives.length }, (_, i) => i + 1) : undefined} tickFormatter={isWeightView ? (val: number) => Number(val.toFixed(2)).toString() : undefined} label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.yAxisTitle, true) as any) : undefined} />
+                <YAxis orientation="right" yAxisId="right_border" width={kSensChartSettings.showMirrorTicks ? 40 : 10} axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={kSensChartSettings.showMirrorTicks ? tickStyle : false} tickLine={kSensChartSettings.showMirrorTicks} domain={isWeightView ? (kSensChartType === 'stackedArea' ? [0, 1] : [0, 'auto']) : [1, alternatives.length]} />
+                <Tooltip contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }} />
+                <Legend {...legendProps} iconSize={8} iconType={isWeightView ? "circle" : "square"} />
+                {(isWeightView ? workingCriteria : [...alternatives].sort((a, b) => {
+                  const var0 = (kSensResults?.[criterionName] || []).find((v: any) => v.variation === 0);
+                  const rA = var0?.rankings?.[a.name]?.rank || 0;
+                  const rB = var0?.rankings?.[b.name]?.rank || 0;
+                  return rB - rA;
+                })).map((item) => {
+                  const originalIdx = isWeightView ? workingCriteria.indexOf(item as any) : alternatives.indexOf(item as any);
+                  const color = colorsArr[originalIdx % colorsArr.length];
+                  return (
                     <Area
-                      key={crit.id}
+                      key={item.name}
                       type="monotone"
-                      dataKey={crit.name}
-                      name={crit.name}
-                      stroke={colors[idx % colors.length]}
-                      fill={colors[idx % colors.length]}
-                      strokeWidth={1}
+                      dataKey={isWeightView ? item.name : item.name}
+                      name={item.name}
+                      stroke={color}
+                      fill={color}
+                      strokeWidth={kSensChartSettings.borderWidth || 2}
                       stackId={kSensChartType === 'stackedArea' ? "1" : undefined}
-                      fillOpacity={kSensChartType === 'stackedArea' ? 0.8 : 0.3}
-                      activeDot={{ r: 5 }}
-                    />
-                  ))
-                ) : (
-                  alternatives.map((alt, altIdx) => (
-                    <Area
-                      key={alt.name}
-                      type="monotone"
-                      dataKey={alt.name}
-                      name={alt.name}
-                      stroke={colors[altIdx % colors.length]}
-                      fill={colors[altIdx % colors.length]}
-                      strokeWidth={2}
-                      stackId={kSensChartType === 'stackedArea' ? "1" : undefined}
-                      fillOpacity={kSensChartType === 'stackedArea' ? 0.8 : 0.3}
-                    />
-                  ))
-                )}
+                      fillOpacity={kSensChartType === 'stackedArea' ? (kSensChartSettings.barOpacity || 0.8) : (kSensChartSettings.barOpacity * 0.75 || 0.75)}
+                      activeDot={kSensChartSettings.markerSize > 0 ? { r: kSensChartSettings.markerSize + 1 } : false}
+                      dot={kSensChartSettings.markerSize > 0 ? { r: kSensChartSettings.markerSize, fill: color, strokeWidth: 0 } : false}
+                    >
+                      {dataLabelComponent}
+                    </Area>
+                  );
+                })}
+                {kSensChartSettings.showGridLines && <CartesianGrid {...(gridProps as any)} />}
               </AreaChart>
             ) : (
               <LineChart
                 data={data}
-                margin={{ top: 40, right: 100, left: 80, bottom: 80 }}
+                margin={commonChartProps.margin}
               >
-                {isWeightView && <text x="50%" y="20" textAnchor="middle" fontSize="14" fontWeight="normal" fill="#000">Sensitivity Analysis of Criteria Weights</text>}
-                <CartesianGrid strokeDasharray={isWeightView ? "none" : "3 3"} vertical={isWeightView ? true : false} stroke={isWeightView ? "#b0b0b0" : "#e5e7eb"} opacity={isWeightView ? 0.7 : 0.5} />
+                {isWeightView && <text x="50%" y="20" textAnchor="middle" fontSize={kSensChartSettings.fontSize + 4} fontWeight="bold" fill={theme.text}>Sensitivity Analysis of Criteria Weights</text>}
+
                 <XAxis
                   dataKey="variation"
-                  tick={{ fontSize: 10, fill: '#000' }}
-                  axisLine={{ stroke: '#000' }}
-                  tickLine={{ stroke: '#000' }}
+                  tick={tickStyle}
+                  axisLine={{ stroke: theme.chartBorder }}
+                  tickLine={{ stroke: theme.chartBorder }}
                   interval={0}
                   padding={{ left: 10, right: 10 }}
                   tickFormatter={isWeightView ? (val: string) => val.replace('%', '') : undefined}
-                  label={{ value: isWeightView ? 'Weight Variation (%)' : 'Perturbation Strength (%)', position: 'insideBottom', offset: -10, style: { fontSize: 11, fill: '#000' } }}
+                  label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.xAxisTitle) as any) : undefined}
                 />
-                <XAxis
-                  orientation="top"
-                  xAxisId="top_border"
-                  axisLine={{ stroke: isWeightView ? '#999' : '#000' }}
-                  tick={false}
-                  tickLine={false}
-                />
+                <XAxis orientation="top" xAxisId="top_border" axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={kSensChartSettings.showMirrorTicks ? tickStyle : false} tickLine={kSensChartSettings.showMirrorTicks} />
                 <YAxis
-                  reversed={isWeightView ? false : true}
-                  tick={{ fontSize: 10, fill: '#000' }}
-                  axisLine={{ stroke: isWeightView ? '#999' : '#000' }}
-                  tickLine={{ stroke: isWeightView ? '#999' : '#000' }}
+                  reversed={!isWeightView}
+                  tick={tickStyle}
+                  axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
+                  tickLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
                   domain={isWeightView ? [0, 'auto'] : [1, alternatives.length]}
                   allowDecimals={isWeightView}
                   ticks={!isWeightView ? Array.from({ length: alternatives.length }, (_, i) => i + 1) : undefined}
                   tickFormatter={isWeightView ? (val: number) => (val * 100).toFixed(0) : undefined}
-                  label={{ value: isWeightView ? 'Weight (%)' : 'Alternative Rank', angle: -90, position: 'insideLeft', offset: -5, style: { fontSize: 11, fill: '#000' } }}
+                  label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.yAxisTitle, true) as any) : undefined}
                 />
                 <YAxis
                   orientation="right"
                   yAxisId="right_border"
-                  width={1}
-                  axisLine={{ stroke: isWeightView ? '#999' : '#000' }}
-                  tick={false}
-                  tickLine={false}
+                  width={kSensChartSettings.showMirrorTicks ? 40 : 10}
+                  axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
+                  tick={kSensChartSettings.showMirrorTicks ? tickStyle : false}
+                  tickLine={kSensChartSettings.showMirrorTicks}
                   domain={isWeightView ? [0, 'auto'] : [1, alternatives.length]}
                 />
 
-                <Tooltip />
-                <Legend
-                  verticalAlign="top"
-                  align="left"
-                  layout="vertical"
-                  wrapperStyle={{
-                    fontSize: "9px",
-                    color: '#000',
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    border: '1px solid #999',
-                    padding: '5px',
-                    lineHeight: '12px',
-                    marginTop: '55px',
-                    marginLeft: '130px',
-                    width: 'auto',
-                    zIndex: 50,
-                    boxShadow: '1px 1px 2px rgba(0,0,0,0.1)'
-                  }}
-                  iconSize={8}
-                  iconType="circle"
-                />
-                {isWeightView ? (
-                  workingCriteria.map((crit, idx) => {
-                    const mplColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
-                    const color = mplColors[idx % mplColors.length];
-                    return (
-                      <Line
-                        key={crit.id}
-                        type="linear"
-                        dataKey={crit.name}
-                        name={crit.name}
-                        stroke={color}
-                        strokeWidth={1.5}
-                        dot={{ r: 4, strokeWidth: 0, fill: color }}
-                        activeDot={{ r: 6 }}
-                      />
-                    );
-                  })
-                ) : (
-                  alternatives.map((alt, altIdx) => (
+                <Tooltip contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }} />
+                <Legend {...legendProps} iconSize={8} iconType="circle" />
+                {(isWeightView ? workingCriteria : alternatives).map((item, idx) => {
+                  const color = colorsArr[idx % colorsArr.length];
+                  return (
                     <Line
-                      key={alt.name}
+                      key={item.name}
                       type="monotone"
-                      dataKey={alt.name}
-                      stroke={colors[altIdx % colors.length]}
-                      strokeWidth={2}
-                      dot={{ r: 4 }}
-                    />
-                  )))}
+                      dataKey={isWeightView ? item.name : item.name}
+                      name={item.name}
+                      stroke={color}
+                      strokeWidth={kSensChartSettings.borderWidth || 2}
+                      dot={kSensChartSettings.markerSize > 0 ? { r: kSensChartSettings.markerSize, strokeWidth: 0, fill: color } : false}
+                      activeDot={kSensChartSettings.markerSize > 0 ? { r: kSensChartSettings.markerSize + 2 } : { r: 4 }}
+                    >
+                      {dataLabelComponent}
+                    </Line>
+                  );
+                })}
+                {kSensChartSettings.showGridLines && <CartesianGrid {...(gridProps as any)} />}
               </LineChart>
             )}
           </ResponsiveContainer>
@@ -1416,151 +1431,90 @@ export default function KSensitivityCalculator({
           <ResponsiveContainer width="100%" height={600}>
             <ScatterChart
               data={data}
-              margin={{ top: 40, right: 100, left: 80, bottom: 80 }}
+              margin={commonChartProps.margin}
             >
-              {isWeightView && <text x="50%" y="20" textAnchor="middle" fontSize="14" fontWeight="normal" fill="#000">Sensitivity Analysis of Criteria Weights</text>}
-              <CartesianGrid strokeDasharray={isWeightView ? "none" : "3 3"} vertical={isWeightView ? true : false} stroke={isWeightView ? "#b0b0b0" : "#e5e7eb"} opacity={isWeightView ? 0.7 : 0.5} />
+              {isWeightView && <text x="50%" y="20" textAnchor="middle" fontSize={kSensChartSettings.fontSize + 4} fontWeight="bold" fill={theme.text}>Sensitivity Analysis of Criteria Weights</text>}
+
               <XAxis
                 type="number"
                 dataKey="x"
                 name="Variation Index"
-                tick={{ fontSize: 10, fill: '#000' }}
-                axisLine={{ stroke: '#000' }}
-                tickLine={{ stroke: '#000' }}
+                tick={tickStyle}
+                axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
+                tickLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
                 domain={[0, kSensVariationRange.length - 1]}
                 ticks={Array.from({ length: kSensVariationRange.length }, (_, i) => i)}
                 tickFormatter={(val) => isWeightView ? `${kSensVariationRange[val]}` : `${kSensVariationRange[val]}%`}
                 interval={0}
-                label={{ value: isWeightView ? 'Weight Variation (%)' : 'Perturbation Strength (%)', position: 'insideBottom', offset: -10, style: { fontSize: 11, fill: '#000', fontWeight: isWeightView ? 'normal' : 'bold', fontStyle: isWeightView ? 'normal' : 'italic' } }}
+                label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.xAxisTitle) as any) : undefined}
               />
-              <XAxis
-                orientation="top"
-                xAxisId="top_border"
-                axisLine={{ stroke: isWeightView ? '#999' : '#000' }}
-                tick={false}
-                tickLine={false}
-              />
+              <XAxis orientation="top" xAxisId="top_border" axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={false} tickLine={false} />
               <YAxis
                 type="number"
                 dataKey="y"
                 name={isWeightView ? "Weight" : "Rank"}
                 reversed={!isWeightView}
-                tick={{ fontSize: 10, fill: '#000' }}
-                axisLine={{ stroke: isWeightView ? '#999' : '#000' }}
-                tickLine={{ stroke: isWeightView ? '#999' : '#000' }}
+                tick={tickStyle}
+                axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
+                tickLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
                 width={50}
                 domain={isWeightView ? [0, 'auto'] : [1, alternatives.length]}
                 allowDecimals={isWeightView}
                 ticks={!isWeightView ? Array.from({ length: alternatives.length }, (_, i) => i + 1) : undefined}
                 tickFormatter={isWeightView ? (val: number) => (val * 100).toFixed(0) : undefined}
-                label={{
-                  value: isWeightView ? 'Weight (%)' : 'Alternative Rank',
-                  angle: -90,
-                  position: 'insideLeft',
-                  offset: -5,
-                  style: { fontSize: 11, fill: '#000', fontWeight: isWeightView ? 'normal' : 'bold', fontStyle: isWeightView ? 'normal' : 'italic' }
-                }}
+                label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.yAxisTitle, true) as any) : undefined}
               />
-              <YAxis
-                orientation="right"
-                yAxisId="right_border"
-                width={1}
-                axisLine={{ stroke: isWeightView ? '#999' : '#000' }}
-                tick={false}
-                tickLine={false}
-                domain={isWeightView ? [0, 'auto'] : [1, alternatives.length]}
-              />
-              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-              <Legend
-                verticalAlign="top"
-                align={isWeightView ? "left" : "right"}
-                layout="vertical"
-                wrapperStyle={isWeightView ? {
-                  fontSize: "9px",
-                  color: '#000',
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                  border: '1px solid #999',
-                  padding: '5px',
-                  lineHeight: '12px',
-                  marginTop: '55px',
-                  marginLeft: '130px',
-                  width: 'auto',
-                  zIndex: 50,
-                  boxShadow: '1px 1px 2px rgba(0,0,0,0.1)'
-                } : {
-                  fontSize: "8px",
-                  color: '#000',
-                  backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                  border: '1.5px solid #000',
-                  padding: '8px',
-                  top: 73,
-                  right: 165,
-                  width: 'auto',
-                  zIndex: 50,
-                  boxShadow: '3px 3px 0px rgba(0,0,0,1)'
-                }}
-                iconSize={8}
-                iconType={isWeightView ? "circle" : undefined}
-              />
-              {isWeightView ? (
-                workingCriteria.map((crit, idx) => {
-                  const scatterData = data.map((d: any, i: number) => ({ x: i, y: d[crit.name] }));
-                  const mplColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
-                  const color = mplColors[idx % mplColors.length];
-                  return <Scatter key={crit.name} name={crit.name} data={scatterData} fill={color} />;
-                })
-              ) : (
-                alternatives.map((alt, altIdx) => {
-                  const scatterData = data.map((d, idx) => ({ x: idx, y: d[alt.name] }));
-                  return (<Scatter key={alt.name} name={alt.name} data={scatterData} fill={colors[altIdx % colors.length]} />);
-                }))}
+              <YAxis orientation="right" yAxisId="right_border" width={kSensChartSettings.showMirrorTicks ? 40 : 10} axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={kSensChartSettings.showMirrorTicks ? tickStyle : false} tickLine={kSensChartSettings.showMirrorTicks} domain={isWeightView ? [0, 'auto'] : [1, alternatives.length]} />
+              <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }} />
+              <Legend {...legendProps} iconSize={8} iconType="circle" />
+              {(isWeightView ? workingCriteria : alternatives).map((item, idx) => {
+                const scatterData = data.map((d: any, i: number) => ({ x: i, y: isWeightView ? d[item.name] : d[item.name] }));
+                const color = colorsArr[idx % colorsArr.length];
+                return (
+                  <Scatter key={item.name} name={item.name} data={scatterData} fill={color} shape={kSensChartSettings.markerType || 'circle'}>
+                    {dataLabelComponent}
+                  </Scatter>
+                );
+              })}
+              {kSensChartSettings.showGridLines && <CartesianGrid {...(gridProps as any)} />}
             </ScatterChart>
           </ResponsiveContainer>
         ) : kSensChartType === 'dual' ? (
           <ResponsiveContainer width="100%" height={600}>
             <ComposedChart
-              {...commonProps}
+              data={data}
+              margin={commonChartProps.margin}
               barGap={0}
               barCategoryGap="10%"
             >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.5} />
               <XAxis
                 dataKey="variation"
-                tick={{ fontSize: 10, fill: '#374151' }}
-                axisLine={{ stroke: '#000' }}
-                tickLine={{ stroke: '#000' }}
+                tick={tickStyle}
+                axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
+                tickLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
                 interval={0}
                 padding={{ left: 10, right: 10 }}
-                label={{ value: 'Perturbation Strength (%)', position: 'insideBottom', offset: -30, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }}
+                label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.xAxisTitle) as any) : undefined}
               />
-              <XAxis
-                orientation="top"
-                xAxisId="top_border"
-                axisLine={{ stroke: '#000' }}
-                tick={false}
-                tickLine={false}
-              />
+              <XAxis orientation="top" xAxisId="top_border" axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={kSensChartSettings.showMirrorTicks ? tickStyle : false} tickLine={kSensChartSettings.showMirrorTicks} />
               <YAxis
                 yAxisId="left"
-                tick={{ fontSize: 10, fill: '#374151' }}
-                axisLine={{ stroke: '#000' }}
-                tickLine={{ stroke: '#000' }}
-                /* Dynamic label for current ranking method */
-                label={{ value: `${MCDM_METHODS.find(m => m.value === selectedRankingMethod)?.label || selectedRankingMethod.toUpperCase()} Score`, angle: -90, position: 'insideLeft', offset: -10, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }}
+                tick={tickStyle}
+                axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
+                tickLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
+                label={kSensChartSettings.showAxisTitles ? (labelStyle(`${MCDM_METHODS.find(m => m.value === selectedRankingMethod)?.label || selectedRankingMethod.toUpperCase()} Score`, true) as any) : undefined}
                 domain={[0, (max: number) => Math.ceil(max * 10) / 10]}
                 tickFormatter={(val: number) => val.toFixed(1)}
-                padding={{ top: 40 }}
               />
               <YAxis
                 yAxisId="right"
                 orientation="right"
-                tick={{ fontSize: 10, fill: '#374151' }}
-                axisLine={{ stroke: '#000' }}
-                tickLine={{ stroke: '#000' }}
-                label={{ value: 'Ranking (1 = Best)', angle: 90, position: 'insideRight', offset: 15, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }}
+                tick={tickStyle}
+                axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
+                tickLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
+                label={kSensChartSettings.showAxisTitles ? { value: 'Ranking (1 = Best)', angle: 90, position: 'insideRight', offset: 15, style: { fontSize: kSensChartSettings.fontSize + 1, fill: theme.text, fontWeight: 'bold' } } : undefined}
                 domain={[1, alternatives.length]}
                 reversed
-                padding={{ top: 40 }}
                 interval={0}
                 ticks={alternatives.length <= 20
                   ? Array.from({ length: alternatives.length }, (_, i) => i + 1)
@@ -1568,102 +1522,50 @@ export default function KSensitivityCalculator({
               />
               <Tooltip
                 cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                content={({ active, payload, label }) => {
-                  if (active && payload && payload.length) {
-                    return (
-                      <div className="bg-white border border-gray-400 p-2 shadow-lg text-[10px] min-w-[150px]">
-                        <p className="font-bold border-b mb-1 pb-1">{label} Variation</p>
-                        {payload.map((entry: any, index: number) => {
-                          const isRank = !entry.name.includes("Score");
-                          return (
-                            <p key={index} className="flex justify-between py-0.5">
-                              <span style={{ color: entry.color }} className="font-medium">{entry.name}:</span>
-                              <span className="font-bold ml-4">
-                                {isRank ? entry.value : Number(entry.value).toFixed(4)}
-                              </span>
-                            </p>
-                          );
-                        })}
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
+                contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }}
               />
-              <Legend
-                verticalAlign="top"
-                align="right"
-                layout="vertical"
-                wrapperStyle={{
-                  fontSize: "9px",
-                  color: '#000',
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                  border: '1px solid #333',
-                  padding: '8px',
-                  top: 80,
-                  right: 220,
-                  width: 'auto',
-                  zIndex: 50,
-                  boxShadow: '2px 2px 5px rgba(0,0,0,0.1)'
-                }}
-                iconSize={10}
-              />
-
-              {/* Matplotlib Colors Mapping for Alternatives */}
-              {(() => {
-                const mplColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
-                return alternatives.map((alt, i) => {
-                  return (
-                    <Bar
-                      key={`bar-${alt.name}`}
-                      yAxisId="left"
-                      dataKey={`${alt.name} Score`}
-                      fill={mplColors[i % mplColors.length]}
-                      name={`${alt.name} Score`}
-                    />
-                  );
-                });
-              })()}
-
-              {/* Ranking Lines for Alternatives */}
-              {(() => {
-                const mplColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
-                return alternatives.map((alt, i) => {
-                  const isDashed = i % 2 !== 0;
-                  const markerType = i % 2 === 0 ? "circle" : "square";
-                  const seriesColor = mplColors[i % mplColors.length];
-
-                  return (
-                    <Line
-                      key={`line-${alt.name}`}
-                      yAxisId="right"
-                      type="linear"
-                      dataKey={alt.name}
-                      stroke={seriesColor}
-                      strokeWidth={3}
-                      strokeDasharray={isDashed ? "5 5" : "0"}
-                      name={`${alt.name} Rank`}
-                      dot={(props: any) => {
-                        const { cx, cy, index } = props;
-                        if (markerType === "square") {
-                          return <rect key={`dot-${alt.name}-${index}`} x={cx - 4.5} y={cy - 4.5} width={9} height={9} fill={seriesColor} />;
-                        }
-                        return <circle key={`dot-${alt.name}-${index}`} cx={cx} cy={cy} r={5} fill={seriesColor} />;
-                      }}
-                      legendType={isDashed ? "plainline" : "line"}
-                    />
-                  );
-                });
-              })()}
+              <Legend {...legendProps} iconSize={10} />
+              {alternatives.map((alt, i) => (
+                <Bar
+                  key={`bar-${alt.name}`}
+                  yAxisId="left"
+                  dataKey={`${alt.name} Score`}
+                  fill={colorsArr[i % colorsArr.length]}
+                  fillOpacity={kSensChartSettings.barOpacity || 1}
+                  name={`${alt.name} Score`}
+                >
+                  {dataLabelComponent}
+                </Bar>
+              ))}
+              {alternatives.map((alt, i) => {
+                const isDashed = i % 2 !== 0;
+                const markerType = i % 2 === 0 ? "circle" : "square";
+                const seriesColor = colorsArr[i % colorsArr.length];
+                return (
+                  <Line
+                    key={`line-${alt.name}`}
+                    yAxisId="right"
+                    type="linear"
+                    dataKey={alt.name}
+                    stroke={seriesColor}
+                    strokeWidth={kSensChartSettings.borderWidth || 3}
+                    strokeDasharray={isDashed ? "5 5" : "0"}
+                    name={`${alt.name} Rank`}
+                    dot={kSensChartSettings.markerSize > 0 ? { r: kSensChartSettings.markerSize + 1, fill: seriesColor, strokeWidth: 0 } : false}
+                    legendType={isDashed ? "plainline" : "line"}
+                  />
+                );
+              })}
+              {kSensChartSettings.showGridLines && <CartesianGrid {...(gridProps as any)} />}
             </ComposedChart>
           </ResponsiveContainer>
         ) : kSensChartType === 'heatmap' ? (
           <div className="w-full h-full flex flex-col items-center">
-            <h3 className="text-sm font-bold mb-4 opacity-70 italic whitespace-nowrap">Rank Sensitivity Heatmap</h3>
+            <h3 className="text-sm font-bold mb-4 opacity-70 italic whitespace-nowrap" style={{ color: theme.text }}>Rank Sensitivity Heatmap</h3>
             <div className="flex w-full items-start px-4" style={{ height: '520px' }}>
-              <div className="flex-grow h-full bg-white overflow-hidden">
+              <div className="flex-grow h-full overflow-hidden">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ScatterChart margin={{ top: 10, right: 10, bottom: 60, left: 150 }}>
+                  <ScatterChart margin={{ top: 20, right: 10, bottom: 60, left: 150 }}>
                     <XAxis
                       type="number"
                       dataKey="varIdx"
@@ -1671,10 +1573,10 @@ export default function KSensitivityCalculator({
                       ticks={data.map((_, i) => i)}
                       tickFormatter={(i) => data[i]?.variation || ''}
                       axisLine={false}
-                      tickLine={{ stroke: '#000' }}
+                      tickLine={false}
                       interval={0}
-                      tick={{ fontSize: 11, fill: '#000', fontWeight: 'bold' }}
-                      label={{ value: 'Weight Variation (%)', position: 'insideBottom', offset: -10, style: { fontSize: 13, fontStyle: 'italic', fill: '#000', fontWeight: 'bold' } }}
+                      tick={tickStyle}
+                      label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.xAxisTitle) as any) : undefined}
                     />
                     <YAxis
                       type="number"
@@ -1683,20 +1585,20 @@ export default function KSensitivityCalculator({
                       ticks={alternatives.map((_, i) => i)}
                       tickFormatter={(i) => alternatives[alternatives.length - 1 - i]?.name || ''}
                       axisLine={false}
-                      tickLine={{ stroke: '#000' }}
-                      tick={{ fontSize: 11, fill: '#000', fontWeight: 'bold' }}
-                      label={{ value: 'Alternatives', angle: -90, position: 'insideLeft', offset: -20, style: { fontSize: 13, fontStyle: 'italic', fill: '#000', fontWeight: 'bold' } }}
+                      tickLine={false}
+                      tick={tickStyle}
+                      label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.yAxisTitle, true) as any) : undefined}
                     />
                     <Tooltip
-                      cursor={{ strokeDasharray: '3 3', stroke: '#333' }}
+                      cursor={{ strokeDasharray: '3 3', stroke: theme.text }}
                       content={({ active, payload }) => {
                         if (active && payload && payload.length) {
                           const item = payload[0].payload;
                           return (
-                            <div className="bg-white border-2 border-black p-2 shadow-xl text-[11px]">
-                              <p className="font-bold border-b border-black mb-1 pb-1 text-blue-700">{item.altName}</p>
-                              <p><span className="font-medium text-gray-600 font-bold">Variation:</span> <span className="font-bold text-black">{item.variation}</span></p>
-                              <p><span className="font-medium text-gray-600 font-bold">Resulting Rank:</span> <span className="font-bold text-lg text-red-600">{item.rank}</span></p>
+                            <div className="bg-white border-2 border-black p-2 shadow-xl text-[11px]" style={{ backgroundColor: theme.tooltipBg, color: theme.text, borderColor: theme.border }}>
+                              <p className="font-bold border-b border-black mb-1 pb-1" style={{ borderColor: theme.border }}>{item.altName}</p>
+                              <p><span className="font-medium opacity-70">Variation:</span> <span className="font-bold">{item.variation}</span></p>
+                              <p><span className="font-medium opacity-70">Rank:</span> <span className="font-bold text-lg">{item.rank}</span></p>
                             </div>
                           );
                         }
@@ -1720,55 +1622,28 @@ export default function KSensitivityCalculator({
                         return pts;
                       })()}
                       shape={(props: any) => {
-                        const { cx, cy } = props;
-                        const payload = props.payload;
+                        const { cx, cy, payload } = props;
                         const numAlt = alternatives.length || 1;
-
-                        // Advanced Color Interpolation for infinite uniqueness
                         const getScientificColor = (p: number) => {
-                          const stops = [
-                            { r: 68, g: 1, b: 84 },   // #440154 (Best)
-                            { r: 59, g: 82, b: 139 }, // #3b528b
-                            { r: 33, g: 145, b: 140 }, // #21918c
-                            { r: 94, g: 201, b: 98 },  // #5ec962
-                            { r: 253, g: 231, b: 37 }  // #fde725 (Worst)
-                          ];
-                          const i = Math.min(stops.length - 2, Math.floor(p * (stops.length - 1)));
-                          const segmentP = (p * (stops.length - 1)) - i;
-                          const r = Math.round(stops[i].r + (stops[i + 1].r - stops[i].r) * segmentP);
-                          const g = Math.round(stops[i].g + (stops[i + 1].g - stops[i].g) * segmentP);
-                          const b = Math.round(stops[i].b + (stops[i + 1].b - stops[i].b) * segmentP);
+                          const stops = [{ r: 68, g: 1, b: 84 }, { r: 59, g: 82, b: 139 }, { r: 33, g: 145, b: 140 }, { r: 94, g: 201, b: 98 }, { r: 253, g: 231, b: 37 }];
+                          const pSafe = isNaN(p) ? 0 : Math.max(0, Math.min(1, p));
+                          const i = Math.min(stops.length - 2, Math.floor(pSafe * (stops.length - 1)));
+                          const segmentP = (pSafe * (stops.length - 1)) - i;
+                          const start = stops[i] || stops[0];
+                          const end = stops[i + 1] || stops[stops.length - 1];
+                          const r = Math.round(start.r + (end.r - start.r) * segmentP);
+                          const g = Math.round(start.g + (end.g - start.g) * segmentP);
+                          const b = Math.round(start.b + (end.b - start.b) * segmentP);
                           return `rgb(${r},${g},${b})`;
                         };
-
-                        const w = (720 / data.length);
+                        const w = (720 / (data.length || 1));
                         const h = (480 / numAlt);
-                        const p = (payload.rank - 1) / (Math.max(1, numAlt - 1));
+                        const p = ((payload?.rank || 1) - 1) / (Math.max(1, numAlt - 1));
                         const fill = getScientificColor(p);
-                        const isDark = payload.rank <= numAlt / 2;
-
                         return (
                           <g>
-                            <rect
-                              x={cx - w / 2}
-                              y={cy - h / 2}
-                              width={w - 1}
-                              height={h - 1}
-                              fill={fill}
-                              stroke="#ffffff"
-                              strokeWidth={0.3}
-                              rx={1}
-                            />
-                            <text
-                              x={cx}
-                              y={cy}
-                              dy=".35em"
-                              textAnchor="middle"
-                              fill={isDark ? "#ffffff" : "#000000"}
-                              className="text-[10px] font-black pointer-events-none"
-                            >
-                              {payload.rank}
-                            </text>
+                            <rect x={cx - w / 2} y={cy - h / 2} width={w - 1} height={h - 1} fill={fill} stroke={theme.bg} strokeWidth={0.3} rx={1} />
+                            <text x={cx} y={cy} dy=".35em" textAnchor="middle" fill={(payload?.rank || 1) <= numAlt / 2 ? "#fff" : "#000"} style={{ fontSize: `${kSensChartSettings.fontSize}px`, fontWeight: 'black' }}>{payload?.rank || 1}</text>
                           </g>
                         );
                       }}
@@ -1776,183 +1651,88 @@ export default function KSensitivityCalculator({
                   </ScatterChart>
                 </ResponsiveContainer>
               </div>
-              {/* Discrete Scientific Color Bar - Dynamic Alignment */}
-              <div className="w-40 pl-8 h-full flex flex-col items-start justify-start pt-[12px]">
-                {(() => {
-                  const numAlt = alternatives.length || 1;
-                  const step = 100 / numAlt;
-
-                  const getScientificColor = (p: number) => {
-                    const stops = [
-                      { r: 68, g: 1, b: 84 },
-                      { r: 59, g: 82, b: 139 },
-                      { r: 33, g: 145, b: 140 },
-                      { r: 94, g: 201, b: 98 },
-                      { r: 253, g: 231, b: 37 }
-                    ];
-                    const i = Math.min(stops.length - 2, Math.floor(p * (stops.length - 1)));
-                    const segmentP = (p * (stops.length - 1)) - i;
-                    const r = Math.round(stops[i].r + (stops[i + 1].r - stops[i].r) * segmentP);
-                    const g = Math.round(stops[i].g + (stops[i + 1].g - stops[i].g) * segmentP);
-                    const b = Math.round(stops[i].b + (stops[i + 1].b - stops[i].b) * segmentP);
-                    return `rgb(${r},${g},${b})`;
-                  };
-
-                  // Construct dynamic gradient string based on number of alternatives
-                  const gradientStops = Array.from({ length: numAlt }).map((_, i) => {
-                    const color = getScientificColor(i / (Math.max(1, numAlt - 1)));
-                    return `${color} ${i * step}% ${(i + 1) * step}%`;
-                  }).join(', ');
-
-                  return (
-                    <div
-                      className="relative w-8 h-[420px] border border-black shadow-sm"
-                      style={{ background: `linear-gradient(to top, ${gradientStops})` }}
-                    >
-                      {/* Rank Intensity Title */}
-                      <div className="absolute -left-20 top-1/2 -translate-y-1/2 flex items-center h-full">
-                        <div className="text-[10px] font-black text-black whitespace-nowrap -rotate-90 tracking-[0.2em] uppercase opacity-80">
-                          Rank Intensity
-                        </div>
-                      </div>
-
-                      {/* Map all rank numbers along the bar - Perfectly Centered in each block */}
-                      {Array.from({ length: numAlt }, (_, i) => i + 1).map((rank) => {
-                        const bottomPercent = ((rank - 0.5) / numAlt) * 100;
-                        return (
-                          <div
-                            key={rank}
-                            className="absolute -right-10 text-[11px] font-black text-black flex items-center"
-                            style={{ bottom: `${bottomPercent}%`, transform: 'translateY(50%)' }}
-                          >
-                            <span className="w-3 h-[1.5px] bg-black mr-2"></span>
-                            {rank}
-                          </div>
-                        );
-                      })}
-                      <div className="absolute left-1/2 -top-6 -translate-x-1/2 text-[9px] text-black font-black uppercase tracking-widest whitespace-nowrap">Worst</div>
-                      <div className="absolute left-1/2 -bottom-6 -translate-x-1/2 text-[9px] text-black font-black uppercase tracking-widest whitespace-nowrap">Best</div>
+              {/* Color Bar aligned with plotting area */}
+              <div className="w-32 flex flex-col items-center justify-start pt-[25px] flex-shrink-0">
+                <div className="text-[10px] font-black uppercase mb-1 w-full text-center" style={{ color: theme.text }}>Worst</div>
+                <div className="relative w-8 border border-black shadow-sm" style={{ height: '430px', background: 'linear-gradient(to top, rgb(68,1,84), rgb(59,82,139), rgb(33,145,140), rgb(94,201,98), rgb(253,231,37))' }}>
+                  <div className="absolute -left-20 top-1/2 -translate-y-1/2 flex items-center h-full">
+                    <div className="text-[10px] font-black whitespace-nowrap -rotate-90 tracking-[0.2em] uppercase opacity-80" style={{ color: theme.text }}>Rank Intensity</div>
+                  </div>
+                  {Array.from({ length: alternatives.length }, (_, i) => i + 1).map((rank) => (
+                    <div key={rank} className="absolute -right-10 text-[11px] font-black flex items-center" style={{ bottom: `${((rank - 0.5) / alternatives.length) * 100}%`, transform: 'translateY(50%)', color: theme.text }}>
+                      <span className="w-3 h-[1.5px] bg-black mr-2" style={{ backgroundColor: theme.text }}></span>{rank}
                     </div>
-                  );
-                })()}
+                  ))}
+                </div>
+                <div className="text-[10px] font-black uppercase mt-1 w-full text-center" style={{ color: theme.text }}>Best</div>
               </div>
             </div>
           </div>
         ) : (
-          <>
-            <ResponsiveContainer width="100%" height={600}>
-              {kSensChartType === 'stackedBar' || kSensChartType === 'bar' || kSensChartType === 'column' ? (
-                <BarChart
-                  data={data}
-                  margin={{ top: 40, right: 80, left: 80, bottom: 80 }}
-                  barGap={0}
-                  barCategoryGap="10%"
-                >
-                  {isWeightView && <text x="50%" y="20" textAnchor="middle" fontSize="14" fontWeight="normal" fill="#000">Sensitivity Analysis of Criteria Weights</text>}
-                  <CartesianGrid strokeDasharray={isWeightView ? "none" : "3 3"} vertical={isWeightView ? true : false} stroke={isWeightView ? "#b0b0b0" : "#e5e7eb"} opacity={isWeightView ? 0.7 : 0.5} />
-                  <XAxis
-                    dataKey="variation"
-                    tick={{ fontSize: 10, fill: '#000' }}
-                    axisLine={{ stroke: '#000' }}
-                    tickLine={{ stroke: '#000' }}
-                    interval={0}
-                    padding={{ left: 10, right: 10 }}
-                    tickFormatter={isWeightView ? (val: string) => val.replace('%', '') : undefined}
-                    label={{ value: isWeightView ? 'Weight Variation (%)' : 'Perturbation Strength (%)', position: 'insideBottom', offset: -5, style: { fontSize: 11, fill: '#000', fontWeight: isWeightView ? 'normal' : 'bold', fontStyle: isWeightView ? 'normal' : 'italic' } }}
-                  />
-                  <XAxis orientation="top" xAxisId="top_border" axisLine={{ stroke: isWeightView ? '#999' : '#000' }} tick={false} tickLine={false} />
-                  <YAxis
-                    yAxisId="left"
-                    tick={{ fontSize: 10, fill: '#000' }}
-                    axisLine={{ stroke: isWeightView ? '#999' : '#000' }}
-                    tickLine={{ stroke: isWeightView ? '#999' : '#000' }}
-                    label={{ value: isWeightView ? 'Weight (%)' : `${MCDM_METHODS.find(m => m.value === selectedRankingMethod)?.label || selectedRankingMethod.toUpperCase()} Score`, angle: -90, position: 'insideLeft', offset: -5, style: { fontSize: 11, fill: '#000', fontWeight: isWeightView ? 'normal' : 'bold', fontStyle: isWeightView ? 'normal' : 'italic' } }}
-                    domain={isWeightView ? (kSensChartType === 'stackedBar' ? [0, 1] : [0, 'auto']) : [0, (max: number) => Math.ceil(max * 10) / 10]}
-                    tickFormatter={isWeightView ? (val: number) => (kSensChartType === 'stackedBar' ? Number(val.toFixed(2)).toString() : (val * 100).toFixed(0)) : (val: number) => val.toFixed(1)}
-                  />
-                  {isWeightView && (
-                    <YAxis
-                      orientation="right"
-                      yAxisId="right_border"
-                      width={1}
-                      axisLine={{ stroke: '#999' }}
-                      tick={false}
-                      tickLine={false}
-                      domain={kSensChartType === 'stackedBar' ? [0, 1] : [0, 'auto']}
-                    />
-                  )}
-                  {!isWeightView && (
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      tick={{ fontSize: 10, fill: '#000' }}
-                      axisLine={{ stroke: '#000' }}
-                      tickLine={{ stroke: '#000' }}
-                      label={{ value: 'Ranking (1 = Best)', angle: 90, position: 'insideRight', offset: 15, style: { fontSize: 11, fontStyle: 'italic', fill: '#000', fontWeight: 'bold' } }}
-                      domain={[1, alternatives.length]}
-                      reversed
-                      interval={0}
-                      ticks={alternatives.length <= 20
-                        ? Array.from({ length: alternatives.length }, (_, i) => i + 1)
-                        : Array.from({ length: Math.floor(alternatives.length / 2) }, (_, i) => (i + 1) * 2)}
-                    />
-                  )}
-                  <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                  <Legend
-                    verticalAlign="top"
-                    align={isWeightView ? "left" : "right"}
-                    layout="vertical"
-                    wrapperStyle={isWeightView ? {
-                      fontSize: "9px",
-                      color: '#000',
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      border: '1px solid #999',
-                      padding: '5px',
-                      lineHeight: '12px',
-                      marginTop: '55px',
-                      marginLeft: '130px',
-                      width: 'auto',
-                      zIndex: 50,
-                      boxShadow: '1px 1px 2px rgba(0,0,0,0.1)'
-                    } : {
-                      fontSize: "8px",
-                      color: '#000',
-                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                      border: '1px solid #333',
-                      padding: '4px',
-                      top: 73,
-                      right: 230,
-                      width: 'auto',
-                      zIndex: 50,
-                      boxShadow: '1px 1px 3px rgba(0,0,0,0.1)'
-                    }}
-                    iconSize={8}
-                    iconType={isWeightView ? "circle" : "square"}
-                  />
-                  {isWeightView ? (
-                    workingCriteria.map((crit, idx) => {
-                      const mplColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
-                      const color = mplColors[idx % mplColors.length];
-                      return (
-                        <Bar key={crit.name} yAxisId="left" dataKey={crit.name} fill={color} name={crit.name} stackId={kSensChartType === 'stackedBar' ? "a" : undefined} />
-                      );
-                    })
-                  ) : (
-                    alternatives.map((alt, altIdx) => (
-                      <Bar
-                        key={alt.name}
-                        yAxisId="left"
-                        dataKey={`${alt.name} Score`}
-                        fill={colors[altIdx % colors.length]}
-                        name={`${alt.name} Score`}
-                        stackId={kSensChartType === 'stackedBar' ? "a" : undefined}
+          <ResponsiveContainer width="100%" height={600}>
+            {['bar', 'stackedBar', 'column'].includes(kSensChartType) ? (
+              <BarChart data={data} margin={commonChartProps.margin}>
+                {isWeightView && <text x="50%" y="20" textAnchor="middle" fontSize={kSensChartSettings.fontSize + 4} fontWeight="bold" fill={theme.text}>Sensitivity Analysis of Criteria Weights</text>}
+                <XAxis dataKey="variation" tick={tickStyle} axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tickLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} interval={0} padding={{ left: 10, right: 10 }} tickFormatter={isWeightView ? (val: string) => val.replace('%', '') : undefined} label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.xAxisTitle) as any) : undefined} />
+                <YAxis
+                  reversed={!isWeightView && kSensChartType !== 'stackedBar'}
+                  tick={tickStyle}
+                  axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
+                  tickLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
+                  domain={(isWeightView || kSensChartType === 'stackedBar') ? [0, 'auto'] : [0.5, alternatives.length]}
+                  ticks={(!isWeightView && kSensChartType !== 'stackedBar') ? Array.from({ length: alternatives.length }, (_, i) => i + 1) : undefined}
+                  label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.yAxisTitle, true) as any) : undefined}
+                  tickFormatter={(isWeightView || kSensChartType === 'stackedBar') ? (val: number) => val.toFixed(2) : undefined}
+                />
+                <Tooltip contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }} formatter={(v: number) => {
+                  if (isWeightView) return (v * 100).toFixed(2) + '%';
+                  if (kSensChartType === 'stackedBar') return `Score: ${v.toFixed(3)}`;
+                  return `Rank: ${v}`;
+                }} />
+                <Legend {...legendProps} iconSize={8} />
+                {(isWeightView ? workingCriteria : alternatives).map((item, idx) => (
+                  <Bar
+                    key={item.name}
+                    dataKey={isWeightView ? item.name : (kSensChartType === 'stackedBar' ? `${item.name} Score` : item.name)}
+                    name={item.name}
+                    stackId={kSensChartType === 'stackedBar' ? "1" : undefined}
+                    fill={colorsArr[idx % colorsArr.length]}
+                    fillOpacity={kSensChartSettings.barOpacity || 1}
+                    stroke={theme.border}
+                    strokeWidth={0.5}
+                    {...({ baseValue: (!isWeightView && kSensChartType !== 'stackedBar') ? alternatives.length : 0 } as any)}
+                  >
+                    {kSensChartSettings.showDataLabels ? (
+                      <LabelList 
+                        dataKey={isWeightView ? item.name : item.name}
+                        position="center" 
+                        formatter={(val: any) => {
+                          if (isWeightView) return (val * 100).toFixed(0);
+                          return val; // This is the Rank
+                        }}
+                        style={{ fontSize: kSensChartSettings.fontSize - 1, fill: '#ffffff', fontWeight: 'bold', pointerEvents: 'none' }} 
                       />
-                    ))
-                  )}
-                </BarChart>
-              ) : <div />}
-            </ResponsiveContainer>
-          </>
+                    ) : null}
+                  </Bar>
+                ))}
+
+                {kSensChartSettings.showGridLines && <CartesianGrid {...(gridProps as any)} />}
+                {/* Mirror axes placed last to ensure they act as a continuous border frame on top of all elements */}
+                <XAxis orientation="top" xAxisId="top_border" axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={false} tickLine={false} />
+                <YAxis
+                  orientation="right"
+                  yAxisId="right_border"
+                  width={kSensChartSettings.showMirrorTicks ? 40 : 10}
+                  axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
+                  tick={kSensChartSettings.showMirrorTicks ? tickStyle : false}
+                  tickLine={kSensChartSettings.showMirrorTicks}
+                  reversed={!isWeightView}
+                  domain={isWeightView ? [0, 'auto'] : [1, alternatives.length]}
+                  ticks={!isWeightView ? Array.from({ length: alternatives.length }, (_, i) => i + 1) : undefined}
+                />
+              </BarChart>
+            ) : <div />}
+          </ResponsiveContainer>
         )}
       </div>
     );
@@ -2967,33 +2747,41 @@ export default function KSensitivityCalculator({
                               })}
                             >
                               <div className="flex items-center gap-2 mr-2">
+                                {/* Chart Type Selector */}
                                 <Select value={kSensChartType} onValueChange={setKSensChartType}>
-                                  <SelectTrigger className="w-36 h-8 text-[11px] bg-white border-gray-300"><SelectValue /></SelectTrigger>
+                                  <SelectTrigger className="w-[140px] h-8 text-[11px] bg-white border-gray-300">
+                                    <SelectValue />
+                                  </SelectTrigger>
                                   <SelectContent>
                                     {kSensChartTypes.map(ct => (
                                       <SelectItem key={ct.value} value={ct.value} className="text-[11px]">
-                                        {ct.icon} {ct.label}
+                                        <div className="flex items-center gap-1.5 font-medium text-gray-700">
+                                          <span className="opacity-70">{ct.icon}</span>
+                                          {ct.label}
+                                        </div>
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
                                 </Select>
-                                <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-md border border-gray-200">
+
+                                {/* Download Buttons Section */}
+                                <div className="flex items-center gap-1.5 bg-gray-50/80 p-0.5 rounded-md border border-gray-200 ml-2">
                                   <Button 
                                     onClick={() => downloadChartAsJpeg('jpeg')} 
                                     variant="ghost" 
                                     size="sm" 
-                                    className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all text-blue-600"
+                                    className="h-7 px-2.5 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all text-blue-600 rounded-sm"
                                   >
-                                    <Download className="w-3 h-3 mr-1" /> JPEG
+                                    <Download className="w-3.5 h-3.5 mr-1" /> JPEG
                                   </Button>
-                                  <div className="w-[1px] h-3 bg-gray-300 mx-0.5" />
+                                  <div className="w-[1.5px] h-3.5 bg-gray-300 mx-0.5" />
                                   <Button 
                                     onClick={() => downloadChartAsJpeg('svg')} 
                                     variant="ghost" 
                                     size="sm" 
-                                    className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all text-indigo-600"
+                                    className="h-7 px-2.5 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all text-indigo-700 rounded-sm"
                                   >
-                                    <Sparkles className="w-3 h-3 mr-1" /> SVG (Vector)
+                                    <Sparkles className="w-3.5 h-3.5 mr-1" /> SVG (Vector)
                                   </Button>
                                 </div>
                               </div>
@@ -3001,6 +2789,14 @@ export default function KSensitivityCalculator({
                             <CardDescription className="text-[10px]">
                               Base Case Weight: {(selectedCrit.weight * 100).toFixed(4)}% | Optimality: {selectedCrit.type === 'beneficial' ? 'Higher is Better' : 'Lower is Better'}
                             </CardDescription>
+                            
+                            {/* Graphic Variation Plate Settings */}
+                            <div className="w-full mt-4 px-0 border-t pt-2 transition-all duration-500 ease-in-out">
+                              <ChartVisualConfigurator
+                                settings={kSensChartSettings}
+                                onSettingsChange={setKSensChartSettings}
+                              />
+                            </div>
                           </CardHeader>
                           <CardContent className="px-0 sm:px-6 pt-6">
                             {renderKSensChart(selectedCrit.name)}

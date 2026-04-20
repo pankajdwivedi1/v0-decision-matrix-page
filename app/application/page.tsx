@@ -197,8 +197,8 @@ export default function MCDMCalculator() {
     backgroundTheme: 'white',
     borderWidth: 1.5,
     barOpacity: 0.8,
-    gridColor: '#e5e7eb',
-    gridOpacity: 0.5,
+    gridColor: '#d1d5db',
+    gridOpacity: 0.6,
 
     // Elements
     showMirrorTicks: true,
@@ -3994,7 +3994,15 @@ export default function MCDMCalculator() {
                   layout="vertical"
                   margin={{ top: 20, right: 120, left: 140, bottom: 60 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#eee" />
+                  {chartSettings.showGridLines && (
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                      stroke={chartSettings.gridColor}
+                      opacity={chartSettings.gridOpacity}
+                    />
+                  )}
                   <XAxis
                     type="number"
                     stroke="#000"
@@ -7051,15 +7059,7 @@ export default function MCDMCalculator() {
                                           barGap={0}
                                           barCategoryGap="25%"
                                         >
-                                          {chartSettings.showGridLines && (
-                                            <CartesianGrid
-                                              strokeDasharray="3 3"
-                                              horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                              vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                              stroke={chartSettings.gridColor}
-                                              opacity={chartSettings.gridOpacity}
-                                            />
-                                          )}
+
                                           <XAxis
                                             dataKey="name"
                                             xAxisId="main"
@@ -7191,6 +7191,16 @@ export default function MCDMCalculator() {
                                               );
                                             });
                                           })()}
+                                          {chartSettings.showGridLines && (
+                                            <CartesianGrid
+                                              strokeDasharray="3 3"
+                                              horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                              vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                              stroke={chartSettings.gridColor}
+                                              opacity={chartSettings.gridOpacity}
+                                              style={{ pointerEvents: 'none' }}
+                                            />
+                                          )}
                                         </ComposedChart>
                                       </ResponsiveContainer>
                                     )
@@ -7388,7 +7398,7 @@ export default function MCDMCalculator() {
                                         case "bar":
                                           return (
                                             <BarChart data={comparisonChartData} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-                                              <CartesianGrid strokeDasharray="3 3" />
+
                                               <XAxis
                                                 dataKey="method"
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
@@ -7427,12 +7437,22 @@ export default function MCDMCalculator() {
                                               {comparisonChartAlternatives.map((alt, idx) => (
                                                 <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
                                               ))}
+                                              {chartSettings.showGridLines && (
+                                                <CartesianGrid
+                                                  strokeDasharray="3 3"
+                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                                  stroke={chartSettings.gridColor}
+                                                  opacity={chartSettings.gridOpacity}
+                                                  style={{ pointerEvents: 'none' }}
+                                                />
+                                              )}
                                             </BarChart>
                                           );
                                         case "stackedBar":
                                           return (
                                             <BarChart data={comparisonChartData} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-                                              <CartesianGrid strokeDasharray="3 3" />
+
                                               <XAxis
                                                 dataKey="method"
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
@@ -7471,12 +7491,22 @@ export default function MCDMCalculator() {
                                               {comparisonChartAlternatives.map((alt, idx) => (
                                                 <Bar key={alt} stackId="a" dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
                                               ))}
+                                              {chartSettings.showGridLines && (
+                                                <CartesianGrid
+                                                  strokeDasharray="3 3"
+                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                                  stroke={chartSettings.gridColor}
+                                                  opacity={chartSettings.gridOpacity}
+                                                  style={{ pointerEvents: 'none' }}
+                                                />
+                                              )}
                                             </BarChart>
                                           );
                                         case "area":
                                           return (
                                             <AreaChart data={comparisonChartData} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-                                              <CartesianGrid strokeDasharray="3 3" />
+
                                               <XAxis
                                                 dataKey="method"
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
@@ -7515,12 +7545,22 @@ export default function MCDMCalculator() {
                                               {comparisonChartAlternatives.map((alt, idx) => (
                                                 <Area type="monotone" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
                                               ))}
+                                              {chartSettings.showGridLines && (
+                                                <CartesianGrid
+                                                  strokeDasharray="3 3"
+                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                                  stroke={chartSettings.gridColor}
+                                                  opacity={chartSettings.gridOpacity}
+                                                  style={{ pointerEvents: 'none' }}
+                                                />
+                                              )}
                                             </AreaChart>
                                           );
                                         case "stackedArea":
                                           return (
                                             <AreaChart data={comparisonChartData} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-                                              <CartesianGrid strokeDasharray="3 3" />
+
                                               <XAxis
                                                 dataKey="method"
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
@@ -7559,6 +7599,16 @@ export default function MCDMCalculator() {
                                               {comparisonChartAlternatives.map((alt, idx) => (
                                                 <Area type="monotone" stackId="1" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
                                               ))}
+                                              {chartSettings.showGridLines && (
+                                                <CartesianGrid
+                                                  strokeDasharray="3 3"
+                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                                  stroke={chartSettings.gridColor}
+                                                  opacity={chartSettings.gridOpacity}
+                                                  style={{ pointerEvents: 'none' }}
+                                                />
+                                              )}
                                             </AreaChart>
                                           );
                                         case "composed":
@@ -7579,15 +7629,7 @@ export default function MCDMCalculator() {
                                               barGap={0}
                                               barCategoryGap="25%"
                                             >
-                                              {chartSettings.showGridLines && (
-                                                <CartesianGrid
-                                                  strokeDasharray="3 3"
-                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                                  stroke={chartSettings.gridColor}
-                                                  opacity={chartSettings.gridOpacity}
-                                                />
-                                              )}
+
                                               <XAxis
                                                 dataKey="alternative"
                                                 xAxisId="main"
@@ -7636,7 +7678,7 @@ export default function MCDMCalculator() {
                                                   padding: "4px 8px",
                                                   top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 45 : undefined,
                                                   left: "50%",
-                                                  transform: "translateX(-50%)",
+                                                  transform: `translateX(-50%) translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                                   width: "max-content",
                                                   maxWidth: "95%",
                                                   zIndex: 50,
@@ -7672,12 +7714,32 @@ export default function MCDMCalculator() {
                                                   activeDot={{ r: 6 }}
                                                 />
                                               ))}
+                                              {chartSettings.showGridLines && (
+                                                <CartesianGrid
+                                                  strokeDasharray="3 3"
+                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                                  stroke={chartSettings.gridColor}
+                                                  opacity={chartSettings.gridOpacity}
+                                                  style={{ pointerEvents: 'none' }}
+                                                />
+                                              )}
+                                              {chartSettings.showGridLines && (
+                                                <CartesianGrid
+                                                  strokeDasharray="3 3"
+                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                                  stroke={chartSettings.gridColor}
+                                                  opacity={chartSettings.gridOpacity}
+                                                  style={{ pointerEvents: 'none' }}
+                                                />
+                                              )}
                                             </ComposedChart>
                                           );
                                         case "scatter":
                                           return (
                                             <ScatterChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-                                              <CartesianGrid strokeDasharray="3 3" />
+
                                               <XAxis
                                                 xAxisId="bottom"
                                                 dataKey="x"
@@ -7709,7 +7771,7 @@ export default function MCDMCalculator() {
                                                   padding: "4px 8px",
                                                   top: 70,
                                                   left: "50%",
-                                                  transform: "translateX(-50%)",
+                                                  transform: `translateX(-50%) translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                                   width: "max-content",
                                                   maxWidth: "95%",
                                                   zIndex: 50,
@@ -7723,6 +7785,16 @@ export default function MCDMCalculator() {
                                               {comparisonChartAlternatives.map((alt, idx) => (
                                                 <Scatter key={alt} xAxisId="bottom" name={alt} data={comparisonChartData.map((d) => ({ x: d.method, y: d[alt] }))} fill={CHART_COLORS[idx % CHART_COLORS.length]} shape={["circle", "cross", "diamond", "square", "star", "triangle", "wye"][idx % 7] as any} line />
                                               ))}
+                                              {chartSettings.showGridLines && (
+                                                <CartesianGrid
+                                                  strokeDasharray="3 3"
+                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                                  stroke={chartSettings.gridColor}
+                                                  opacity={chartSettings.gridOpacity}
+                                                  style={{ pointerEvents: 'none' }}
+                                                />
+                                              )}
                                             </ScatterChart>
                                           );
                                         case "boxPlot":
@@ -7793,11 +7865,16 @@ export default function MCDMCalculator() {
                                                 <line x1={pad.left} y1={pad.top} x2={800 - pad.right} y2={pad.top} stroke="#000" strokeWidth="2" />
                                                 {/* Right border */}
                                                 <line x1={800 - pad.right} y1={pad.top} x2={800 - pad.right} y2={pad.top + cH} stroke="#000" strokeWidth="2" />
+                                                {chartSettings.showGridLines && (chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both') && [0, 0.25, 0.5, 0.75, 1].map((pct) => (
+                                                  <line key={`hgrid-${pct}`} x1={pad.left} y1={gY(minV + pct * yR)} x2={800 - pad.right} y2={gY(minV + pct * yR)} stroke={chartSettings.gridColor} strokeWidth="1" strokeDasharray="3,3" opacity={chartSettings.gridOpacity} />
+                                                ))}
+                                                {chartSettings.showGridLines && (chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both') && boxData.map((_, idx) => (
+                                                  <line key={`vgrid-${idx}`} x1={gX(idx)} y1={pad.top} x2={gX(idx)} y2={pad.top + cH} stroke={chartSettings.gridColor} strokeWidth="1" strokeDasharray="3,3" opacity={chartSettings.gridOpacity} />
+                                                ))}
                                                 {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
                                                   <g key={`ylabel-${pct}`}>
                                                     <line x1={pad.left - 5} y1={gY(minV + pct * yR)} x2={pad.left} y2={gY(minV + pct * yR)} stroke="#999" strokeWidth="1" />
                                                     <text x={pad.left - 10} y={gY(minV + pct * yR) + 4} fontSize="11" textAnchor="end" fill="#666">{(minV + pct * yR).toFixed(1)}</text>
-                                                    <line x1={pad.left} y1={gY(minV + pct * yR)} x2={800 - pad.right} y2={gY(minV + pct * yR)} stroke="#eee" strokeWidth="1" strokeDasharray="2,2" />
                                                   </g>
                                                 ))}
                                                 {boxData.map((data, idx) => {
@@ -7824,7 +7901,7 @@ export default function MCDMCalculator() {
                                         default:
                                           return (
                                             <LineChart data={comparisonChartData} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-                                              <CartesianGrid strokeDasharray="3 3" />
+
                                               <XAxis
                                                 dataKey="method"
                                                 tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
@@ -7851,7 +7928,7 @@ export default function MCDMCalculator() {
                                                   padding: "4px 8px",
                                                   top: 70,
                                                   left: "50%",
-                                                  transform: "translateX(-50%)",
+                                                  transform: `translateX(-50%) translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                                   width: "max-content",
                                                   maxWidth: "95%",
                                                   zIndex: 50,
@@ -7865,6 +7942,16 @@ export default function MCDMCalculator() {
                                               {comparisonChartAlternatives.map((alt, idx) => (
                                                 <Line key={alt} type={comparisonChartType === "step" ? "step" : "monotone"} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2} strokeDasharray={["0", "5 5", "3 3", "10 5", "2 2", "15 5"][idx % 6]} activeDot={{ r: 6 }} dot={{ r: 4, strokeWidth: 1, fill: "white", stroke: CHART_COLORS[idx % CHART_COLORS.length] }} />
                                               ))}
+                                              {chartSettings.showGridLines && (
+                                                <CartesianGrid
+                                                  strokeDasharray="3 3"
+                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                                  stroke={chartSettings.gridColor}
+                                                  opacity={chartSettings.gridOpacity}
+                                                  style={{ pointerEvents: 'none' }}
+                                                />
+                                              )}
                                             </LineChart>
                                           );
                                       }
@@ -8140,9 +8227,6 @@ export default function MCDMCalculator() {
 
                             return (
                               <RadarChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                                <PolarGrid stroke="#e2e8f0" />
-                                <PolarAngleAxis dataKey="criterion" tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} />
-                                <PolarRadiusAxis angle={30} domain={[0, 1]} tick={{ fontSize: 9 }} />
                                 {top3Alts.map((alt, idx) => (
                                   <Radar
                                     key={alt.alternativeName}
@@ -8154,6 +8238,15 @@ export default function MCDMCalculator() {
                                     strokeWidth={2}
                                   />
                                 ))}
+                                <PolarAngleAxis dataKey="criterion" tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} />
+                                <PolarRadiusAxis angle={30} domain={[0, 1]} tick={{ fontSize: 9 }} />
+                                {chartSettings.showGridLines && (
+                                  <PolarGrid
+                                    stroke={chartSettings.gridColor}
+                                    opacity={chartSettings.gridOpacity}
+                                    strokeWidth={1}
+                                  />
+                                )}
                                 <Tooltip
                                   contentStyle={{ fontSize: '10px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                   formatter={(val: number) => [val.toFixed(3), 'Score']}
@@ -8167,7 +8260,7 @@ export default function MCDMCalculator() {
                                   padding: "4px 8px",
                                   top: 5,
                                   left: "50%",
-                                  transform: "translateX(-50%)",
+                                  transform: `translateX(-50%) translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                   width: "max-content",
                                   maxWidth: "95%",
                                   zIndex: 50,
@@ -8814,7 +8907,7 @@ export default function MCDMCalculator() {
                                   <ResponsiveContainer width="100%" height="100%">
                                     {sensitivityChartType === 'radar' ? (
                                       <RadarChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} cx="50%" cy="50%" outerRadius="80%" data={sensitivityWeightChartData}>
-                                        {chartSettings.showGridLines && <PolarGrid stroke={theme.text} strokeWidth={0.5} opacity={chartSettings.gridOpacity} />}
+                                        {chartSettings.showGridLines && <PolarGrid stroke={chartSettings.gridColor} strokeWidth={1} opacity={chartSettings.gridOpacity} />}
                                         <PolarAngleAxis dataKey="name" tick={{ fontSize: chartSettings.fontSize, fill: theme.text, fontWeight: 'bold' }} />
                                         <PolarRadiusAxis angle={30} domain={[0, 'dataMax']} tick={{ fontSize: chartSettings.fontSize - 2, fill: theme.text }} />
                                         <Legend
@@ -8831,7 +8924,7 @@ export default function MCDMCalculator() {
                                             top: 70,
                                             left: chartSettings.legendPosition === 'left' ? 10 : chartSettings.legendPosition === 'right' ? undefined : "50%",
                                             right: chartSettings.legendPosition === 'right' ? 10 : undefined,
-                                            transform: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "none" : "translateX(-50%)",
+                                            transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                             zIndex: 50,
                                             boxShadow: "2px 2px 0px rgba(0,0,0,1)",
@@ -8847,10 +8940,10 @@ export default function MCDMCalculator() {
                                             key={res.weightLabel}
                                             name={res.weightLabel.replace(" Weight", "")}
                                             dataKey={`${res.weightLabel} Rank`}
-                                            stroke={CHART_COLORS[i % CHART_COLORS.length]}
-                                            fill={CHART_COLORS[i % CHART_COLORS.length]}
+                                            stroke={activeColors[i % activeColors.length]}
+                                            fill={activeColors[i % activeColors.length]}
                                             strokeWidth={chartSettings.borderWidth + 1}
-                                            fillOpacity={chartSettings.barOpacity}
+                                            fillOpacity={Math.min(chartSettings.barOpacity, 0.35)}
                                           />
                                         ))}
                                       </RadarChart>
@@ -8859,15 +8952,7 @@ export default function MCDMCalculator() {
                                         data={sensitivityWeightChartData}
                                         margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                       >
-                                        {chartSettings.showGridLines && (
-                                          <CartesianGrid
-                                            strokeDasharray="3 3"
-                                            horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                            vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                            stroke={chartSettings.gridColor}
-                                            opacity={chartSettings.gridOpacity}
-                                          />
-                                        )}
+
                                         <XAxis
                                           dataKey="name"
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
@@ -8886,6 +8971,7 @@ export default function MCDMCalculator() {
                                           label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
                                           interval={0}
                                           domain={[0, alternatives.length || 'dataMax']}
+                                          ticks={Array.from({ length: (alternatives.length || 0) + 1 }, (_, i) => i)}
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={{ stroke: theme.border, strokeWidth: 1 }} />
@@ -8927,12 +9013,6 @@ export default function MCDMCalculator() {
                                         {sensitivityWeightComparisonResults.map((res, i) => (
                                           <Bar key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} fill={activeColors[i % activeColors.length]} name={res.weightLabel.replace(" Weight", "")} fillOpacity={chartSettings.barOpacity} />
                                         ))}
-                                      </BarChart>
-                                    ) : sensitivityChartType === "stackedBar" ? (
-                                      <BarChart
-                                        data={sensitivityWeightChartData}
-                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
-                                      >
                                         {chartSettings.showGridLines && (
                                           <CartesianGrid
                                             strokeDasharray="3 3"
@@ -8940,8 +9020,16 @@ export default function MCDMCalculator() {
                                             vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
                                             stroke={chartSettings.gridColor}
                                             opacity={chartSettings.gridOpacity}
+                                            style={{ pointerEvents: 'none' }}
                                           />
                                         )}
+                                      </BarChart>
+                                    ) : sensitivityChartType === "stackedBar" ? (
+                                      <BarChart
+                                        data={sensitivityWeightChartData}
+                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                      >
+
                                         <XAxis
                                           dataKey="name"
                                           tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
@@ -8958,38 +9046,40 @@ export default function MCDMCalculator() {
                                         />
                                         <YAxis
                                           label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } } : undefined}
-                                          interval={0}
-                                          domain={[0, 'dataMax']}
+                                          domain={[0, (alternatives.length * (sensitivityWeightComparisonResults.length || 1)) || 'dataMax']}
+                                          ticks={Array.from({ length: (alternatives.length || 0) + 1 }, (_, i) => i * (sensitivityWeightComparisonResults.length || 1))}
                                           tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
                                           axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
                                           tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                                         <YAxis
                                           orientation="right"
                                           yAxisId="right_border"
-                                          domain={[1, (alternatives.length * sensitivityWeightComparisonResults.length) || 'dataMax']}
-                                          tick={{ fontSize: 10, fill: '#000' }}
+                                          domain={[0, (alternatives.length * (sensitivityWeightComparisonResults.length || 1)) || 'dataMax']}
+                                          ticks={Array.from({ length: (alternatives.length || 0) + 1 }, (_, i) => i * (sensitivityWeightComparisonResults.length || 1))}
+                                          tickFormatter={(val) => (val / (sensitivityWeightComparisonResults.length || 1)).toString()}
+                                          tick={chartSettings.showMirrorTicks ? { fontSize: 10, fill: '#000', fontWeight: 700 } : false}
                                           axisLine={{ stroke: '#000', strokeWidth: 1.5 }}
-                                          tickLine={{ stroke: '#000', strokeWidth: 1 }}
+                                          tickLine={chartSettings.showMirrorTicks ? { stroke: '#000', strokeWidth: 1 } : false}
                                         />
                                         <Line yAxisId="right_border" dataKey="nonexistent" stroke="transparent" dot={false} activeDot={false} legendType="none" />
                                         <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                         <Legend
-                                          verticalAlign="top"
-                                          align="center"
-                                          layout="horizontal"
+                                          verticalAlign={chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right' ? 'middle' : chartSettings.legendPosition}
+                                          align={chartSettings.legendPosition === 'left' ? 'left' : chartSettings.legendPosition === 'right' ? 'right' : 'center'}
+                                          layout={chartSettings.legendLayout}
                                           wrapperStyle={{
-                                            fontSize: "10px",
-                                            color: "#000",
+                                            fontSize: `${chartSettings.fontSize}px`,
+                                            color: theme.text,
                                             fontWeight: 700,
-                                            backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                            border: "1px solid #000",
+                                            backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                            border: `${chartSettings.borderWidth}px solid ${theme.border}`,
                                             padding: "4px 8px",
                                             top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
-                                            left: chartSettings.legendPosition === 'left' ? 30 : chartSettings.legendPosition === 'right' ? undefined : "50%",
-                                            right: chartSettings.legendPosition === 'right' ? 30 : undefined,
+                                            left: chartSettings.legendPosition === 'left' ? 10 : chartSettings.legendPosition === 'right' ? undefined : "50%",
+                                            right: chartSettings.legendPosition === 'right' ? 10 : undefined,
                                             transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
-                                            width: "max-content",
+                                            width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                             maxWidth: "95%",
                                             zIndex: 50,
                                             boxShadow: "2px 2px 0px rgba(0,0,0,1)",
@@ -9005,12 +9095,6 @@ export default function MCDMCalculator() {
                                             <Bar key={res.weightLabel} stackId="a" dataKey={`${res.weightLabel} Rank`} fill={mplColors[i % mplColors.length]} name={res.weightLabel.replace(" Weight", "")} />
                                           ));
                                         })()}
-                                      </BarChart>
-                                    ) : sensitivityChartType === "area" ? (
-                                      <AreaChart
-                                        data={sensitivityWeightChartData}
-                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
-                                      >
                                         {chartSettings.showGridLines && (
                                           <CartesianGrid
                                             strokeDasharray="3 3"
@@ -9018,8 +9102,16 @@ export default function MCDMCalculator() {
                                             vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
                                             stroke={chartSettings.gridColor}
                                             opacity={chartSettings.gridOpacity}
+                                            style={{ pointerEvents: 'none' }}
                                           />
                                         )}
+                                      </BarChart>
+                                    ) : sensitivityChartType === "area" ? (
+                                      <AreaChart
+                                        data={sensitivityWeightChartData}
+                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                      >
+
                                         <XAxis
                                           dataKey="name"
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: "#000" }}
@@ -9037,7 +9129,8 @@ export default function MCDMCalculator() {
                                         <YAxis
                                           label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } } : undefined}
                                           interval={0}
-                                          domain={[0, 'dataMax']}
+                                          domain={[0, alternatives.length || 'dataMax']}
+                                          ticks={Array.from({ length: (alternatives.length || 0) + 1 }, (_, i) => i)}
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: "#000" }}
                                           axisLine={{ stroke: "#000", strokeWidth: chartSettings.borderWidth }}
                                           tickLine={{ stroke: "#000", strokeWidth: 1 }} />
@@ -9058,10 +9151,10 @@ export default function MCDMCalculator() {
                                           layout={chartSettings.legendLayout}
                                           wrapperStyle={{
                                             fontSize: `${chartSettings.fontSize}px`,
-                                            color: "#000",
+                                            color: theme.text,
                                             fontWeight: 700,
-                                            backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                            border: `${chartSettings.borderWidth}px solid #000`,
+                                            backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                            border: `${chartSettings.borderWidth}px solid ${theme.border}`,
                                             padding: "4px 8px",
                                             top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
@@ -9079,14 +9172,17 @@ export default function MCDMCalculator() {
                                           iconSize={8}
                                         />
                                         {sensitivityWeightComparisonResults.map((res, i) => (
-                                          <Area type="monotone" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={activeColors[i % activeColors.length]} fill={activeColors[i % activeColors.length]} fillOpacity={chartSettings.barOpacity} name={res.weightLabel.replace(" Weight", "")} strokeWidth={chartSettings.borderWidth} />
+                                          <Area 
+                                            type="monotone" 
+                                            key={res.weightLabel} 
+                                            dataKey={`${res.weightLabel} Rank`} 
+                                            stroke={activeColors[i % activeColors.length]} 
+                                            fill={activeColors[i % activeColors.length]} 
+                                            fillOpacity={Math.min(chartSettings.barOpacity, 0.35)} 
+                                            name={res.weightLabel.replace(" Weight", "")} 
+                                            strokeWidth={chartSettings.borderWidth + 1} 
+                                          />
                                         ))}
-                                      </AreaChart>
-                                    ) : sensitivityChartType === "stackedArea" ? (
-                                      <AreaChart
-                                        data={sensitivityWeightChartData}
-                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
-                                      >
                                         {chartSettings.showGridLines && (
                                           <CartesianGrid
                                             strokeDasharray="3 3"
@@ -9094,8 +9190,16 @@ export default function MCDMCalculator() {
                                             vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
                                             stroke={chartSettings.gridColor}
                                             opacity={chartSettings.gridOpacity}
+                                            style={{ pointerEvents: 'none' }}
                                           />
                                         )}
+                                      </AreaChart>
+                                    ) : sensitivityChartType === "stackedArea" ? (
+                                      <AreaChart
+                                        data={sensitivityWeightChartData}
+                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                      >
+
                                         <XAxis
                                           dataKey="name"
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: "#000" }}
@@ -9112,17 +9216,18 @@ export default function MCDMCalculator() {
                                         />
                                         <YAxis
                                           label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: '#000' } } : undefined}
-                                          interval={0}
-                                          domain={[0, 'dataMax']}
+                                          domain={[0, (alternatives.length * (sensitivityWeightComparisonResults.length || 1)) || 'dataMax']}
+                                          ticks={Array.from({ length: (alternatives.length || 0) + 1 }, (_, i) => i * (sensitivityWeightComparisonResults.length || 1))}
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: "#000" }}
                                           axisLine={{ stroke: "#000", strokeWidth: chartSettings.borderWidth }}
                                           tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                                         <YAxis
                                           orientation="right"
                                           yAxisId="right_border"
-                                          domain={[1, alternatives.length || 'dataMax']}
-                                          tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fill: '#000' } : false}
-                                          ticks={chartSettings.showMirrorTicks ? Array.from({ length: alternatives.length }, (_, i) => i + 1) : undefined}
+                                          domain={[0, (alternatives.length * (sensitivityWeightComparisonResults.length || 1)) || 'dataMax']}
+                                          ticks={Array.from({ length: (alternatives.length || 0) + 1 }, (_, i) => i * (sensitivityWeightComparisonResults.length || 1))}
+                                          tickFormatter={(val) => (val / (sensitivityWeightComparisonResults.length || 1)).toString()}
+                                          tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fill: '#000', fontWeight: 700 } : false}
                                           axisLine={{ stroke: '#000', strokeWidth: chartSettings.borderWidth }}
                                           tickLine={chartSettings.showMirrorTicks ? { stroke: '#000', strokeWidth: 1 } : false}
                                         />
@@ -9134,10 +9239,10 @@ export default function MCDMCalculator() {
                                           layout={chartSettings.legendLayout}
                                           wrapperStyle={{
                                             fontSize: `${chartSettings.fontSize}px`,
-                                            color: "#000",
+                                            color: theme.text,
                                             fontWeight: 700,
-                                            backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                            border: `${chartSettings.borderWidth}px solid #000`,
+                                            backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                            border: `${chartSettings.borderWidth}px solid ${theme.border}`,
                                             padding: "4px 8px",
                                             top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
@@ -9157,6 +9262,16 @@ export default function MCDMCalculator() {
                                         {sensitivityWeightComparisonResults.map((res, i) => (
                                           <Area type="monotone" stackId="1" key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} stroke={activeColors[i % activeColors.length]} fill={activeColors[i % activeColors.length]} fillOpacity={chartSettings.barOpacity} name={res.weightLabel.replace(" Weight", "")} strokeWidth={chartSettings.borderWidth} />
                                         ))}
+                                        {chartSettings.showGridLines && (
+                                          <CartesianGrid
+                                            strokeDasharray="3 3"
+                                            horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                            vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                            stroke={chartSettings.gridColor}
+                                            opacity={chartSettings.gridOpacity}
+                                            style={{ pointerEvents: 'none' }}
+                                          />
+                                        )}
                                       </AreaChart>
                                     ) : sensitivityChartType === "composed" ? (
                                       <ComposedChart
@@ -9181,15 +9296,7 @@ export default function MCDMCalculator() {
                                         })}
                                         margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                       >
-                                        {chartSettings.showGridLines && (
-                                          <CartesianGrid
-                                            strokeDasharray="3 3"
-                                            horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                            vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                            stroke={chartSettings.gridColor}
-                                            opacity={chartSettings.gridOpacity}
-                                          />
-                                        )}
+
                                         <XAxis
                                           type="number"
                                           domain={[1, alternatives.length]}
@@ -9244,15 +9351,15 @@ export default function MCDMCalculator() {
                                           layout={chartSettings.legendLayout}
                                           wrapperStyle={{
                                             fontSize: `${chartSettings.fontSize}px`,
-                                            color: "#000",
+                                            color: theme.text,
                                             fontWeight: 700,
-                                            backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                            border: `${chartSettings.borderWidth}px solid #000`,
+                                            backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                            border: `${chartSettings.borderWidth}px solid ${theme.border}`,
                                             padding: "4px 8px",
                                             top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 40 : undefined,
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
-                                            left: chartSettings.legendPosition === 'left' ? 30 : chartSettings.legendPosition === 'right' ? undefined : "50%",
-                                            right: chartSettings.legendPosition === 'right' ? 30 : undefined,
+                                            left: chartSettings.legendPosition === 'left' ? 10 : chartSettings.legendPosition === 'right' ? undefined : "50%",
+                                            right: chartSettings.legendPosition === 'right' ? 10 : undefined,
                                             transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                             maxWidth: "95%",
@@ -9269,12 +9376,6 @@ export default function MCDMCalculator() {
                                         <Scatter dataKey="min" fill="#2ca02c" shape="circle" name="Best Case" />
                                         <Scatter dataKey="max" fill="#1f77b4" shape="square" name="Worst Case" />
                                         <Scatter dataKey="avg" fill="#d62728" shape="diamond" name="Average/Consensus" />
-                                      </ComposedChart>
-                                    ) : sensitivityChartType === "scatter" ? (
-                                      <ScatterChart
-                                        data={sensitivityWeightChartData}
-                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
-                                      >
                                         {chartSettings.showGridLines && (
                                           <CartesianGrid
                                             strokeDasharray="3 3"
@@ -9282,8 +9383,16 @@ export default function MCDMCalculator() {
                                             vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
                                             stroke={chartSettings.gridColor}
                                             opacity={chartSettings.gridOpacity}
+                                            style={{ pointerEvents: 'none' }}
                                           />
                                         )}
+                                      </ComposedChart>
+                                    ) : sensitivityChartType === "scatter" ? (
+                                      <ScatterChart
+                                        data={sensitivityWeightChartData}
+                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                      >
+
                                         <XAxis
                                           dataKey="name"
                                           type="category"
@@ -9329,15 +9438,15 @@ export default function MCDMCalculator() {
                                           layout={chartSettings.legendLayout}
                                           wrapperStyle={{
                                             fontSize: `${chartSettings.fontSize}px`,
-                                            color: "#000",
+                                            color: theme.text,
                                             fontWeight: 700,
-                                            backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                            border: `${chartSettings.borderWidth}px solid #000`,
+                                            backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                            border: `${chartSettings.borderWidth}px solid ${theme.border}`,
                                             padding: "4px 8px",
                                             top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 40 : undefined,
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
-                                            left: chartSettings.legendPosition === 'left' ? 30 : chartSettings.legendPosition === 'right' ? undefined : "50%",
-                                            right: chartSettings.legendPosition === 'right' ? 30 : undefined,
+                                            left: chartSettings.legendPosition === 'left' ? 10 : chartSettings.legendPosition === 'right' ? undefined : "50%",
+                                            right: chartSettings.legendPosition === 'right' ? 10 : undefined,
                                             transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                             maxWidth: "95%",
@@ -9352,6 +9461,16 @@ export default function MCDMCalculator() {
                                         {sensitivityWeightComparisonResults.map((res, i) => (
                                           <Scatter key={res.weightLabel} name={res.weightLabel.replace(" Weight", "")} data={sensitivityWeightChartData.map(d => ({ name: d.name, rank: d[`${res.weightLabel} Rank`] }))} fill={activeColors[i % activeColors.length]} />
                                         ))}
+                                        {chartSettings.showGridLines && (
+                                          <CartesianGrid
+                                            strokeDasharray="3 3"
+                                            horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                            vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                            stroke={chartSettings.gridColor}
+                                            opacity={chartSettings.gridOpacity}
+                                            style={{ pointerEvents: 'none' }}
+                                          />
+                                        )}
                                       </ScatterChart>
                                     ) : sensitivityChartType === "radial" ? (
                                       (() => {
@@ -9367,7 +9486,7 @@ export default function MCDMCalculator() {
                                           value: d[rankKey] ? (Math.max(...sensitivityWeightChartData.map(x => x[rankKey] || 0)) - d[rankKey] + 1) : 0,
                                           actualRank: d[rankKey],
                                           actualScore: d[scoreKey],
-                                          fill: CHART_COLORS[idx % CHART_COLORS.length]
+                                          fill: activeColors[idx % activeColors.length]
                                         })).sort((a, b) => b.value - a.value);
 
                                         return (
@@ -9466,15 +9585,7 @@ export default function MCDMCalculator() {
                                             barGap={0}
                                             barCategoryGap="25%"
                                           >
-                                            {chartSettings.showGridLines && (
-                                              <CartesianGrid
-                                                strokeDasharray="3 3"
-                                                horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                                vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                                stroke={chartSettings.gridColor}
-                                                opacity={chartSettings.gridOpacity}
-                                              />
-                                            )}
+
                                             <XAxis
                                               dataKey="name"
                                               tick={{ fontSize: chartSettings.fontSize, fill: theme.text }}
@@ -9502,7 +9613,6 @@ export default function MCDMCalculator() {
                                               label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
                                               domain={[0, (max: number) => Math.ceil(max * 10) / 10]}
                                               tickFormatter={(val: number) => val.toFixed(1)}
-                                              padding={{ top: 40 }}
                                             />
                                             <YAxis
                                               yAxisId="right"
@@ -9514,8 +9624,7 @@ export default function MCDMCalculator() {
                                               reversed
                                               ticks={chartSettings.showMirrorTicks ? rankingTicks : undefined}
                                               interval={0}
-                                              allowDecimals={false}
-                                              padding={{ top: 40 }} />
+                                              allowDecimals={false} />
                                             <Tooltip
                                               cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                                               content={({ active, payload, label }) => {
@@ -9609,6 +9718,16 @@ export default function MCDMCalculator() {
                                                 />
                                               );
                                             })}
+                                            {chartSettings.showGridLines && (
+                                              <CartesianGrid
+                                                strokeDasharray="3 3"
+                                                horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                                vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                                stroke={chartSettings.gridColor}
+                                                opacity={chartSettings.gridOpacity}
+                                                style={{ pointerEvents: 'none' }}
+                                              />
+                                            )}
                                           </ComposedChart>
                                         </ResponsiveContainer>
                                       );
@@ -9618,15 +9737,7 @@ export default function MCDMCalculator() {
                                         data={sensitivityWeightChartData}
                                         margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                       >
-                                        {chartSettings.showGridLines && (
-                                          <CartesianGrid
-                                            strokeDasharray="3 3"
-                                            horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                            vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                            stroke={chartSettings.gridColor}
-                                            opacity={chartSettings.gridOpacity}
-                                          />
-                                        )}
+
                                         <XAxis
                                           dataKey="name"
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
@@ -9678,7 +9789,7 @@ export default function MCDMCalculator() {
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
                                             left: chartSettings.legendPosition === 'left' ? 30 : chartSettings.legendPosition === 'right' ? undefined : "50%",
                                             right: chartSettings.legendPosition === 'right' ? 30 : undefined,
-                                            transform: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "none" : "translateX(-50%)",
+                                            transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                             maxWidth: "95%",
                                             zIndex: 50,
@@ -9707,6 +9818,16 @@ export default function MCDMCalculator() {
                                             }}
                                           />
                                         ))}
+                                        {chartSettings.showGridLines && (
+                                          <CartesianGrid
+                                            strokeDasharray="3 3"
+                                            horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                            vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                            stroke={chartSettings.gridColor}
+                                            opacity={chartSettings.gridOpacity}
+                                            style={{ pointerEvents: 'none' }}
+                                          />
+                                        )}
                                       </LineChart>
                                     )}
                                   </ResponsiveContainer>
@@ -9734,6 +9855,7 @@ export default function MCDMCalculator() {
                   alternatives={alternatives}
                   weightMethod={criteria.some(c => c.weight > 0) ? "Applied" : "Not Set"}
                   methodName={MCDM_METHODS.find(m => m.value === sensitivityMethod)?.label || sensitivityMethod.toUpperCase()}
+                  chartSettings={chartSettings}
                   onAiAnalysis={(data) => handleAiAnalysis("k_sensitivity", {
                     kSensData: data.kSensData,
                     criterionName: data.criterionName,
@@ -14976,6 +15098,16 @@ export default function MCDMCalculator() {
                               glass: { bg: 'rgba(255, 255, 255, 0.7)', text: '#000000', border: '#000000' }
                             }[chartSettings.backgroundTheme] || { bg: '#ffffff', text: '#000000', border: '#000000' };
 
+                            // Scientific Alignment Logic
+                            const numAlts = apiResults.ranking.length || 1;
+                            const maxScoreVal = Math.max(...apiResults.ranking.map((r: any) => r.score || 0), 0.0001);
+                            const rawStep = maxScoreVal / numAlts;
+                            const scoreStep = Math.max(0.01, Math.ceil(rawStep * 100) / 100);
+                            const maxScoreExpanded = scoreStep * numAlts;
+                            const sharedScoreTicks = Array.from({ length: numAlts + 1 }, (_, i) => parseFloat((i * scoreStep).toFixed(4)));
+                            const displayRankTicks = Array.from({ length: numAlts }, (_, i) => i + 1); 
+
+
                             const legCfg = {
                               top: { verticalAlign: 'top' as const, align: 'center' as const, layout: 'horizontal' as const },
                               bottom: { verticalAlign: 'bottom' as const, align: 'center' as const, layout: 'horizontal' as const },
@@ -14991,7 +15123,7 @@ export default function MCDMCalculator() {
                                 <RadarChart cx="50%" cy="50%" outerRadius="70%" data={apiResults.ranking} margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
                                   <PolarGrid stroke="#000" />
                                   <PolarAngleAxis dataKey="alternativeName" tick={{ fontSize: 10, fontWeight: 700, fill: '#000' }} />
-                                  <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fontSize: 9, fontWeight: 700, fill: '#000' }} />
+                                  <PolarRadiusAxis angle={30} domain={[0, (max: number) => max * 1.1]} tick={{ fontSize: 9, fontWeight: 700, fill: '#000' }} />
                                   <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                   <Legend
                                     {...legCfg}
@@ -15071,15 +15203,7 @@ export default function MCDMCalculator() {
                             if (isDual) {
                               return (
                                 <ComposedChart data={apiResults.ranking} margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-                                  {chartSettings.showGridLines && (
-                                    <CartesianGrid
-                                      strokeDasharray="3 3"
-                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                      stroke={chartSettings.gridColor}
-                                      opacity={chartSettings.gridOpacity}
-                                    />
-                                  )}
+
                                   <ReferenceLine y={1} yAxisId="right" stroke="#000" strokeWidth={1.5} />
                                   <XAxis
                                     dataKey="alternativeName"
@@ -15094,7 +15218,8 @@ export default function MCDMCalculator() {
                                     tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                     axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                     tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
-                                    domain={[0, 'auto']}
+                                    domain={[0, maxScoreExpanded]}
+                                    ticks={sharedScoreTicks}
                                     label={chartSettings.showAxisTitles ? {
                                       value: `Performance Score`,
                                       angle: -90,
@@ -15109,8 +15234,8 @@ export default function MCDMCalculator() {
                                     tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text } : false}
                                     axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                     tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false}
-                                    domain={[1, apiResults.ranking.length]}
-                                    tickCount={apiResults.ranking.length}
+                                    domain={[0, numAlts]}
+                                    ticks={displayRankTicks}
                                     label={chartSettings.showAxisTitles ? {
                                       value: 'Ranking (1 = Best)',
                                       angle: 90,
@@ -15157,6 +15282,16 @@ export default function MCDMCalculator() {
                                     dot={{ r: 4, fill: '#1f77b4', strokeWidth: 1, stroke: '#1f77b4' }}
                                     name="Rank"
                                   />
+                                  {chartSettings.showGridLines && (
+                                    <CartesianGrid
+                                      strokeDasharray="3 3"
+                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                      stroke={chartSettings.gridColor}
+                                      opacity={chartSettings.gridOpacity}
+                                      style={{ pointerEvents: 'none' }}
+                                    />
+                                  )}
                                 </ComposedChart>
                               );
                             }
@@ -15238,6 +15373,16 @@ export default function MCDMCalculator() {
                                     iconSize={chartSettings.markerSize + 4}
                                   />
                                   <Bar xAxisId="bottom" yAxisId="left" dataKey="score" fill={activeColors[0]} fillOpacity={chartSettings.barOpacity} stroke={themeColors.border} strokeWidth={chartSettings.borderWidth} name="Performance Score" radius={[0, 4, 4, 0]} />
+                                  {chartSettings.showGridLines && (
+                                    <CartesianGrid
+                                      strokeDasharray="3 3"
+                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                      stroke={chartSettings.gridColor}
+                                      opacity={chartSettings.gridOpacity}
+                                      style={{ pointerEvents: 'none' }}
+                                    />
+                                  )}
                                 </BarChart>
                               );
                             }
@@ -15267,6 +15412,8 @@ export default function MCDMCalculator() {
                                   {/* Left Axis for Percentage Scale */}
                                   <YAxis
                                     tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                    domain={[0, 100]}
+                                    ticks={[0, 20, 40, 60, 80, 100]}
                                     label={chartSettings.showAxisTitles ? { value: 'Relative Scale (%)', angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text } } : undefined}
                                     axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                     tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} />
@@ -15276,8 +15423,8 @@ export default function MCDMCalculator() {
                                     yAxisId="right"
                                     orientation="right"
                                     reversed
-                                    domain={[1, apiResults.ranking.length]}
-                                    tickCount={apiResults.ranking.length}
+                                    domain={[0, numAlts]}
+                                    ticks={displayRankTicks}
                                     interval={0}
                                     tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text } : false}
                                     label={chartSettings.showAxisTitles ? { value: 'Ranking (1 = Best)', angle: 90, position: 'insideRight', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 2, fontWeight: 700, fill: themeColors.text } } : undefined}
@@ -15310,6 +15457,16 @@ export default function MCDMCalculator() {
 
                                   {/* Hidden Line for Right Axis Stability */}
                                   <Line yAxisId="right" dataKey="rank" stroke="transparent" strokeWidth={0} dot={false} isAnimationActive={false} legendType="none" activeDot={false} />
+                                  {chartSettings.showGridLines && (
+                                    <CartesianGrid
+                                      strokeDasharray="3 3"
+                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                      stroke={chartSettings.gridColor}
+                                      opacity={chartSettings.gridOpacity}
+                                      style={{ pointerEvents: 'none' }}
+                                    />
+                                  )}
                                 </ComposedChart>
                               );
                             }
@@ -15347,7 +15504,8 @@ export default function MCDMCalculator() {
                                     tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                     axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                     tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
-                                    domain={[0, 'auto']}
+                                    domain={[0, maxScoreExpanded]}
+                                    ticks={sharedScoreTicks}
                                     label={chartSettings.showAxisTitles ? {
                                       value: 'Performance Score',
                                       angle: -90,
@@ -15364,8 +15522,8 @@ export default function MCDMCalculator() {
                                     tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text } : false}
                                     axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                     tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false}
-                                    domain={[1, apiResults.ranking.length]}
-                                    tickCount={apiResults.ranking.length}
+                                    domain={[0, numAlts]}
+                                    ticks={displayRankTicks}
                                     interval={0}
                                     label={chartSettings.showAxisTitles ? {
                                       value: 'Ranking (1 = Best)',
@@ -15426,6 +15584,16 @@ export default function MCDMCalculator() {
                                     barSize={20}
                                     name="Rank"
                                   />
+                                  {chartSettings.showGridLines && (
+                                    <CartesianGrid
+                                      strokeDasharray="3 3"
+                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                      stroke={chartSettings.gridColor}
+                                      opacity={chartSettings.gridOpacity}
+                                      style={{ pointerEvents: 'none' }}
+                                    />
+                                  )}
                                 </ComposedChart>
                               );
                             }
@@ -15437,15 +15605,7 @@ export default function MCDMCalculator() {
                                   margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                   style={{ backgroundColor: themeColors.bg }}
                                 >
-                                  {chartSettings.showGridLines && (
-                                    <CartesianGrid
-                                      strokeDasharray="3 3"
-                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                      stroke={chartSettings.gridColor}
-                                      opacity={chartSettings.gridOpacity}
-                                    />
-                                  )}
+
                                   <XAxis
                                     dataKey="alternativeName"
                                     tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
@@ -15462,7 +15622,8 @@ export default function MCDMCalculator() {
                                     tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                     axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                     tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
-                                    domain={[0, 'auto']}
+                                    domain={[0, maxScoreExpanded]}
+                                    ticks={sharedScoreTicks}
                                     label={chartSettings.showAxisTitles ? {
                                       value: 'Performance Score',
                                       angle: -90,
@@ -15480,8 +15641,8 @@ export default function MCDMCalculator() {
                                     tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text } : false}
                                     axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                     tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false}
-                                    domain={[1, apiResults.ranking.length]}
-                                    tickCount={apiResults.ranking.length}
+                                    domain={[0, numAlts]}
+                                    ticks={displayRankTicks}
                                     interval={0}
                                     label={chartSettings.showAxisTitles ? {
                                       value: 'Ranking (1 = Best)',
@@ -15540,6 +15701,16 @@ export default function MCDMCalculator() {
                                     activeDot={{ r: chartSettings.markerSize + 2 }}
                                     name="Rank"
                                   />
+                                  {chartSettings.showGridLines && (
+                                    <CartesianGrid
+                                      strokeDasharray="3 3"
+                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                      stroke={chartSettings.gridColor}
+                                      opacity={chartSettings.gridOpacity}
+                                      style={{ pointerEvents: 'none' }}
+                                    />
+                                  )}
                                 </ComposedChart>
                               );
                             }
@@ -15553,15 +15724,7 @@ export default function MCDMCalculator() {
                                   barCategoryGap="25%"
                                   style={{ backgroundColor: themeColors.bg }}
                                 >
-                                  {chartSettings.showGridLines && (
-                                    <CartesianGrid
-                                      strokeDasharray="3 3"
-                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                      stroke={chartSettings.gridColor}
-                                      opacity={chartSettings.gridOpacity}
-                                    />
-                                  )}
+
                                   <XAxis
                                     dataKey="alternativeName"
                                     tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
@@ -15577,7 +15740,8 @@ export default function MCDMCalculator() {
                                     tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                     axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                     tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
-                                    domain={[0, 'auto']}
+                                    domain={[0, maxScoreExpanded]}
+                                    ticks={sharedScoreTicks}
                                     label={chartSettings.showAxisTitles ? {
                                       value: 'Performance Score',
                                       angle: -90,
@@ -15594,8 +15758,8 @@ export default function MCDMCalculator() {
                                     tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text } : false}
                                     axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                     tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false}
-                                    domain={[1, apiResults.ranking.length]}
-                                    tickCount={apiResults.ranking.length}
+                                    domain={[0, numAlts]}
+                                    ticks={displayRankTicks}
                                     interval={0}
                                     label={chartSettings.showAxisTitles ? {
                                       value: 'Ranking (1 = Best)',
@@ -15655,6 +15819,16 @@ export default function MCDMCalculator() {
                                     activeDot={{ r: chartSettings.markerSize + 2 }}
                                     name="Score"
                                   />
+                                  {chartSettings.showGridLines && (
+                                    <CartesianGrid
+                                      strokeDasharray="3 3"
+                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                      stroke={chartSettings.gridColor}
+                                      opacity={chartSettings.gridOpacity}
+                                      style={{ pointerEvents: 'none' }}
+                                    />
+                                  )}
                                 </ComposedChart>
                               );
                             }
@@ -15674,15 +15848,7 @@ export default function MCDMCalculator() {
                                       <stop offset="95%" stopColor={activeColors[0]} stopOpacity={0} />
                                     </linearGradient>
                                   </defs>
-                                  {chartSettings.showGridLines && (
-                                    <CartesianGrid
-                                      strokeDasharray="3 3"
-                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                      stroke={chartSettings.gridColor}
-                                      opacity={chartSettings.gridOpacity}
-                                    />
-                                  )}
+
                                   <XAxis
                                     dataKey="alternativeName"
                                     tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
@@ -15698,7 +15864,8 @@ export default function MCDMCalculator() {
                                     tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                     axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                     tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
-                                    domain={[0, 'auto']}
+                                    domain={[0, maxScoreExpanded]}
+                                    ticks={sharedScoreTicks}
                                     label={chartSettings.showAxisTitles ? {
                                       value: 'Performance Score',
                                       angle: -90,
@@ -15715,8 +15882,8 @@ export default function MCDMCalculator() {
                                     tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text } : false}
                                     axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                     tickLine={chartSettings.showMirrorTicks ? { stroke: themeColors.border, strokeWidth: 1 } : false}
-                                    domain={[1, apiResults.ranking.length]}
-                                    tickCount={apiResults.ranking.length}
+                                    domain={[0, numAlts]}
+                                    ticks={displayRankTicks}
                                     interval={0}
                                     label={chartSettings.showAxisTitles ? {
                                       value: 'Ranking (1 = Best)',
@@ -15776,28 +15943,37 @@ export default function MCDMCalculator() {
                                     fill="url(#colorScoreArea)"
                                     name="Score"
                                   />
+                                  {chartSettings.showGridLines && (
+                                    <CartesianGrid
+                                      strokeDasharray="3 3"
+                                      horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                      vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                      stroke={chartSettings.gridColor}
+                                      opacity={chartSettings.gridOpacity}
+                                      style={{ pointerEvents: 'none' }}
+                                    />
+                                  )}
                                 </ComposedChart>
                               );
                             }
 
                             return (
                               <ComposedChart data={apiResults.ranking} margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+
                                 <XAxis
                                   dataKey="alternativeName"
                                   tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
                                   label={{ value: 'Robot Alternatives', position: 'insideBottom', offset: -15, style: { fontSize: 12, fontWeight: 700, fill: '#000' } }}
-                                  height={50}
+                                  height={40}
                                   axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
                                   tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
                                 <YAxis
                                   reversed={isRankView}
                                   tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
                                   axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
                                   tickLine={{ stroke: "#000", strokeWidth: 1 }}
-                                  domain={isRankView ? [1, apiResults.ranking.length] : [0, 'auto']}
-                                  tickCount={isRankView ? apiResults.ranking.length : undefined}
+                                  domain={isRankView ? [0, numAlts] : [0, maxScoreExpanded]}
+                                  ticks={isRankView ? displayRankTicks : sharedScoreTicks}
                                   interval={0}
                                   label={{
                                     value: isRankView ? 'Ranking (1 = Best)' : 'Performance Score',
