@@ -1137,45 +1137,87 @@ export default function KSensitivityCalculator({
           return row;
         });
 
+        // Journal-ready styling tokens
+        const journalGridColor = kSensChartSettings.gridColor === '#e2e8f0' ? '#94a3b8' : kSensChartSettings.gridColor;
+        const journalStrokeWidth = Math.max(2, kSensChartSettings.borderWidth);
+
         return (
-          <div ref={chartRef} className={`max-w-7xl mx-auto relative transition-all duration-500 ${kSensChartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }}>
+          <div ref={chartRef} className={`max-w-7xl mx-auto relative transition-all duration-500 rounded-xl overflow-hidden ${kSensChartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text, border: `1.5px solid ${theme.border}` }}>
             <ResponsiveContainer width="100%" height={750}>
-              <RadarChart data={radarData} outerRadius="80%" margin={commonChartProps.margin}>
-                {isWeightView && <text x="50%" y="20" textAnchor="middle" fontSize={kSensChartSettings.fontSize + 4} fontWeight="bold" fill={theme.text}>Weight Stability Forensic Radar</text>}
+              <RadarChart data={radarData} outerRadius="75%" margin={{ ...commonChartProps.margin, top: 60 }}>
                 {kSensChartSettings.showGridLines && (
                   <PolarGrid
                     gridType="polygon"
-                    stroke={kSensChartSettings.gridColor}
-                    opacity={kSensChartSettings.gridOpacity}
-                    strokeWidth={1}
+                    stroke={journalGridColor}
+                    opacity={kSensChartSettings.gridOpacity * 1.2 || 0.4}
+                    strokeWidth={0.8}
                   />
                 )}
-                <PolarAngleAxis dataKey="scenario" tick={tickStyle} />
+                <PolarAngleAxis 
+                  dataKey="scenario" 
+                  tick={{ ...tickStyle, fontSize: kSensChartSettings.fontSize + 2 }} 
+                />
                 <PolarRadiusAxis
                   angle={90}
                   domain={[0, 'auto']}
-                  tick={tickStyle}
-                  tickFormatter={(val) => val.toFixed(2)}
+                  tick={{ ...tickStyle, fontSize: kSensChartSettings.fontSize - 1 }}
+                  tickFormatter={(val) => (val * 100).toFixed(0) + '%'}
+                  axisLine={false}
                 />
                 <Tooltip
-                  contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }}
+                  formatter={(val: number) => (val * 100).toFixed(2) + '%'}
+                  contentStyle={{ 
+                    fontSize: `${kSensChartSettings.fontSize}px`, 
+                    backgroundColor: 'rgba(255, 255, 255, 0.98)', 
+                    color: '#000', 
+                    border: '1px solid #000',
+                    boxShadow: '4px 4px 0px rgba(0,0,0,0.1)',
+                    borderRadius: '0'
+                  }}
                 />
-                <Legend {...legendProps} iconSize={8} iconType="circle" />
-                {workingCriteria.map((crit, idx) => (
-                  <Radar
-                    key={crit.name}
-                    name={crit.name}
-                    dataKey={crit.name}
-                    stroke={colorsArr[idx % colorsArr.length]}
-                    fill={colorsArr[idx % colorsArr.length]}
-                    fillOpacity={kSensChartSettings.barOpacity || 0.3}
-                    strokeWidth={crit.id === selectedCriterionToVary ? (kSensChartSettings.borderWidth + 2) : kSensChartSettings.borderWidth}
-                    strokeDasharray={crit.id === selectedCriterionToVary ? "" : "5 5"}
-                    dot={{ r: kSensChartSettings.markerSize || 3, fill: colorsArr[idx % colorsArr.length] }}
-                  />
-                ))}
+                <Legend 
+                  {...legendProps} 
+                  iconSize={12} 
+                  iconType="plainline"
+                  wrapperStyle={{
+                    ...legendProps.wrapperStyle,
+                    padding: "10px",
+                    border: "1.5px solid #000",
+                    backgroundColor: "#fff",
+                    boxShadow: "3px 3px 0px rgba(0,0,0,1)"
+                  }}
+                />
+                {workingCriteria.map((crit, idx) => {
+                  const isTarget = crit.id === selectedCriterionToVary;
+                  const color = colorsArr[idx % colorsArr.length];
+                  
+                  return (
+                    <Radar
+                      key={crit.name}
+                      name={crit.name}
+                      dataKey={crit.name}
+                      stroke={color}
+                      fill={color}
+                      fillOpacity={0.15} // Lowered for journal compatibility (visibility of overlaps)
+                      strokeWidth={isTarget ? journalStrokeWidth + 1 : journalStrokeWidth}
+                      strokeDasharray={isTarget ? "" : idx % 2 === 0 ? "5 5" : "3 3"}
+                      dot={{ 
+                        r: isTarget ? 5 : 4, 
+                        fill: color, 
+                        stroke: '#fff', 
+                        strokeWidth: 1.5 
+                      }}
+                      activeDot={{ r: 6, strokeWidth: 0 }}
+                    />
+                  );
+                })}
               </RadarChart>
             </ResponsiveContainer>
+            {/* Minimalist Watermark/Label for Q1 look */}
+            <div className="absolute top-4 left-6 py-2 px-4 border-l-4 border-blue-600 bg-white/50">
+              <span className="text-[10px] font-black uppercase tracking-widest text-blue-900 block">Publication Quality Asset</span>
+              <span className="text-xs font-bold text-gray-800">Weight Stability Analysis (Forensic Radar)</span>
+            </div>
           </div>
         );
       }

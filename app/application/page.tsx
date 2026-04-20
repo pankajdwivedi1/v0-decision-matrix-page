@@ -15204,7 +15204,6 @@ export default function MCDMCalculator() {
                               return (
                                 <ComposedChart data={apiResults.ranking} margin={{ top: chartSettings.marginTop, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
 
-                                  <ReferenceLine y={1} yAxisId="right" stroke="#000" strokeWidth={1.5} />
                                   <XAxis
                                     dataKey="alternativeName"
                                     tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
@@ -15266,8 +15265,8 @@ export default function MCDMCalculator() {
                                   <Bar
                                     yAxisId="left"
                                     dataKey="score"
-                                    fill="#1f77b4"
-                                    stroke="#000"
+                                    fill={activeColors[0]}
+                                    stroke={themeColors.border}
                                     strokeWidth={1}
                                     name="Score"
                                     barSize={30}
@@ -15276,10 +15275,10 @@ export default function MCDMCalculator() {
                                     yAxisId="right"
                                     type="linear"
                                     dataKey="rank"
-                                    stroke="#1f77b4"
+                                    stroke={activeColors[1] || "#d62728"}
                                     strokeWidth={2}
                                     strokeDasharray="5 5"
-                                    dot={{ r: 4, fill: '#1f77b4', strokeWidth: 1, stroke: '#1f77b4' }}
+                                    dot={{ r: 4, fill: activeColors[1] || "#d62728", strokeWidth: 1, stroke: activeColors[1] || "#d62728" }}
                                     name="Rank"
                                   />
                                   {chartSettings.showGridLines && (
