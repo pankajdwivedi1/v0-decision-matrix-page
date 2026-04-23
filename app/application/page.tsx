@@ -298,6 +298,7 @@ export default function MCDMCalculator() {
 
   const [ahpResult, setAhpResult] = useState<AHPResult | null>(null)
   const [pipreciaResult, setPipreciaResult] = useState<PipreciaResult | null>(null)
+  const [scientificHoverInfo, setScientificHoverInfo] = useState<{ methodIdx: number; x: number; y: number } | null>(null);
   const [merecResult, setMerecResult] = useState<MERECResult | null>(null)
   const [swaraResult, setSwaraResult] = useState<SWARAResult | null>(null)
   const [sidebarCategory, setSidebarCategory] = useState<"objective" | "subjective">("objective")
@@ -6972,6 +6973,12 @@ export default function MCDMCalculator() {
                                 </Button>
                               </div>
                             </ResearchAssetHeader>
+                            <div className="w-full mt-3 px-4 border-t pt-2">
+                              <ChartVisualConfigurator
+                                settings={chartSettings}
+                                onSettingsChange={setChartSettings}
+                              />
+                            </div>
                             <CardDescription className="text-xs text-gray-700 mt-1">
                               {comparisonChartType === "composed"
                                 ? "Hybrid visualization of ordinal rankings (bars) and primary performance scores (line)."
@@ -6984,8 +6991,33 @@ export default function MCDMCalculator() {
                                       : "Chart comparing alternative ranks across selected methods."}
                             </CardDescription>
                           </CardHeader>
-                          <CardContent className={`${comparisonChartType === "heatmap" ? "h-auto" : "h-[800px] sm:h-[600px]"} p-0 sm:px-6 sm:py-2 mt-0`}>
+                          <CardContent className={`${(comparisonChartType === "heatmap" || comparisonChartType === "scientific") ? "h-auto" : "h-[800px] sm:h-[600px]"} p-0 sm:px-6 sm:py-2 mt-0`}>
                             {(() => {
+                              const activeColors = chartSettings.colorPalette === 'academic'
+                                ? ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+                                : chartSettings.colorPalette === 'grayscale'
+                                  ? ['#333333', '#666666', '#999999', '#cccccc', '#444444', '#777777', '#aaaaaa', '#dddddd', '#111111', '#999999']
+                                  : chartSettings.colorPalette === 'vibrant'
+                                    ? ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#a855f7', '#6366f1']
+                                    : CHART_COLORS;
+
+                              const themeColors = ({
+                                white: { bg: '#ffffff', text: '#000000', border: '#000000' },
+                                slate: { bg: '#f8fafc', text: '#334155', border: '#475569' },
+                                dark: { bg: '#0f172a', text: '#f1f5f9', border: '#cbd5e1' },
+                                glass: { bg: 'rgba(255, 255, 255, 0.7)', text: '#000000', border: '#000000' }
+                              } as any)[chartSettings.backgroundTheme] || { bg: '#ffffff', text: '#000000', border: '#000000' };
+
+                              const legCfg = ({
+                                top: { verticalAlign: 'top' as const, align: 'center' as const, layout: 'horizontal' as const },
+                                bottom: { verticalAlign: 'bottom' as const, align: 'center' as const, layout: 'horizontal' as const },
+                                left: { verticalAlign: 'middle' as const, align: 'left' as const, layout: 'vertical' as const },
+                                right: { verticalAlign: 'middle' as const, align: 'right' as const, layout: 'vertical' as const },
+                                middle: { verticalAlign: 'middle' as const, align: 'center' as const, layout: 'horizontal' as const },
+                              } as any)[chartSettings.legendPosition] || { verticalAlign: 'top' as const, align: 'center' as const, layout: 'horizontal' as const };
+
+                              const legLayout = chartSettings.legendLayout || legCfg.layout;
+
                               if (comparisonChartType === "heatmap") {
                                 return (
                                   <div ref={comparisonChartRef} className="w-full h-full flex flex-col overflow-x-auto">
@@ -7040,157 +7072,961 @@ export default function MCDMCalculator() {
                                   </div>
                                 );
                               }
-                              return (
-                                <div ref={comparisonChartRef} className="w-full h-full">
-                                  {(comparisonChartType === "dual" || comparisonChartType === "normalization-min-max") ? (() => {
-                                    const totalAlts = alternatives.length || 0;
-                                    const isNormChart = comparisonChartType === "normalization-min-max";
 
-                                    // Dynamic ticks logic
-                                    const rankingTicks = totalAlts <= 20
-                                      ? Array.from({ length: totalAlts + 1 }, (_, i) => i)
-                                      : Array.from({ length: Math.ceil(totalAlts / 2) + 1 }, (_, i) => i * 2);
+                              const isDualLike = comparisonChartType === "normalization-min-max" || comparisonChartType === "dual";
+                              const maxRankVal = Math.max(0, ...comparisonChartData.flatMap(row => comparisonChartAlternatives.map(alt => Number(row[alt] || 0))));
+                              const rightAxisProps = {
+                                orientation: "right" as const,
+                                yAxisId: "right_border",
+                                domain: [0, maxRankVal > 0 ? maxRankVal : 'auto'] as [number, number | string],
+                                tick: { fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text },
+                                tickLine: { stroke: themeColors.border, strokeWidth: 1 },
+                                axisLine: { stroke: themeColors.border, strokeWidth: chartSettings.borderWidth },
+                                allowDecimals: false,
+                              };
 
-                                    return (
-                                      <ResponsiveContainer width="100%" height="100%">
-                                        <ComposedChart
-                                          data={comparisonDualAxisData}
-                                          margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
-                                          barGap={0}
-                                          barCategoryGap="25%"
-                                        >
+                              let chartElement;
+                              if (isDualLike) {
+                                const isNormChart = comparisonChartType === "normalization-min-max";
+                                const totalAlts = comparisonChartAlternatives.length;
+                                const rankingTicks = totalAlts <= 20
+                                  ? Array.from({ length: totalAlts + 1 }, (_, i) => i)
+                                  : Array.from({ length: Math.ceil(totalAlts / 2) + 1 }, (_, i) => i * 2);
 
-                                          <XAxis
-                                            dataKey="name"
+                                chartElement = (
+                                  <ResponsiveContainer width="100%" height="100%">
+                                    <ComposedChart
+                                      data={comparisonDualAxisData}
+                                      margin={{ 
+                                        top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, 
+                                        right: chartSettings.marginRight, 
+                                        left: chartSettings.marginLeft, 
+                                        bottom: chartSettings.marginBottom 
+                                      }}
+                                      barGap={0}
+                                      barCategoryGap="25%"
+                                    >
+                                      <XAxis
+                                        dataKey="name"
+                                        xAxisId="main"
+                                        tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                        axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                        tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                        label={chartSettings.showAxisTitles ? { 
+                                          value: chartSettings.xAxisTitle || 'Alternatives', 
+                                          position: 'insideBottom', 
+                                          offset: chartSettings.xAxisOffset, 
+                                          style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: themeColors.text } 
+                                        } : undefined} 
+                                      />
+                                      <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
+                                      <YAxis
+                                        yAxisId="left"
+                                        tick={{ fontSize: chartSettings.fontSize, fill: themeColors.text, fontWeight: 700 }}
+                                        axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                        tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                        label={chartSettings.showAxisTitles ? { 
+                                          value: chartSettings.yAxisTitle || (isNormChart ? 'Rank' : 'Performance Score'), 
+                                          angle: -90, 
+                                          position: 'insideLeft', 
+                                          offset: chartSettings.yAxisOffset, 
+                                          style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: themeColors.text } 
+                                        } : undefined}
+                                        domain={isNormChart ? [0, totalAlts] : [0, (max: number) => Math.ceil(max * 10) / 10]}
+                                        reversed={isNormChart}
+                                        ticks={isNormChart ? rankingTicks : undefined}
+                                        padding={{ top: 20 }} 
+                                      />
+                                      <YAxis
+                                        yAxisId="right"
+                                        orientation="right"
+                                        tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                        axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                        tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                        label={chartSettings.showAxisTitles ? { 
+                                          value: isNormChart ? 'Normalized Score (0-1)' : 'Rank', 
+                                          angle: 90, 
+                                          position: 'insideRight', 
+                                          offset: 0, 
+                                          style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: themeColors.text } 
+                                        } : undefined}
+                                        domain={isNormChart ? [0, 1] : [1, totalAlts || 10]}
+                                        reversed={!isNormChart}
+                                        ticks={isNormChart ? [0, 0.2, 0.4, 0.6, 0.8, 1.0] : rankingTicks}
+                                      />
+                                      <Tooltip
+                                        cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                                        contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text }}
+                                      />
+                                      <Legend
+                                        {...legCfg}
+                                        layout={legLayout}
+                                        wrapperStyle={{
+                                          fontSize: `${chartSettings.fontSize}px`,
+                                          color: themeColors.text,
+                                          fontWeight: 700,
+                                          backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                          border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
+                                          padding: "4px 8px",
+                                          top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
+                                          left: legCfg.align === 'center' ? '50%' : legCfg.align === 'left' ? 10 : undefined,
+                                          right: legCfg.align === 'right' ? 10 : undefined,
+                                          transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
+                                          width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
+                                          zIndex: 50,
+                                          boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                          display: "flex",
+                                          justifyContent: "center",
+                                          whiteSpace: "nowrap"
+                                        }}
+                                        iconSize={chartSettings.markerSize + 4}
+                                      />
+                                      {comparisonResults.map((res, i) => (
+                                        <Bar
+                                          key={`bar-${res.label}`}
+                                          xAxisId="main"
+                                          yAxisId="left"
+                                          dataKey={isNormChart ? `${res.label} Rank` : `${res.label} Score`}
+                                          fill={activeColors[i % activeColors.length]}
+                                          name={isNormChart ? `${res.label} Rank` : res.label}
+                                          barSize={15}
+                                          fillOpacity={chartSettings.barOpacity}
+                                        />
+                                      ))}
+                                      {comparisonResults.map((res, i) => {
+                                        const isDashed = i % 2 !== 0;
+                                        const seriesColor = activeColors[i % activeColors.length];
+                                        return (
+                                          <Line
+                                            key={`line-${res.label}-${i}`}
                                             xAxisId="main"
-                                            type="category"
-                                            allowDuplicatedCategory={false}
-                                            tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                            axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                            tickLine={{ stroke: "#000", strokeWidth: 1 }}
-                                            label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }} />
-                                          <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                          <YAxis
-                                            yAxisId="left"
-                                            tick={{ fontSize: 10, fill: '#000', fontWeight: 700 }}
-                                            axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                            tickLine={{ stroke: "#000", strokeWidth: 1 }}
-                                            label={{ value: chartSettings.yAxisTitle || (isNormChart ? 'Rank' : 'Performance Score'), angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }}
-                                            domain={isNormChart ? [0, totalAlts] : [0, (max: number) => Math.ceil(max * 10) / 10]}
-                                            reversed={isNormChart}
-                                            ticks={isNormChart ? rankingTicks : undefined}
-                                            tickFormatter={isNormChart ? undefined : (val: number) => val.toFixed(1)}
-                                            padding={{ top: 20 }} />
-                                          <YAxis
                                             yAxisId="right"
-                                            orientation="right"
-                                            tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                            axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                            tickLine={{ stroke: "#000", strokeWidth: 1 }}
-                                            label={{ value: isNormChart ? 'Normalized Score (0-1)' : 'Rank', angle: 90, position: 'insideRight', offset: 0, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }}
-                                            domain={isNormChart ? [0, 1] : [1, totalAlts || 10]}
-                                            reversed={!isNormChart}
-                                            ticks={isNormChart ? [0, 0.2, 0.4, 0.6, 0.8, 1.0] : rankingTicks}
-                                            interval={0}
-                                            allowDecimals={isNormChart}
-                                            padding={{ top: 20 }} />
-                                          <Tooltip
-                                            cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                                            content={({ active, payload, label }) => {
-                                              if (active && payload && payload.length) {
-                                                return (
-                                                  <div className="bg-white border border-gray-400 p-2 shadow-lg text-[10px] min-w-[150px]">
-                                                    <p className="font-bold border-b mb-1 pb-1">{label}</p>
-                                                    {payload.map((entry: any, index: number) => {
-                                                      const isRankField = entry.name.includes("Rank");
-                                                      return (
-                                                        <p key={index} className="flex justify-between py-0.5">
-                                                          <span style={{ color: entry.color }} className="font-medium">{entry.name}:</span>
-                                                          <span className="font-bold ml-4">
-                                                            {isRankField ? entry.value : Number(entry.value).toFixed(resultsDecimalPlaces)}
-                                                          </span>
-                                                        </p>
-                                                      );
-                                                    })}
-                                                  </div>
-                                                );
+                                            type="linear"
+                                            dataKey={isNormChart ? `${res.label} Score (Norm)` : `${res.label} Rank`}
+                                            stroke={seriesColor}
+                                            strokeWidth={chartSettings.borderWidth}
+                                            strokeDasharray={isDashed ? "5 5" : "0"}
+                                            name={isNormChart ? `${res.label} Score (Norm)` : `${res.label} Rank`}
+                                            dot={(chartSettings.markerType as string) !== 'none' ? (props: any) => {
+                                              const { cx, cy, index } = props;
+                                              const mSize = chartSettings.markerSize;
+                                              if (chartSettings.markerType === "square") {
+                                                return <rect key={`dot-${res.label}-${index}`} x={cx - mSize} y={cy - mSize} width={mSize*2} height={mSize*2} fill={seriesColor} />;
                                               }
-                                              return null;
-                                            }}
+                                              if (chartSettings.markerType === "triangle") {
+                                                return <path key={`dot-${res.label}-${index}`} d={`M${cx},${cy - mSize} L${cx - mSize},${cy + mSize} L${cx + mSize},${cy + mSize} Z`} fill={seriesColor} />;
+                                              }
+                                              if (chartSettings.markerType === "diamond") {
+                                                return <path key={`dot-${res.label}-${index}`} d={`M${cx},${cy - mSize} L${cx + mSize},${cy} L${cx},${cy + mSize} L${cx - mSize},${cy} Z`} fill={seriesColor} />;
+                                              }
+                                              return <circle key={`dot-${res.label}-${index}`} cx={cx} cy={cy} r={mSize} fill={seriesColor} />;
+                                            } : false}
+                                            legendType={isDashed ? "plainline" : "line"}
+                                          />
+                                        );
+                                      })}
+                                      {chartSettings.showGridLines && (
+                                        <CartesianGrid
+                                          strokeDasharray="3 3"
+                                          horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                          vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                          stroke={chartSettings.gridColor}
+                                          opacity={chartSettings.gridOpacity}
+                                          style={{ pointerEvents: 'none' }}
+                                        />
+                                      )}
+                                    </ComposedChart>
+                                  </ResponsiveContainer>
+                                );
+                              } else {
+                                switch (comparisonChartType) {
+                                  case "radar":
+                                    chartElement = (
+                                      <ResponsiveContainer width="100%" height="100%">
+                                        <RadarChart 
+                                          margin={{ 
+                                            top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, 
+                                            right: chartSettings.marginRight, 
+                                            left: chartSettings.marginLeft, 
+                                            bottom: chartSettings.marginBottom 
+                                          }} 
+                                          cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}
+                                        >
+                                          {chartSettings.showGridLines && <PolarGrid stroke={chartSettings.gridColor} strokeWidth={1} opacity={chartSettings.gridOpacity} />}
+                                          <PolarAngleAxis dataKey="method" tick={{ fontSize: chartSettings.fontSize, fill: themeColors.text, fontWeight: 'bold' }} />
+                                          <PolarRadiusAxis 
+                                            angle={30} 
+                                            domain={[1, maxRankVal > 0 ? maxRankVal : 'dataMax']} 
+                                            tick={{ fontSize: chartSettings.fontSize - 2, fill: themeColors.text }} 
+                                            axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                           />
                                           <Legend
-                                            verticalAlign="top"
-                                            align="center"
-                                            layout="horizontal"
+                                            {...legCfg}
+                                            layout={legLayout}
                                             wrapperStyle={{
-                                              fontSize: "10px",
-                                              color: "#000",
+                                              fontSize: `${chartSettings.fontSize}px`,
+                                              color: themeColors.text,
                                               fontWeight: 700,
-                                              backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                              border: "1px solid #000",
+                                              backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                              border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
                                               padding: "4px 8px",
-                                              top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 45 : undefined,
-                                              left: "50%",
-                                              transform: "translateX(-50%)",
-                                              width: "max-content",
-                                              maxWidth: "95%",
+                                              top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
+                                              left: legCfg.align === 'center' ? '50%' : legCfg.align === 'left' ? 10 : undefined,
+                                              right: legCfg.align === 'right' ? 10 : undefined,
+                                              transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
+                                              width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                               zIndex: 50,
                                               boxShadow: "2px 2px 0px rgba(0,0,0,1)",
                                               display: "flex",
                                               justifyContent: "center",
                                               whiteSpace: "nowrap"
                                             }}
-                                            iconSize={8}
+                                            iconSize={chartSettings.markerSize + 4}
+                                          />
+                                          <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                          {comparisonChartAlternatives.map((alt, idx) => (
+                                            <Radar 
+                                              key={alt} 
+                                              name={alt} 
+                                              dataKey={alt} 
+                                              stroke={activeColors[idx % activeColors.length]} 
+                                              fill={activeColors[idx % activeColors.length]} 
+                                              strokeWidth={chartSettings.borderWidth}
+                                              fillOpacity={chartSettings.barOpacity / 3} 
+                                            />
+                                          ))}
+                                        </RadarChart>
+                                      </ResponsiveContainer>
+                                    );
+                                    break;
+                                  case "scientific": {
+                                    // DATA PREP
+                                    const nAlts    = comparisonChartAlternatives.length || 1;
+                                    const nMethods = comparisonResults.length || 1;
+                                    const maxRank  = nAlts;
+
+                                    const rankMap: Record<string, Record<string, number>> = {};
+                                    comparisonResults.forEach(res => {
+                                      rankMap[res.label] = {};
+                                      comparisonChartAlternatives.forEach(alt => {
+                                        const ri = res.ranking?.find(r => r.alternativeName === alt);
+                                        rankMap[res.label][alt] = ri ? ri.rank : maxRank;
+                                      });
+                                    });
+
+                                    // LAYOUT
+                                    const svgW   = 540;
+                                    const svgH   = 540;
+                                    const cx     = 270;
+                                    const cy     = 270;
+                                    const outerR = 210;
+
+                                    const totalPos   = nMethods * nAlts;
+                                    const stepAngle  = (2 * Math.PI) / totalPos;
+                                    const startAngle = -Math.PI / 2;
+
+                                    const rankToR = (rank: number) =>
+                                      ((maxRank - rank + 1) / maxRank) * outerR;
+
+                                    const pol = (r: number, angle: number) => ({
+                                      x: cx + r * Math.cos(angle),
+                                      y: cy + r * Math.sin(angle),
+                                    });
+
+                                    const withAlpha = (color: string, a: number) => {
+                                      if (color.startsWith('#')) {
+                                        const r = parseInt(color.slice(1,3),16);
+                                        const g = parseInt(color.slice(3,5),16);
+                                        const b = parseInt(color.slice(5,7),16);
+                                        return `rgba(${r},${g},${b},${a})`;
+                                      }
+                                      return color.replace(/[\d.]+\)$/, `${a})`);
+                                    };
+
+                                    // Build straight-step path for each ALTERNATIVE
+                                    const buildAltPath = (altName: string) => {
+                                      const segs: string[] = [];
+                                      const gapAngle = stepAngle * 0.42;
+
+                                      for (let mIdx = 0; mIdx < nMethods; mIdx++) {
+                                        const label     = comparisonResults[mIdx].label;
+                                        const nextLabel = comparisonResults[(mIdx + 1) % nMethods].label;
+                                        const r     = rankToR(rankMap[label]?.[altName]     ?? maxRank);
+                                        const rNext = rankToR(rankMap[nextLabel]?.[altName] ?? maxRank);
+
+                                        const sectorStart = startAngle + mIdx * nAlts * stepAngle;
+                                        const sectorEnd   = startAngle + (mIdx + 1) * nAlts * stepAngle;
+
+                                        const arcStartAngle = sectorStart + gapAngle;
+                                        const arcEndAngle   = sectorEnd   - gapAngle;
+
+                                        const arcS     = pol(r, arcStartAngle);
+                                        const arcE     = pol(r, arcEndAngle);
+                                        const arcSpan  = arcEndAngle - arcStartAngle;
+                                        const largeArc = arcSpan > Math.PI ? 1 : 0;
+
+                                        if (mIdx === 0) {
+                                          segs.push(`M ${arcS.x.toFixed(2)} ${arcS.y.toFixed(2)}`);
+                                        }
+
+                                        segs.push(`A ${r.toFixed(2)} ${r.toFixed(2)} 0 ${largeArc} 1 ${arcE.x.toFixed(2)} ${arcE.y.toFixed(2)}`);
+
+                                        const nextArcStartAngle = sectorEnd + gapAngle;
+                                        const nextArcS = pol(rNext, nextArcStartAngle);
+                                        segs.push(`L ${nextArcS.x.toFixed(2)} ${nextArcS.y.toFixed(2)}`);
+                                      }
+
+                                      segs.push('Z');
+                                      return segs.join(' ');
+                                    };
+
+                                    const subDivs  = 3;
+                                    const nRings   = maxRank * subDivs;
+
+                                    const isHorizontal = chartSettings.legendLayout === 'horizontal';
+                                    const isLegendTop  = chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle' || chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right';
+
+                                    const legendBox = (
+                                      <div
+                                        className="bg-white border-2 border-black p-1.5 px-4 z-10"
+                                        style={{ 
+                                          width: 'fit-content', 
+                                          maxWidth: `${outerR * 2}px`,
+                                          margin: isLegendTop ? '4px auto 0' : '0 auto 4px', 
+                                          boxShadow: '3px 3px 0 #000',
+                                          transform: `translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
+                                          transition: 'transform 0.1s ease-out'
+                                        }}
+                                      >
+                                        <div className={`flex ${isHorizontal ? 'flex-col items-center' : 'flex-row items-start gap-x-6'}`}>
+                                          <div className={`flex ${isHorizontal ? 'flex-wrap justify-center gap-x-3 gap-y-0.5 border-b border-gray-200 pb-1 mb-1' : 'flex-col gap-y-1'}`}>
+                                            {comparisonChartAlternatives.map((alt, i) => (
+                                              <div key={alt} className="flex items-center gap-1">
+                                                <div className="w-5 h-2" style={{ backgroundColor: activeColors[i % activeColors.length] }} />
+                                                <span className="text-[9px] font-bold uppercase">{alt}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                          <div className={`flex ${isHorizontal ? 'flex-wrap justify-center gap-x-4 gap-y-0.5' : 'flex-col gap-y-1'}`}>
+                                            {comparisonResults.map((res, i) => (
+                                              <div key={res.label} className="flex items-center gap-1.5">
+                                                <div className="w-5 h-3 border border-gray-300 opacity-50" style={{ backgroundColor: activeColors[i % activeColors.length] }} />
+                                                <span className="text-[9px] font-bold uppercase">{res.label}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+
+                                    chartElement = (
+                                      <div
+                                        ref={comparisonChartRef}
+                                        className="w-full flex flex-col items-center relative select-none"
+                                        style={{ backgroundColor: themeColors.bg }}
+                                      >
+                                        {isLegendTop && legendBox}
+
+                                        {/* SVG */}
+                                        <svg 
+                                          viewBox={`0 0 ${svgW} ${svgH}`} 
+                                          width={svgW}
+                                          height={svgH}
+                                          className="max-w-full h-auto"
+                                          style={{ display: 'block' }}
+                                          onMouseMove={(e) => {
+                                            const rect = e.currentTarget.getBoundingClientRect();
+                                            const x = e.clientX - rect.left;
+                                            const y = e.clientY - rect.top;
+                                            const svgX = (x / rect.width) * svgW;
+                                            const svgY = (y / rect.height) * svgH;
+                                            const dx = svgX - cx;
+                                            const dy = svgY - cy;
+                                            let angle = Math.atan2(dy, dx);
+                                            let normAngle = (angle - startAngle) % (2 * Math.PI);
+                                            if (normAngle < 0) normAngle += 2 * Math.PI;
+                                            const mIdx = Math.floor(normAngle / (nAlts * stepAngle));
+                                            if (mIdx >= 0 && mIdx < nMethods) {
+                                              setScientificHoverInfo({ methodIdx: mIdx, x: e.clientX, y: e.clientY });
+                                            } else {
+                                              setScientificHoverInfo(null);
+                                            }
+                                          }}
+                                          onMouseLeave={() => setScientificHoverInfo(null)}
+                                        >
+
+                                          {/* 1. METHOD SECTOR FILLS */}
+                                          {comparisonResults.map((res, mIdx) => {
+                                            const color = activeColors[mIdx % activeColors.length];
+                                            const sStart = startAngle + mIdx * nAlts * stepAngle;
+                                            const sEnd   = startAngle + (mIdx + 1) * nAlts * stepAngle;
+                                            const nSamples = 40;
+                                            const arcPts: string[] = [];
+                                            arcPts.push(`M ${cx.toFixed(2)} ${cy.toFixed(2)}`);
+                                            for (let s = 0; s <= nSamples; s++) {
+                                              const ang = sStart + (s / nSamples) * (sEnd - sStart);
+                                              const p = pol(outerR, ang);
+                                              arcPts.push(`L ${p.x.toFixed(2)} ${p.y.toFixed(2)}`);
+                                            }
+                                            arcPts.push('Z');
+                                            return (
+                                              <path
+                                                key={`sector-fill-${res.label}`}
+                                                d={arcPts.join(' ')}
+                                                fill={withAlpha(color, scientificHoverInfo?.methodIdx === mIdx ? 0.30 : 0.15)}
+                                                stroke="none"
+                                                className="transition-all duration-300"
+                                              />
+                                            );
+                                          })}
+
+                                          {/* 2. CONCENTRIC GRID RINGS */}
+                                          {Array.from({ length: nRings }, (_, i) => {
+                                            const r       = ((i + 1) / nRings) * outerR;
+                                            const isMajor = (i + 1) % subDivs === 0;
+                                            return (
+                                              <circle
+                                                key={`ring-${i}`}
+                                                cx={cx} cy={cy} r={r}
+                                                fill="none"
+                                                stroke={themeColors.text}
+                                                strokeWidth={isMajor ? 0.55 : 0.2}
+                                                opacity={isMajor ? 0.3 : 0.12}
+                                              />
+                                            );
+                                          })}
+
+
+                                          {/* 4. RADIAL SPOKE LINES */}
+                                          {Array.from({ length: totalPos }, (_, p) => {
+                                            const angle = startAngle + p * stepAngle;
+                                            const inner = pol(0, angle);
+                                            const outer = pol(outerR + 3, angle);
+                                            const isMethodBoundary = p % nAlts === 0;
+                                            return (
+                                              <line
+                                                key={`spoke-${p}`}
+                                                x1={inner.x} y1={inner.y}
+                                                x2={outer.x} y2={outer.y}
+                                                stroke={themeColors.text}
+                                                strokeWidth={isMethodBoundary ? 0.8 : 0.3}
+                                                opacity={isMethodBoundary ? 0.4 : 0.15}
+                                              />
+                                            );
+                                          })}
+
+
+                                          {/* 3. WHITE GAP WEDGES - Moved here to mask the grid rings and fills */}
+                                          {comparisonResults.map((_, mIdx) => {
+                                            const gapAngle    = stepAngle * 0.42;
+                                            const boundaryAng = startAngle + (mIdx + 1) * nAlts * stepAngle;
+                                            const gapStart    = boundaryAng - gapAngle;
+                                            const gapEnd      = boundaryAng + gapAngle;
+                                            const nSamp       = 12;
+                                            const wpts: string[] = [];
+                                            wpts.push(`M ${cx.toFixed(2)} ${cy.toFixed(2)}`);
+                                            for (let s = 0; s <= nSamp; s++) {
+                                              const ang = gapStart + (s / nSamp) * (gapEnd - gapStart);
+                                              const p   = pol(outerR + 10, ang);
+                                              wpts.push(`L ${p.x.toFixed(2)} ${p.y.toFixed(2)}`);
+                                            }
+                                            wpts.push('Z');
+                                            return (
+                                              <path
+                                                key={`gap-mask-${mIdx}`}
+                                                d={wpts.join(' ')}
+                                                fill="white"
+                                                stroke="none"
+                                              />
+                                            );
+                                          })}
+
+                                          {/* 6. ALTERNATIVE POLYGONS: border lines */}
+                                          {comparisonChartAlternatives.map((alt, altIdx) => {
+                                            const color = activeColors[altIdx % activeColors.length];
+                                            const d     = buildAltPath(alt);
+                                            return (
+                                              <path
+                                                key={`alt-border-${alt}`}
+                                                d={d}
+                                                fill="none"
+                                                stroke={color}
+                                                strokeWidth={chartSettings.borderWidth + 2.2}
+                                                strokeLinejoin="round"
+                                                strokeLinecap="round"
+                                                opacity="0.92"
+                                              />
+                                            );
+                                          })}
+
+                                          {/* 7. OUTER BOUNDARY */}
+                                          <circle
+                                            cx={cx} cy={cy} r={outerR}
+                                            fill="none"
+                                            stroke={themeColors.border}
+                                            strokeWidth={chartSettings.borderWidth}
+                                            opacity="0.5"
                                           />
 
-                                          {(() => {
-                                            const mplColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
-                                            return comparisonResults.map((res, i) => (
-                                              <Bar
-                                                key={`bar-${res.label}`}
-                                                xAxisId="main"
-                                                yAxisId="left"
-                                                dataKey={isNormChart ? `${res.label} Rank` : `${res.label} Score`}
-                                                fill={mplColors[i % mplColors.length]}
-                                                name={isNormChart ? `${res.label} Rank` : res.label}
-                                                barSize={15}
-                                              />
-                                            ));
-                                          })()}
+                                          {/* 8. RANK LABELS */}
+                                          {Array.from({ length: maxRank }, (_, i) => {
+                                            const rank  = i + 1;
+                                            const r     = rankToR(rank);
+                                            const angle = startAngle + Math.PI / 10;
+                                            const p     = pol(r, angle);
+                                            return (
+                                              <text
+                                                key={`rank-lbl-${rank}`}
+                                                x={p.x + 4} y={p.y - 2}
+                                                fontSize={chartSettings.fontSize - 1}
+                                                fontWeight="900"
+                                                fill="#dc2626"
+                                                textAnchor="start"
+                                                style={{ paintOrder: 'stroke', stroke: 'white', strokeWidth: 2 } as React.CSSProperties}
+                                              >
+                                                {rank}
+                                              </text>
+                                            );
+                                          })}
 
-                                          {(() => {
-                                            const mplColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
-                                            return comparisonResults.map((res, i) => {
-                                              const isDashed = i % 2 !== 0;
-                                              const markerType = i % 3 === 0 ? "circle" : i % 3 === 1 ? "square" : "triangle";
-                                              const seriesColor = mplColors[i % mplColors.length];
+                                          {/* 9. CENTER DOT */}
+                                          <circle cx={cx} cy={cy} r="4" fill={themeColors.border} opacity="0.8" />
+                                        </svg>
 
-                                              return (
-                                                <Line
-                                                  key={`line-${res.label}-${i}`}
-                                                  xAxisId="main"
-                                                  yAxisId="right"
-                                                  type="linear"
-                                                  dataKey={isNormChart ? `${res.label} Score (Norm)` : `${res.label} Rank`}
-                                                  stroke={seriesColor}
-                                                  strokeWidth={1.5}
-                                                  strokeDasharray={isDashed ? "5 5" : "0"}
-                                                  name={isNormChart ? `${res.label} Score (Norm)` : `${res.label} Rank`}
-                                                  dot={(props: any) => {
-                                                    const { cx, cy, index } = props;
-                                                    if (markerType === "square") {
-                                                      return <rect key={`dot-${res.label}-${index}`} x={cx - 3} y={cy - 3} width={6} height={6} fill={seriesColor} />;
-                                                    }
-                                                    if (markerType === "triangle") {
-                                                      return <path key={`dot-${res.label}-${index}`} d={`M${cx},${cy - 4} L${cx - 4},${cy + 4} L${cx + 4},${cy + 4} Z`} fill={seriesColor} />;
-                                                    }
-                                                    return <circle key={`dot-${res.label}-${index}`} cx={cx} cy={cy} r={3.5} fill={seriesColor} />;
-                                                  }}
-                                                  legendType={isDashed ? "plainline" : "line"}
-                                                />
-                                              );
-                                            });
-                                          })()}
+                                        {!isLegendTop && legendBox}
+
+                                        {/* FLOATING TOOLTIP */}
+                                        {scientificHoverInfo && (
+                                          <div
+                                            className="fixed z-[100] bg-white border-2 border-black p-2 shadow-[4px_4px_0_rgba(0,0,0,1)] pointer-events-none"
+                                            style={{
+                                              left: scientificHoverInfo.x + 15,
+                                              top: scientificHoverInfo.y + 15,
+                                              transform: 'translate(0, 0)',
+                                              minWidth: '160px'
+                                            }}
+                                          >
+                                            <div className="text-center font-black border-b-2 border-black pb-1 mb-2 text-sm uppercase italic">
+                                              {comparisonResults[scientificHoverInfo.methodIdx].label}
+                                            </div>
+                                            <div className="space-y-1">
+                                              {comparisonChartAlternatives.map((alt, i) => {
+                                                const rank = rankMap[comparisonResults[scientificHoverInfo.methodIdx].label]?.[alt];
+                                                return (
+                                                  <div key={alt} className="flex justify-between items-center gap-4">
+                                                    <span className="text-[11px] font-bold" style={{ color: activeColors[i % activeColors.length] }}>
+                                                      {alt}
+                                                    </span>
+                                                    <span className="text-[10px] font-black text-gray-500 uppercase">
+                                                      Rank <span className="text-black text-sm">{rank}</span>
+                                                    </span>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                    break;
+                                  }
+                                  case "stackedBar":
+                                    chartElement = (
+                                      <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart 
+                                          data={comparisonChartData} 
+                                          margin={{ 
+                                            top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, 
+                                            right: chartSettings.marginRight, 
+                                            left: chartSettings.marginLeft, 
+                                            bottom: chartSettings.marginBottom 
+                                          }}
+                                        >
+                                          <XAxis
+                                            dataKey="method"
+                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            label={chartSettings.showAxisTitles ? { 
+                                              value: chartSettings.xAxisTitle || 'MCDM Methods', 
+                                              position: 'insideBottom', 
+                                              offset: chartSettings.xAxisOffset, 
+                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text } 
+                                            } : undefined}
+                                            axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} 
+                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} 
+                                          />
+                                          <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
+                                          <YAxis
+                                            label={chartSettings.showAxisTitles ? { 
+                                              value: chartSettings.yAxisTitle || 'Ordinal Ranking', 
+                                              angle: -90, 
+                                              position: 'insideLeft', 
+                                              offset: chartSettings.yAxisOffset,
+                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text } 
+                                            } : undefined}
+                                            axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} 
+                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} 
+                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }} 
+                                          />
+                                          <YAxis {...rightAxisProps} />
+                                          <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                          <Legend
+                                            {...legCfg}
+                                            layout={legLayout}
+                                            wrapperStyle={{
+                                              fontSize: `${chartSettings.fontSize}px`,
+                                              color: themeColors.text,
+                                              fontWeight: 700,
+                                              backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                              border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
+                                              padding: "4px 8px",
+                                              top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
+                                              left: legCfg.align === 'center' ? '50%' : legCfg.align === 'left' ? 10 : undefined,
+                                              right: legCfg.align === 'right' ? 10 : undefined,
+                                              transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
+                                              width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
+                                              zIndex: 50,
+                                              boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                              display: "flex",
+                                              justifyContent: "center",
+                                              whiteSpace: "nowrap"
+                                            }}
+                                            iconSize={chartSettings.markerSize + 4}
+                                          />
+                                          {comparisonChartAlternatives.map((alt, idx) => (
+                                            <Bar 
+                                              key={alt} 
+                                              stackId="a" 
+                                              dataKey={alt} 
+                                              fill={activeColors[idx % activeColors.length]} 
+                                              name={alt} 
+                                              fillOpacity={chartSettings.barOpacity}
+                                            />
+                                          ))}
+                                          {chartSettings.showGridLines && (
+                                            <CartesianGrid
+                                              strokeDasharray="3 3"
+                                              horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                              vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                              stroke={chartSettings.gridColor}
+                                              opacity={chartSettings.gridOpacity}
+                                              style={{ pointerEvents: 'none' }}
+                                            />
+                                          )}
+                                        </BarChart>
+                                      </ResponsiveContainer>
+                                    );
+                                    break;
+                                  case "bar":
+                                    chartElement = (
+                                      <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart 
+                                          data={comparisonChartData} 
+                                          margin={{ 
+                                            top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, 
+                                            right: chartSettings.marginRight, 
+                                            left: chartSettings.marginLeft, 
+                                            bottom: chartSettings.marginBottom 
+                                          }}
+                                        >
+                                          <XAxis
+                                            dataKey="method"
+                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            label={chartSettings.showAxisTitles ? { 
+                                              value: chartSettings.xAxisTitle || 'MCDM Methods', 
+                                              position: 'insideBottom', 
+                                              offset: chartSettings.xAxisOffset, 
+                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text } 
+                                            } : undefined}
+                                            axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} 
+                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} 
+                                          />
+                                          <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
+                                          <YAxis
+                                            label={chartSettings.showAxisTitles ? { 
+                                              value: chartSettings.yAxisTitle || 'Ordinal Ranking', 
+                                              angle: -90, 
+                                              position: 'insideLeft', 
+                                              offset: chartSettings.yAxisOffset,
+                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text } 
+                                            } : undefined}
+                                            axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} 
+                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} 
+                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }} 
+                                          />
+                                          <YAxis {...rightAxisProps} />
+                                          <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                          <Legend
+                                            {...legCfg}
+                                            layout={legLayout}
+                                            wrapperStyle={{
+                                              fontSize: `${chartSettings.fontSize}px`,
+                                              color: themeColors.text,
+                                              fontWeight: 700,
+                                              backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                              border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
+                                              padding: "4px 8px",
+                                              top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
+                                              left: legCfg.align === 'center' ? '50%' : legCfg.align === 'left' ? 10 : undefined,
+                                              right: legCfg.align === 'right' ? 10 : undefined,
+                                              transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
+                                              width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
+                                              zIndex: 50,
+                                              boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                              display: "flex",
+                                              justifyContent: "center",
+                                              whiteSpace: "nowrap"
+                                            }}
+                                            iconSize={chartSettings.markerSize + 4}
+                                          />
+                                          {comparisonChartAlternatives.map((alt, idx) => (
+                                            <Bar 
+                                              key={alt} 
+                                              dataKey={alt} 
+                                              fill={activeColors[idx % activeColors.length]} 
+                                              name={alt} 
+                                              fillOpacity={chartSettings.barOpacity}
+                                            />
+                                          ))}
+                                          {chartSettings.showGridLines && (
+                                            <CartesianGrid
+                                              strokeDasharray="3 3"
+                                              horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                              vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                              stroke={chartSettings.gridColor}
+                                              opacity={chartSettings.gridOpacity}
+                                              style={{ pointerEvents: 'none' }}
+                                            />
+                                          )}
+                                        </BarChart>
+                                      </ResponsiveContainer>
+                                    );
+                                    break;
+                                  case "area":
+                                  case "stackedArea":
+                                    chartElement = (
+                                      <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart 
+                                          data={comparisonChartData} 
+                                          margin={{ 
+                                            top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, 
+                                            right: chartSettings.marginRight, 
+                                            left: chartSettings.marginLeft, 
+                                            bottom: chartSettings.marginBottom 
+                                          }}
+                                        >
+                                          <XAxis
+                                            dataKey="method"
+                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            label={chartSettings.showAxisTitles ? { 
+                                              value: chartSettings.xAxisTitle || 'MCDM Methods', 
+                                              position: 'insideBottom', 
+                                              offset: chartSettings.xAxisOffset, 
+                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text } 
+                                            } : undefined}
+                                            axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} 
+                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} 
+                                          />
+                                          <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
+                                          <YAxis
+                                            label={chartSettings.showAxisTitles ? { 
+                                              value: chartSettings.yAxisTitle || 'Ordinal Ranking', 
+                                              angle: -90, 
+                                              position: 'insideLeft', 
+                                              offset: chartSettings.yAxisOffset,
+                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text } 
+                                            } : undefined}
+                                            axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} 
+                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} 
+                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }} 
+                                          />
+                                          <YAxis {...rightAxisProps} />
+                                          <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                          <Legend
+                                            {...legCfg}
+                                            layout={legLayout}
+                                            wrapperStyle={{
+                                              fontSize: `${chartSettings.fontSize}px`,
+                                              color: themeColors.text,
+                                              fontWeight: 700,
+                                              backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                              border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
+                                              padding: "4px 8px",
+                                              top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
+                                              left: legCfg.align === 'center' ? '50%' : legCfg.align === 'left' ? 10 : undefined,
+                                              right: legCfg.align === 'right' ? 10 : undefined,
+                                              transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
+                                              width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
+                                              zIndex: 50,
+                                              boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                              display: "flex",
+                                              justifyContent: "center",
+                                              whiteSpace: "nowrap"
+                                            }}
+                                            iconSize={chartSettings.markerSize + 4}
+                                          />
+                                          {comparisonChartAlternatives.map((alt, idx) => (
+                                            <Area 
+                                              type="monotone" 
+                                              stackId={comparisonChartType === "stackedArea" ? "1" : undefined}
+                                              key={alt} 
+                                              dataKey={alt} 
+                                              stroke={activeColors[idx % activeColors.length]} 
+                                              fill={activeColors[idx % activeColors.length]} 
+                                              fillOpacity={chartSettings.barOpacity / 2.5} 
+                                              name={alt} 
+                                            />
+                                          ))}
+                                          {chartSettings.showGridLines && (
+                                            <CartesianGrid
+                                              strokeDasharray="3 3"
+                                              horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                              vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                              stroke={chartSettings.gridColor}
+                                              opacity={chartSettings.gridOpacity}
+                                              style={{ pointerEvents: 'none' }}
+                                            />
+                                          )}
+                                        </AreaChart>
+                                      </ResponsiveContainer>
+                                    );
+                                    break;
+                                  case "composed":
+                                    const hybridData = comparisonChartAlternatives.map(alt => {
+                                      const item: any = { alternative: alt };
+                                      comparisonResults.forEach(res => {
+                                        const rankItem = res.ranking.find(r => r.alternativeName === alt);
+                                        item[res.label] = rankItem ? rankItem.rank : null;
+                                        item[res.label + "_score"] = rankItem ? (typeof rankItem.score === "string" ? parseFloat(rankItem.score) : rankItem.score) : 0;
+                                      });
+                                      return item;
+                                    });
+
+                                    chartElement = (
+                                      <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart
+                                          data={hybridData}
+                                          margin={{ 
+                                            top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, 
+                                            right: chartSettings.marginRight, 
+                                            left: chartSettings.marginLeft, 
+                                            bottom: chartSettings.marginBottom 
+                                          }}
+                                          barGap={0}
+                                          barCategoryGap="25%"
+                                        >
+                                          <XAxis
+                                            dataKey="alternative"
+                                            xAxisId="main"
+                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            label={chartSettings.showAxisTitles ? { 
+                                              value: chartSettings.xAxisTitle || "Alternatives", 
+                                              position: "insideBottom", 
+                                              offset: chartSettings.xAxisOffset, 
+                                              style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: themeColors.text } 
+                                            } : undefined}
+                                            axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                            interval={0}
+                                          />
+                                          <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
+                                          <YAxis
+                                            yAxisId="rank"
+                                            reversed={true}
+                                            domain={[0, "auto"]}
+                                            allowDecimals={false}
+                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            label={chartSettings.showAxisTitles ? { 
+                                              value: chartSettings.yAxisTitle || "Ordinal Ranking (1 = Top)", 
+                                              angle: -90, 
+                                              position: "insideLeft", 
+                                              offset: chartSettings.yAxisOffset, 
+                                              style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: themeColors.text } 
+                                            } : undefined}
+                                            axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                          />
+                                          <YAxis
+                                            yAxisId="score"
+                                            orientation="right"
+                                            domain={[0, "auto"]}
+                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            label={chartSettings.showAxisTitles ? { 
+                                              value: "Algorithm Performance Scores", 
+                                              angle: 90, 
+                                              position: "insideRight", 
+                                              offset: 0, 
+                                              style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: themeColors.text } 
+                                            } : undefined}
+                                            axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
+                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                          />
+                                          <Tooltip
+                                            contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }}
+                                            cursor={{ fill: "rgba(0,0,0,0.05)" }}
+                                          />
+                                          <Legend
+                                            {...legCfg}
+                                            layout={legLayout}
+                                            wrapperStyle={{
+                                              fontSize: `${chartSettings.fontSize}px`,
+                                              color: themeColors.text,
+                                              fontWeight: 700,
+                                              backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                              border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
+                                              padding: "4px 8px",
+                                              top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
+                                              left: legCfg.align === 'center' ? '50%' : legCfg.align === 'left' ? 10 : undefined,
+                                              right: legCfg.align === 'right' ? 10 : undefined,
+                                              transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
+                                              width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
+                                              zIndex: 50,
+                                              boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                              display: "flex",
+                                              justifyContent: "center",
+                                              whiteSpace: "nowrap"
+                                            }}
+                                            iconSize={chartSettings.markerSize + 4}
+                                          />
+                                          {comparisonResults.map((res, idx) => (
+                                            <Bar
+                                              key={`${res.label}_bar`}
+                                              xAxisId="main"
+                                              yAxisId="rank"
+                                              dataKey={res.label}
+                                              name={`${res.label} Rank`}
+                                              fill={activeColors[idx % activeColors.length]}
+                                              barSize={15}
+                                              fillOpacity={chartSettings.barOpacity}
+                                            />
+                                          ))}
+                                          {comparisonResults.map((res, idx) => (
+                                            <Line
+                                              key={`${res.label}_score_line`}
+                                              xAxisId="main"
+                                              yAxisId="score"
+                                              type="monotone"
+                                              dataKey={`${res.label}_score`}
+                                              name={`${res.label} Score`}
+                                              stroke={activeColors[idx % activeColors.length]}
+                                              strokeWidth={chartSettings.borderWidth}
+                                              dot={(chartSettings.markerType as string) !== 'none' ? (props: any) => {
+                                                const { cx, cy, index } = props;
+                                                const mSize = chartSettings.markerSize;
+                                                const seriesColor = activeColors[idx % activeColors.length];
+                                                if (chartSettings.markerType === "square") {
+                                                  return <rect key={`dot-${res.label}-${index}`} x={cx - mSize} y={cy - mSize} width={mSize*2} height={mSize*2} fill={seriesColor} />;
+                                                }
+                                                if (chartSettings.markerType === "triangle") {
+                                                  return <path key={`dot-${res.label}-${index}`} d={`M${cx},${cy - mSize} L${cx - mSize},${cy + mSize} L${cx + mSize},${cy + mSize} Z`} fill={seriesColor} />;
+                                                }
+                                                if (chartSettings.markerType === "diamond") {
+                                                  return <path key={`dot-${res.label}-${index}`} d={`M${cx},${cy - mSize} L${cx + mSize},${cy} L${cx},${cy + mSize} L${cx - mSize},${cy} Z`} fill={seriesColor} />;
+                                                }
+                                                return <circle key={`dot-${res.label}-${index}`} cx={cx} cy={cy} r={mSize} fill={seriesColor} />;
+                                              } : false}
+                                              activeDot={{ r: chartSettings.markerSize + 2 }}
+                                            />
+                                          ))}
                                           {chartSettings.showGridLines && (
                                             <CartesianGrid
                                               strokeDasharray="3 3"
@@ -7203,765 +8039,342 @@ export default function MCDMCalculator() {
                                           )}
                                         </ComposedChart>
                                       </ResponsiveContainer>
-                                    )
-                                  })() : (() => {
-                                    const maxRank = Math.max(0, ...comparisonChartData.flatMap(row => comparisonChartAlternatives.map(alt => Number(row[alt] || 0))));
-                                    const rightAxisProps = {
-                                      orientation: "right" as const,
-                                      yAxisId: "right_border",
-                                      domain: [0, maxRank > 0 ? maxRank : 'auto'] as [number, number | string],
-                                      tick: { fontSize: 10, fontWeight: 700, fill: "#000" },
-                                      tickLine: { stroke: "#000", strokeWidth: 1 },
-                                      axisLine: { stroke: "#000", strokeWidth: 1.5 },
-                                      allowDecimals: false,
-                                    };
-                                    const renderedChart = (() => {
-                                      switch (comparisonChartType) {
-                                        case "radar":
-                                          return (
-                                            <RadarChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} cx="50%" cy="50%" outerRadius="80%" data={comparisonChartData}>
-                                              <PolarGrid />
-                                              <PolarAngleAxis dataKey="method" tick={{ fontSize: 10 }} />
-                                              <PolarRadiusAxis />
-                                              <Legend wrapperStyle={{
-                                                fontSize: "10px",
-                                                color: "#000",
-                                                fontWeight: 700,
-                                                backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                border: "1px solid #000",
-                                                padding: "4px 8px",
-                                                top: 5,
-                                                left: "50%",
-                                                transform: "translateX(-50%)",
-                                                width: "max-content",
-                                                maxWidth: "95%",
-                                                zIndex: 50,
-                                                boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                display: "flex",
-                                                justifyContent: "center",
-                                                whiteSpace: "nowrap"
-                                              }} />
-                                              <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                              {comparisonChartAlternatives.map((alt, idx) => (
-                                                <Radar key={alt} name={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.1} />
-                                              ))}
-                                            </RadarChart>
-                                          );
-                                        case "scientific":
-                                          const maxPossibleRank = Math.max(...comparisonResults.flatMap(r => r.ranking?.map(i => i.rank) || [0]), 1);
-                                          return (
-                                            <div className="flex flex-col h-full bg-white relative">
-                                              <div className="flex-1 w-full h-full">
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                  <RadarChart cx="50%" cy="50%" outerRadius="95%" data={scientificRadialData} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-                                                    <PolarGrid stroke="#cbd5e1" strokeWidth={1} gridType="circle" />
-                                                    <PolarAngleAxis
-                                                      dataKey="method"
-                                                      tick={false}
-                                                    />
-                                                    <PolarRadiusAxis
-                                                      angle={45}
-                                                      domain={[0, maxPossibleRank]}
-                                                      tickCount={maxPossibleRank + 1}
-                                                      tick={(props) => {
-                                                        const { x, y, payload } = props;
-                                                        if (payload.value === 0) return <g />;
-                                                        const displayRank = maxPossibleRank - payload.value + 1;
-                                                        return (
-                                                          <text
-                                                            x={x}
-                                                            y={y}
-                                                            dy={-5}
-                                                            dx={5}
-                                                            fontSize={14}
-                                                            fontWeight="900"
-                                                            fill="#ef4444"
-                                                            stroke="#fff"
-                                                            strokeWidth={4}
-                                                            paintOrder="stroke"
-                                                            textAnchor="start"
-                                                            dominantBaseline="middle"
-                                                          >
-                                                            {displayRank}
-                                                          </text>
-                                                        );
-                                                      }}
-                                                      axisLine={false}
-                                                    />
-                                                    {comparisonResults.map((res, idx) => (
-                                                      <Radar
-                                                        key={`sector-${res.label}`}
-                                                        name={res.label}
-                                                        dataKey={(d: any) => (d.method === res.label || d.parentMethod === res.label) ? maxPossibleRank : 0}
-                                                        stroke="none"
-                                                        fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                                                        fillOpacity={0.10}
-                                                        isAnimationActive={false}
-                                                        legendType="rect"
-                                                        tooltipType="none"
-                                                      />
-                                                    ))}
-                                                    <Tooltip
-                                                      content={({ active, payload, label }) => {
-                                                        const realLabel = label?.includes('_sub_') ? label.split('_sub_')[0] : label;
-                                                        if (active && payload && payload.length) {
-                                                          const realPayload = payload.filter((p: any) =>
-                                                            p.name &&
-                                                            typeof p.name === 'string' &&
-                                                            !comparisonResults.some(r => r.label === p.name)
-                                                          );
-                                                          if (realPayload.length === 0) return null;
-
-                                                          return (
-                                                            <div className="bg-white border-2 border-black p-3 shadow-2xl text-[11px] font-mono leading-tight">
-                                                              <p className="font-black border-b-2 border-black mb-2 pb-1 text-center uppercase">{realLabel}</p>
-                                                              {realPayload.map((entry: any, index: number) => (
-                                                                <div key={index} className="flex justify-between py-1 gap-6">
-                                                                  <span className="font-bold underline" style={{ color: entry.color }}>{entry.name}</span>
-                                                                  <span className="font-black">RANK {entry.payload[`${entry.name}_actual_rank`] || "N/A"}</span>
-                                                                </div>
-                                                              ))}
-                                                            </div>
-                                                          );
-                                                        }
-                                                        return null;
-                                                      }}
-                                                    />
-                                                    <Legend wrapperStyle={{
-                                                      fontSize: "10px",
-                                                      color: "#000",
-                                                      fontWeight: 700,
-                                                      backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                      border: "1px solid #000",
-                                                      padding: "4px 8px",
-                                                      top: 10,
-                                                      left: "50%",
-                                                      transform: "translateX(-50%)",
-                                                      width: "max-content",
-                                                      maxWidth: "95%",
-                                                      zIndex: 50,
-                                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                      display: "flex",
-                                                      justifyContent: "center",
-                                                      whiteSpace: "nowrap"
-                                                    }}
-                                                      verticalAlign="bottom"
-                                                      content={(props) => {
-                                                        const { payload } = props;
-                                                        if (!payload) return null;
-                                                        const alternatives = payload.filter(p => !comparisonResults.some(r => r.label === p.value));
-                                                        const methods = payload.filter(p => comparisonResults.some(r => r.label === p.value));
-
-                                                        return (
-                                                          <div className="flex flex-col items-center">
-                                                            <div className="flex flex-wrap justify-center gap-x-2 gap-y-0.2">
-                                                              {alternatives.map((entry, index) => (
-                                                                <div key={`alt-${index}`} className="flex items-center gap-1">
-                                                                  <div className="w-4 h-0.5" style={{ backgroundColor: entry.color }}></div>
-                                                                  <span className="text-[10px] font-black uppercase text-gray-800 tracking-tight">{entry.value}</span>
-                                                                </div>
-                                                              ))}
-                                                            </div>
-                                                            <div className="flex flex-wrap justify-center gap-x-3 gap-y-0.5 w-full max-w-2xl">
-                                                              {methods.map((entry, index) => (
-                                                                <div key={`meth-${index}`} className="flex items-center gap-1.5">
-                                                                  <div className="w-3 h-3" style={{ backgroundColor: entry.color, opacity: 0.25 }}></div>
-                                                                  <span className="text-[10px] font-black uppercase text-gray-900 tracking-tight">{entry.value}</span>
-                                                                </div>
-                                                              ))}
-                                                            </div>
-                                                          </div>
-                                                        );
-                                                      }}
-                                                    />
-                                                    {comparisonChartAlternatives.map((alt, idx) => (
-                                                      <Radar
-                                                        key={alt}
-                                                        name={alt}
-                                                        dataKey={alt}
-                                                        stroke={CHART_COLORS[idx % CHART_COLORS.length]}
-                                                        fill="none"
-                                                        strokeWidth={3}
-                                                        dot={false}
-                                                        activeDot={{ r: 5, strokeWidth: 2, fill: '#fff' }}
-                                                        isAnimationActive={false}
-                                                      />
-                                                    ))}
-                                                  </RadarChart>
-                                                </ResponsiveContainer>
-                                              </div>
-                                              <div className="absolute bottom-1 right-2 pointer-events-none">
-                                                <p className="text-[9px] font-black text-gray-300 tracking-tighter uppercase whitespace-nowrap">Concentric Ranking Matrix</p>
-                                              </div>
-                                            </div>
-                                          );
-                                        case "bar":
-                                          return (
-                                            <BarChart data={comparisonChartData} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-
-                                              <XAxis
-                                                dataKey="method"
-                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: chartSettings.xAxisTitle || 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                              <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                              <YAxis
-                                                label={{ value: chartSettings.yAxisTitle || 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
-                                              <YAxis {...rightAxisProps} />
-                                              <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                              <Legend
-                                                verticalAlign="top"
-                                                align="center"
-                                                layout="horizontal"
-                                                wrapperStyle={{
-                                                  fontSize: "10px",
-                                                  color: "#000",
-                                                  fontWeight: 700,
-                                                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                  border: "1px solid #000",
-                                                  padding: "4px 8px",
-                                                  top: 70,
-                                                  left: "50%",
-                                                  transform: "translateX(-50%)",
-                                                  width: "max-content",
-                                                  maxWidth: "95%",
-                                                  zIndex: 50,
-                                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                  display: "flex",
-                                                  justifyContent: "center",
-                                                  whiteSpace: "nowrap"
-                                                }}
-                                                iconSize={8}
-                                              />
-                                              {comparisonChartAlternatives.map((alt, idx) => (
-                                                <Bar key={alt} dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
-                                              ))}
-                                              {chartSettings.showGridLines && (
-                                                <CartesianGrid
-                                                  strokeDasharray="3 3"
-                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                                  stroke={chartSettings.gridColor}
-                                                  opacity={chartSettings.gridOpacity}
-                                                  style={{ pointerEvents: 'none' }}
-                                                />
-                                              )}
-                                            </BarChart>
-                                          );
-                                        case "stackedBar":
-                                          return (
-                                            <BarChart data={comparisonChartData} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-
-                                              <XAxis
-                                                dataKey="method"
-                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: chartSettings.xAxisTitle || 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                              <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                              <YAxis
-                                                label={{ value: chartSettings.yAxisTitle || 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
-                                              <YAxis {...rightAxisProps} />
-                                              <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                              <Legend
-                                                verticalAlign="top"
-                                                align="center"
-                                                layout="horizontal"
-                                                wrapperStyle={{
-                                                  fontSize: "10px",
-                                                  color: "#000",
-                                                  fontWeight: 700,
-                                                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                  border: "1px solid #000",
-                                                  padding: "4px 8px",
-                                                  top: 70,
-                                                  left: "50%",
-                                                  transform: "translateX(-50%)",
-                                                  width: "max-content",
-                                                  maxWidth: "95%",
-                                                  zIndex: 50,
-                                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                  display: "flex",
-                                                  justifyContent: "center",
-                                                  whiteSpace: "nowrap"
-                                                }}
-                                                iconSize={8}
-                                              />
-                                              {comparisonChartAlternatives.map((alt, idx) => (
-                                                <Bar key={alt} stackId="a" dataKey={alt} fill={CHART_COLORS[idx % CHART_COLORS.length]} name={alt} />
-                                              ))}
-                                              {chartSettings.showGridLines && (
-                                                <CartesianGrid
-                                                  strokeDasharray="3 3"
-                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                                  stroke={chartSettings.gridColor}
-                                                  opacity={chartSettings.gridOpacity}
-                                                  style={{ pointerEvents: 'none' }}
-                                                />
-                                              )}
-                                            </BarChart>
-                                          );
-                                        case "area":
-                                          return (
-                                            <AreaChart data={comparisonChartData} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-
-                                              <XAxis
-                                                dataKey="method"
-                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: chartSettings.xAxisTitle || 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                              <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                              <YAxis
-                                                label={{ value: chartSettings.yAxisTitle || 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
-                                              <YAxis {...rightAxisProps} />
-                                              <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                              <Legend
-                                                verticalAlign="top"
-                                                align="center"
-                                                layout="horizontal"
-                                                wrapperStyle={{
-                                                  fontSize: "10px",
-                                                  color: "#000",
-                                                  fontWeight: 700,
-                                                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                  border: "1px solid #000",
-                                                  padding: "4px 8px",
-                                                  top: 70,
-                                                  left: "50%",
-                                                  transform: "translateX(-50%)",
-                                                  width: "max-content",
-                                                  maxWidth: "95%",
-                                                  zIndex: 50,
-                                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                  display: "flex",
-                                                  justifyContent: "center",
-                                                  whiteSpace: "nowrap"
-                                                }}
-                                                iconSize={8}
-                                              />
-                                              {comparisonChartAlternatives.map((alt, idx) => (
-                                                <Area type="monotone" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
-                                              ))}
-                                              {chartSettings.showGridLines && (
-                                                <CartesianGrid
-                                                  strokeDasharray="3 3"
-                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                                  stroke={chartSettings.gridColor}
-                                                  opacity={chartSettings.gridOpacity}
-                                                  style={{ pointerEvents: 'none' }}
-                                                />
-                                              )}
-                                            </AreaChart>
-                                          );
-                                        case "stackedArea":
-                                          return (
-                                            <AreaChart data={comparisonChartData} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-
-                                              <XAxis
-                                                dataKey="method"
-                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: chartSettings.xAxisTitle || 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                              <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                              <YAxis
-                                                label={{ value: chartSettings.yAxisTitle || 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
-                                              <YAxis {...rightAxisProps} />
-                                              <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                              <Legend
-                                                verticalAlign="top"
-                                                align="center"
-                                                layout="horizontal"
-                                                wrapperStyle={{
-                                                  fontSize: "10px",
-                                                  color: "#000",
-                                                  fontWeight: 700,
-                                                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                  border: "1px solid #000",
-                                                  padding: "4px 8px",
-                                                  top: 70,
-                                                  left: "50%",
-                                                  transform: "translateX(-50%)",
-                                                  width: "max-content",
-                                                  maxWidth: "95%",
-                                                  zIndex: 50,
-                                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                  display: "flex",
-                                                  justifyContent: "center",
-                                                  whiteSpace: "nowrap"
-                                                }}
-                                                iconSize={8}
-                                              />
-                                              {comparisonChartAlternatives.map((alt, idx) => (
-                                                <Area type="monotone" stackId="1" key={alt} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} fill={CHART_COLORS[idx % CHART_COLORS.length]} fillOpacity={0.3} name={alt} />
-                                              ))}
-                                              {chartSettings.showGridLines && (
-                                                <CartesianGrid
-                                                  strokeDasharray="3 3"
-                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                                  stroke={chartSettings.gridColor}
-                                                  opacity={chartSettings.gridOpacity}
-                                                  style={{ pointerEvents: 'none' }}
-                                                />
-                                              )}
-                                            </AreaChart>
-                                          );
-                                        case "composed":
-                                          const hybridData = comparisonChartAlternatives.map(alt => {
-                                            const item: any = { alternative: alt };
-                                            comparisonResults.forEach(res => {
-                                              const rankItem = res.ranking.find(r => r.alternativeName === alt);
-                                              item[res.label] = rankItem ? rankItem.rank : null;
-                                              item[res.label + "_score"] = rankItem ? (typeof rankItem.score === "string" ? parseFloat(rankItem.score) : rankItem.score) : 0;
-                                            });
-                                            return item;
-                                          });
-
-                                          return (
-                                            <ComposedChart
-                                              data={hybridData}
-                                              margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
-                                              barGap={0}
-                                              barCategoryGap="25%"
-                                            >
-
-                                              <XAxis
-                                                dataKey="alternative"
-                                                xAxisId="main"
-                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: chartSettings.xAxisTitle || "Alternatives", position: "insideBottom", offset: chartSettings.xAxisOffset, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }}
-                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                                tickLine={{ stroke: "#000", strokeWidth: 1 }}
-                                                interval={0}
-                                                angle={-45}
-                                                textAnchor="end"
-                                              />
-                                              <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                              <YAxis
-                                                yAxisId="rank"
-                                                reversed={true}
-                                                domain={[0, "auto"]}
-                                                allowDecimals={false}
-                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: chartSettings.yAxisTitle || "Ordinal Ranking (1 = Top)", angle: -90, position: "insideLeft", offset: chartSettings.yAxisOffset, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }}
-                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                                tickLine={{ stroke: "#000", strokeWidth: 1 }}
-                                              />
-                                              <YAxis
-                                                yAxisId="score"
-                                                orientation="right"
-                                                domain={[0, "auto"]}
-                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: "Algorithm Performance Scores", angle: 90, position: "insideRight", offset: 0, style: { fontSize: 11, fontStyle: 'italic', fill: '#000' } }}
-                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }}
-                                                tickLine={{ stroke: "#000", strokeWidth: 1 }}
-                                              />
-                                              <Tooltip
-                                                contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }}
-                                                cursor={{ fill: "rgba(0,0,0,0.05)" }}
-                                              />
-                                              <Legend
-                                                verticalAlign="top"
-                                                align="center"
-                                                layout="horizontal"
-                                                wrapperStyle={{
-                                                  fontSize: "10px",
-                                                  color: "#000",
-                                                  fontWeight: 700,
-                                                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                  border: "1px solid #000",
-                                                  padding: "4px 8px",
-                                                  top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 45 : undefined,
-                                                  left: "50%",
-                                                  transform: `translateX(-50%) translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
-                                                  width: "max-content",
-                                                  maxWidth: "95%",
-                                                  zIndex: 50,
-                                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                  display: "flex",
-                                                  justifyContent: "center",
-                                                  whiteSpace: "nowrap"
-                                                }}
-                                                iconSize={8}
-                                              />
-                                              {comparisonResults.map((res, idx) => (
-                                                <Bar
-                                                  key={`${res.label}_bar`}
-                                                  xAxisId="main"
-                                                  yAxisId="rank"
-                                                  dataKey={res.label}
-                                                  name={`${res.label} Rank`}
-                                                  fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                                                  barSize={15}
-                                                />
-                                              ))}
-                                              {comparisonResults.map((res, idx) => (
-                                                <Line
-                                                  key={`${res.label}_score_line`}
-                                                  xAxisId="main"
-                                                  yAxisId="score"
-                                                  type="monotone"
-                                                  dataKey={`${res.label}_score`}
-                                                  name={`${res.label} Score`}
-                                                  stroke={CHART_COLORS[idx % CHART_COLORS.length]}
-                                                  strokeWidth={2}
-                                                  dot={{ r: 4, fill: CHART_COLORS[idx % CHART_COLORS.length], strokeWidth: 1.5, stroke: "#fff" }}
-                                                  activeDot={{ r: 6 }}
-                                                />
-                                              ))}
-                                              {chartSettings.showGridLines && (
-                                                <CartesianGrid
-                                                  strokeDasharray="3 3"
-                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                                  stroke={chartSettings.gridColor}
-                                                  opacity={chartSettings.gridOpacity}
-                                                  style={{ pointerEvents: 'none' }}
-                                                />
-                                              )}
-                                              {chartSettings.showGridLines && (
-                                                <CartesianGrid
-                                                  strokeDasharray="3 3"
-                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                                  stroke={chartSettings.gridColor}
-                                                  opacity={chartSettings.gridOpacity}
-                                                  style={{ pointerEvents: 'none' }}
-                                                />
-                                              )}
-                                            </ComposedChart>
-                                          );
-                                        case "scatter":
-                                          return (
-                                            <ScatterChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-
-                                              <XAxis
-                                                xAxisId="bottom"
-                                                dataKey="x"
-                                                type="category"
-                                                allowDuplicatedCategory={false}
-                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                name="Method"
-                                                label={{ value: chartSettings.xAxisTitle || 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                              <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                              <YAxis
-                                                dataKey="y"
-                                                type="number"
-                                                name="Rank"
-                                                label={{ value: chartSettings.yAxisTitle || 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} />
-                                              <YAxis {...rightAxisProps} />
-                                              <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                              <Legend
-                                                verticalAlign="top"
-                                                align="center"
-                                                layout="horizontal"
-                                                wrapperStyle={{
-                                                  fontSize: "10px",
-                                                  color: "#000",
-                                                  fontWeight: 700,
-                                                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                  border: "1px solid #000",
-                                                  padding: "4px 8px",
-                                                  top: 70,
-                                                  left: "50%",
-                                                  transform: `translateX(-50%) translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
-                                                  width: "max-content",
-                                                  maxWidth: "95%",
-                                                  zIndex: 50,
-                                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                  display: "flex",
-                                                  justifyContent: "center",
-                                                  whiteSpace: "nowrap"
-                                                }}
-                                                iconSize={8}
-                                              />
-                                              {comparisonChartAlternatives.map((alt, idx) => (
-                                                <Scatter key={alt} xAxisId="bottom" name={alt} data={comparisonChartData.map((d) => ({ x: d.method, y: d[alt] }))} fill={CHART_COLORS[idx % CHART_COLORS.length]} shape={["circle", "cross", "diamond", "square", "star", "triangle", "wye"][idx % 7] as any} line />
-                                              ))}
-                                              {chartSettings.showGridLines && (
-                                                <CartesianGrid
-                                                  strokeDasharray="3 3"
-                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                                  stroke={chartSettings.gridColor}
-                                                  opacity={chartSettings.gridOpacity}
-                                                  style={{ pointerEvents: 'none' }}
-                                                />
-                                              )}
-                                            </ScatterChart>
-                                          );
-                                        case "boxPlot":
-                                          const boxData = comparisonChartAlternatives.map((alt) => {
-                                            const values = comparisonChartData.map((r) => r[alt]).filter((v) => v != null).sort((a, b) => a - b)
-                                            if (values.length === 0) return null
-                                            const q1 = values[Math.floor(values.length * 0.25)]
-                                            const median = values[Math.floor(values.length * 0.5)]
-                                            const q3 = values[Math.floor(values.length * 0.75)]
-                                            const min = Math.min(...values)
-                                            const max = Math.max(...values)
-                                            const iqr = q3 - q1
-                                            const whiskerLow = Math.max(min, q1 - 1.5 * iqr)
-                                            const whiskerHigh = Math.min(max, q3 + 1.5 * iqr)
-                                            return { alt, min, q1, median, q3, max, whiskerLow, whiskerHigh, n: values.length }
-                                          }).filter((d): d is any => d !== null)
-
-                                          if (boxData.length === 0) return <div />
-                                          const allVals = boxData.flatMap(d => [d.whiskerLow, d.whiskerHigh])
-                                          const minV = Math.min(...allVals)
-                                          const maxV = Math.max(...allVals)
-                                          const yR = maxV - minV || 1
-                                          const pad = { top: 5, right: 120, bottom: 60, left: 120 }
-                                          const cW = 800 - pad.left - pad.right
-                                          const cH = 400 - pad.top - pad.bottom
-                                          const bW = Math.max(15, (cW / boxData.length) * 0.6)
-                                          const sp = cW / boxData.length
-                                          const gY = (v: number) => pad.top + cH - ((v - minV) / yR) * cH
-                                          const gX = (idx: number) => pad.left + (idx + 0.5) * sp
-
-                                          return (
-                                            <div className="w-full h-full relative">
-                                              <div
-                                                style={{
-                                                  position: 'absolute',
-                                                  top: '100px',
-                                                  left: '50%',
-                                                  transform: 'translateX(-50%)',
-                                                  zIndex: 10,
-                                                  fontSize: '10px',
-                                                  color: '#000',
-                                                  fontWeight: 700,
-                                                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                                  border: '1px solid #000',
-                                                  padding: '4px 8px',
-                                                  boxShadow: '2px 2px 0px rgba(0,0,0,1)',
-                                                  display: 'flex',
-                                                  gap: '12px',
-                                                  whiteSpace: 'nowrap'
-                                                }}
-                                              >
-                                                <div className="flex items-center gap-1.5">
-                                                  <div style={{ width: 12, height: 12, backgroundColor: '#ff3333' }}></div>
-                                                  <span>Median Rank</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                  <div style={{ width: 12, height: 12, border: '1px solid #666', opacity: 0.4 }}></div>
-                                                  <span>Interquartile Range (IQR)</span>
-                                                </div>
-                                              </div>
-
-                                              <svg viewBox="0 0 800 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-                                                {/* Left border */}
-                                                <line x1={pad.left} y1={pad.top} x2={pad.left} y2={pad.top + cH} stroke="#000" strokeWidth="2" />
-                                                {/* Bottom border */}
-                                                <line x1={pad.left} y1={pad.top + cH} x2={800 - pad.right} y2={pad.top + cH} stroke="#000" strokeWidth="2" />
-                                                {/* Top border */}
-                                                <line x1={pad.left} y1={pad.top} x2={800 - pad.right} y2={pad.top} stroke="#000" strokeWidth="2" />
-                                                {/* Right border */}
-                                                <line x1={800 - pad.right} y1={pad.top} x2={800 - pad.right} y2={pad.top + cH} stroke="#000" strokeWidth="2" />
-                                                {chartSettings.showGridLines && (chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both') && [0, 0.25, 0.5, 0.75, 1].map((pct) => (
-                                                  <line key={`hgrid-${pct}`} x1={pad.left} y1={gY(minV + pct * yR)} x2={800 - pad.right} y2={gY(minV + pct * yR)} stroke={chartSettings.gridColor} strokeWidth="1" strokeDasharray="3,3" opacity={chartSettings.gridOpacity} />
-                                                ))}
-                                                {chartSettings.showGridLines && (chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both') && boxData.map((_, idx) => (
-                                                  <line key={`vgrid-${idx}`} x1={gX(idx)} y1={pad.top} x2={gX(idx)} y2={pad.top + cH} stroke={chartSettings.gridColor} strokeWidth="1" strokeDasharray="3,3" opacity={chartSettings.gridOpacity} />
-                                                ))}
-                                                {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
-                                                  <g key={`ylabel-${pct}`}>
-                                                    <line x1={pad.left - 5} y1={gY(minV + pct * yR)} x2={pad.left} y2={gY(minV + pct * yR)} stroke="#999" strokeWidth="1" />
-                                                    <text x={pad.left - 10} y={gY(minV + pct * yR) + 4} fontSize="11" textAnchor="end" fill="#666">{(minV + pct * yR).toFixed(1)}</text>
-                                                  </g>
-                                                ))}
-                                                {boxData.map((data, idx) => {
-                                                  const x = gX(idx)
-                                                  const color = CHART_COLORS[idx % CHART_COLORS.length]
-                                                  return (
-                                                    <g key={`box-${data.alt}`}>
-                                                      <line x1={x} y1={gY(data.whiskerLow)} x2={x} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2" opacity="0.8" />
-                                                      <line x1={x - bW / 3} y1={gY(data.whiskerLow)} x2={x + bW / 3} y2={gY(data.whiskerLow)} stroke={color} strokeWidth="2.5" opacity="0.8" />
-                                                      <line x1={x - bW / 3} y1={gY(data.whiskerHigh)} x2={x + bW / 3} y2={gY(data.whiskerHigh)} stroke={color} strokeWidth="2.5" opacity="0.8" />
-                                                      <rect x={x - bW / 2} y={gY(data.q3)} width={bW} height={Math.max(1, gY(data.q1) - gY(data.q3))} fill={color} fillOpacity="0.4" stroke={color} strokeWidth="2" />
-                                                      <line x1={x - bW / 2} y1={gY(data.median)} x2={x + bW / 2} y2={gY(data.median)} stroke="#ff3333" strokeWidth="3" />
-                                                      <circle cx={x} cy={gY(data.min)} r="3" fill={color} opacity="0.6" />
-                                                      <circle cx={x} cy={gY(data.max)} r="3" fill={color} opacity="0.6" />
-                                                      <text x={x} y={pad.top + cH + 25} fontSize="12" textAnchor="middle" fill="#333" fontWeight="500">{data.alt.substring(0, 8)}</text>
-                                                    </g>
-                                                  )
-                                                })}
-                                                <text x={pad.left - 45} y={pad.top + cH / 2} fontSize="12" fontWeight="700" fill="#000" transform={`rotate(-90, ${pad.left - 45}, ${pad.top + cH / 2})`} textAnchor="middle">Ordinal Ranking</text>
-                                                <text x={pad.left + cW / 2} y={395} fontSize="12" fontWeight="700" fill="#000" textAnchor="middle">MCDM Methods</text>
-                                              </svg>
-                                            </div>
-                                          );
-                                        default:
-                                          return (
-                                            <LineChart data={comparisonChartData} margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}>
-
-                                              <XAxis
-                                                dataKey="method"
-                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: chartSettings.xAxisTitle || 'MCDM Methods', position: 'insideBottom', offset: -15, style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                              <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
-                                              <YAxis
-                                                allowDecimals={false}
-                                                tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                                label={{ value: chartSettings.yAxisTitle || 'Ordinal Ranking', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fontWeight: 700, fill: '#000' } }}
-                                                axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
-                                              <YAxis {...rightAxisProps} />
-                                              <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-                                              <Legend
-                                                verticalAlign="top"
-                                                align="center"
-                                                layout="horizontal"
-                                                wrapperStyle={{
-                                                  fontSize: "10px",
-                                                  color: "#000",
-                                                  fontWeight: 700,
-                                                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                                                  border: "1px solid #000",
-                                                  padding: "4px 8px",
-                                                  top: 70,
-                                                  left: "50%",
-                                                  transform: `translateX(-50%) translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
-                                                  width: "max-content",
-                                                  maxWidth: "95%",
-                                                  zIndex: 50,
-                                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                  display: "flex",
-                                                  justifyContent: "center",
-                                                  whiteSpace: "nowrap"
-                                                }}
-                                                iconSize={8}
-                                              />
-                                              {comparisonChartAlternatives.map((alt, idx) => (
-                                                <Line key={alt} type={comparisonChartType === "step" ? "step" : "monotone"} dataKey={alt} stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2} strokeDasharray={["0", "5 5", "3 3", "10 5", "2 2", "15 5"][idx % 6]} activeDot={{ r: 6 }} dot={{ r: 4, strokeWidth: 1, fill: "white", stroke: CHART_COLORS[idx % CHART_COLORS.length] }} />
-                                              ))}
-                                              {chartSettings.showGridLines && (
-                                                <CartesianGrid
-                                                  strokeDasharray="3 3"
-                                                  horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                                  vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                                  stroke={chartSettings.gridColor}
-                                                  opacity={chartSettings.gridOpacity}
-                                                  style={{ pointerEvents: 'none' }}
-                                                />
-                                              )}
-                                            </LineChart>
-                                          );
-                                      }
-                                    })();
-                                    return (
+                                    );
+                                    break;
+                                  case "scatter":
+                                    chartElement = (
                                       <ResponsiveContainer width="100%" height="100%">
-                                        {renderedChart}
+                                        <ScatterChart 
+                                          margin={{ 
+                                            top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, 
+                                            right: chartSettings.marginRight, 
+                                            left: chartSettings.marginLeft, 
+                                            bottom: chartSettings.marginBottom 
+                                          }}
+                                        >
+                                          <XAxis
+                                            xAxisId="bottom"
+                                            dataKey="x"
+                                            type="category"
+                                            allowDuplicatedCategory={false}
+                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            name="Method"
+                                            label={chartSettings.showAxisTitles ? { 
+                                              value: chartSettings.xAxisTitle || 'MCDM Methods', 
+                                              position: 'insideBottom', 
+                                              offset: chartSettings.xAxisOffset, 
+                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text } 
+                                            } : undefined}
+                                            axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} 
+                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} 
+                                          />
+                                          <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
+                                          <YAxis
+                                            dataKey="y"
+                                            type="number"
+                                            name="Rank"
+                                            label={chartSettings.showAxisTitles ? { 
+                                              value: chartSettings.yAxisTitle || 'Ordinal Ranking', 
+                                              angle: -90, 
+                                              position: 'insideLeft', 
+                                              offset: chartSettings.yAxisOffset,
+                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text } 
+                                            } : undefined}
+                                            axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} 
+                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} 
+                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }} 
+                                          />
+                                          <YAxis {...rightAxisProps} />
+                                          <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                          <Legend
+                                            {...legCfg}
+                                            layout={legLayout}
+                                            wrapperStyle={{
+                                              fontSize: `${chartSettings.fontSize}px`,
+                                              color: themeColors.text,
+                                              fontWeight: 700,
+                                              backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                              border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
+                                              padding: "4px 8px",
+                                              top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
+                                              left: legCfg.align === 'center' ? '50%' : legCfg.align === 'left' ? 10 : undefined,
+                                              right: legCfg.align === 'right' ? 10 : undefined,
+                                              transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
+                                              width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
+                                              zIndex: 50,
+                                              boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                              display: "flex",
+                                              justifyContent: "center",
+                                              whiteSpace: "nowrap"
+                                            }}
+                                            iconSize={chartSettings.markerSize + 4}
+                                          />
+                                          {comparisonChartAlternatives.map((alt, idx) => (
+                                            <Scatter 
+                                              key={alt} 
+                                              xAxisId="bottom" 
+                                              name={alt} 
+                                              data={comparisonChartData.map((d) => ({ x: d.method, y: d[alt] }))} 
+                                              fill={activeColors[idx % activeColors.length]} 
+                                              shape={((chartSettings.markerType as string) !== 'none' ? chartSettings.markerType : ["circle", "cross", "diamond", "square", "star", "triangle", "wye"][idx % 7]) as any} 
+                                              line 
+                                            />
+                                          ))}
+                                          {chartSettings.showGridLines && (
+                                            <CartesianGrid
+                                              strokeDasharray="3 3"
+                                              horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                              vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                              stroke={chartSettings.gridColor}
+                                              opacity={chartSettings.gridOpacity}
+                                              style={{ pointerEvents: 'none' }}
+                                            />
+                                          )}
+                                        </ScatterChart>
                                       </ResponsiveContainer>
                                     );
-                                  })()}
+                                    break;
+                                  case "boxPlot":
+                                    const boxData = comparisonChartAlternatives.map((alt) => {
+                                      const values = comparisonChartData.map((r) => r[alt]).filter((v) => v != null).sort((a: number, b: number) => a - b)
+                                      if (values.length === 0) return null
+                                      const q1 = values[Math.floor(values.length * 0.25)]
+                                      const median = values[Math.floor(values.length * 0.5)]
+                                      const q3 = values[Math.floor(values.length * 0.75)]
+                                      const min = Math.min(...values)
+                                      const max = Math.max(...values)
+                                      const iqr = q3 - q1
+                                      const whiskerLow = Math.max(min, q1 - 1.5 * iqr)
+                                      const whiskerHigh = Math.min(max, q3 + 1.5 * iqr)
+                                      return { alt, min, q1, median, q3, max, whiskerLow, whiskerHigh, n: values.length }
+                                    }).filter((d): d is any => d !== null)
+
+                                    if (boxData.length === 0) {
+                                      chartElement = <div />;
+                                    } else {
+                                      const allVals = boxData.flatMap(d => [d.whiskerLow, d.whiskerHigh])
+                                      const minV = Math.min(...allVals)
+                                      const maxV = Math.max(...allVals)
+                                      const yR = maxV - minV || 1
+                                      const pad = { top: 5, right: 120, bottom: 60, left: 120 }
+                                      const cW = 800 - pad.left - pad.right
+                                      const cH = 400 - pad.top - pad.bottom
+                                      const bW = Math.max(15, (cW / boxData.length) * 0.6)
+                                      const sp = cW / boxData.length
+                                      const gY = (v: number) => pad.top + cH - ((v - minV) / yR) * cH
+                                      const gX = (idx: number) => pad.left + (idx + 0.5) * sp
+
+                                      chartElement = (
+                                        <div className="w-full h-full relative" style={{ backgroundColor: themeColors.bg }}>
+                                          <div
+                                            style={{
+                                              position: 'absolute',
+                                              top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? '40px' : '100px',
+                                              left: '50%',
+                                              transform: 'translateX(-50%)',
+                                              zIndex: 10,
+                                              fontSize: `${chartSettings.fontSize}px`,
+                                              color: themeColors.text,
+                                              fontWeight: 700,
+                                              backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                              border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
+                                              padding: '4px 8px',
+                                              boxShadow: '2px 2px 0px rgba(0,0,0,1)',
+                                              display: 'flex',
+                                              gap: '12px',
+                                              whiteSpace: 'nowrap'
+                                            }}
+                                          >
+                                            <div className="flex items-center gap-1.5">
+                                              <div style={{ width: 12, height: 12, backgroundColor: '#ff3333' }}></div>
+                                              <span>Median Rank</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                              <div style={{ width: 12, height: 12, border: `1px solid ${themeColors.border}`, opacity: 0.4 }}></div>
+                                              <span>Interquartile Range (IQR)</span>
+                                            </div>
+                                          </div>
+
+                                          <svg viewBox="0 0 800 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+                                            {/* 4-Sided Academic Border */}
+                                            <rect x={pad.left} y={pad.top} width={cW} height={cH} fill="none" stroke={themeColors.border} strokeWidth={chartSettings.borderWidth + 0.5} />
+                                            
+                                            {/* Grid Lines */}
+                                            {chartSettings.showGridLines && (chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both') && Array.from({length: maxV - minV + 1}, (_, i) => minV + i).map((v) => (
+                                              <line key={`hgrid-${v}`} x1={pad.left} y1={gY(v)} x2={pad.left + cW} y2={gY(v)} stroke={chartSettings.gridColor} strokeWidth="0.5" opacity={chartSettings.gridOpacity} />
+                                            ))}
+                                            
+                                            {/* Y-Axis Labels (Ordinal Ranking) */}
+                                            {Array.from({length: Math.floor(maxV - minV + 1)}, (_, i) => Math.floor(minV + i)).map((v) => (
+                                              <g key={`ylabel-${v}`}>
+                                                <line x1={pad.left - 5} y1={gY(v)} x2={pad.left} y2={gY(v)} stroke={themeColors.border} strokeWidth="1.5" />
+                                                <text x={pad.left - 10} y={gY(v) + 4} fontSize={chartSettings.fontSize} textAnchor="end" fill={themeColors.text} fontWeight="600">{v}</text>
+                                              </g>
+                                            ))}
+
+                                            {boxData.map((data, idx) => {
+                                              const x = gX(idx)
+                                              const color = activeColors[idx % activeColors.length]
+                                              
+                                              // Raw values for jitter
+                                              const values = comparisonChartData.map((r) => r[data.alt]).filter((v) => v != null)
+
+                                              return (
+                                                <g key={`box-${data.alt}`}>
+                                                  {/* 1. Jittered points (Raw Data Distribution) */}
+                                                  {values.map((v, j) => (
+                                                    <circle
+                                                      key={`jitter-${j}`}
+                                                      cx={x + (Math.random() - 0.5) * (bW * 0.45)}
+                                                      cy={gY(v)}
+                                                      r={2}
+                                                      fill={color}
+                                                      opacity="0.3"
+                                                    />
+                                                  ))}
+
+                                                  {/* 2. Whiskers & Caps */}
+                                                  <line x1={x} y1={gY(data.whiskerLow)} x2={x} y2={gY(data.whiskerHigh)} stroke="#334155" strokeWidth="1.5" />
+                                                  <line x1={x - bW / 4} y1={gY(data.whiskerLow)} x2={x + bW / 4} y2={gY(data.whiskerLow)} stroke="#334155" strokeWidth="1.5" />
+                                                  <line x1={x - bW / 4} y1={gY(data.whiskerHigh)} x2={x + bW / 4} y2={gY(data.whiskerHigh)} stroke="#334155" strokeWidth="1.5" />
+                                                  
+                                                  {/* 3. The Box (IQR) */}
+                                                  <rect 
+                                                    x={x - bW / 2} 
+                                                    y={gY(data.q3)} 
+                                                    width={bW} 
+                                                    height={Math.max(1, gY(data.q1) - gY(data.q3))} 
+                                                    fill={color} 
+                                                    fillOpacity={0.15} 
+                                                    stroke={color} 
+                                                    strokeWidth={2} 
+                                                  />
+                                                  
+                                                  {/* 4. Median Line (Highlight) */}
+                                                  <line x1={x - bW / 2} y1={gY(data.median)} x2={x + bW / 2} y2={gY(data.median)} stroke="#ef4444" strokeWidth="3" strokeLinecap="round" />
+                                                  
+                                                  {/* 5. Alternative Name */}
+                                                  <text x={x} y={pad.top + cH + 25} fontSize={chartSettings.fontSize} textAnchor="middle" fill="#0f172a" fontWeight="700">{data.alt}</text>
+                                                </g>
+                                              )
+                                            })}
+
+                                            {/* Axis Titles */}
+                                            <text x={pad.left - 45} y={pad.top + cH / 2} fontSize={chartSettings.fontSize + 1} fontWeight="800" fill={themeColors.text} transform={`rotate(-90, ${pad.left - 45}, ${pad.top + cH / 2})`} textAnchor="middle">{chartSettings.yAxisTitle || 'Ordinal Ranking'}</text>
+                                            <text x={pad.left + cW / 2} y={400 - 5} fontSize={chartSettings.fontSize + 1} fontWeight="800" fill={themeColors.text} textAnchor="middle">{chartSettings.xAxisTitle || 'Alternatives'}</text>
+                                          </svg>
+                                        </div>
+                                      );
+                                    }
+                                    break;
+                                  default:
+                                    chartElement = (
+                                      <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart 
+                                          data={comparisonChartData} 
+                                          margin={{ 
+                                            top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, 
+                                            right: chartSettings.marginRight, 
+                                            left: chartSettings.marginLeft, 
+                                            bottom: chartSettings.marginBottom 
+                                          }}
+                                        >
+                                          <XAxis
+                                            dataKey="method"
+                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            label={chartSettings.showAxisTitles ? { 
+                                              value: chartSettings.xAxisTitle || 'MCDM Methods', 
+                                              position: 'insideBottom', 
+                                              offset: chartSettings.xAxisOffset, 
+                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text } 
+                                            } : undefined}
+                                            axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} 
+                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} 
+                                          />
+                                          <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
+                                          <YAxis
+                                            allowDecimals={false}
+                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            label={chartSettings.showAxisTitles ? { 
+                                              value: chartSettings.yAxisTitle || 'Ordinal Ranking', 
+                                              angle: -90, 
+                                              position: 'insideLeft', 
+                                              offset: chartSettings.yAxisOffset,
+                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text } 
+                                            } : undefined}
+                                            axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} 
+                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }} 
+                                          />
+                                          <YAxis {...rightAxisProps} />
+                                          <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                                          <Legend
+                                            {...legCfg}
+                                            layout={legLayout}
+                                            wrapperStyle={{
+                                              fontSize: `${chartSettings.fontSize}px`,
+                                              color: themeColors.text,
+                                              fontWeight: 700,
+                                              backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                              border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
+                                              padding: "4px 8px",
+                                              top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
+                                              left: legCfg.align === 'center' ? '50%' : legCfg.align === 'left' ? 10 : undefined,
+                                              right: legCfg.align === 'right' ? 10 : undefined,
+                                              transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
+                                              width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
+                                              zIndex: 50,
+                                              boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                              display: "flex",
+                                              justifyContent: "center",
+                                              whiteSpace: "nowrap"
+                                            }}
+                                            iconSize={chartSettings.markerSize + 4}
+                                          />
+                                          {comparisonChartAlternatives.map((alt, idx) => (
+                                            <Line 
+                                              key={alt} 
+                                              type={comparisonChartType === "step" ? "step" : "monotone"} 
+                                              dataKey={alt} 
+                                              stroke={activeColors[idx % activeColors.length]} 
+                                              strokeWidth={chartSettings.borderWidth} 
+                                              strokeDasharray={["0", "5 5", "3 3", "10 5", "2 2", "15 5"][idx % 6]} 
+                                              activeDot={{ r: chartSettings.markerSize + 2 }} 
+                                              dot={(chartSettings.markerType as string) !== 'none' ? (props: any) => {
+                                                const { cx, cy, index } = props;
+                                                const mSize = chartSettings.markerSize;
+                                                const seriesColor = activeColors[idx % activeColors.length];
+                                                if (chartSettings.markerType === "square") {
+                                                  return <rect key={`dot-${alt}-${index}`} x={cx - mSize} y={cy - mSize} width={mSize*2} height={mSize*2} fill={seriesColor} />;
+                                                }
+                                                if (chartSettings.markerType === "triangle") {
+                                                  return <path key={`dot-${alt}-${index}`} d={`M${cx},${cy - mSize} L${cx - mSize},${cy + mSize} L${cx + mSize},${cy + mSize} Z`} fill={seriesColor} />;
+                                                }
+                                                if (chartSettings.markerType === "diamond") {
+                                                  return <path key={`dot-${alt}-${index}`} d={`M${cx},${cy - mSize} L${cx + mSize},${cy} L${cx},${cy + mSize} L${cx - mSize},${cy} Z`} fill={seriesColor} />;
+                                                }
+                                                return <circle key={`dot-${alt}-${index}`} cx={cx} cy={cy} r={mSize} fill={seriesColor} />;
+                                              } : false} 
+                                            />
+                                          ))}
+                                          {chartSettings.showGridLines && (
+                                            <CartesianGrid
+                                              strokeDasharray="3 3"
+                                              horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                              vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                              stroke={chartSettings.gridColor}
+                                              opacity={chartSettings.gridOpacity}
+                                              style={{ pointerEvents: 'none' }}
+                                            />
+                                          )}
+                                        </LineChart>
+                                      </ResponsiveContainer>
+                                    );
+                                }
+                              }
+
+                              return (
+                                <div ref={comparisonChartRef} className="w-full h-full relative" style={{ backgroundColor: themeColors.bg, color: themeColors.text }}>
+                                  {chartElement}
                                 </div>
                               );
                             })()}
