@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useMemo, Fragment, useEffect } from "react"
 import { MCDMMethod, WeightMethod, PageStep, ComparisonResult, EntropyResult, CriticResult, AHPResult, PipreciaResult, MERECResult, SWARAResult, WensloResult, LopcowResult, DematelResult, SDResult, VarianceResult, MADResult, DBWResult, SVPResult, MDMResult, LSWResult, GPOWResult, LPWMResult, PCWMResult, RankingWeightResult, ROCResult, RRResult, Criterion, Alternative } from "@/types/mcdm"
@@ -248,91 +248,91 @@ export default function MCDMCalculator() {
   })
 
   // --- SCIENTIFIC CHART HELPERS ---
-    const getPaletteColors = (palette: string) => {
-      switch (palette) {
-        case 'academic': return ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
-        case 'grayscale': return ['#333333', '#666666', '#999999', '#cccccc', '#444444', '#777777', '#aaaaaa', '#dddddd', '#111111', '#999999'];
-        case 'vibrant': return ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#a855f7', '#6366f1'];
-        case 'fluorescent': return ['#ff00ff', '#00ffff', '#ffff00', '#00ff00', '#ff0000', '#0000ff', '#ff8000', '#8000ff', '#00ff80', '#ff0080'];
-        case 'viridis': return ['#440154', '#482878', '#3e4989', '#31688e', '#26828e', '#1f9e89', '#35b779', '#6ece58', '#b5de2b', '#fde725'];
-        case 'magma': return ['#000004', '#140e36', '#3b0f70', '#63118e', '#8c2981', '#b63679', '#de4968', '#f3735e', '#fca06e', '#fdee9b'];
-        case 'inferno': return ['#000004', '#160b39', '#420a68', '#6a176e', '#932667', '#bc3754', '#dd513a', '#f37819', '#fca50a', '#fcfdbf'];
-        default: return CHART_COLORS;
-      }
-    };
+  const getPaletteColors = (palette: string) => {
+    switch (palette) {
+      case 'academic': return ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
+      case 'grayscale': return ['#333333', '#666666', '#999999', '#cccccc', '#444444', '#777777', '#aaaaaa', '#dddddd', '#111111', '#999999'];
+      case 'vibrant': return ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#a855f7', '#6366f1'];
+      case 'fluorescent': return ['#ff00ff', '#00ffff', '#ffff00', '#00ff00', '#ff0000', '#0000ff', '#ff8000', '#8000ff', '#00ff80', '#ff0080'];
+      case 'viridis': return ['#440154', '#482878', '#3e4989', '#31688e', '#26828e', '#1f9e89', '#35b779', '#6ece58', '#b5de2b', '#fde725'];
+      case 'magma': return ['#000004', '#140e36', '#3b0f70', '#63118e', '#8c2981', '#b63679', '#de4968', '#f3735e', '#fca06e', '#fdee9b'];
+      case 'inferno': return ['#000004', '#160b39', '#420a68', '#6a176e', '#932667', '#bc3754', '#dd513a', '#f37819', '#fca50a', '#fcfdbf'];
+      default: return CHART_COLORS;
+    }
+  };
 
-    const makeCustomDot = (color: string) => (props: any) => {
-      const { cx, cy, index } = props;
-      const size = chartSettings.markerSize || 4;
-      const type = chartSettings.markerType || 'circle';
-      const key = `custom-dot-${index}`;
-      if (type === 'square') return <rect key={key} x={cx - size} y={cy - size} width={size * 2} height={size * 2} fill={color} stroke="#fff" strokeWidth={1} />;
-      if (type === 'triangle') return <path key={key} d={`M ${cx} ${cy - size} L ${cx + size} ${cy + size} L ${cx - size} ${cy + size} Z`} fill={color} stroke="#fff" strokeWidth={1} />;
-      if (type === 'diamond') return <path key={key} d={`M ${cx} ${cy - size} L ${cx + size} ${cy} L ${cx} ${cy + size} L ${cx - size} ${cy} Z`} fill={color} stroke="#fff" strokeWidth={1} />;
-      return <circle key={key} cx={cx} cy={cy} r={size} fill={color} stroke="#fff" strokeWidth={1} />;
-    };
+  const makeCustomDot = (color: string) => (props: any) => {
+    const { cx, cy, index } = props;
+    const size = chartSettings.markerSize || 4;
+    const type = chartSettings.markerType || 'circle';
+    const key = `custom-dot-${index}`;
+    if (type === 'square') return <rect key={key} x={cx - size} y={cy - size} width={size * 2} height={size * 2} fill={color} stroke="#fff" strokeWidth={1} />;
+    if (type === 'triangle') return <path key={key} d={`M ${cx} ${cy - size} L ${cx + size} ${cy + size} L ${cx - size} ${cy + size} Z`} fill={color} stroke="#fff" strokeWidth={1} />;
+    if (type === 'diamond') return <path key={key} d={`M ${cx} ${cy - size} L ${cx + size} ${cy} L ${cx} ${cy + size} L ${cx - size} ${cy} Z`} fill={color} stroke="#fff" strokeWidth={1} />;
+    return <circle key={key} cx={cx} cy={cy} r={size} fill={color} stroke="#fff" strokeWidth={1} />;
+  };
 
-    const RightFrameBorder = (props: any) => {
-      if (chartSettings.frameStyle !== 'Box') return null;
-      const { viewBox } = props;
-      if (!viewBox || viewBox.width == null) return null;
-      const stroke = chartSettings.backgroundTheme === 'dark' ? '#cbd5e1' : '#000000';
-      return <line x1={viewBox.x + viewBox.width} y1={viewBox.y} x2={viewBox.x + viewBox.width} y2={viewBox.y + viewBox.height} stroke={stroke} strokeWidth={1.5} />;
-    };
+  const RightFrameBorder = (props: any) => {
+    if (chartSettings.frameStyle !== 'Box') return null;
+    const { viewBox } = props;
+    if (!viewBox || viewBox.width == null) return null;
+    const stroke = chartSettings.backgroundTheme === 'dark' ? '#cbd5e1' : '#000000';
+    return <line x1={viewBox.x + viewBox.width} y1={viewBox.y} x2={viewBox.x + viewBox.width} y2={viewBox.y + viewBox.height} stroke={stroke} strokeWidth={1.5} />;
+  };
 
-    const getTickLine = (orientation: 'top' | 'bottom' | 'left' | 'right') => {
-      const isInner = chartSettings.tickDirection === 'inner';
-      const stroke = chartSettings.backgroundTheme === 'dark' ? '#cbd5e1' : '#000000';
-      return { stroke, strokeWidth: 1, transform: isInner ? (orientation === 'left' ? 'translateX(6px)' : orientation === 'right' ? 'translateX(-6px)' : orientation === 'top' ? 'translateY(6px)' : 'translateY(-6px)') : '' };
-    };
+  const getTickLine = (orientation: 'top' | 'bottom' | 'left' | 'right') => {
+    const isInner = chartSettings.tickDirection === 'inner';
+    const stroke = chartSettings.backgroundTheme === 'dark' ? '#cbd5e1' : '#000000';
+    return { stroke, strokeWidth: 1, transform: isInner ? (orientation === 'left' ? 'translateX(6px)' : orientation === 'right' ? 'translateX(-6px)' : orientation === 'top' ? 'translateY(6px)' : 'translateY(-6px)') : '' };
+  };
 
-    const renderDefs = (colors: string[] = []) => {
-      const stroke = chartSettings.separatorColor || '#ffffff';
-      const showSep = chartSettings.showSeparator;
-      // Default colors if none provided
-      const finalColors = colors.length > 0 ? colors : ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
-      
-      return (
-        <defs>
-          {/* Generic patterns for simple cases */}
-          <pattern id="pattern-striped" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-            <rect width="8" height="8" fill="transparent" />
-            <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,255,255,0.3)" strokeWidth="4" />
-          </pattern>
-          <pattern id="pattern-dotted" width="4" height="4" patternUnits="userSpaceOnUse">
-            <circle cx="1" cy="1" r="1" fill="rgba(255,255,255,0.4)" />
-          </pattern>
-          <pattern id="pattern-grid" width="10" height="10" patternUnits="userSpaceOnUse">
-            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
-          </pattern>
-          
-          {/* Color-specific patterns */}
-          {finalColors.map((color, i) => (
-            <Fragment key={`pattern-defs-${i}`}>
-              <pattern id={`pattern-striped-${i}`} width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                <rect width="8" height="8" fill={color} />
-                <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,255,255,0.3)" strokeWidth="4" />
-              </pattern>
-              <pattern id={`pattern-dotted-${i}`} width="4" height="4" patternUnits="userSpaceOnUse">
-                <rect width="4" height="4" fill={color} />
-                <circle cx="1" cy="1" r="1" fill="rgba(255,255,255,0.4)" />
-              </pattern>
-              <pattern id={`pattern-grid-${i}`} width="10" height="10" patternUnits="userSpaceOnUse">
-                <rect width="10" height="10" fill={color} />
-                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
-              </pattern>
-            </Fragment>
-          ))}
-        </defs>
-      );
-    };
+  const renderDefs = (colors: string[] = []) => {
+    const stroke = chartSettings.separatorColor || '#ffffff';
+    const showSep = chartSettings.showSeparator;
+    // Default colors if none provided
+    const finalColors = colors.length > 0 ? colors : ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
 
-    const getFillPattern = (color: string, index: number = 0) => {
-      if (chartSettings.fillPattern === 'striped') return `url(#pattern-striped-${index})`;
-      if (chartSettings.fillPattern === 'dotted') return `url(#pattern-dotted-${index})`;
-      if (chartSettings.fillPattern === 'grid') return `url(#pattern-grid-${index})`;
-      return color;
-    };
+    return (
+      <defs>
+        {/* Generic patterns for simple cases */}
+        <pattern id="pattern-striped" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="8" height="8" fill="transparent" />
+          <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,255,255,0.3)" strokeWidth="4" />
+        </pattern>
+        <pattern id="pattern-dotted" width="4" height="4" patternUnits="userSpaceOnUse">
+          <circle cx="1" cy="1" r="1" fill="rgba(255,255,255,0.4)" />
+        </pattern>
+        <pattern id="pattern-grid" width="10" height="10" patternUnits="userSpaceOnUse">
+          <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
+        </pattern>
+
+        {/* Color-specific patterns */}
+        {finalColors.map((color, i) => (
+          <Fragment key={`pattern-defs-${i}`}>
+            <pattern id={`pattern-striped-${i}`} width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="8" height="8" fill={color} />
+              <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,255,255,0.3)" strokeWidth="4" />
+            </pattern>
+            <pattern id={`pattern-dotted-${i}`} width="4" height="4" patternUnits="userSpaceOnUse">
+              <rect width="4" height="4" fill={color} />
+              <circle cx="1" cy="1" r="1" fill="rgba(255,255,255,0.4)" />
+            </pattern>
+            <pattern id={`pattern-grid-${i}`} width="10" height="10" patternUnits="userSpaceOnUse">
+              <rect width="10" height="10" fill={color} />
+              <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
+            </pattern>
+          </Fragment>
+        ))}
+      </defs>
+    );
+  };
+
+  const getFillPattern = (color: string, index: number = 0) => {
+    if (chartSettings.fillPattern === 'striped') return `url(#pattern-striped-${index})`;
+    if (chartSettings.fillPattern === 'dotted') return `url(#pattern-dotted-${index})`;
+    if (chartSettings.fillPattern === 'grid') return `url(#pattern-grid-${index})`;
+    return color;
+  };
 
   // Persistence for navigation state
   useEffect(() => {
@@ -3569,15 +3569,15 @@ export default function MCDMCalculator() {
 
   const cardFormula = showingWeightFormula
     ? weightMethod === "entropy"
-      ? "w_j = d_j / ÃŽÂ£d_j, where d_j = 1 - E_j and E_j = -k ÃŽÂ£(p_ij × ln(p_ij))"
+      ? "w_j = d_j / Σd_j, where d_j = 1 - E_j and E_j = -k Σ(p_ij × ln(p_ij))"
       : weightMethod === "critic"
-        ? "w_j = C_j / ÃŽÂ£C_j, where C_j = σ_j × ÃŽÂ£(1 - r_jk)"
+        ? "w_j = C_j / ΣC_j, where C_j = σ_j × Σ(1 - r_jk)"
         : weightMethod === "ahp"
           ? "w = eigenvector of pairwise matrix a_ij = w_i / w_j; check CR = CI / RI"
           : weightMethod === "piprecia"
-            ? "w_j = q_j / ÃŽÂ£q, where q_j = q_{j-1}/k_j, k_j derived from relative importance sort"
+            ? "w_j = q_j / Σq, where q_j = q_{j-1}/k_j, k_j derived from relative importance sort"
             : weightMethod === "pcwm"
-              ? "w_j = C_j / ÃŽÂ£C_j, where C_j = ÃŽÂ£(1 - r_jk)"
+              ? "w_j = C_j / ΣC_j, where C_j = Σ(1 - r_jk)"
               : weightMethodInfo?.label
     : methodInfo?.formula
 
@@ -4510,7 +4510,7 @@ export default function MCDMCalculator() {
                 setNumCriteria(newCriteria.length);
                 setCurrentStep("table");
               } else if (extractedData.criteria?.length > 0 && extractedData.alternatives?.length > 0) {
-                // No matrix values but we have criteria and alternatives ââ‚¬” fill names only
+                // No matrix values but we have criteria and alternatives — fill names only
                 const newCriteria: Criterion[] = extractedData.criteria.map((c: any, i: number) => ({
                   id: `crit-${i}`,
                   name: c.name,
@@ -4571,7 +4571,7 @@ export default function MCDMCalculator() {
                 <span className={`${aiResearchContext.researchGap.split(' ').filter(w => w.length > 0).length < 50 ? 'text-amber-600' : aiResearchContext.researchGap.split(' ').filter(w => w.length > 0).length > 150 ? 'text-green-600' : 'text-blue-600'}`}>
                   {aiResearchContext.researchGap.split(' ').filter(w => w.length > 0).length} words
                   {aiResearchContext.researchGap.split(' ').filter(w => w.length > 0).length < 50 && ' - Add more detail for better AI results'}
-                  {aiResearchContext.researchGap.split(' ').filter(w => w.length > 0).length >= 150 && ' - Excellent detail! âÅ“…'}
+                  {aiResearchContext.researchGap.split(' ').filter(w => w.length > 0).length >= 150 && ' - Excellent detail! ✓'}
                 </span>
               </div>
             </div>
@@ -9663,33 +9663,33 @@ export default function MCDMCalculator() {
                                       </BarChart>
                                     ) : sensitivityChartType === "area" ? (
                                       <AreaChart
-                                         data={sensitivityWeightChartData}
-                                         margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
-                                       >
-                                         {renderDefs(activeColors)}
-                                         <Customized component={RightFrameBorder} />
-                                         <XAxis
-                                           dataKey="name"
-                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
-                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
-                                           tickLine={getTickLine('bottom')}
-                                           label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } }} />
-                                         <XAxis
-                                           orientation="top"
-                                           xAxisId="top_border"
-                                           dataKey="name"
-                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
-                                           tick={false}
-                                           tickLine={false}
-                                         />
-                                         <YAxis
-                                           label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
-                                           interval={0}
-                                           domain={[0, (alternatives.length || 8) || 'dataMax']}
-                                           ticks={Array.from({ length: ((alternatives.length || 8) || 0) + 1 }, (_, i) => i)}
-                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
-                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
-                                           tickLine={getTickLine('left')} />
+                                        data={sensitivityWeightChartData}
+                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                      >
+                                        {renderDefs(activeColors)}
+                                        <Customized component={RightFrameBorder} />
+                                        <XAxis
+                                          dataKey="name"
+                                          tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
+                                          tickLine={getTickLine('bottom')}
+                                          label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } }} />
+                                        <XAxis
+                                          orientation="top"
+                                          xAxisId="top_border"
+                                          dataKey="name"
+                                          axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
+                                          tick={false}
+                                          tickLine={false}
+                                        />
+                                        <YAxis
+                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                          interval={0}
+                                          domain={[0, (alternatives.length || 8) || 'dataMax']}
+                                          ticks={Array.from({ length: ((alternatives.length || 8) || 0) + 1 }, (_, i) => i)}
+                                          tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
+                                          tickLine={getTickLine('left')} />
                                         <YAxis
                                           orientation="right"
                                           yAxisId="right_border"
@@ -11057,7 +11057,7 @@ export default function MCDMCalculator() {
             <div className="max-w-7xl mx-auto">
               {sweiSwiValidationWarning && (
                 <div className="mb-3 p-3 bg-amber-50 border border-amber-300 rounded-lg text-amber-800 text-xs">
-                  <p className="font-semibold">âÅ¡Â Ã¯Â¸Â  {sweiSwiValidationWarning.message}</p>
+                  <p className="font-semibold">⚠️, ✓  {sweiSwiValidationWarning.message}</p>
                   <p className="mt-1 text-amber-700">
                     Invalid values found in: {sweiSwiValidationWarning.invalidCells.slice(0, 5).join(", ")}
                     {sweiSwiValidationWarning.invalidCells.length > 5 && ` and ${sweiSwiValidationWarning.invalidCells.length - 5} more...`}
@@ -11851,7 +11851,7 @@ export default function MCDMCalculator() {
                       <ResearchAssetHeader
                         assetKey="critic_standard_deviation_j"
                         defaultLabel={getWeightTableLabel()}
-                        title="STANDARD DEVIATION (ÃŽÂ£_J)"
+                        title="STANDARD DEVIATION (Σ_J)"
                         included={selectedAiAssets.has("critic_standard_deviation_j")}
                         onIncludeChange={handleIncludeChange}
                         onLabelChange={handleAssetLabelChange}
@@ -13168,7 +13168,7 @@ export default function MCDMCalculator() {
                       <ResearchAssetHeader
                         assetKey="sd_standard_deviation_per_criterion_j"
                         defaultLabel={getWeightTableLabel()}
-                        title="STANDARD DEVIATION PER CRITERION (ÃŽÂ£_J)"
+                        title="STANDARD DEVIATION PER CRITERION (Σ_J)"
                         included={selectedAiAssets.has("sd_standard_deviation_per_criterion_j")}
                         onIncludeChange={handleIncludeChange}
                         onLabelChange={handleAssetLabelChange}
@@ -13335,7 +13335,7 @@ export default function MCDMCalculator() {
                       <ResearchAssetHeader
                         assetKey="variance_statistical_variance_per_criterion_j"
                         defaultLabel={getWeightTableLabel()}
-                        title="STATISTICAL VARIANCE PER CRITERION (ÃŽÂ£Ã‚Â²_J)"
+                        title="STATISTICAL VARIANCE PER CRITERION (σ²_j)"
                         included={selectedAiAssets.has("variance_statistical_variance_per_criterion_j")}
                         onIncludeChange={handleIncludeChange}
                         onLabelChange={handleAssetLabelChange}
@@ -14530,7 +14530,7 @@ export default function MCDMCalculator() {
                       <ResearchAssetHeader
                         assetKey="lpwm_anti_ideal_values_a_and_lower_deviations_ld_j"
                         defaultLabel={getWeightTableLabel()}
-                        title="ANTI-IDEAL VALUES (Aâ») AND LOWER DEVIATIONS (LD_J)"
+                        title="ANTI-IDEAL VALUES (A⁻) AND LOWER DEVIATIONS (LD_J)"
                         included={selectedAiAssets.has("lpwm_anti_ideal_values_a_and_lower_deviations_ld_j")}
                         onIncludeChange={handleIncludeChange}
                         onLabelChange={handleAssetLabelChange}
@@ -14552,7 +14552,7 @@ export default function MCDMCalculator() {
                           </TableHeader>
                           <TableBody>
                             <TableRow className="border-b border-gray-200 hover:bg-gray-50">
-                              <TableCell className="py-3 px-4 font-medium text-black text-xs">Anti-Ideal (Aâ»)</TableCell>
+                              <TableCell className="py-3 px-4 font-medium text-black text-xs">Anti-Ideal (A⁻)</TableCell>
                               {criteria.map((crit) => (
                                 <TableCell key={crit.id} className="text-center py-1.5 px-1 text-[10px] text-black font-semibold border-r border-gray-300">
                                   {lpwmResult.antiIdealValues[crit.id]?.toFixed(weightsDecimalPlaces)}
@@ -15414,7 +15414,7 @@ export default function MCDMCalculator() {
                           </div>
 
                           <div className="sticky bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 flex justify-between items-center px-8">
-                            <p className="text-[10px] text-gray-400">Ã‚© AI Generated Academic Draft - Review for precision</p>
+                            <p className="text-[10px] text-gray-400">© AI Generated Academic Draft - Review for precision</p>
                             <div className="flex gap-2">
                               <Button
                                 onClick={() => {
@@ -16714,7 +16714,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -16757,7 +16757,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -16804,7 +16804,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -16847,7 +16847,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -17158,7 +17158,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -17201,7 +17201,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -17292,7 +17292,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -17332,9 +17332,9 @@ export default function MCDMCalculator() {
                             <TableHeader>
                               <TableRow className="bg-gray-50 border-b border-gray-200">
                                 <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
-                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Positive Flow (Ãâ€ +)</TableHead>
-                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Negative Flow (Ãâ€ -)</TableHead>
-                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Net Flow (Ãâ€ )</TableHead>
+                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Positive Flow (Φ+)</TableHead>
+                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Negative Flow (Φ-)</TableHead>
+                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Net Flow (Φ)</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -17383,7 +17383,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -17465,8 +17465,8 @@ export default function MCDMCalculator() {
                             <TableHeader>
                               <TableRow className="bg-gray-50 border-b border-gray-200">
                                 <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
-                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Positive Flow (Ãâ€ +)</TableHead>
-                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Negative Flow (Ãâ€ -)</TableHead>
+                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Positive Flow (Φ+)</TableHead>
+                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Negative Flow (Φ-)</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -17554,7 +17554,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -17636,9 +17636,9 @@ export default function MCDMCalculator() {
                             <TableHeader>
                               <TableRow className="bg-gray-50 border-b border-gray-200">
                                 <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
-                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Positive Flow (Ãâ€ +)</TableHead>
-                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Negative Flow (Ãâ€ -)</TableHead>
-                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Net Flow (Ãâ€ )</TableHead>
+                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Positive Flow (Φ+)</TableHead>
+                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Negative Flow (Φ-)</TableHead>
+                                <TableHead className="text-xs font-semibold text-black py-3 px-4 text-center">Net Flow (Φ)</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -17693,7 +17693,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -17866,7 +17866,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18081,7 +18081,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18124,7 +18124,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18167,7 +18167,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18214,7 +18214,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18257,7 +18257,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18300,7 +18300,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18391,7 +18391,7 @@ export default function MCDMCalculator() {
                                 <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18418,7 +18418,7 @@ export default function MCDMCalculator() {
                         <ResearchAssetHeader
                           assetKey="gra_deviation_sequence_ij"
                           defaultLabel={getRankingTableLabel()}
-                          title="DEVIATION SEQUENCE (ÃŽ”IJ)"
+                          title="DEVIATION SEQUENCE (Δ_ij)"
                           included={selectedAiAssets.has("gra_deviation_sequence_ij")}
                           onIncludeChange={handleIncludeChange}
                           onLabelChange={handleAssetLabelChange}
@@ -18432,7 +18432,7 @@ export default function MCDMCalculator() {
                                 <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18459,7 +18459,7 @@ export default function MCDMCalculator() {
                         <ResearchAssetHeader
                           assetKey="gra_grey_relational_coefficients_ij"
                           defaultLabel={getRankingTableLabel()}
-                          title="GREY RELATIONAL COEFFICIENTS (ÃŽÅ¾IJ)"
+                          title="GREY RELATIONAL COEFFICIENTS (ξ_ij)"
                           included={selectedAiAssets.has("gra_grey_relational_coefficients_ij")}
                           onIncludeChange={handleIncludeChange}
                           onLabelChange={handleAssetLabelChange}
@@ -18473,7 +18473,7 @@ export default function MCDMCalculator() {
                                 <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18518,7 +18518,7 @@ export default function MCDMCalculator() {
                                 <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18585,7 +18585,7 @@ export default function MCDMCalculator() {
                                 <TableHead className="text-xs font-semibold text-black py-3 px-4">Alternative</TableHead>
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-xs font-semibold text-center py-3 px-4 ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18675,7 +18675,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18718,7 +18718,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18815,7 +18815,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18858,7 +18858,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18901,7 +18901,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -18993,7 +18993,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-center py-3 px-4 font-semibold text-xs ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19033,7 +19033,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19076,7 +19076,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19176,7 +19176,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19219,7 +19219,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19262,7 +19262,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19303,7 +19303,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19350,7 +19350,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19393,7 +19393,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19436,7 +19436,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19533,7 +19533,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19576,7 +19576,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19667,7 +19667,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19710,7 +19710,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19818,7 +19818,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19860,7 +19860,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-center py-3 px-4 font-semibold text-xs ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19948,7 +19948,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -19990,7 +19990,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-center py-3 px-4 font-semibold text-xs ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -20078,7 +20078,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -20121,7 +20121,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -20212,7 +20212,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -20255,7 +20255,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -20298,7 +20298,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
@@ -20341,7 +20341,7 @@ export default function MCDMCalculator() {
                                 {criteria.map((crit) => (
                                   <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-1 px-1 border-r border-gray-300 ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
                                     }`}>
-                                    {crit.name} {crit.type === "beneficial" ? "â†‘" : "â†“"}
+                                    {crit.name} {crit.type === "beneficial" ? "↑" : "↓"}
                                   </TableHead>
                                 ))}
                               </TableRow>
