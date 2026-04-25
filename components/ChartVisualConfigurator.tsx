@@ -40,12 +40,17 @@ import { Switch } from '@/components/ui/switch';
 
 export interface ChartSettings {
   // Styles
-  colorPalette: 'default' | 'academic' | 'grayscale' | 'vibrant' | 'custom';
+  colorPalette: 'default' | 'academic' | 'grayscale' | 'vibrant' | 'fluorescent' | 'viridis' | 'magma' | 'inferno' | 'custom';
   backgroundTheme: 'white' | 'slate' | 'dark' | 'glass';
   borderWidth: number;
   barOpacity: number;
   gridColor: string;
   gridOpacity: number;
+  gridStyle: 'normal' | 'hairline';
+
+  // Scientific Framing
+  frameStyle: 'L-Frame' | 'Box';
+  tickDirection: 'inner' | 'outer';
 
   // Elements
   showMirrorTicks: boolean;
@@ -60,7 +65,18 @@ export interface ChartSettings {
   fontSize: number;
   markerSize: number;
   markerType: 'circle' | 'square' | 'triangle' | 'diamond';
+  lineStyle: 'uniform' | 'alternating' | 'sequential' | 'dashed' | 'dotted';
   resultsDecimalPlaces: number;
+
+  // Enhancements
+  barSaturation: number;
+  barBrightness: number;
+  fillPattern: 'none' | 'striped' | 'dotted' | 'grid';
+  separatorColor: string;
+  showSeparator: boolean;
+  aspectRatio: 'auto' | '1:1' | '4:3' | '16:9' | '3:2' | 'golden' | 'journal-single' | 'journal-double';
+  zeroBaseline: boolean;
+  directLabeling: boolean;
 
   // Custom Labels
   xAxisTitle: string;
@@ -93,10 +109,13 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
   const updateSetting = <K extends keyof ChartSettings>(key: K, value: ChartSettings[K]) => {
     onSettingsChange({ ...settings, [key]: value });
   };
-
   const paletteColors = {
     academic: ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'],
     vibrant: ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#a855f7', '#64748b'],
+    fluorescent: ['#FF00FF', '#00FFFF', '#00FF00', '#FFFF00', '#FF0000', '#8A2BE2', '#FF4500', '#7FFF00', '#1E90FF', '#FF1493'],
+    viridis: ['#440154', '#482878', '#3e4989', '#31688e', '#26828e', '#1f9e89', '#35b779', '#6ece58', '#addc30', '#fde725'],
+    magma: ['#000004', '#140e36', '#3b0f70', '#631184', '#8c2981', '#b73779', '#de4968', '#f56d5d', '#fe9444', '#ffbd35'],
+    inferno: ['#000004', '#1b0c41', '#4a0c6b', '#781c6d', '#a52c60', '#cf4446', '#ed6925', '#fb9b06', '#f7d13d', '#fcffa4'],
     grayscale: ['#333', '#666', '#999', '#aaa', '#ccc', '#777', '#555', '#444', '#888', '#999'],
     default: ['#8884d8', '#82ca9d', '#ffc658', '#0088fe', '#00c49f', '#ff8042', '#a4de6c', '#d0ed57', '#83a6ed', '#8dd1e1']
   };
@@ -334,7 +353,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                    <div className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-lg">
                       <span className="text-[10px] font-black text-blue-500 w-4">X</span>
                       <Input
-                        value={settings.xAxisTitle}
+                        value={settings.xAxisTitle || ''}
                         onChange={(e) => updateSetting('xAxisTitle', e.target.value)}
                         disabled={!settings.showAxisTitles}
                         placeholder="X-Axis Title"
@@ -344,7 +363,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                    <div className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-lg">
                       <span className="text-[10px] font-black text-green-500 w-4">Y</span>
                       <Input
-                        value={settings.yAxisTitle}
+                        value={settings.yAxisTitle || ''}
                         onChange={(e) => updateSetting('yAxisTitle', e.target.value)}
                         disabled={!settings.showAxisTitles}
                         placeholder="Y-Axis Title"
@@ -364,8 +383,8 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                   <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Master Palette</Label>
                   <Palette className="w-3.5 h-3.5 text-blue-500" />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['academic', 'grayscale', 'vibrant', 'default'] as const).map((p) => (
+                <div className="grid grid-cols-3 gap-2">
+                  {(['academic', 'grayscale', 'vibrant', 'fluorescent', 'viridis', 'magma', 'inferno', 'default'] as const).map((p) => (
                     <button
                       key={p}
                       onClick={() => updateSetting('colorPalette', p)}
@@ -401,21 +420,47 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     </button>
                   ))}
                 </div>
-                <div className="pt-4 space-y-4 border-t border-slate-50">
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-[10px] font-black text-slate-400">
-                      <span>FILL OPACITY</span>
-                      <span>{Math.round(settings.barOpacity * 100)}%</span>
+                  <div className="pt-4 space-y-4 border-t border-slate-50">
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[10px] font-black text-slate-400">
+                        <span>FILL OPACITY</span>
+                        <span>{Math.round(settings.barOpacity * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.1" max="1" step="0.1"
+                        value={settings.barOpacity ?? 0.8}
+                        onChange={(e) => updateSetting('barOpacity', parseFloat(e.target.value))}
+                        className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      />
                     </div>
-                    <input
-                      type="range"
-                      min="0.1" max="1" step="0.1"
-                      value={settings.barOpacity}
-                      onChange={(e) => updateSetting('barOpacity', parseFloat(e.target.value))}
-                      className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[10px] font-black text-slate-400">
+                        <span>SATURATION</span>
+                        <span>{Math.round(settings.barSaturation * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0" max="2" step="0.1"
+                        value={settings.barSaturation ?? 1.0}
+                        onChange={(e) => updateSetting('barSaturation', parseFloat(e.target.value))}
+                        className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[10px] font-black text-slate-400">
+                        <span>BRIGHTNESS</span>
+                        <span>{Math.round(settings.barBrightness * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0" max="2" step="0.1"
+                        value={settings.barBrightness ?? 1.0}
+                        onChange={(e) => updateSetting('barBrightness', parseFloat(e.target.value))}
+                        className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      />
+                    </div>
                   </div>
-                </div>
               </div>
 
               <div className="space-y-4 border-l border-slate-100 pl-8">
@@ -429,9 +474,37 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                       <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => updateSetting('borderWidth', Math.min(4, settings.borderWidth + 0.5))}>+</Button>
                     </div>
                   </div>
+
+                  {/* Line Style Selector */}
+                  <div className="space-y-2">
+                    <span className="text-[11px] font-bold text-slate-600">Line Style</span>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {([
+                        { value: 'uniform',     label: 'Uniform Solid',   preview: '────────' },
+                        { value: 'alternating', label: 'Alternating',     preview: '──── - ──── -' },
+                        { value: 'sequential',  label: 'Sequential Mix',  preview: '─ · ─── ···' },
+                        { value: 'dashed',      label: 'All Dashed',      preview: '── ── ── ──' },
+                        { value: 'dotted',      label: 'All Dotted',      preview: '· · · · · ·' },
+                      ] as const).map(({ value, label, preview }) => (
+                        <button
+                          key={value}
+                          onClick={() => updateSetting('lineStyle', value)}
+                          className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-left transition-all ${
+                            settings.lineStyle === value
+                              ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200'
+                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          <span className="text-[10px] font-black text-slate-600 uppercase tracking-tight">{label}</span>
+                          <span className="text-[10px] font-mono text-slate-400 tracking-tighter">{preview}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-slate-600">Precision</span>
-                    <Select value={settings.resultsDecimalPlaces.toString()} onValueChange={(val) => updateSetting('resultsDecimalPlaces', parseInt(val))}>
+                    <Select value={(settings.resultsDecimalPlaces ?? 3).toString()} onValueChange={(val) => updateSetting('resultsDecimalPlaces', parseInt(val))}>
                       <SelectTrigger className="h-8 text-xs font-bold w-20 bg-white">
                         <SelectValue />
                       </SelectTrigger>
@@ -442,6 +515,90 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                         <SelectItem value="4">.0001</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-50 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-600">Fill Pattern</span>
+                      <Select value={settings.fillPattern || 'none'} onValueChange={(val: any) => updateSetting('fillPattern', val)}>
+                        <SelectTrigger className="h-8 text-[10px] font-bold w-24 bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Solid</SelectItem>
+                          <SelectItem value="striped">Striped</SelectItem>
+                          <SelectItem value="dotted">Dotted</SelectItem>
+                          <SelectItem value="grid">Grid</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-slate-600">Separators</span>
+                        <Switch checked={settings.showSeparator} onCheckedChange={(val) => updateSetting('showSeparator', val)} />
+                      </div>
+                      <input 
+                        type="color" 
+                        value={settings.separatorColor || '#ffffff'} 
+                        onChange={(e) => updateSetting('separatorColor', e.target.value)}
+                        className="w-8 h-8 rounded border-none cursor-pointer bg-transparent"
+                        disabled={!settings.showSeparator}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-600">Grid Style</span>
+                      <Select value={settings.gridStyle || 'normal'} onValueChange={(val: any) => updateSetting('gridStyle', val)}>
+                        <SelectTrigger className="h-8 text-[10px] font-bold w-24 bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="normal">Normal</SelectItem>
+                          <SelectItem value="hairline">Hairline</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-600">Frame Style</span>
+                      <Select value={settings.frameStyle || 'L-Frame'} onValueChange={(val: any) => updateSetting('frameStyle', val)}>
+                        <SelectTrigger className="h-8 text-[10px] font-bold w-24 bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="L-Frame">L-Frame</SelectItem>
+                          <SelectItem value="Box">Box Frame</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-600">Ticks</span>
+                      <Select value={settings.tickDirection || 'outer'} onValueChange={(val: any) => updateSetting('tickDirection', val)}>
+                        <SelectTrigger className="h-8 text-[10px] font-bold w-24 bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="outer">Outer</SelectItem>
+                          <SelectItem value="inner">Inward</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-slate-50 pt-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-slate-600">Zero Baseline</span>
+                        <Switch checked={settings.zeroBaseline} onCheckedChange={(val) => updateSetting('zeroBaseline', val)} />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-slate-600">Direct Labels</span>
+                        <Switch checked={settings.directLabeling} onCheckedChange={(val) => updateSetting('directLabeling', val)} />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -468,7 +625,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-slate-600">Type</span>
-                    <Select value={settings.markerType} onValueChange={(val: any) => updateSetting('markerType', val)}>
+                    <Select value={settings.markerType || 'circle'} onValueChange={(val: any) => updateSetting('markerType', val)}>
                       <SelectTrigger className="h-8 text-xs font-bold w-24 bg-white">
                         <SelectValue />
                       </SelectTrigger>
@@ -502,7 +659,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     <input
                       type="range"
                       min="-50" max="50" step="1"
-                      value={settings.xAxisOffset}
+                      value={settings.xAxisOffset ?? 0}
                       onChange={(e) => updateSetting('xAxisOffset', parseInt(e.target.value))}
                       className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                     />
@@ -515,7 +672,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     <input
                       type="range"
                       min="-50" max="50" step="1"
-                      value={settings.yAxisOffset}
+                      value={settings.yAxisOffset ?? 0}
                       onChange={(e) => updateSetting('yAxisOffset', parseInt(e.target.value))}
                       className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                     />
@@ -534,7 +691,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     <input
                       type="range"
                       min="0" max="150" step="5"
-                      value={settings.marginTop}
+                      value={settings.marginTop ?? 35}
                       onChange={(e) => updateSetting('marginTop', parseInt(e.target.value))}
                       className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                     />
@@ -547,7 +704,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     <input
                       type="range"
                       min="0" max="150" step="5"
-                      value={settings.marginBottom}
+                      value={settings.marginBottom ?? 35}
                       onChange={(e) => updateSetting('marginBottom', parseInt(e.target.value))}
                       className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                     />
@@ -560,7 +717,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     <input
                       type="range"
                       min="0" max="150" step="5"
-                      value={settings.marginLeft}
+                      value={settings.marginLeft ?? 20}
                       onChange={(e) => updateSetting('marginLeft', parseInt(e.target.value))}
                       className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                     />
@@ -573,10 +730,32 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     <input
                       type="range"
                       min="0" max="150" step="5"
-                      value={settings.marginRight}
+                      value={settings.marginRight ?? 20}
                       onChange={(e) => updateSetting('marginRight', parseInt(e.target.value))}
                       className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                     />
+                  </div>
+                </div>
+
+                <div className="w-full md:w-[20%] space-y-4 border-l border-slate-100 pl-8">
+                  <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Scientific Presets</Label>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-600">Aspect Ratio</span>
+                    <Select value={settings.aspectRatio || 'auto'} onValueChange={(val: any) => updateSetting('aspectRatio', val)}>
+                      <SelectTrigger className="h-8 text-[10px] font-bold w-28 bg-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto (Full)</SelectItem>
+                        <SelectItem value="1:1">1:1 (Square)</SelectItem>
+                        <SelectItem value="4:3">4:3 (Standard)</SelectItem>
+                        <SelectItem value="3:2">3:2 (Classic)</SelectItem>
+                        <SelectItem value="16:9">16:9 (Wide)</SelectItem>
+                        <SelectItem value="golden">Golden Ratio</SelectItem>
+                        <SelectItem value="journal-single">Single Column</SelectItem>
+                        <SelectItem value="journal-double">Double Column</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
