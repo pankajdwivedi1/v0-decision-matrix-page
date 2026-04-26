@@ -101,6 +101,8 @@ import GRAFormula from "@/components/GRAFormula"
 import ARASFormula from "@/components/ARASFormula"
 import ColorSwitcher from "@/components/ColorSwitcher"
 import KSensitivityCalculator from "@/components/KSensitivityCalculator"
+import CorrelationHeatmap from "@/components/CorrelationHeatmap"
+
 import { AIResearchAssistant } from "@/components/AIResearchAssistant"
 import { ResearchAssetHeader } from "@/components/ResearchAssetHeader"
 import { toast } from "sonner"
@@ -1711,7 +1713,7 @@ export default function MCDMCalculator() {
         const options = {
           quality: 1.0,
           backgroundColor: themeBg,
-          pixelRatio: 4,
+          pixelRatio: 5, // Q1 journal quality (600 DPI equivalent)
           width: targetWidth,
           height: targetHeight,
           style: {
@@ -1774,7 +1776,7 @@ export default function MCDMCalculator() {
     toJpeg(element, {
       quality: 1.0,
       backgroundColor: "#ffffff",
-      pixelRatio: 4,
+      pixelRatio: 5, // Q1 journal quality (600 DPI equivalent)
       width: width,
       height: height,
       style: {
@@ -1808,7 +1810,7 @@ export default function MCDMCalculator() {
     toJpeg(element, {
       quality: 1.0,
       backgroundColor: "#ffffff",
-      pixelRatio: 4,
+      pixelRatio: 5, // Q1 journal quality (600 DPI equivalent)
       width: width,
       height: height,
       style: {
@@ -3991,18 +3993,7 @@ export default function MCDMCalculator() {
   };
 
   const handleDownloadWeightResultsChart = () => {
-    if (weightResultsChartRef.current) {
-      toJpeg(weightResultsChartRef.current, { backgroundColor: '#fff', quality: 0.95 })
-        .then((dataUrl) => {
-          const link = document.createElement('a');
-          link.download = `Weight_Distribution_${weightMethod}_${new Date().toISOString().slice(0, 10)}.jpg`;
-          link.href = dataUrl;
-          link.click();
-        })
-        .catch((err) => {
-          console.error('Failed to download chart:', err);
-        });
-    }
+    downloadChartAsJpeg(weightResultsChartRef, `Weight_Distribution_${weightMethod}`, 'png');
   };
 
   const renderWeightResultsChart = () => {
@@ -4039,7 +4030,8 @@ export default function MCDMCalculator() {
       weightResultsChartType === 'pie' ? "Weight Distribution" :
         weightResultsChartType === 'line' ? "Weight Trend" :
           weightResultsChartType === 'radar' ? "Radar Chart" :
-            weightResultsChartType === 'heatmap' ? "Heatmap" : "Area Representation";
+            weightResultsChartType === 'heatmap' ? "Heatmap" :
+              weightResultsChartType === 'dual' ? "Weight-Rank Dual Profile" : "Area Representation";
 
     return (
       <Card id="weight-method-chart-section" className="border-gray-300 bg-white shadow-sm mt-8 mb-6 overflow-hidden rounded-md">
@@ -4064,6 +4056,7 @@ export default function MCDMCalculator() {
                     {weightResultsChartType === 'area' && '🟦 Area Chart'}
                     {weightResultsChartType === 'radar' && '🕸️ Radar Chart'}
                     {weightResultsChartType === 'heatmap' && '🌡️ Heatmap'}
+                    {weightResultsChartType === 'dual' && '📉 Dual Profile'}
                   </span>
                 </SelectTrigger>
                 <SelectContent className="border-gray-300 shadow-md">
@@ -4073,6 +4066,7 @@ export default function MCDMCalculator() {
                   <SelectItem value="area" className="text-[11px]">🟦 Area Chart</SelectItem>
                   <SelectItem value="radar" className="text-[11px]">🕸️ Radar Chart</SelectItem>
                   <SelectItem value="heatmap" className="text-[11px]">🌡️ Heatmap</SelectItem>
+                  <SelectItem value="dual" className="text-[11px]">📉 Dual Profile (Weight & Rank)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -4174,6 +4168,78 @@ export default function MCDMCalculator() {
                       />
                     ))}
                   </Bar>
+                </ComposedChart>
+              ) : weightResultsChartType === 'dual' ? (
+                <ComposedChart
+                  data={[...data].sort((a, b) => b.value - a.value).map((d, i) => ({ ...d, rank: i + 1 }))}
+                  margin={{ top: 10, right: 160, left: 160, bottom: 10 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                  <XAxis
+                    dataKey="name"
+                    stroke="#000"
+                    tick={{ fontSize: 10, fontWeight: 700, fill: '#000' }}
+                    angle={-45}
+                    textAnchor="end"
+                    interval={0}
+                    height={60}
+                    axisLine={{ stroke: "#000", strokeWidth: 2 }}
+                    tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                  />
+                  {/* Top Border line for scientific framing */}
+                  <XAxis
+                    orientation="top"
+                    xAxisId="top_border"
+                    tick={false}
+                    axisLine={{ stroke: "#000", strokeWidth: 2 }}
+                  />
+                  <YAxis
+                    yAxisId="weight"
+                    stroke="#000"
+                    label={{ value: 'Criterion Weight (ω)', angle: -90, position: 'insideLeft', offset: -10, fontSize: 10, fontWeight: 800, fill: '#000' }}
+                    tick={{ fontSize: 10, fontWeight: 700, fill: '#1f77b4' }}
+                    axisLine={{ stroke: "#000", strokeWidth: 2 }}
+                    tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                  />
+                  <YAxis
+                    yAxisId="rank"
+                    orientation="right"
+                    stroke="#000"
+                    reversed
+                    domain={[1, Math.max(data.length, 1)]}
+                    ticks={Array.from({ length: data.length }, (_, i) => i + 1)}
+                    label={{ value: 'Rank Position', angle: 90, position: 'insideRight', offset: 20, fontSize: 10, fontWeight: 800, fill: '#000' }}
+                    tick={{ fontSize: 10, fontWeight: 700, fill: '#d62728' }}
+                    axisLine={{ stroke: "#000", strokeWidth: 2 }}
+                    tickLine={{ stroke: "#000", strokeWidth: 1 }}
+                  />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #000', fontSize: '11px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    cursor={{ fill: 'rgba(0,0,0,0.02)' }}
+                  />
+                  <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700 }} />
+                  <Bar
+                    yAxisId="weight"
+                    name="Criterion Weight"
+                    dataKey="value"
+                    fill="#1f77b4"
+                    fillOpacity={0.6}
+                    barSize={40}
+                    stroke="#1f77b4"
+                    strokeWidth={1}
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    yAxisId="rank"
+                    name="Ordinal Rank"
+                    type="monotone"
+                    dataKey="rank"
+                    stroke="#d62728"
+                    strokeWidth={3}
+                    dot={{ r: 6, fill: '#d62728', strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 8, strokeWidth: 0 }}
+                    isAnimationActive={false}
+                  />
                 </ComposedChart>
               ) : weightResultsChartType === 'pie' ? (
                 <PieChart>
@@ -6283,6 +6349,27 @@ export default function MCDMCalculator() {
           {
             homeTab === "rankingComparison" && (
               <>
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-6">
+                  {/* Left: Back Button + Title */}
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      onClick={() => setCurrentStep("table")}
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-black hover:bg-gray-100 bg-transparent flex-shrink-0 touch-target"
+                      title="Back"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="flex-shrink-0">
+                      <h2 className="text-lg md:text-xl font-bold text-black">Ranking Comparison Results</h2>
+                      <p className="text-[10px] text-gray-700">Calculation Results</p>
+                    </div>
+                  </div>
+                </div>
+
                 <Card className="border-gray-200 bg-white shadow-none w-full mb-6">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-bold">Construct the Decision Matrix</CardTitle>
@@ -8564,6 +8651,20 @@ export default function MCDMCalculator() {
                               ))}
                             </tbody>
                           </table>
+
+                          <div className="mt-12 mb-8 pt-8 border-t border-indigo-100 flex flex-col items-center">
+                            <div className="text-center text-[10px] text-indigo-400 mb-6 uppercase font-bold tracking-[0.2em]">Visual Correlation Analysis</div>
+                            <CorrelationHeatmap
+                              data={spearmanCorrelation}
+                              assetKey="ranking_spearman_heatmap"
+                              defaultLabel={getComparisonFigureLabel()}
+                              title="Spearman Correlation"
+                              onLabelChange={handleAssetLabelChange}
+                              included={selectedAiAssets.has("ranking_spearman_heatmap")}
+                              onIncludeChange={handleIncludeChange}
+                              onAiAnalysis={() => handleAiAnalysis("ranking_comparison", { spearmanData: spearmanCorrelation })}
+                            />
+                          </div>
                           <div className="mt-4 p-3 bg-indigo-50/50 rounded-lg border border-indigo-100">
                             <p className="text-[10px] text-indigo-800 leading-relaxed italic font-medium">
                               <strong>Note for Q1 Journals:</strong> Report these correlation coefficients to demonstrate that your findings are
@@ -8631,6 +8732,27 @@ export default function MCDMCalculator() {
                               ))}
                             </tbody>
                           </table>
+
+                          <div className="mt-12 mb-8 pt-8 border-t border-indigo-100 flex flex-col items-center">
+                            <div className="text-center text-[10px] text-indigo-400 mb-6 uppercase font-bold tracking-[0.2em]">Visual Kendall Tau Analysis</div>
+                            <CorrelationHeatmap
+                              data={kendallTau}
+                              assetKey="ranking_kendall_heatmap"
+                              defaultLabel={getComparisonFigureLabel()}
+                              title="Kendall's Tau Correlation"
+                              onLabelChange={handleAssetLabelChange}
+                              included={selectedAiAssets.has("ranking_kendall_heatmap")}
+                              onIncludeChange={handleIncludeChange}
+                              onAiAnalysis={() => handleAiAnalysis("ranking_comparison", { kendallData: kendallTau })}
+                            />
+                          </div>
+
+                          <div className="mt-4 p-3 bg-indigo-50/50 rounded-lg border border-indigo-100">
+                            <p className="text-[10px] text-indigo-800 leading-relaxed italic font-medium">
+                              <strong>Note for Kendall's Tau:</strong> This measures the ordinal association between rankings.
+                              A value of 1.0 indicates perfect agreement, while -1.0 indicates perfect disagreement.
+                            </p>
+                          </div>
                         </CardContent>
                       </Card>
                     )}
@@ -8822,6 +8944,27 @@ export default function MCDMCalculator() {
           {
             homeTab === "sensitivityAnalysis" && (
               <>
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-6">
+                  {/* Left: Back Button + Title */}
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      onClick={() => setCurrentStep("table")}
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-black hover:bg-gray-100 bg-transparent flex-shrink-0 touch-target"
+                      title="Back"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="flex-shrink-0">
+                      <h2 className="text-lg md:text-xl font-bold text-black">Sensitivity Analysis Results</h2>
+                      <p className="text-[10px] text-gray-700">Calculation Results</p>
+                    </div>
+                  </div>
+                </div>
+
                 <Card className="border-gray-200 bg-white shadow-none w-full mb-6 rounded-none sm:rounded-xl">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-bold">Construct the Decision Matrix</CardTitle>
@@ -11326,7 +11469,7 @@ export default function MCDMCalculator() {
                       <LayoutGrid className="h-4 w-4 md:h-5 md:w-5 text-black" />
                     </div>
                     <div>
-                      <h2 className="text-lg md:text-xl font-bold text-black truncate tracking-tight">Evaluation Matrix</h2>
+                      <h2 className="text-lg md:text-xl font-bold text-black truncate tracking-tight">Weight Results</h2>
                       <p className="text-[10px] md:text-xs text-gray-500 font-medium truncate italic">Review your decision matrix before calculation</p>
                     </div>
                   </div>
@@ -15248,7 +15391,7 @@ export default function MCDMCalculator() {
                       <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <div className="flex-shrink-0">
-                      <h2 className="text-lg md:text-xl font-bold text-black">Results</h2>
+                      <h2 className="text-lg md:text-xl font-bold text-black">Ranking Results</h2>
                       <p className="text-[10px] text-gray-700">Calculation Results</p>
                     </div>
                   </div>
