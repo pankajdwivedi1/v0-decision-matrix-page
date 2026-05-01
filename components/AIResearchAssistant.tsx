@@ -330,8 +330,8 @@ export function AIResearchAssistant({
 
         const getForensicCategory = (k: string) => {
             const lowKey = k.toLowerCase();
-            const weightMethodsKeys = ['entropy', 'merec', 'critic', 'ahp', 'piprecia', 'swara', 'roc', 'rr', 'wenslo', 'lopcow', 'dematel', 'sd', 'variance', 'mad', 'dbw', 'svp', 'mdm', 'lsw', 'gpow', 'lpwm', 'pcwm', 'seca', 'idocriw'];
-            const rankingMethodsKeys = ['topsis', 'waspas', 'moora', 'multimoora', 'vikor', 'edas', 'copras', 'todim', 'codas', 'moosra', 'mairca', 'marcos', 'swei', 'swi', 'ocra', 'electre', 'oresme', 'pivia'];
+            const weightMethodsKeys = ['entropy', 'merec', 'critic', 'ahp', 'piprecia', 'swara', 'fucom', 'roc', 'rr', 'wenslo', 'lopcow', 'dematel', 'sd', 'variance', 'mad', 'dbw', 'svp', 'mdm', 'lsw', 'gpow', 'lpwm', 'pcwm', 'seca', 'idocriw'];
+            const rankingMethodsKeys = ['topsis', 'waspas', 'moora', 'multimoora', 'vikor', 'edas', 'copras', 'todim', 'codas', 'moosra', 'mairca', 'marcos', 'swei', 'swi', 'spotis', 'ocra', 'electre', 'oresme', 'pivia'];
 
             // Priority 1: Ranking Methods (Forensic R)
             // We check this first so that ranking method internal tables (like "weighted matrix") 

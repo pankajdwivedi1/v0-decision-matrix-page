@@ -20,7 +20,7 @@ import { ResearchAssetHeader } from './ResearchAssetHeader';
 import { Tag } from 'lucide-react';
 import { toJpeg, toPng, toSvg } from 'html-to-image';
 import { MCDM_METHODS } from "@/constants/mcdm";
-import { MCDMMethod } from "@/types/mcdm";
+import { MCDMMethod, Alternative, Criterion } from "@/types/mcdm";
 import { ChartVisualConfigurator, ChartSettings } from "@/components/ChartVisualConfigurator";
 
 
@@ -263,19 +263,6 @@ const ThreeDChart = ({ data, criteria, variationRange, elev: elevDeg, azim: azim
     </div>
   );
 };
-
-interface Criterion {
-  id: string;
-  name: string;
-  weight: number;
-  type: "beneficial" | "non-beneficial";
-}
-
-interface Alternative {
-  id: string;
-  name: string;
-  scores: Record<string, number | "">;
-}
 
 interface KSensitivityCalculatorProps {
   criteria: Criterion[];
@@ -1444,7 +1431,7 @@ export default function KSensitivityCalculator({
 
     // Right vertical frame border — drawn via Customized SVG to reliably appear on the right side.
     const RightFrameBorder = (props: any) => {
-      if (kSensChartSettings.frameStyle !== 'Box') return null;
+      // Always draw the right border on any graph to ensure visual consistency
       
       // Use viewBox to identify the exact plot area boundaries
       const { viewBox } = props;
@@ -1890,7 +1877,8 @@ export default function KSensitivityCalculator({
                 <XAxis dataKey="variation" tick={tickStyle} axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tickLine={getTickLine('bottom')} interval={0} padding={{ left: 10, right: 10 }} tickFormatter={isWeightView ? (val: string) => val.replace('%', '') : undefined} label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.xAxisTitle) as any) : undefined} />
                 <XAxis orientation="top" xAxisId="top_border" axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={kSensChartSettings.showMirrorTicks ? tickStyle : false} tickLine={kSensChartSettings.showMirrorTicks ? getTickLine('top') : false} />
                 <YAxis reversed={!isWeightView} tick={tickStyle} axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tickLine={getTickLine('left')} domain={isWeightView ? (kSensChartType === 'stackedArea' ? [0, 1] : [0, 'auto']) : [1, alternatives.length]} allowDecimals={isWeightView} ticks={!isWeightView ? Array.from({ length: alternatives.length }, (_, i) => i + 1) : undefined} tickFormatter={isWeightView ? (val: number) => Number(val.toFixed(2)).toString() : undefined} label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.yAxisTitle, true) as any) : undefined} />
-                <YAxis orientation="right" yAxisId="right_border" width={(kSensChartSettings.showMirrorTicks || kSensChartSettings.frameStyle === 'Box') ? (kSensChartSettings.showMirrorTicks ? 40 : 10) : 0} axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={kSensChartSettings.showMirrorTicks ? tickStyle : false} tickLine={kSensChartSettings.showMirrorTicks ? getTickLine('right') : false} domain={isWeightView ? (kSensChartType === 'stackedArea' ? [0, 1] : [0, 'auto']) : [1, alternatives.length]} />
+                <YAxis orientation="right" yAxisId="right_border" axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={kSensChartSettings.showMirrorTicks ? tickStyle : false} tickLine={kSensChartSettings.showMirrorTicks ? getTickLine('right') : false} domain={isWeightView ? (kSensChartType === 'stackedArea' ? [0, 1] : [0, 'auto']) : [1, alternatives.length]} />
+                <Area yAxisId="right_border" type="linear" dataKey={isWeightView ? (workingCriteria[0]?.name) : (alternatives[0]?.name)} fill="none" stroke="none" fillOpacity={0} isAnimationActive={false} legendType="none" />
                 <Tooltip contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }} />
                 {!kSensChartSettings.directLabeling && <Legend {...legendProps} iconSize={8} iconType={isWeightView ? "circle" : "square"} />}
                 {(isWeightView ? workingCriteria : [...alternatives].sort((a, b) => {
@@ -1954,7 +1942,7 @@ export default function KSensitivityCalculator({
                   tickFormatter={isWeightView ? (val: string) => val.replace('%', '') : undefined}
                   label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.xAxisTitle) as any) : undefined}
                 />
-                <XAxis orientation="top" xAxisId="top_border" axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={kSensChartSettings.showMirrorTicks ? tickStyle : false} tickLine={kSensChartSettings.showMirrorTicks ? getTickLine('top') : false} />
+                <XAxis orientation="top" xAxisId="top_border" axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={false} tickLine={false} />
                 <YAxis
                   reversed={!isWeightView}
                   tick={tickStyle}
@@ -1969,11 +1957,19 @@ export default function KSensitivityCalculator({
                 <YAxis
                   orientation="right"
                   yAxisId="right_border"
-                  width={(kSensChartSettings.showMirrorTicks || kSensChartSettings.frameStyle === 'Box') ? (kSensChartSettings.showMirrorTicks ? 40 : 10) : 0}
                   axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
                   tick={kSensChartSettings.showMirrorTicks ? tickStyle : false}
                   tickLine={kSensChartSettings.showMirrorTicks ? getTickLine('right') : false}
                   domain={isWeightView ? [0, 'auto'] : [1, alternatives.length]}
+                />
+                <Line
+                  yAxisId="right_border"
+                  dataKey={isWeightView ? (workingCriteria[0]?.name) : (alternatives[0]?.name)}
+                  stroke="transparent"
+                  strokeOpacity={0}
+                  dot={false}
+                  activeDot={false}
+                  legendType="none"
                 />
 
                 <Tooltip contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }} />
@@ -2054,7 +2050,8 @@ export default function KSensitivityCalculator({
                 label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.yAxisTitle, true) as any) : undefined}
               />
               {kSensChartSettings.zeroBaseline && <ReferenceLine y={0} stroke={theme.chartBorder} strokeWidth={2} strokeOpacity={0.8} />}
-              <YAxis orientation="right" yAxisId="right_border" width={(kSensChartSettings.showMirrorTicks || kSensChartSettings.frameStyle === 'Box') ? (kSensChartSettings.showMirrorTicks ? 40 : 10) : 0} axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={kSensChartSettings.showMirrorTicks ? tickStyle : false} tickLine={kSensChartSettings.showMirrorTicks ? getTickLine('right') : false} domain={isWeightView ? [0, 'auto'] : [1, alternatives.length]} />
+              <YAxis orientation="right" yAxisId="right_border" axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={kSensChartSettings.showMirrorTicks ? tickStyle : false} tickLine={kSensChartSettings.showMirrorTicks ? getTickLine('right') : false} domain={isWeightView ? [0, 'auto'] : [1, alternatives.length]} />
+              <Scatter yAxisId="right_border" data={[{ x: 0, y: 0 }]} fill="transparent" isAnimationActive={false} legendType="none" />
               <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }} />
               <Legend {...legendProps} iconSize={8} iconType="circle" />
               {(isWeightView ? workingCriteria : alternatives).map((item, idx) => {
@@ -2087,7 +2084,7 @@ export default function KSensitivityCalculator({
                 padding={{ left: 10, right: 10 }}
                 label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.xAxisTitle) as any) : undefined}
               />
-              <XAxis orientation="top" xAxisId="top_border" axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={kSensChartSettings.showMirrorTicks ? tickStyle : false} tickLine={kSensChartSettings.showMirrorTicks ? getTickLine('top') : false} />
+              <XAxis orientation="top" xAxisId="top_border" axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={false} tickLine={false} />
               <YAxis
                 yAxisId="left"
                 tick={tickStyle}
@@ -2270,69 +2267,78 @@ export default function KSensitivityCalculator({
         ) : (
           <ResponsiveContainer width="100%" height={chartAspectRatio ? undefined : 600} aspect={chartAspectRatio}>
             {['bar', 'stackedBar', 'column'].includes(kSensChartType) ? (
-              <BarChart data={data} margin={commonChartProps.margin}>
+              <BarChart
+                data={data}
+                margin={commonChartProps.margin}
+              >
                 {renderDefs()}
-                  <XAxis dataKey="variation" tick={tickStyle} axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tickLine={getTickLine('bottom')} interval={0} padding={{ left: 10, right: 10 }} tickFormatter={isWeightView ? (val: string) => val.replace('%', '') : undefined} label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.xAxisTitle) as any) : undefined} />
-                  <YAxis
-                    reversed={!isWeightView && kSensChartType !== 'stackedBar'}
-                    tick={tickStyle}
-                    axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
-                    tickLine={getTickLine('left')}
-                    domain={(isWeightView || kSensChartType === 'stackedBar') ? [0, 'auto'] : [0.5, alternatives.length]}
-                    ticks={(!isWeightView && kSensChartType !== 'stackedBar') ? Array.from({ length: alternatives.length }, (_, i) => i + 1) : undefined}
-                    label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.yAxisTitle, true) as any) : undefined}
-                    tickFormatter={(isWeightView || kSensChartType === 'stackedBar') ? (val: number) => val.toFixed(2) : undefined}
-                  />
-                  <Tooltip contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }} formatter={(v: number) => {
+                <XAxis dataKey="variation" tick={{ fontSize: kSensChartSettings.fontSize, fill: '#000', fontWeight: 'bold' }} axisLine={{ stroke: '#000', strokeWidth: 1.5 }} tickLine={getTickLine('bottom')} interval={0} tickFormatter={isWeightView ? (val: string) => val.replace('%', '') : undefined} label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.xAxisTitle) as any) : undefined} />
+                <YAxis
+                  reversed={!isWeightView && kSensChartType !== 'stackedBar'}
+                  tick={{ fontSize: kSensChartSettings.fontSize, fill: '#000', fontWeight: 'bold' }}
+                  axisLine={{ stroke: '#000', strokeWidth: 1.5 }}
+                  tickLine={getTickLine('left')}
+                  domain={(isWeightView || kSensChartType === 'stackedBar') ? [0, 'auto'] : [0.5, alternatives.length]}
+                  ticks={(!isWeightView && kSensChartType !== 'stackedBar') ? Array.from({ length: alternatives.length }, (_, i) => i + 1) : undefined}
+                  label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.yAxisTitle, true) as any) : undefined}
+                  tickFormatter={(isWeightView || kSensChartType === 'stackedBar') ? (val: number) => val.toFixed(2) : undefined}
+                />
+                <Tooltip
+                  cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                  contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}`, borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                  formatter={(v: number) => {
                     if (isWeightView) return (v * 100).toFixed(2) + '%';
                     if (kSensChartType === 'stackedBar') return `Score: ${v.toFixed(3)}`;
                     return `Rank: ${v}`;
-                  }} />
-                  <Legend {...legendProps} iconSize={8} />
-                  {(isWeightView ? workingCriteria : alternatives).map((item, idx) => {
-                    const color = colorsArr[idx % colorsArr.length];
-                    const fill = kSensChartSettings.fillPattern === 'none' ? color : `url(#pattern-${idx % colorsArr.length})`;
-                    return (
-                      <Bar
-                        key={item.name}
-                        dataKey={isWeightView ? item.name : (kSensChartType === 'stackedBar' ? `${item.name} Score` : item.name)}
-                        name={item.name}
-                        stackId={kSensChartType === 'stackedBar' ? "1" : undefined}
-                        fill={fill}
-                        fillOpacity={kSensChartSettings.fillPattern === 'none' ? (kSensChartSettings.barOpacity || 1) : 1}
-                        stroke={kSensChartSettings.showSeparator ? (kSensChartSettings.separatorColor || '#000') : theme.border}
-                        strokeWidth={kSensChartSettings.showSeparator ? (kSensChartSettings.borderWidth || 0.5) : 0.5}
-                        {...({ baseValue: (!isWeightView && kSensChartType !== 'stackedBar') ? alternatives.length : 0 } as any)}
-                      >
-                        {kSensChartSettings.showDataLabels ? (
-                          <LabelList 
-                            dataKey={isWeightView ? item.name : item.name}
-                            position="center" 
-                            formatter={(val: any) => {
-                              if (isWeightView) return (val * 100).toFixed(0);
-                              return val; // This is the Rank
-                            }}
-                            style={{ fontSize: kSensChartSettings.fontSize - 1, fill: '#ffffff', fontWeight: 'bold', pointerEvents: 'none' }} 
-                          />
-                        ) : null}
-                      </Bar>
-                    );
-                  })}
+                  }}
+                />
+                <Legend {...legendProps} iconSize={10} />
+                {(isWeightView ? workingCriteria : alternatives).map((item, idx) => {
+                  const color = colorsArr[idx % colorsArr.length];
+                  const fill = kSensChartSettings.fillPattern === 'none' ? color : `url(#pattern-${idx % colorsArr.length})`;
+                  const totalItems = isWeightView ? workingCriteria.length : alternatives.length;
+                  return (
+                    <Bar
+                      key={item.name}
+                      dataKey={isWeightView ? item.name : (kSensChartType === 'stackedBar' ? `${item.name} Score` : item.name)}
+                      name={item.name}
+                      stackId={kSensChartType === 'stackedBar' ? "a" : undefined}
+                      fill={fill}
+                      fillOpacity={kSensChartSettings.fillPattern === 'none' ? (kSensChartSettings.barOpacity || 1) : 1}
+                      stroke={kSensChartSettings.showSeparator ? (kSensChartSettings.separatorColor || '#000') : theme.border}
+                      strokeWidth={kSensChartSettings.showSeparator ? (kSensChartSettings.borderWidth || 0.5) : 0.5}
+                      {...({ baseValue: (!isWeightView && kSensChartType !== 'stackedBar') ? alternatives.length : 0 } as any)}
+                    >
+                      {kSensChartSettings.showDataLabels ? (
+                        <LabelList
+                          dataKey={isWeightView ? item.name : item.name}
+                          position="center"
+                          formatter={(val: any) => {
+                            if (isWeightView) return (val * 100).toFixed(0);
+                            return val;
+                          }}
+                          style={{ fontSize: kSensChartSettings.fontSize - 1, fill: '#ffffff', fontWeight: 'bold', pointerEvents: 'none' }}
+                        />
+                      ) : null}
+                    </Bar>
+                  );
+                })}
 
                 {kSensChartSettings.showGridLines && <CartesianGrid {...(gridProps as any)} />}
-                {/* Mirror axes placed last to ensure they act as a continuous border frame on top of all elements */}
-                <XAxis orientation="top" xAxisId="top_border" axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={kSensChartSettings.showMirrorTicks ? tickStyle : false} tickLine={kSensChartSettings.showMirrorTicks ? getTickLine('top') : false} />
+                <XAxis orientation="top" xAxisId="top_border" axisLine={{ stroke: '#000', strokeWidth: 1.5 }} tick={false} tickLine={false} />
                 <YAxis
                   orientation="right"
                   yAxisId="right_border"
-                  width={(kSensChartSettings.showMirrorTicks || kSensChartSettings.frameStyle === 'Box') ? (kSensChartSettings.showMirrorTicks ? 40 : 10) : 0}
-                  axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
-                  tick={kSensChartSettings.showMirrorTicks ? tickStyle : false}
+                  axisLine={{ stroke: '#000', strokeWidth: 1.5 }}
+                  tick={kSensChartSettings.showMirrorTicks ? { fontSize: kSensChartSettings.fontSize, fill: '#000', fontWeight: 'bold' } : false}
                   tickLine={kSensChartSettings.showMirrorTicks ? getTickLine('right') : false}
                   reversed={!isWeightView}
                   domain={isWeightView ? [0, 'auto'] : [1, alternatives.length]}
                   ticks={!isWeightView ? Array.from({ length: alternatives.length }, (_, i) => i + 1) : undefined}
                 />
+                {kSensChartType !== 'stackedBar' && (
+                  <Bar yAxisId="right_border" dataKey={isWeightView ? (workingCriteria[0]?.name) : (alternatives[0]?.name)} fill="transparent" isAnimationActive={false} legendType="none" />
+                )}
                 <Customized component={RightFrameBorder} />
               </BarChart>
             ) : <div />}
@@ -3390,12 +3396,12 @@ export default function KSensitivityCalculator({
                                 </div>
                               </div>
                             </ResearchAssetHeader>
-                            <CardDescription className="text-[10px]">
+                            <CardDescription className="text-[10px] mt-0.5 sm:mt-1">
                               Base Case Weight: {(selectedCrit.weight * 100).toFixed(4)}% | Optimality: {selectedCrit.type === 'beneficial' ? 'Higher is Better' : 'Lower is Better'}
                             </CardDescription>
                             
                             {/* Graphic Variation Plate Settings */}
-                            <div className="w-full mt-4 px-0 border-t pt-2 transition-all duration-500 ease-in-out">
+                            <div className="w-full mt-2 sm:mt-4 px-0 border-t pt-2 transition-all duration-500 ease-in-out">
                               <ChartVisualConfigurator
                                 settings={kSensChartSettings}
                                 onSettingsChange={setKSensChartSettings}
@@ -3433,20 +3439,20 @@ export default function KSensitivityCalculator({
                               );
 
                               return (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 sm:gap-4">
                                   {points.sort((a, b) => Math.abs(a.variation) - Math.abs(b.variation)).map((p, idx) => (
                                     <Card key={idx} className="border-gray-100 bg-white shadow-sm hover:border-amber-400 transition-all">
-                                      <CardContent className="p-4 flex flex-col items-center justify-center text-center space-y-3">
-                                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-900 border rounded-full px-3 py-1 bg-gray-50/50">
-                                          <span>{p.alt1}</span>
-                                          <span className="text-amber-500">↔</span>
-                                          <span>{p.alt2}</span>
+                                      <CardContent className="p-1.5 sm:p-4 flex flex-col items-center justify-center text-center space-y-1 sm:space-y-3">
+                                        <div className="flex flex-col items-center justify-center w-full space-y-0.5 sm:space-y-0 sm:flex-row sm:gap-2 text-[6px] sm:text-[10px] font-bold text-gray-900 sm:border sm:rounded-full sm:px-3 sm:py-1 sm:bg-gray-50/50 overflow-hidden">
+                                          <span className="truncate w-full text-center sm:w-auto">{p.alt1}</span>
+                                          <span className="text-amber-500 text-[8px] sm:text-[10px] leading-none sm:leading-normal">↕</span>
+                                          <span className="truncate w-full text-center sm:w-auto">{p.alt2}</span>
                                         </div>
-                                        <div className="flex flex-col items-center">
-                                          <div className={`text-xl font-black ${p.variation > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        <div className="flex flex-col items-center scale-[0.85] sm:scale-100">
+                                          <div className={`text-[10px] sm:text-xl font-black ${p.variation > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                             {p.variation > 0 ? '+' : ''}{p.variation.toFixed(2)}%
                                           </div>
-                                          <span className="text-[9px] uppercase font-bold text-gray-400">Critical Threshold</span>
+                                          <span className="text-[5.5px] sm:text-[9px] uppercase font-black text-gray-400 leading-tight">Threshold</span>
                                         </div>
                                       </CardContent>
                                     </Card>

@@ -1,8 +1,13 @@
-﻿"use client";
+"use client";
 
 import { useState, useRef, useMemo, Fragment, useEffect } from "react"
-import { MCDMMethod, WeightMethod, PageStep, ComparisonResult, EntropyResult, CriticResult, AHPResult, PipreciaResult, MERECResult, SWARAResult, WensloResult, LopcowResult, DematelResult, SDResult, VarianceResult, MADResult, DBWResult, SVPResult, MDMResult, LSWResult, GPOWResult, LPWMResult, PCWMResult, RankingWeightResult, ROCResult, RRResult, Criterion, Alternative } from "@/types/mcdm"
+import { MCDMMethod, WeightMethod, PageStep, ComparisonResult, EntropyResult, CriticResult, AHPResult, PipreciaResult, MERECResult, SWARAResult, WensloResult, LopcowResult, DematelResult, SDResult, VarianceResult, MADResult, DBWResult, SVPResult, MDMResult, LSWResult, GPOWResult, LPWMResult, PCWMResult, RankingWeightResult, ROCResult, RRResult, FUCOMResult, Criterion, Alternative } from "@/types/mcdm"
 import { MCDM_METHODS, WEIGHT_METHODS, CHART_COLORS } from "@/constants/mcdm"
+import { LINGUISTIC_SCALES } from "@/constants/fuzzy"
+import { getProcessedAlternatives, formatDecisionMatrixValue } from "@/utils/fuzzyUtils"
+import { FuzzyModeSelector } from "@/components/FuzzyModeSelector"
+import { FuzzyTripletInput } from "@/components/FuzzyTripletInput"
+import { SharedDecisionMatrix } from "@/components/SharedDecisionMatrix"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -98,6 +103,30 @@ import PCWMFormula from "@/components/PCWMFormula"
 import ROCFormula from "@/components/ROCFormula"
 import RRFormula from "@/components/RRFormula"
 import GRAFormula from "@/components/GRAFormula"
+import FUCOMResults from "@/components/FUCOMResults"
+import SPOTISResults from "@/components/SPOTISResults"
+import FuzzyTOPSISResults from "@/components/FuzzyTOPSISResults"
+import FuzzyTOPSISFormula from "@/components/FuzzyTOPSISFormula"
+import FuzzyVIKORResults from "@/components/FuzzyVIKORResults"
+import FuzzyWASPASResults from "@/components/FuzzyWASPASResults"
+import FuzzyEDASResults from "@/components/FuzzyEDASResults"
+import FuzzyMOORAResults from "@/components/FuzzyMOORAResults"
+import FuzzyMULTIMOORAResults from "@/components/FuzzyMULTIMOORAResults"
+import FuzzyTODIMResults from "@/components/FuzzyTODIMResults"
+import FuzzyCODASResults from "@/components/FuzzyCODASResults"
+import FuzzyMOOSRAResults from "@/components/FuzzyMOOSRAResults"
+import FuzzyMAIRCAResults from "@/components/FuzzyMAIRCAResults"
+import FuzzyMABACResults from "@/components/FuzzyMABACResults"
+import FuzzyMARCOSResults from "@/components/FuzzyMARCOSResults"
+import FuzzyCOCOSOResults from "@/components/FuzzyCOCOSOResults"
+import FuzzyCOPRASResults from "@/components/FuzzyCOPRASResults"
+import FuzzySWEIResults from "@/components/FuzzySWEIResults"
+import FuzzySWIResults from "@/components/FuzzySWIResults"
+import FuzzySWEIFormula from "@/components/FuzzySWEIFormula"
+import FuzzySWIFormula from "@/components/FuzzySWIFormula"
+import { Switch } from "@/components/ui/switch"
+import SPOTISFormula from "@/components/SPOTISFormula"
+import FUCOMFormula from "@/components/FUCOMFormula"
 import ARASFormula from "@/components/ARASFormula"
 import ColorSwitcher from "@/components/ColorSwitcher"
 import KSensitivityCalculator from "@/components/KSensitivityCalculator"
@@ -118,7 +147,27 @@ declare global {
 
 
 
+
+
 export default function MCDMCalculator() {
+  const [isFuzzyMode, setIsFuzzyMode] = useState(false)
+  const [fuzzyScaleType, setFuzzyScaleType] = useState<5 | 7 | 9 | 11>(5)
+
+  useEffect(() => {
+    if (isFuzzyMode) {
+      toast.info(`Fuzzy Mode Active: Using ${fuzzyScaleType}-Point Scale. You can now edit Triangular Fuzzy Numbers (TFN) triplets directly in the matrix.`, {
+        duration: 5000,
+      });
+    }
+  }, [isFuzzyMode]);
+  const [customFuzzyScales, setCustomFuzzyScales] = useState(LINGUISTIC_SCALES)
+  const [fuzzyCrispSpread, setFuzzyCrispSpread] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem("fuzzy_crisp_spread")
+      return saved ? parseFloat(saved) : 10
+    }
+    return 10
+  })
   const [method, setMethod] = useState<MCDMMethod>("topsis")
   const [weightMethod, setWeightMethod] = useState<WeightMethod>("equal")
   const [activeFormulaType, setActiveFormulaType] = useState<"method" | "weight">("method")
@@ -187,12 +236,23 @@ export default function MCDMCalculator() {
   const [pcwmResult, setPcwmResult] = useState<PCWMResult | null>(null)
   const [rocResult, setRocResult] = useState<ROCResult | null>(null)
   const [rrResult, setRrResult] = useState<RRResult | null>(null)
+  const [fucomResult, setFucomResult] = useState<FUCOMResult | null>(null)
+  const [isFucomDialogOpen, setIsFucomDialogOpen] = useState(false)
+  const [fucomPriorityScores, setFucomPriorityScores] = useState<Record<string, string>>({})
 
   // Responsive items per page for carousels
   const [itemsPerPage, setItemsPerPage] = useState(6)
   const [showAllRankingMethods, setShowAllRankingMethods] = useState(false)
   const [showAllWeightMethods, setShowAllWeightMethods] = useState(false)
   const [isMethodSelectionSheetOpen, setIsMethodSelectionSheetOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const [chartSettings, setChartSettings] = useState<ChartSettings>({
     // Styles
@@ -249,6 +309,19 @@ export default function MCDMCalculator() {
     legendOffsetY: 0
   })
 
+  const getAspectRatioValue = () => {
+    switch (chartSettings.aspectRatio) {
+      case '1:1': return 1;
+      case '4:3': return 1.333;
+      case '3:2': return 1.5;
+      case '16:9': return 1.777;
+      case 'golden': return 1.618;
+      case 'journal-single': return 1.2;
+      case 'journal-double': return 1.5;
+      default: return undefined;
+    }
+  };
+
   // --- SCIENTIFIC CHART HELPERS ---
   const getPaletteColors = (palette: string) => {
     switch (palette) {
@@ -263,11 +336,12 @@ export default function MCDMCalculator() {
     }
   };
 
-  const makeCustomDot = (color: string) => (props: any) => {
+  const makeCustomDot = (color: string, id: string | number = color) => (props: any) => {
     const { cx, cy, index } = props;
     const size = chartSettings.markerSize || 4;
     const type = chartSettings.markerType || 'circle';
-    const key = `custom-dot-${index}`;
+    const cleanId = id.toString().replace(/[^a-zA-Z0-9]/g, "");
+    const key = `custom-dot-${cleanId}-${index}`;
     if (type === 'square') return <rect key={key} x={cx - size} y={cy - size} width={size * 2} height={size * 2} fill={color} stroke="#fff" strokeWidth={1} />;
     if (type === 'triangle') return <path key={key} d={`M ${cx} ${cy - size} L ${cx + size} ${cy + size} L ${cx - size} ${cy + size} Z`} fill={color} stroke="#fff" strokeWidth={1} />;
     if (type === 'diamond') return <path key={key} d={`M ${cx} ${cy - size} L ${cx + size} ${cy} L ${cx} ${cy + size} L ${cx - size} ${cy} Z`} fill={color} stroke="#fff" strokeWidth={1} />;
@@ -695,6 +769,8 @@ export default function MCDMCalculator() {
     setDematelResult(null)
   }
   const [isResearchContextDialogOpen, setIsResearchContextDialogOpen] = useState(false)
+
+
 
   // Excel data selection state
   const [excelPreviewData, setExcelPreviewData] = useState<any[][] | null>(null)
@@ -1408,6 +1484,28 @@ export default function MCDMCalculator() {
       return { criteria: updated }
     }
 
+    if (weight === "fucom") {
+      // Return stored weights if they exist, otherwise fetch
+      if (fucomResult) {
+        const updated = crits.map((crit) => ({ ...crit, weight: fucomResult.weights[crit.id] || crit.weight }))
+        return { criteria: updated }
+      }
+      const response = await fetch("/api/fucom-weights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          criteria: crits, 
+          priorityScores: Object.fromEntries(
+            Object.entries(fucomPriorityScores).map(([id, score]) => [id, parseFloat(score) || 1])
+          )
+        }),
+      })
+      if (!response.ok) throw new Error("Failed to calculate FUCOM weights")
+      const data: FUCOMResult = await response.json()
+      const updated = crits.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+      return { criteria: updated }
+    }
+
     if (weight === "custom") {
       // Use stored custom weights if available
       const weightsToUse = customWeightsCalculated || {}
@@ -1453,7 +1551,7 @@ export default function MCDMCalculator() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               method: m,
-              alternatives: payloadAlternatives,
+              alternatives: getProcessedAlternatives(alternatives, fuzzyScaleType, customFuzzyScales, m),
               criteria: weightedCriteria,
               vikorVValue: parseFloat(vikorVValue) || 0.5,
               waspasLambdaValue: parseFloat(waspasLambdaValue) || 0.5,
@@ -2073,10 +2171,13 @@ export default function MCDMCalculator() {
     return alternatives.every((alt) =>
       criteria.every((crit) => {
         const score = alt.scores[crit.id]
+        if (isFuzzyMode) {
+          return score !== undefined && score !== ""
+        }
         return score !== undefined && score !== "" && !isNaN(Number(score))
       }),
     )
-  }, [alternatives, criteria])
+  }, [alternatives, criteria, isFuzzyMode])
 
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -2222,8 +2323,30 @@ export default function MCDMCalculator() {
     setAlternatives(alternatives.map((alt) => (alt.id === id ? { ...alt, name } : alt)))
   }
 
-  const updateAlternativeScore = (altId: string, critId: string, value: string) => {
-    if (value !== "") {
+  const updateAlternativeScore = (altId: string, critId: string, value: any) => {
+    // If it's a fuzzy triplet object, allow it directly
+    if (typeof value === 'object' && value !== null && 'l' in value) {
+      setAlternatives(
+        alternatives.map((alt) =>
+          alt.id === altId
+            ? {
+              ...alt,
+              scores: {
+                ...alt.scores,
+                [critId]: value,
+              },
+            }
+            : alt
+        )
+      )
+      return;
+    }
+
+    // If it's a linguistic value from our scale, allow it directly
+    const allLinguisticValues = Object.values(LINGUISTIC_SCALES).flat().map(s => s.value);
+    const isLinguistic = typeof value === 'string' && allLinguisticValues.includes(value);
+
+    if (!isLinguistic && value !== "" && typeof value !== 'object') {
       const numValue = Number.parseFloat(value)
       if (isNaN(numValue) || numValue < 0) {
         return
@@ -2237,7 +2360,7 @@ export default function MCDMCalculator() {
             ...alt,
             scores: {
               ...alt.scores,
-              [critId]: value === "" ? "" : Number.parseFloat(value),
+              [critId]: isLinguistic ? value : (value === "" ? "" : Number.parseFloat(value)),
             },
           }
           : alt,
@@ -2263,6 +2386,7 @@ export default function MCDMCalculator() {
     setWensloResult(null)
     setLopcowResult(null)
     setDematelResult(null)
+    setFucomResult(null)
 
     if (methodToUse === "equal") {
       const weight = 1 / criteria.length
@@ -2278,6 +2402,18 @@ export default function MCDMCalculator() {
         newCriteria = criteria.map((crit) => ({
           ...crit,
           weight: customWeightsCalculated[crit.id] !== undefined ? customWeightsCalculated[crit.id] : (1 / criteria.length)
+        }))
+        setCriteria(newCriteria)
+      }
+      setIsLoading(false)
+      return newCriteria
+    }
+
+    if (methodToUse === "fucom") {
+      if (fucomResult) {
+        newCriteria = criteria.map((crit) => ({
+          ...crit,
+          weight: fucomResult.weights[crit.id] || 0
         }))
         setCriteria(newCriteria)
       }
@@ -2308,7 +2444,7 @@ export default function MCDMCalculator() {
           const response = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ method: m, alternatives, criteria }),
+            body: JSON.stringify({ method: m, alternatives: getProcessedAlternatives(alternatives, fuzzyScaleType, customFuzzyScales), criteria }),
           })
           if (!response.ok) throw new Error(`Failed to calculate ${m} weights`)
           const data = await response.json()
@@ -2339,7 +2475,7 @@ export default function MCDMCalculator() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            alternatives,
+            alternatives: getProcessedAlternatives(alternatives, fuzzyScaleType, customFuzzyScales),
             criteria,
           }),
         })
@@ -2363,7 +2499,7 @@ export default function MCDMCalculator() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            alternatives,
+            alternatives: getProcessedAlternatives(alternatives, fuzzyScaleType, customFuzzyScales),
             criteria,
           }),
         })
@@ -2671,17 +2807,27 @@ export default function MCDMCalculator() {
     const allScoresFilled = alternatives.every((alt) =>
       criteria.every((crit) => {
         const score = alt.scores[crit.id]
-        return score !== undefined && score !== "" && Number(score) >= 0
+        if (score === undefined || score === "") return false
+        if (isFuzzyMode) return true
+        const num = Number(score)
+        return !isNaN(num) && num >= 0
       }),
     )
 
     if (!allScoresFilled) {
-      alert("Please fill in all score values with numbers greater than or equal to 0")
+      alert(isFuzzyMode ? "Please select linguistic values for all alternatives" : "Please fill in all score values with numbers greater than or equal to 0")
       return { success: false, updatedCriteria: criteria }
     }
 
     const finalWeightMethod = weightMethodOverride || weightMethod
     let currentCriteria = [...criteria]
+
+    const processedAlternatives = isFuzzyMode 
+      ? getProcessedAlternatives(alternatives, fuzzyScaleType, customFuzzyScales) 
+      : alternatives
+
+    {
+      const alternatives = processedAlternatives
 
     // Reset previous weight calculation results
     setEntropyResult(null)
@@ -2704,6 +2850,7 @@ export default function MCDMCalculator() {
     setPcwmResult(null)
     setRocResult(null)
     setRrResult(null)
+    setFucomResult(null)
 
     // Calculate equal weights if equal method is selected
     if (finalWeightMethod === "equal") {
@@ -3273,6 +3420,16 @@ export default function MCDMCalculator() {
       }
     }
 
+    if (finalWeightMethod === "fucom") {
+      if (fucomResult) {
+        currentCriteria = criteria.map((crit) => ({
+          ...crit,
+          weight: fucomResult.weights[crit.id] || 0,
+        }))
+        setCriteria(currentCriteria)
+      }
+    }
+
     // Check if we need to return to a specific tab after completing input
     if (shouldNavigate) {
       if (returnToTab === "rankingComparison") {
@@ -3288,6 +3445,7 @@ export default function MCDMCalculator() {
       }
       // Always clear returnToTab after it has been used for navigation
       setReturnToTab(null)
+    }
     }
     return { success: true, updatedCriteria: currentCriteria }
   }
@@ -3370,6 +3528,7 @@ export default function MCDMCalculator() {
     else if (weightMethod === "pcwm") activeResult = pcwmResult
     else if (weightMethod === "roc") activeResult = rocResult
     else if (weightMethod === "rr") activeResult = rrResult
+    else if (weightMethod === "fucom") activeResult = fucomResult
 
     if (!activeResult && weightMethod !== "equal") {
       alert("No weight results to export. Please calculate weights first.")
@@ -3414,7 +3573,7 @@ export default function MCDMCalculator() {
       console.error("Export error:", error)
       alert("Failed to export to Excel")
     }
-  }
+    }
 
   const handleCalculate = async (methodOverride?: string, criteriaOverride?: Criterion[]) => {
     setIsLoading(true)
@@ -3435,9 +3594,10 @@ export default function MCDMCalculator() {
     }
 
     try {
+      const targetMethod = methodOverride || method;
       const payload = {
-        method: methodOverride || method,
-        alternatives,
+        method: targetMethod,
+        alternatives: getProcessedAlternatives(alternatives, fuzzyScaleType, customFuzzyScales, targetMethod),
         criteria: currentCriteriaToUse,
         vikorVValue: vikorVValue,
         waspasLambdaValue: waspasLambdaValue,
@@ -3675,6 +3835,18 @@ export default function MCDMCalculator() {
       return
     }
 
+    if (newWeightMethod === "fucom") {
+      setIsLoading(false);
+      setIsFucomDialogOpen(true)
+      return
+    }
+
+    if (newWeightMethod === "hybrid") {
+      setIsLoading(false);
+      setIsHybridDialogOpen(true)
+      return
+    }
+
     // For objective methods, calculate immediately
     const { success, updatedCriteria } = await handleSaveTable(false, newWeightMethod)
     if (success) {
@@ -3780,7 +3952,7 @@ export default function MCDMCalculator() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 method: sensitivityMethod,
-                alternatives,
+                alternatives: getProcessedAlternatives(alternatives, fuzzyScaleType, customFuzzyScales, sensitivityMethod),
                 criteria: wCrits,
                 vikorVValue: parseFloat(vikorVValue) || 0.5,
                 waspasLambdaValue: parseFloat(waspasLambdaValue) || 0.5,
@@ -3822,7 +3994,7 @@ export default function MCDMCalculator() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             method: sensitivityMethod,
-            alternatives,
+            alternatives: getProcessedAlternatives(alternatives, fuzzyScaleType, customFuzzyScales, sensitivityMethod),
             criteria: customCriteria,
             vikorVValue: parseFloat(vikorVValue) || 0.5,
             waspasLambdaValue: parseFloat(waspasLambdaValue) || 0.5,
@@ -3978,6 +4150,8 @@ export default function MCDMCalculator() {
       weightsArray = criteria.map(c => ({ name: c.name, value: swaraCalculatedWeights[c.id] || 0, id: c.id }));
     } else if (merecResult && weightMethod === "merec") {
       weightsArray = criteria.map(c => ({ name: c.name, value: merecResult.weights[c.id] || 0, id: c.id }));
+    } else if (weightMethod === "fucom" && fucomResult) {
+      weightsArray = criteria.map(c => ({ name: c.name, value: fucomResult.weights[c.id] || 0, id: c.id }));
     } else if (weightMethod === "custom" && customWeightsCalculated) {
       weightsArray = criteria.map(c => ({ name: c.name, value: customWeightsCalculated[c.id] || 0, id: c.id }));
     } else {
@@ -4869,55 +5043,15 @@ export default function MCDMCalculator() {
                         </p>
                       </div>
 
-                      <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
-                        <Table className="border-collapse w-full" style={{ width: `${80 + (criteria.length * 60)}px`, minWidth: '100%' }}>
-                          <TableHeader>
-                            <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
-                              <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
-                                <div className="flex flex-col items-center justify-center h-full leading-tight">
-                                  <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center flex items-center justify-center gap-1">Criteria <ArrowRight className="w-2.5 h-2.5 stroke-[3]" /></div>
-                                  <div className="text-[10px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">Alternatives <ArrowDown className="w-2.5 h-2.5 stroke-[3]" /></div>
-                                </div>
-                              </TableHead>
-                              {criteria.map((crit) => (
-                                <TableHead key={crit.id} className="text-black font-bold text-center text-[10px] border-r border-gray-300 px-1 py-0.5" style={{ width: '60px', minWidth: '60px' }}>
-                                  <div className="flex flex-col items-center py-0.5">
-                                    <div className="flex items-center gap-0.5">
-                                      <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
-                                      <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"} aria-hidden>
-                                        {crit.type === "beneficial" ? "▲" : "▼"}
-                                      </span>
-                                    </div>
-                                    <div className="text-gray-600 font-semibold text-[9px]">
-                                      {crit.type === "beneficial" ? "Max" : "Min"}
-                                    </div>
-                                  </div>
-                                </TableHead>
-                              ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {alternatives.map((alt) => (
-                              <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
-                                <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5 text-center">{alt.name}</TableCell>
-                                {criteria.map((crit) => (
-                                  <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
-                                    <Input
-                                      type="number"
-                                      step="any"
-                                      min="0"
-                                      value={alt.scores[crit.id] ?? ""}
-                                      onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
-                                      onKeyDown={handleKeyDown}
-                                      className="text-center text-[10px] h-7 border-gray-100 text-black w-full shadow-none bg-white rounded-md p-1 focus:ring-1 focus:ring-blue-400"
-                                    />
-                                  </TableCell>
-                                ))}
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+                      <SharedDecisionMatrix
+                        alternatives={alternatives}
+                        criteria={criteria}
+                        isFuzzyMode={isFuzzyMode}
+                        fuzzyScaleType={fuzzyScaleType}
+                        customFuzzyScales={customFuzzyScales}
+                        updateAlternativeScore={updateAlternativeScore}
+                        handleKeyDown={handleKeyDown}
+                      />
                     </CardContent>
                   </Card>
                 )}
@@ -4950,8 +5084,6 @@ export default function MCDMCalculator() {
                           key={m.value}
                           onClick={() => {
                             handleRankingMethodChange(m.value)
-                            setActiveFormulaType("method")
-                            setIsDialogOpen(true)
                           }}
                           className={`group relative flex flex-col justify-between p-3 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden h-[100px] w-full ${method === m.value
                             ? "border-blue-500 bg-blue-50 shadow-sm"
@@ -4959,7 +5091,17 @@ export default function MCDMCalculator() {
                             }`}
                         >
                           <div className="absolute top-2 right-2 flex flex-col items-end gap-1.5 transition-opacity">
-                            <div className="opacity-30 group-hover:opacity-100 text-blue-500 border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic font-bold">i</div>
+                            <div
+                              className="opacity-30 group-hover:opacity-100 text-blue-500 border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic font-bold cursor-help"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMethod(m.value)
+                                setActiveFormulaType("method")
+                                setIsDialogOpen(true)
+                              }}
+                            >
+                              i
+                            </div>
                             <div
                               className="flex items-center gap-1 bg-white/80 backdrop-blur-sm px-1.5 py-0.5 rounded border border-indigo-100 shadow-sm hover:bg-indigo-50 transition-colors"
                               onClick={(e) => {
@@ -4977,7 +5119,15 @@ export default function MCDMCalculator() {
                             </div>
                           </div>
 
-                          <div className="pr-4 flex-1 flex flex-col justify-center">
+                          <div
+                            className="pr-4 flex-1 flex flex-col justify-center cursor-help"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMethod(m.value)
+                              setActiveFormulaType("method")
+                              setIsDialogOpen(true)
+                            }}
+                          >
                             <h4 className={`text-[13px] font-bold font-serif mb-1 transition-colors ${method === m.value ? 'text-blue-800' : 'text-gray-900 group-hover:text-blue-600'}`}>
                               {m.label}
                             </h4>
@@ -5312,23 +5462,41 @@ export default function MCDMCalculator() {
                           key={w.value}
                           onClick={() => {
                             handleWeightMethodChange(w.value)
-                            if (w.value === "hybrid") {
-                              setIsHybridDialogOpen(true)
-                            } else {
-                              setActiveFormulaType("weight")
-                              setIsDialogOpen(true)
-                            }
                           }}
                           className={`group relative flex flex-col justify-between p-3 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden h-[90px] w-full ${weightMethod === w.value
                             ? "border-emerald-500 bg-emerald-50 shadow-sm"
                             : "border-emerald-400/40 bg-white hover:border-emerald-500 hover:bg-emerald-50/30 hover:shadow-sm"
                             }`}
                         >
-                          <div className="absolute top-2 right-2 opacity-30 group-hover:opacity-100 transition-opacity">
+                          <div
+                            className="absolute top-2 right-2 opacity-30 group-hover:opacity-100 transition-opacity cursor-help"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setWeightMethod(w.value)
+                              if (w.value === "hybrid") {
+                                setIsHybridDialogOpen(true)
+                              } else {
+                                setActiveFormulaType("weight")
+                                setIsDialogOpen(true)
+                              }
+                            }}
+                          >
                             <div className="text-emerald-500 border border-current rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-serif italic font-bold">i</div>
                           </div>
 
-                          <div className="pr-4 flex-1 flex flex-col justify-center">
+                          <div
+                            className="pr-4 flex-1 flex flex-col justify-center cursor-help"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setWeightMethod(w.value)
+                              if (w.value === "hybrid") {
+                                setIsHybridDialogOpen(true)
+                              } else {
+                                setActiveFormulaType("weight")
+                                setIsDialogOpen(true)
+                              }
+                            }}
+                          >
                             <h4 className={`text-[13px] font-bold font-serif mb-1 transition-colors ${weightMethod === w.value ? 'text-emerald-800' : 'text-gray-900 group-hover:text-emerald-600'}`}>
                               {w.label}
                             </h4>
@@ -6404,55 +6572,114 @@ export default function MCDMCalculator() {
                         </div>
 
                         {/* Editable Decision Matrix Table */}
-                        <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
-                          <Table className="border-collapse w-full" style={{ width: `${80 + (criteria.length * 60)}px`, minWidth: '100%' }}>
-                            <TableHeader>
-                              <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
-                                <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
-                                  <div className="flex flex-col items-center justify-center h-full leading-tight">
-                                    <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center flex items-center justify-center gap-1">Criteria <ArrowRight className="w-2.5 h-2.5 stroke-[3]" /></div>
-                                    <div className="text-[10px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">Alternatives <ArrowDown className="w-2.5 h-2.5 stroke-[3]" /></div>
-                                  </div>
-                                </TableHead>
-                                {criteria.map((crit) => (
-                                  <TableHead key={crit.id} className="text-black font-bold text-center text-[10px] border-r border-gray-300 px-1 py-0.5" style={{ width: '60px', minWidth: '60px' }}>
-                                    <div className="flex flex-col items-center py-0.5">
-                                      <div className="flex items-center gap-1">
-                                        <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
-                                        <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"} aria-hidden>
-                                          {crit.type === "beneficial" ? "▲" : "▼"}
-                                        </span>
-                                      </div>
-                                      <div className="text-gray-600 font-semibold text-[9px]">
-                                        {crit.type === "beneficial" ? "Max" : "Min"}
-                                      </div>
-                                    </div>
-                                  </TableHead>
-                                ))}
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {alternatives.map((alt) => (
-                                <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
-                                  <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5 text-center">{alt.name}</TableCell>
-                                  {criteria.map((crit) => (
-                                    <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
-                                      <Input
-                                        type="number"
-                                        step="any"
-                                        min="0"
-                                        value={alt.scores[crit.id] ?? ""}
-                                        onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
-                                        onKeyDown={handleKeyDown}
-                                        className="text-center text-[10px] h-7 border-gray-100 text-black w-full shadow-none bg-white rounded-md p-1 focus:ring-1 focus:ring-blue-400"
-                                      />
-                                    </TableCell>
-                                  ))}
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
+                        {!isFuzzyMode && (
+                          <SharedDecisionMatrix
+                            alternatives={alternatives}
+                            criteria={criteria}
+                            isFuzzyMode={isFuzzyMode}
+                            fuzzyScaleType={fuzzyScaleType}
+                            customFuzzyScales={customFuzzyScales}
+                            updateAlternativeScore={updateAlternativeScore}
+                            handleKeyDown={handleKeyDown}
+                          />
+                        )}
+
+                        {isFuzzyMode && (
+                          <Card className="border-blue-100 bg-gradient-to-br from-blue-50/20 to-indigo-50/10 mb-6 overflow-hidden shadow-sm ring-1 ring-blue-500/5 mt-4">
+                            <div className="px-6 pt-4 flex flex-row items-center justify-between border-b border-blue-50 pb-3">
+                              <ResearchAssetHeader
+                                assetKey="fuzzy_matrix_results_step5"
+                                defaultLabel={getRankingTableLabel()}
+                                title="FUZZY TRIANGULAR DECISION MATRIX"
+                                included={selectedAiAssets.has("fuzzy_matrix_results_step5")}
+                                onIncludeChange={handleIncludeChange}
+                                onLabelChange={handleAssetLabelChange}
+                              />
+                              
+                              {/* Crisp Spread Selector for editable numerical values */}
+                              {alternatives.some(alt => Object.values(alt.scores).some(val => typeof val === "number" || (!Object.values(LINGUISTIC_SCALES).flat().some(s => s.value === val)))) && (
+                                <div className="flex items-center gap-2 bg-white px-3 py-1 border border-blue-100 rounded-lg shadow-sm">
+                                  <span className="text-[10px] font-bold text-blue-700 uppercase">Spread:</span>
+                                  <Select 
+                                    value={String(fuzzyCrispSpread)} 
+                                    onValueChange={(val) => {
+                                      const spreadNum = parseFloat(val);
+                                      setFuzzyCrispSpread(spreadNum);
+                                      if (typeof window !== "undefined") {
+                                        localStorage.setItem("fuzzy_crisp_spread", val);
+                                      }
+                                      handleComparisonCalculate();
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-16 h-6 text-[10px] font-bold border-none shadow-none text-blue-800 bg-blue-50/50 hover:bg-blue-100/50 transition-colors">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="text-xs">
+                                      <SelectItem value="5" className="text-[10px]">± 5%</SelectItem>
+                                      <SelectItem value="10" className="text-[10px]">± 10%</SelectItem>
+                                      <SelectItem value="15" className="text-[10px]">± 15%</SelectItem>
+                                      <SelectItem value="20" className="text-[10px]">± 20%</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <CardContent className="pt-4 px-6 pb-6">
+                              <div className="table-responsive border border-blue-100 rounded-lg overflow-x-auto bg-white shadow-inner">
+                                <table className="min-w-full text-xs border-collapse">
+                                  <thead className="bg-blue-50/50">
+                                    <tr>
+                                      <th className="px-3 py-2 text-left border-b border-blue-100 text-blue-900 font-bold uppercase tracking-wider text-[10px] w-32 border-r border-blue-100">
+                                        Alternatives
+                                      </th>
+                                      {criteria.map((crit) => (
+                                        <th
+                                          key={crit.id}
+                                          className="px-3 py-2 text-center border-b border-blue-100 text-blue-900 font-bold uppercase tracking-wider text-[10px] min-w-[140px] border-r border-blue-100 last:border-r-0"
+                                        >
+                                          <div className="flex flex-col items-center justify-center">
+                                            <span>{crit.name}</span>
+                                            <span className={`text-[9px] font-extrabold mt-0.5 px-1.5 py-0.5 rounded-full ${crit.type === "beneficial" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+                                              {crit.type === "beneficial" ? "MAX" : "MIN"}
+                                            </span>
+                                          </div>
+                                        </th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {(() => {
+                                      const processedAlts = getProcessedAlternatives(alternatives, fuzzyScaleType, customFuzzyScales, "fuzzy_display");
+                                      return processedAlts.map((alt) => (
+                                        <tr key={alt.id} className="border-b border-blue-50 hover:bg-blue-50/10 transition-colors last:border-b-0">
+                                          <td className="px-3 py-2.5 text-left font-bold text-gray-900 bg-gray-50/30 border-r border-blue-50">
+                                            {alt.name}
+                                          </td>
+                                          {criteria.map((crit) => {
+                                            const score = alt.scores[crit.id];
+                                            const formatValue = (v: any) => {
+                                              if (v && typeof v === "object" && "l" in v) {
+                                                return `(${v.l.toFixed(resultsDecimalPlaces)}, ${v.m.toFixed(resultsDecimalPlaces)}, ${v.u.toFixed(resultsDecimalPlaces)})`;
+                                              }
+                                              return String(v);
+                                            };
+                                            return (
+                                              <td key={crit.id} className="text-center py-2 px-3 border-r border-blue-50 last:border-r-0 font-mono font-bold text-blue-800 text-[11px] tabular-nums whitespace-nowrap">
+                                                {formatValue(score)}
+                                              </td>
+                                            );
+                                          })}
+                                        </tr>
+                                      ));
+                                    })()}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
                       </div>
                     ) : (
                       <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded">
@@ -6498,6 +6725,9 @@ export default function MCDMCalculator() {
                                     }
                                     if (w.value === "custom") {
                                       setIsComparisonCustomWeightsDialogOpen(true)
+                                    }
+                                    if (w.value === "fucom") {
+                                      setIsFucomDialogOpen(true)
                                     }
                                     setComparisonWeightMethod(w.value)
                                   }}
@@ -9002,55 +9232,114 @@ export default function MCDMCalculator() {
                         </div>
 
                         {/* Editable Decision Matrix Table */}
-                        <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
-                          <Table className="border-collapse w-full" style={{ width: `${80 + (criteria.length * 60)}px`, minWidth: '100%' }}>
-                            <TableHeader>
-                              <TableRow className="bg-[#FFD966] hover:bg-[#FFD966] border-b border-gray-300">
-                                <TableHead className="bg-white text-black font-bold text-[9px] border-r border-gray-300 p-0 h-8" style={{ width: '80px', minWidth: '80px' }}>
-                                  <div className="flex flex-col items-center justify-center h-full leading-tight">
-                                    <div className="text-[10px] font-bold py-0.5 border-b border-gray-300 w-full text-center flex items-center justify-center gap-1">Criteria <ArrowRight className="w-2.5 h-2.5 stroke-[3]" /></div>
-                                    <div className="text-[10px] font-bold py-0.5 w-full text-center flex items-center justify-center gap-1">Alternatives <ArrowDown className="w-2.5 h-2.5 stroke-[3]" /></div>
-                                  </div>
-                                </TableHead>
-                                {criteria.map((crit) => (
-                                  <TableHead key={crit.id} className="text-black font-bold text-center text-[10px] border-r border-gray-300 px-1 py-0.5" style={{ width: '60px', minWidth: '60px' }}>
-                                    <div className="flex flex-col items-center py-0.5">
-                                      <div className="flex items-center gap-1">
-                                        <div className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</div>
-                                        <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"} aria-hidden>
-                                          {crit.type === "beneficial" ? "▲" : "▼"}
-                                        </span>
-                                      </div>
-                                      <div className="text-gray-600 font-semibold text-[9px]">
-                                        {crit.type === "beneficial" ? "Max" : "Min"}
-                                      </div>
-                                    </div>
-                                  </TableHead>
-                                ))}
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {alternatives.map((alt) => (
-                                <TableRow key={alt.id} className="border-b border-gray-300 hover:bg-gray-50/50 transition-colors">
-                                  <TableCell className="bg-[#F4B084] text-black font-bold text-[9px] border-r border-gray-300 py-1 px-1.5 text-center">{alt.name}</TableCell>
-                                  {criteria.map((crit) => (
-                                    <TableCell key={crit.id} className="p-0.5 border-r border-gray-300">
-                                      <Input
-                                        type="number"
-                                        step="any"
-                                        min="0"
-                                        value={alt.scores[crit.id] ?? ""}
-                                        onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
-                                        onKeyDown={handleKeyDown}
-                                        className="text-center text-[10px] h-7 border-gray-100 text-black w-full shadow-none bg-white rounded-md p-1 focus:ring-1 focus:ring-blue-400"
-                                      />
-                                    </TableCell>
-                                  ))}
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
+                        {!isFuzzyMode && (
+                          <SharedDecisionMatrix
+                            alternatives={alternatives}
+                            criteria={criteria}
+                            isFuzzyMode={isFuzzyMode}
+                            fuzzyScaleType={fuzzyScaleType}
+                            customFuzzyScales={customFuzzyScales}
+                            updateAlternativeScore={updateAlternativeScore}
+                            handleKeyDown={handleKeyDown}
+                          />
+                        )}
+
+                        {isFuzzyMode && (
+                          <Card className="border-blue-100 bg-gradient-to-br from-blue-50/20 to-indigo-50/10 mb-6 overflow-hidden shadow-sm ring-1 ring-blue-500/5 mt-4">
+                            <div className="px-6 pt-4 flex flex-row items-center justify-between border-b border-blue-50 pb-3">
+                              <ResearchAssetHeader
+                                assetKey="fuzzy_matrix_results_step6"
+                                defaultLabel={getRankingTableLabel()}
+                                title="FUZZY TRIANGULAR DECISION MATRIX"
+                                included={selectedAiAssets.has("fuzzy_matrix_results_step6")}
+                                onIncludeChange={handleIncludeChange}
+                                onLabelChange={handleAssetLabelChange}
+                              />
+                              
+                              {/* Crisp Spread Selector for editable numerical values */}
+                              {alternatives.some(alt => Object.values(alt.scores).some(val => typeof val === "number" || (!Object.values(LINGUISTIC_SCALES).flat().some(s => s.value === val)))) && (
+                                <div className="flex items-center gap-2 bg-white px-3 py-1 border border-blue-100 rounded-lg shadow-sm">
+                                  <span className="text-[10px] font-bold text-blue-700 uppercase">Spread:</span>
+                                  <Select 
+                                    value={String(fuzzyCrispSpread)} 
+                                    onValueChange={(val) => {
+                                      const spreadNum = parseFloat(val);
+                                      setFuzzyCrispSpread(spreadNum);
+                                      if (typeof window !== "undefined") {
+                                        localStorage.setItem("fuzzy_crisp_spread", val);
+                                      }
+                                      handleWeightSensitivityAnalysis();
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-16 h-6 text-[10px] font-bold border-none shadow-none text-blue-800 bg-blue-50/50 hover:bg-blue-100/50 transition-colors">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="text-xs">
+                                      <SelectItem value="5" className="text-[10px]">± 5%</SelectItem>
+                                      <SelectItem value="10" className="text-[10px]">± 10%</SelectItem>
+                                      <SelectItem value="15" className="text-[10px]">± 15%</SelectItem>
+                                      <SelectItem value="20" className="text-[10px]">± 20%</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <CardContent className="pt-4 px-6 pb-6">
+                              <div className="table-responsive border border-blue-100 rounded-lg overflow-x-auto bg-white shadow-inner">
+                                <table className="min-w-full text-xs border-collapse">
+                                  <thead className="bg-blue-50/50">
+                                    <tr>
+                                      <th className="px-3 py-2 text-left border-b border-blue-100 text-blue-900 font-bold uppercase tracking-wider text-[10px] w-32 border-r border-blue-100">
+                                        Alternatives
+                                      </th>
+                                      {criteria.map((crit) => (
+                                        <th
+                                          key={crit.id}
+                                          className="px-3 py-2 text-center border-b border-blue-100 text-blue-900 font-bold uppercase tracking-wider text-[10px] min-w-[140px] border-r border-blue-100 last:border-r-0"
+                                        >
+                                          <div className="flex flex-col items-center justify-center">
+                                            <span>{crit.name}</span>
+                                            <span className={`text-[9px] font-extrabold mt-0.5 px-1.5 py-0.5 rounded-full ${crit.type === "beneficial" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+                                              {crit.type === "beneficial" ? "MAX" : "MIN"}
+                                            </span>
+                                          </div>
+                                        </th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {(() => {
+                                      const processedAlts = getProcessedAlternatives(alternatives, fuzzyScaleType, customFuzzyScales, "fuzzy_display");
+                                      return processedAlts.map((alt) => (
+                                        <tr key={alt.id} className="border-b border-blue-50 hover:bg-blue-50/10 transition-colors last:border-b-0">
+                                          <td className="px-3 py-2.5 text-left font-bold text-gray-900 bg-gray-50/30 border-r border-blue-50">
+                                            {alt.name}
+                                          </td>
+                                          {criteria.map((crit) => {
+                                            const score = alt.scores[crit.id];
+                                            const formatValue = (v: any) => {
+                                              if (v && typeof v === "object" && "l" in v) {
+                                                return `(${v.l.toFixed(resultsDecimalPlaces)}, ${v.m.toFixed(resultsDecimalPlaces)}, ${v.u.toFixed(resultsDecimalPlaces)})`;
+                                              }
+                                              return String(v);
+                                            };
+                                            return (
+                                              <td key={crit.id} className="text-center py-2 px-3 border-r border-blue-50 last:border-r-0 font-mono font-bold text-blue-800 text-[11px] tabular-nums whitespace-nowrap">
+                                                {formatValue(score)}
+                                              </td>
+                                            );
+                                          })}
+                                        </tr>
+                                      ));
+                                    })()}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
                       </>
                     ) : (
                       <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded">
@@ -9423,6 +9712,24 @@ export default function MCDMCalculator() {
                       }[chartSettings.backgroundTheme] || { bg: '#ffffff', text: '#000000', border: '#000000' };
 
                       const markerShape = chartSettings.markerType;
+                      
+                      const RightFrameBorder = (props: any) => {
+                        const { viewBox } = props;
+                        if (!viewBox || viewBox.width == null || viewBox.height == null) return null;
+                        const x = viewBox.x + viewBox.width;
+                        const y1 = viewBox.y;
+                        const y2 = viewBox.y + viewBox.height;
+                        return (
+                          <line
+                            key="right-frame-border"
+                            x1={x} y1={y1} x2={x} y2={y2}
+                            stroke={theme.border}
+                            strokeWidth={chartSettings.borderWidth || 1.5}
+                            strokeLinecap="square"
+                            pointerEvents="none"
+                          />
+                        );
+                      };
 
                       return (
                         <>
@@ -9543,7 +9850,7 @@ export default function MCDMCalculator() {
                                   onIncludeChange={handleIncludeChange}
                                   onAiAnalysis={() => handleAiAnalysis("sensitivity", { sensitivityData: sensitivityCriteriaWeights })}
                                 >
-                                  <div className="flex items-center gap-2 flex-wrap">
+                                  <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                                     <Select value={sensitivityChartType} onValueChange={setSensitivityChartType}>
                                       <SelectTrigger className="w-28 sm:w-32 h-7 text-xs">
                                         <SelectValue />
@@ -9562,7 +9869,7 @@ export default function MCDMCalculator() {
                                         <SelectItem value="dual">Dual-Axis (Score & Rank)</SelectItem>
                                       </SelectContent>
                                     </Select>
-                                    <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-md border border-gray-200">
+                                    <div className="flex items-center gap-1 sm:gap-1.5 bg-gray-50 p-0.5 sm:p-1 rounded-md border border-gray-200">
                                       <Button
                                         onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation", 'jpeg')}
                                         variant="ghost"
@@ -9583,16 +9890,16 @@ export default function MCDMCalculator() {
                                     </div>
                                   </div>
                                 </ResearchAssetHeader>
-                                <div className="w-full mt-3 px-4 border-t pt-2">
+                                <div className="w-full mt-3 px-0 sm:px-4 border-t pt-2">
                                   <ChartVisualConfigurator
                                     settings={chartSettings}
                                     onSettingsChange={setChartSettings}
                                   />
                                 </div>
                               </CardHeader>
-                              <CardContent className="h-[800px] sm:h-[600px] p-0 sm:px-6 sm:py-2 mt-0">
-                                <div className={`w-full h-full max-w-7xl mx-auto transition-all duration-500 ${chartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }} ref={sensitivityGraphicalVariationRef}>
-                                  <ResponsiveContainer width="100%" height="100%">
+                              <CardContent className="px-0 sm:px-6 pt-6 mt-0">
+                                <div className={`w-full max-w-7xl mx-auto transition-all duration-500 ${chartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }} ref={sensitivityGraphicalVariationRef}>
+                                  <ResponsiveContainer width="100%" height={getAspectRatioValue() ? undefined : (isMobile ? 400 : 600)} aspect={getAspectRatioValue()}>
                                     {sensitivityChartType === 'radar' ? (
                                       <RadarChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} cx="50%" cy="50%" outerRadius="80%" data={sensitivityWeightChartData}>
                                         {renderDefs(activeColors)}
@@ -10313,8 +10620,7 @@ export default function MCDMCalculator() {
                                         : Array.from({ length: Math.ceil(totalAlts / 2) }, (_, i) => (i + 1) * 2);
 
                                       return (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                          <ComposedChart
+                                        <ComposedChart
                                             data={sensitivityWeightChartData}
                                             margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
                                             barGap={0}
@@ -10442,7 +10748,7 @@ export default function MCDMCalculator() {
                                                   strokeWidth={chartSettings.borderWidth + 0.5}
                                                   strokeDasharray={_dash}
                                                   name={`${cleanLabel} Rank`}
-                                                  dot={makeCustomDot(seriesColor)}
+                                                  dot={makeCustomDot(seriesColor, `line-${res.weightLabel}-${i}`)}
                                                   legendType={_dash !== '0' ? 'plainline' : 'line'}
                                                 />
                                               );
@@ -10458,7 +10764,6 @@ export default function MCDMCalculator() {
                                               />
                                             )}
                                           </ComposedChart>
-                                        </ResponsiveContainer>
                                       );
                                     })()
                                     ) : (
@@ -10544,10 +10849,10 @@ export default function MCDMCalculator() {
                                               dot={(props: any) => {
                                                 const { cx, cy, index, stroke } = props;
                                                 const size = chartSettings.markerSize;
-                                                if (markerShape === 'square') return <rect key={index} x={cx - size} y={cy - size} width={size * 2} height={size * 2} fill={stroke} />;
-                                                if (markerShape === 'triangle') return <path key={index} d={`M${cx},${cy - size * 1.5} L${cx - size},${cy + size} L${cx + size},${cy + size} Z`} fill={stroke} />;
-                                                if (markerShape === 'diamond') return <path key={index} d={`M${cx},${cy - size * 1.5} L${cx + size},${cy} L${cx},${cy + size * 1.5} L${cx - size},${cy} Z`} fill={stroke} />;
-                                                return <circle key={index} cx={cx} cy={cy} r={size} fill={stroke} />;
+                                                if (markerShape === 'square') return <rect key={`dot-${res.weightLabel}-${i}-${index}`} x={cx - size} y={cy - size} width={size * 2} height={size * 2} fill={stroke} />;
+                                                if (markerShape === 'triangle') return <path key={`dot-${res.weightLabel}-${i}-${index}`} d={`M${cx},${cy - size * 1.5} L${cx - size},${cy + size} L${cx + size},${cy + size} Z`} fill={stroke} />;
+                                                if (markerShape === 'diamond') return <path key={`dot-${res.weightLabel}-${i}-${index}`} d={`M${cx},${cy - size * 1.5} L${cx + size},${cy} L${cx},${cy + size * 1.5} L${cx - size},${cy} Z`} fill={stroke} />;
+                                                return <circle key={`dot-${res.weightLabel}-${i}-${index}`} cx={cx} cy={cy} r={size} fill={stroke} />;
                                               }}
                                             />
                                           );
@@ -10656,6 +10961,10 @@ export default function MCDMCalculator() {
                     {method === "cocoso" && <COCOSOFormula />}
                     {method === "gra" && <GRAFormula />}
                     {method === "aras" && <ARASFormula />}
+                    {method === "spotis" && <SPOTISFormula />}
+                    {method === "fuzzytopsis" && <FuzzyTOPSISFormula />}
+                    {method === "fuzzyswei" && <FuzzySWEIFormula />}
+                    {method === "fuzzyswi" && <FuzzySWIFormula />}
                   </>
 
                 ) : (
@@ -10667,6 +10976,7 @@ export default function MCDMCalculator() {
                     {weightMethod === "equal" && <EqualWeightsFormula />}
                     {weightMethod === "merec" && <MERECFormula />}
                     {weightMethod === "swara" && <SWARAFormula />}
+                    {weightMethod === "fucom" && <FUCOMFormula />}
                     {weightMethod === "wenslo" && <WENSLOFormula />}
                     {weightMethod === "lopcow" && <LOPCOWFormula />}
                     {weightMethod === "dematel" && <DEMATELFormula />}
@@ -11125,15 +11435,21 @@ export default function MCDMCalculator() {
                               key={crit.id}
                               className="text-xs font-bold text-center py-2 px-3 min-w-28 border-r border-gray-300 last:border-r-0"
                             >
-                              <div className="flex flex-col items-center gap-1">
-                                <Input
-                                  value={crit.name}
-                                  onChange={(e) => updateCriterion(crit.id, { name: e.target.value })}
-                                  className="text-xs h-7 border-gray-300 text-black text-center shadow-none font-bold bg-white"
-                                />
-                                <span className={`text-sm ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
-                                  {crit.type === "beneficial" ? "▲" : "▼"}
-                                </span>
+                              <div className={`flex flex-col items-center gap-0.5 rounded-t-md py-1 px-1 transition-colors ${
+                                crit.type === "beneficial" ? "bg-green-50/50" : "bg-red-50/50"
+                              }`}>
+                                <div className="flex items-center gap-1">
+                                  <Input
+                                    value={crit.name}
+                                    onChange={(e) => updateCriterion(crit.id, { name: e.target.value })}
+                                    className={`text-[11px] h-6 border-transparent focus:border-blue-400 text-center shadow-none font-extrabold bg-transparent ${
+                                      crit.type === "beneficial" ? "text-green-800" : "text-red-800"
+                                    }`}
+                                  />
+                                  <span className={`text-xs font-black ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
+                                    {crit.type === "beneficial" ? "▲" : "▼"}
+                                  </span>
+                                </div>
                               </div>
                             </TableHead>
                           ))}
@@ -11142,21 +11458,30 @@ export default function MCDMCalculator() {
                         <TableRow className="bg-gray-50 border-b border-gray-300">
                           <TableHead className="text-xs font-semibold text-black py-2 px-3 border-r border-gray-300">Max/Min</TableHead>
                           {criteria.map((crit) => (
-                            <TableHead key={crit.id} className="text-xs font-semibold text-black text-center py-2 px-3 border-r border-gray-300 last:border-r-0">
-                              <Select
-                                value={crit.type}
-                                onValueChange={(value) =>
-                                  updateCriterion(crit.id, { type: value as "beneficial" | "non-beneficial" })
-                                }
-                              >
-                                <SelectTrigger className="text-xs h-7 border-gray-300 bg-white text-black shadow-none w-full">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="beneficial">Max</SelectItem>
-                                  <SelectItem value="non-beneficial">Min</SelectItem>
-                                </SelectContent>
-                              </Select>
+                            <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-2 px-3 border-r border-gray-300 last:border-r-0 ${
+                              crit.type === "beneficial" ? "bg-green-50/30" : "bg-red-50/30"
+                            }`}>
+                              <div className="flex flex-col items-center">
+                                <Select
+                                  value={crit.type}
+                                  onValueChange={(value) =>
+                                    updateCriterion(crit.id, { type: value as "beneficial" | "non-beneficial" })
+                                  }
+                                >
+                                  <SelectTrigger className={`text-[10px] h-6 border-gray-200 bg-white shadow-none w-full font-bold ${
+                                    crit.type === "beneficial" ? "text-green-700" : "text-red-700"
+                                  }`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="beneficial" className="text-green-700 font-bold text-[10px]">Max (Beneficial)</SelectItem>
+                                    <SelectItem value="non-beneficial" className="text-red-700 font-bold text-[10px]">Min (Non-Beneficial)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <span className="text-[9px] text-gray-500 font-mono mt-0.5">
+                                  ({crit.weight.toFixed(4)})
+                                </span>
+                              </div>
                             </TableHead>
                           ))}
                         </TableRow>
@@ -11175,15 +11500,44 @@ export default function MCDMCalculator() {
                             </TableCell>
                             {criteria.map((crit) => (
                               <TableCell key={crit.id} className="text-center py-2 px-3 border-r border-gray-200 last:border-r-0">
-                                <Input
-                                  type="number"
-                                  inputMode="decimal"
-                                  placeholder="0"
-                                  value={alt.scores[crit.id] ?? ""}
-                                  onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
-                                  onKeyDown={handleKeyDown}
-                                  className="text-center text-xs h-7 border-gray-300 text-black w-full shadow-none bg-white"
-                                />
+                                {isFuzzyMode ? (
+                                  <div className="flex flex-col gap-1 w-full">
+                                    <Select
+                                      value={alt.scores[crit.id]?.toString() || ""}
+                                      onValueChange={(value) => updateAlternativeScore(alt.id, crit.id, value)}
+                                    >
+                                      <SelectTrigger className="text-xs h-7 border-gray-300 bg-white text-black shadow-none w-full font-bold">
+                                        <SelectValue placeholder="Scale" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {customFuzzyScales[fuzzyScaleType].map((item: any) => (
+                                          <SelectItem key={item.value} value={item.value} className="text-[10px]">
+                                            {item.label}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    {alt.scores[crit.id] && customFuzzyScales[fuzzyScaleType].find((s: any) => s.value === alt.scores[crit.id]) && (
+                                      <div className="text-[9px] text-blue-600 font-mono bg-blue-50/50 rounded px-1 text-center py-0.5">
+                                        {(() => {
+                                          const item = customFuzzyScales[fuzzyScaleType].find((s: any) => s.value === alt.scores[crit.id]);
+                                          if (!item) return "";
+                                          return `(${item.triplet.l}, ${item.triplet.m}, ${item.triplet.u})`;
+                                        })()}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <Input
+                                    type="number"
+                                    inputMode="decimal"
+                                    placeholder="0"
+                                    value={alt.scores[crit.id] ?? ""}
+                                    onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    className="text-center text-xs h-7 border-gray-300 text-black w-full shadow-none bg-white font-semibold"
+                                  />
+                                )}
                               </TableCell>
                             ))}
                           </TableRow>
@@ -11495,6 +11849,8 @@ export default function MCDMCalculator() {
                           })
                           setCustomWeights(initialWeights)
                           setIsMainCustomWeightsDialogOpen(true)
+                        } else if (val === "fucom") {
+                          setIsFucomDialogOpen(true)
                         } else {
                           calculateWeights(val)
                         }
@@ -11505,7 +11861,7 @@ export default function MCDMCalculator() {
                         <SelectContent className="max-h-[300px]">
                           <SelectGroup>
                             <SelectLabel className="text-xs font-bold text-blue-600 px-2 py-1.5 bg-blue-50/50">Objective Weights</SelectLabel>
-                            {WEIGHT_METHODS.filter(m => !["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
+                            {WEIGHT_METHODS.filter(m => !["ahp", "piprecia", "swara", "roc", "rr", "custom", "fucom"].includes(m.value)).map((m) => (
                               <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
                                 {m.label}
                               </SelectItem>
@@ -11513,7 +11869,7 @@ export default function MCDMCalculator() {
                           </SelectGroup>
                           <SelectGroup>
                             <SelectLabel className="text-xs font-bold text-purple-600 px-2 py-1.5 bg-purple-50/50 mt-1">Subjective Weights</SelectLabel>
-                            {WEIGHT_METHODS.filter(m => ["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
+                            {WEIGHT_METHODS.filter(m => ["ahp", "piprecia", "swara", "roc", "rr", "custom", "fucom"].includes(m.value)).map((m) => (
                               <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
                                 {m.label}
                               </SelectItem>
@@ -11620,8 +11976,20 @@ export default function MCDMCalculator() {
               {/* Evaluation Matrix */}
               <Card className="border-gray-200 bg-white shadow-none mb-3">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-bold">Evaluation Matrix</CardTitle>
-                  <CardDescription className="text-[10px]">Review your decision matrix before calculation</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-sm font-bold">Evaluation Matrix</CardTitle>
+                      <CardDescription className="text-[10px]">Review your decision matrix before calculation</CardDescription>
+                    </div>
+                    <FuzzyModeSelector 
+                      isFuzzyMode={isFuzzyMode}
+                      setIsFuzzyMode={setIsFuzzyMode}
+                      fuzzyScaleType={fuzzyScaleType}
+                      setFuzzyScaleType={setFuzzyScaleType}
+                      customFuzzyScales={customFuzzyScales}
+                      setCustomFuzzyScales={setCustomFuzzyScales}
+                    />
+                  </div>
                 </CardHeader>
                 <CardContent className="pt-3">
                   <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
@@ -11637,21 +12005,27 @@ export default function MCDMCalculator() {
                           {criteria.map((crit) => (
                             <TableHead
                               key={crit.id}
-                              className="text-black font-bold text-center min-w-[60px] text-[10px] border-r border-gray-300 px-1"
+                              className="text-black font-bold text-center min-w-[120px] text-[10px] border-r border-gray-300 px-0 py-0"
                             >
-                              <div className="flex flex-col items-center py-0.5">
-                                <div className="flex items-center gap-1">
-                                  <span className={crit.type === "beneficial" ? "text-green-700" : "text-red-700"}>{crit.name}</span>
-                                  <span className={crit.type === "beneficial" ? "text-green-700 font-bold" : "text-red-700 font-bold"}>
+                              <div className={`flex flex-col items-center justify-center h-full py-1.5 ${
+                                crit.type === "beneficial" ? "bg-green-50/20" : "bg-red-50/20"
+                              }`}>
+                                <div className="flex items-center gap-1 mb-0.5">
+                                  <span className={`font-black ${crit.type === "beneficial" ? "text-green-800" : "text-red-800"}`}>
+                                    {crit.name}
+                                  </span>
+                                  <span className={`text-[11px] font-black ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
                                     {crit.type === "beneficial" ? "▲" : "▼"}
                                   </span>
                                 </div>
-                                <span className="text-gray-600 font-semibold text-[9px]">
-                                  {crit.type === "beneficial" ? "Max" : "Min"}
-                                </span>
-                                <span className="text-gray-500 text-[8px] font-normal leading-none">
-                                  ({crit.weight.toFixed(weightsDecimalPlaces)})
-                                </span>
+                                <div className="flex flex-col items-center leading-none">
+                                  <span className={`text-[9px] font-bold ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"}`}>
+                                    {crit.type === "beneficial" ? "Max" : "Min"}
+                                  </span>
+                                  <span className="text-gray-500 text-[8px] font-mono mt-0.5">
+                                    ({crit.weight.toFixed(weightsDecimalPlaces)})
+                                  </span>
+                                </div>
                               </div>
                             </TableHead>
                           ))}
@@ -11665,10 +12039,63 @@ export default function MCDMCalculator() {
                             </TableCell>
                             {criteria.map((crit) => (
                               <TableCell key={crit.id} className="text-center p-0.5 border-r border-gray-300">
-                                <div className="bg-white border border-gray-200 rounded-md py-1 px-1.5 inline-block min-w-[50px] shadow-none text-[10px]">
-                                  {alt.scores[crit.id] !== undefined && alt.scores[crit.id] !== ""
-                                    ? Number(alt.scores[crit.id]).toString()
-                                    : "-"}
+                                <div className="inline-block min-w-[70px]">
+                                  {isFuzzyMode ? (
+                                    <div className="flex flex-col gap-2 items-center py-1">
+                                      <Select
+                                        value={typeof alt.scores[crit.id] === 'string' ? alt.scores[crit.id] as string : ""}
+                                        onValueChange={(value) => updateAlternativeScore(alt.id, crit.id, value)}
+                                      >
+                                        <SelectTrigger className="text-[9px] h-5 border-blue-200 bg-blue-50/50 text-blue-800 shadow-none w-full font-bold hover:bg-blue-100/50 transition-colors">
+                                          <SelectValue placeholder="Scale" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {customFuzzyScales[fuzzyScaleType].map((item: any) => (
+                                            <SelectItem key={item.value} value={item.value} className="text-[10px]">
+                                              {item.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      
+                                      <FuzzyTripletInput 
+                                        value={(() => {
+                                          const score = alt.scores[crit.id];
+                                          // 1. Check if already a triplet object
+                                          if (typeof score === 'object' && score !== null && 'l' in score) return score as any;
+                                          
+                                          // 2. Check if it matches a linguistic term
+                                          const item = customFuzzyScales[fuzzyScaleType].find((s: any) => s.value === score);
+                                          if (item) return item.triplet;
+                                          
+                                          // 3. Fallback: Convert crisp number to triplet using spread
+                                          const numValue = typeof score === 'number' ? score : parseFloat(score as string);
+                                          if (!isNaN(numValue)) {
+                                            const spreadDecimal = fuzzyCrispSpread / 100;
+                                            return {
+                                              l: numValue * (1 - spreadDecimal),
+                                              m: numValue,
+                                              u: numValue * (1 + spreadDecimal)
+                                            };
+                                          }
+                                          return { l: 0, m: 0, u: 0 };
+                                        })()}
+                                        onChange={(newTriplet) => updateAlternativeScore(alt.id, crit.id, newTriplet)}
+                                        resultsDecimalPlaces={resultsDecimalPlaces}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="bg-white border border-gray-200 rounded-md py-1 px-1.5 inline-block min-w-[50px] shadow-none text-[10px]">
+                                      <Input
+                                        type="number"
+                                        inputMode="decimal"
+                                        placeholder="0"
+                                        value={alt.scores[crit.id] ?? ""}
+                                        onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
+                                        className="h-6 border-transparent focus:border-blue-400 text-center shadow-none p-0 text-[10px] w-full"
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               </TableCell>
                             ))}
@@ -11715,7 +12142,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -11934,7 +12361,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -12284,7 +12711,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -12582,7 +13009,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -12750,7 +13177,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -12957,7 +13384,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -13251,7 +13678,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -13418,7 +13845,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -13585,7 +14012,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -13754,7 +14181,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -13921,7 +14348,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -14089,7 +14516,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -14257,7 +14684,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -14435,7 +14862,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -14613,7 +15040,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -14791,7 +15218,7 @@ export default function MCDMCalculator() {
                                 <TableCell className="py-3 px-4 font-medium text-black text-xs">{alt.name}</TableCell>
                                 {criteria.map((crit) => (
                                   <TableCell key={crit.id} className="text-center py-3 px-4 text-xs text-black">
-                                    {alt.scores[crit.id] !== undefined ? Number(alt.scores[crit.id]).toString() : "-"}
+                                    {formatDecisionMatrixValue(alt.scores[crit.id], isFuzzyMode, fuzzyScaleType, customFuzzyScales)}
                                   </TableCell>
                                 ))}
                               </TableRow>
@@ -15010,6 +15437,18 @@ export default function MCDMCalculator() {
                     </CardContent>
                   </Card>
                 </>
+              )}
+
+              {fucomResult && weightMethod === "fucom" && (
+                <FUCOMResults
+                  fucomResult={fucomResult}
+                  criteria={criteria}
+                  weightsDecimalPlaces={weightsDecimalPlaces}
+                  selectedAiAssets={selectedAiAssets}
+                  handleIncludeChange={handleIncludeChange}
+                  handleAssetLabelChange={handleAssetLabelChange}
+                  getWeightTableLabel={getWeightTableLabel}
+                />
               )}
 
 
@@ -15407,7 +15846,7 @@ export default function MCDMCalculator() {
                         <SelectContent className="max-h-[300px]">
                           <SelectGroup>
                             <SelectLabel className="text-xs font-bold text-blue-600 px-2 py-1.5 bg-blue-50/50">Objective Weights</SelectLabel>
-                            {WEIGHT_METHODS.filter(m => !["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
+                            {WEIGHT_METHODS.filter(m => !["ahp", "piprecia", "swara", "roc", "rr", "custom", "fucom"].includes(m.value)).map((m) => (
                               <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
                                 {m.label}
                               </SelectItem>
@@ -15415,7 +15854,7 @@ export default function MCDMCalculator() {
                           </SelectGroup>
                           <SelectGroup>
                             <SelectLabel className="text-xs font-bold text-purple-600 px-2 py-1.5 bg-purple-50/50 mt-1">Subjective Weights</SelectLabel>
-                            {WEIGHT_METHODS.filter(m => ["ahp", "piprecia", "swara", "roc", "rr", "custom"].includes(m.value)).map((m) => (
+                            {WEIGHT_METHODS.filter(m => ["ahp", "piprecia", "swara", "roc", "rr", "custom", "fucom"].includes(m.value)).map((m) => (
                               <SelectItem key={m.value} value={m.value} className="text-xs pl-6">
                                 {m.label}
                               </SelectItem>
@@ -15582,6 +16021,102 @@ export default function MCDMCalculator() {
                           </div>
                         </div>
                       )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {isFuzzyMode && (
+                  <Card className="border-blue-100 bg-gradient-to-br from-blue-50/20 to-indigo-50/10 mb-6 overflow-hidden shadow-sm ring-1 ring-blue-500/5">
+                    <div className="px-6 pt-4 flex flex-row items-center justify-between border-b border-blue-50 pb-3">
+                      <ResearchAssetHeader
+                        assetKey="fuzzy_matrix_results"
+                        defaultLabel={getRankingTableLabel()}
+                        title="FUZZY TRIANGULAR DECISION MATRIX"
+                        included={selectedAiAssets.has("fuzzy_matrix_results")}
+                        onIncludeChange={handleIncludeChange}
+                        onLabelChange={handleAssetLabelChange}
+                      />
+                      
+                      {/* Crisp Spread Selector for editable numerical values */}
+                      {alternatives.some(alt => Object.values(alt.scores).some(val => typeof val === "number" || (!Object.values(LINGUISTIC_SCALES).flat().some(s => s.value === val)))) && (
+                        <div className="flex items-center gap-2 bg-white px-3 py-1 border border-blue-100 rounded-lg shadow-sm">
+                          <span className="text-[10px] font-bold text-blue-700 uppercase">Spread:</span>
+                          <Select 
+                            value={String(fuzzyCrispSpread)} 
+                            onValueChange={(val) => {
+                              const spreadNum = parseFloat(val);
+                              setFuzzyCrispSpread(spreadNum);
+                              if (typeof window !== "undefined") {
+                                localStorage.setItem("fuzzy_crisp_spread", val);
+                              }
+                              handleCalculate();
+                            }}
+                          >
+                            <SelectTrigger className="w-16 h-6 text-[10px] font-bold border-none shadow-none text-blue-800 bg-blue-50/50 hover:bg-blue-100/50 transition-colors">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="text-xs">
+                              <SelectItem value="5" className="text-[10px]">± 5%</SelectItem>
+                              <SelectItem value="10" className="text-[10px]">± 10%</SelectItem>
+                              <SelectItem value="15" className="text-[10px]">± 15%</SelectItem>
+                              <SelectItem value="20" className="text-[10px]">± 20%</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <CardContent className="pt-4 px-6 pb-6">
+                      <div className="table-responsive border border-blue-100 rounded-lg overflow-x-auto bg-white shadow-inner">
+                        <table className="min-w-full text-xs border-collapse">
+                          <thead className="bg-blue-50/50">
+                            <tr>
+                              <th className="px-3 py-2 text-left border-b border-blue-100 text-blue-900 font-bold uppercase tracking-wider text-[10px] w-32 border-r border-blue-100">
+                                Alternatives
+                              </th>
+                              {criteria.map((crit) => (
+                                <th
+                                  key={crit.id}
+                                  className="px-3 py-2 text-center border-b border-blue-100 text-blue-900 font-bold uppercase tracking-wider text-[10px] min-w-[140px] border-r border-blue-100 last:border-r-0"
+                                >
+                                  <div className="flex flex-col items-center justify-center">
+                                    <span>{crit.name}</span>
+                                    <span className={`text-[9px] font-extrabold mt-0.5 px-1.5 py-0.5 rounded-full ${crit.type === "beneficial" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+                                      {crit.type === "beneficial" ? "MAX" : "MIN"}
+                                    </span>
+                                  </div>
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(() => {
+                              const processedAlts = getProcessedAlternatives(alternatives, fuzzyScaleType, customFuzzyScales, "fuzzy_display");
+                              return processedAlts.map((alt) => (
+                                <tr key={alt.id} className="border-b border-blue-50 hover:bg-blue-50/10 transition-colors last:border-b-0">
+                                  <td className="px-3 py-2.5 text-left font-bold text-gray-900 bg-gray-50/30 border-r border-blue-50">
+                                    {alt.name}
+                                  </td>
+                                  {criteria.map((crit) => {
+                                    const score = alt.scores[crit.id];
+                                    const formatValue = (v: any) => {
+                                      if (v && typeof v === "object" && "l" in v) {
+                                        return `(${v.l.toFixed(resultsDecimalPlaces)}, ${v.m.toFixed(resultsDecimalPlaces)}, ${v.u.toFixed(resultsDecimalPlaces)})`;
+                                      }
+                                      return String(v);
+                                    };
+                                    return (
+                                      <td key={crit.id} className="text-center py-2 px-3 border-r border-blue-50 last:border-r-0 font-mono font-bold text-blue-800 text-[11px] tabular-nums whitespace-nowrap">
+                                        {formatValue(score)}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ));
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
                     </CardContent>
                   </Card>
                 )}
@@ -16833,6 +17368,331 @@ export default function MCDMCalculator() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {method === "spotis" && apiResults?.metrics?.spotisBounds && (
+                  <SPOTISResults
+                    spotisResult={{
+                      scores: apiResults.results,
+                      normalizedMatrix: apiResults.metrics.spotisNormalizedMatrix,
+                      distanceMatrix: apiResults.metrics.spotisDistanceMatrix,
+                      bounds: apiResults.metrics.spotisBounds
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                    boundsLabel={assetLabelsMap.spotis_bounds || "CRITERIA BOUNDS AND IDEAL SOLUTION"}
+                    distanceLabel={assetLabelsMap.spotis_distance_matrix || "NORMALIZED DISTANCE MATRIX (DIJ)"}
+                  />
+                )}
+
+                {method === "fuzzytopsis" && apiResults?.metrics?.fuzzyTopsisFPIS && (
+                  <FuzzyTOPSISResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyNormalizedMatrix: apiResults.metrics.fuzzyTopsisNormalizedMatrix,
+                      fuzzyWeightedMatrix: apiResults.metrics.fuzzyTopsisWeightedMatrix,
+                      fpis: apiResults.metrics.fuzzyTopsisFPIS,
+                      fnis: apiResults.metrics.fuzzyTopsisFNIS,
+                      distances: apiResults.metrics.fuzzyTopsisDistances
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                    fpisLabel={assetLabelsMap.fuzzy_topsis_ideals || "Table R6: FUZZY POSITIVE AND NEGATIVE IDEAL SOLUTIONS (FPIS & FNIS)"}
+                    weightedMatrixLabel={assetLabelsMap.fuzzy_topsis_weighted_matrix || "Table R5: FUZZY WEIGHTED NORMALIZED DECISION MATRIX"}
+                  />
+                )}
+
+                {method === "fuzzyvikor" && apiResults?.metrics?.fuzzyVikorFPIS && (
+                  <FuzzyVIKORResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyNormalizedMatrix: apiResults.metrics.fuzzyVikorNormalizedMatrix,
+                      fuzzyWeightedMatrix: apiResults.metrics.fuzzyVikorWeightedMatrix,
+                      fpis: apiResults.metrics.fuzzyVikorFPIS,
+                      fnis: apiResults.metrics.fuzzyVikorFNIS,
+                      sValues: apiResults.metrics.fuzzyVikorSValues,
+                      rValues: apiResults.metrics.fuzzyVikorRValues,
+                      qValues: apiResults.metrics.fuzzyVikorQValues
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                  />
+                )}
+
+                {method === "fuzzywaspas" && apiResults?.metrics?.fuzzyWaspasNormalizedMatrix && (
+                  <FuzzyWASPASResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyNormalizedMatrix: apiResults.metrics.fuzzyWaspasNormalizedMatrix,
+                      fuzzyWeightedMatrix: apiResults.metrics.fuzzyWaspasWeightedMatrix,
+                      wsmScores: apiResults.metrics.fuzzyWaspasWsmScores,
+                      wpmScores: apiResults.metrics.fuzzyWaspasWpmScores,
+                      combinedScores: apiResults.metrics.fuzzyWaspasCombinedScores
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                  />
+                )}
+
+                {method === "fuzzyedas" && apiResults?.metrics?.fuzzyEdasAverageSolution && (
+                  <FuzzyEDASResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyAverageSolution: apiResults.metrics.fuzzyEdasAverageSolution,
+                      fuzzyPdaMatrix: apiResults.metrics.fuzzyEdasPdaMatrix,
+                      fuzzyNdaMatrix: apiResults.metrics.fuzzyEdasNdaMatrix,
+                      fuzzySpValues: apiResults.metrics.fuzzyEdasSpValues,
+                      fuzzySnValues: apiResults.metrics.fuzzyEdasSnValues,
+                      fuzzyNspValues: apiResults.metrics.fuzzyEdasNspValues,
+                      fuzzyNsnValues: apiResults.metrics.fuzzyEdasNsnValues,
+                      fuzzyAsValues: apiResults.metrics.fuzzyEdasAsValues
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                  />
+                )}
+
+                {method === "fuzzymoora" && apiResults?.metrics?.fuzzyMooraNormalizedMatrix && (
+                  <FuzzyMOORAResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyNormalizedMatrix: apiResults.metrics.fuzzyMooraNormalizedMatrix,
+                      fuzzyWeightedMatrix: apiResults.metrics.fuzzyMooraWeightedMatrix,
+                      beneficialSum: apiResults.metrics.fuzzyMooraBeneficialSum,
+                      nonBeneficialSum: apiResults.metrics.fuzzyMooraNonBeneficialSum,
+                      overallAssessment: apiResults.metrics.fuzzyMooraOverallAssessment
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                  />
+                )}
+
+                {method === "fuzzymultimoora" && apiResults?.metrics?.fuzzyMultimooraNormalizedMatrix && (
+                  <FuzzyMULTIMOORAResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyNormalizedMatrix: apiResults.metrics.fuzzyMultimooraNormalizedMatrix,
+                      fuzzyWeightedMatrix: apiResults.metrics.fuzzyMultimooraWeightedMatrix,
+                      ratioSystemScores: apiResults.metrics.fuzzyMultimooraRatioScores,
+                      referencePointScores: apiResults.metrics.fuzzyMultimooraRefScores,
+                      fullMultiplicativeScores: apiResults.metrics.fuzzyMultimooraMultScores,
+                      ratioSystemRanking: apiResults.metrics.fuzzyMultimooraRatioRank,
+                      referencePointRanking: apiResults.metrics.fuzzyMultimooraRefRank,
+                      fullMultiplicativeRanking: apiResults.metrics.fuzzyMultimooraMultRank
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                  />
+                )}
+
+                {method === "fuzzytodim" && apiResults?.metrics?.fuzzyTodimNormalizedMatrix && (
+                  <FuzzyTODIMResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyNormalizedMatrix: apiResults.metrics.fuzzyTodimNormalizedMatrix,
+                      relativeWeights: apiResults.metrics.fuzzyTodimRelativeWeights,
+                      dominanceMatrix: apiResults.metrics.fuzzyTodimDominanceMatrix
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                  />
+                )}
+
+                {method === "fuzzycodas" && apiResults?.metrics?.fuzzyCodasNormalizedMatrix && (
+                  <FuzzyCODASResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyNormalizedMatrix: apiResults.metrics.fuzzyCodasNormalizedMatrix,
+                      fuzzyWeightedMatrix: apiResults.metrics.fuzzyCodasWeightedMatrix,
+                      negativeIdealSolution: apiResults.metrics.fuzzyCodasNegativeIdealSolution,
+                      euclideanDistances: apiResults.metrics.fuzzyCodasEuclideanDistances,
+                      taxicabDistances: apiResults.metrics.fuzzyCodasTaxicabDistances,
+                      relativeAssessmentScores: apiResults.metrics.fuzzyCodasRelativeAssessmentScores
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                  />
+                )}
+
+                {method === "fuzzymoosra" && apiResults?.metrics?.fuzzyMoosraNormalizedMatrix && (
+                  <FuzzyMOOSRAResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyNormalizedMatrix: apiResults.metrics.fuzzyMoosraNormalizedMatrix,
+                      fuzzyWeightedMatrix: apiResults.metrics.fuzzyMoosraWeightedMatrix,
+                      beneficialSum: apiResults.metrics.fuzzyMoosraBeneficialSum,
+                      nonBeneficialSum: apiResults.metrics.fuzzyMoosraNonBeneficialSum
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                  />
+                )}
+
+                {method === "fuzzymairca" && apiResults?.metrics?.fuzzyMaircaNormalizedMatrix && (
+                  <FuzzyMAIRCAResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyNormalizedMatrix: apiResults.metrics.fuzzyMaircaNormalizedMatrix,
+                      theoreticalRatings: apiResults.metrics.fuzzyMaircaTheoreticalRatings,
+                      realRatings: apiResults.metrics.fuzzyMaircaRealRatings,
+                      gapMatrix: apiResults.metrics.fuzzyMaircaGapMatrix,
+                      totalGaps: apiResults.metrics.fuzzyMaircaTotalGaps
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                  />
+                )}
+
+                {method === "fuzzymabac" && apiResults?.metrics?.fuzzyMabacNormalizedMatrix && (
+                  <FuzzyMABACResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyNormalizedMatrix: apiResults.metrics.fuzzyMabacNormalizedMatrix,
+                      fuzzyWeightedMatrix: apiResults.metrics.fuzzyMabacWeightedMatrix,
+                      borderApproximationArea: apiResults.metrics.fuzzyMabacBorderArea,
+                      fuzzyDistanceMatrix: apiResults.metrics.fuzzyMabacDistanceMatrix
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                  />
+                )}
+
+                {method === "fuzzymarcos" && apiResults?.metrics?.fuzzyMarcosNormalizedMatrix && (
+                  <FuzzyMARCOSResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyNormalizedMatrix: apiResults.metrics.fuzzyMarcosNormalizedMatrix,
+                      fuzzyWeightedMatrix: apiResults.metrics.fuzzyMarcosWeightedMatrix,
+                      utilityDegrees: apiResults.metrics.fuzzyMarcosUtilityDegrees
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                  />
+                )}
+
+                {method === "fuzzycocoso" && apiResults?.metrics?.fuzzyCocosoNormalizedMatrix && (
+                  <FuzzyCOCOSOResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyNormalizedMatrix: apiResults.metrics.fuzzyCocosoNormalizedMatrix,
+                      weightedComparabilitySum: apiResults.metrics.fuzzyCocosoComparabilitySum,
+                      weightedComparabilityPower: apiResults.metrics.fuzzyCocosoComparabilityPower,
+                      kia: apiResults.metrics.fuzzyCocosoKia,
+                      kib: apiResults.metrics.fuzzyCocosoKib,
+                      kic: apiResults.metrics.fuzzyCocosoKic
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                  />
+                )}
+
+                {method === "fuzzycopras" && apiResults?.metrics?.fuzzyCoprasNormalizedMatrix && (
+                  <FuzzyCOPRASResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyNormalizedMatrix: apiResults.metrics.fuzzyCoprasNormalizedMatrix,
+                      fuzzyWeightedMatrix: apiResults.metrics.fuzzyCoprasWeightedMatrix,
+                      sPlus: apiResults.metrics.fuzzyCoprasSPlus,
+                      sMinus: apiResults.metrics.fuzzyCoprasSMinus,
+                      qi: apiResults.metrics.fuzzyCoprasQi
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                  />
+                )}
+
+                {method === "fuzzyswei" && apiResults?.metrics?.fuzzySweiNormalizedMatrix && (
+                  <FuzzySWEIResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyNormalizedMatrix: apiResults.metrics.fuzzySweiNormalizedMatrix,
+                      fuzzyInformationMatrix: apiResults.metrics.fuzzySweiInformationMatrix,
+                      fuzzyWeightedExponentialMatrix: apiResults.metrics.fuzzySweiWeightedExponentialMatrix
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                  />
+                )}
+
+                {method === "fuzzyswi" && apiResults?.metrics?.fuzzySwiNormalizedMatrix && (
+                  <FuzzySWIResults
+                    fuzzyResult={{
+                      scores: apiResults.results,
+                      fuzzyNormalizedMatrix: apiResults.metrics.fuzzySwiNormalizedMatrix,
+                      fuzzyInformationMatrix: apiResults.metrics.fuzzySwiInformationMatrix,
+                      fuzzyWeightedInformationMatrix: apiResults.metrics.fuzzySwiWeightedInformationMatrix
+                    }}
+                    criteria={criteria}
+                    alternatives={alternatives}
+                    resultsDecimalPlaces={resultsDecimalPlaces}
+                    selectedAiAssets={selectedAiAssets}
+                    handleIncludeChange={handleIncludeChange}
+                    handleAssetLabelChange={handleAssetLabelChange}
+                  />
+                )}
 
                 {method === "wsm" && apiResults?.metrics?.wsmNormalizedMatrix && (
                   <>
@@ -20711,10 +21571,11 @@ export default function MCDMCalculator() {
                             type="number"
                             min="1"
                             max={criteria.length}
-                            className="w-16 h-7 text-xs text-center mx-auto"
                             value={criteriaRanks[crit.id] || ""}
-                            onChange={(e) => setCriteriaRanks(prev => ({ ...prev, [crit.id]: e.target.value }))}
+                            onChange={(e) => setCriteriaRanks({ ...criteriaRanks, [crit.id]: e.target.value })}
                             onKeyDown={handleKeyDown}
+                            className="w-16 h-7 text-xs text-center mx-auto"
+                            placeholder="#"
                           />
                         </TableCell>
                       </TableRow>
@@ -20724,14 +21585,118 @@ export default function MCDMCalculator() {
               </div>
             </div>
             <DialogFooter className="mt-4">
-              <Button variant="outline" onClick={() => setIsRanksDialogOpen(false)} className="text-xs h-8">Cancel</Button>
+              <Button variant="outline" onClick={() => setIsRanksDialogOpen(false)} className="text-xs">Cancel</Button>
               <Button
                 type="button"
-                className="bg-black text-white hover:bg-gray-800 text-xs h-8"
+                className="bg-black text-white hover:bg-gray-800 text-xs"
                 onClick={async () => {
-                  setIsRanksDialogOpen(false)
-                  const updatedCriteria = await calculateWeights(weightMethod)
-                  handleCalculate(method, updatedCriteria)
+                  try {
+                    const rankOrder: Record<string, number> = {}
+                    criteria.forEach(crit => {
+                      rankOrder[crit.id] = parseInt(criteriaRanks[crit.id]) || 1
+                    })
+
+                    const response = await fetch(`/api/${weightMethod}-weights`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ criteria, ranks: rankOrder }),
+                    })
+
+                    if (!response.ok) throw new Error(`Failed to calculate ${weightMethod.toUpperCase()} weights`)
+
+                    const data: RankingWeightResult = await response.json()
+                    if (weightMethod === "roc") setRocResult(data as ROCResult)
+                    else setRrResult(data as RRResult)
+
+                    setIsRanksDialogOpen(false)
+                    const updatedCriteria = criteria.map(c => ({ ...c, weight: data.weights[c.id] || 0 }))
+                    setCriteria(updatedCriteria)
+                    sweepMethodAssets('weighting')
+                    handleCalculate(method, updatedCriteria)
+                  } catch (error) {
+                    console.error(`${weightMethod.toUpperCase()} calculation error:`, error)
+                    alert(`Error calculating ${weightMethod.toUpperCase()} weights`)
+                  }
+                }}
+              >
+                Calculate Weights
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* FUCOM Dialog */}
+        <Dialog open={isFucomDialogOpen} onOpenChange={setIsFucomDialogOpen}>
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto w-full">
+            <DialogHeader>
+              <DialogTitle>FUCOM Weight Calculator</DialogTitle>
+              <DialogDescription className="text-xs">
+                Enter priority scores for each criterion (higher = more important).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div className="border border-gray-200 rounded-lg overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="text-xs font-semibold">Criterion</TableHead>
+                      <TableHead className="text-xs font-semibold text-center w-24">Priority Score</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {criteria.map((crit) => (
+                      <TableRow key={crit.id} className="border-b border-gray-200 hover:bg-gray-50">
+                        <TableCell className="py-2 px-4 font-medium text-black text-xs">{crit.name}</TableCell>
+                        <TableCell className="text-center py-2 px-4 text-xs text-black">
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="1"
+                            value={fucomPriorityScores[crit.id] || ""}
+                            onChange={(e) => setFucomPriorityScores({ ...fucomPriorityScores, [crit.id]: e.target.value })}
+                            onKeyDown={handleKeyDown}
+                            className="w-20 h-7 text-xs text-center mx-auto"
+                            placeholder="1.0"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setIsFucomDialogOpen(false)} className="text-xs">Cancel</Button>
+              <Button
+                type="button"
+                className="bg-black text-white hover:bg-gray-800 text-xs"
+                onClick={async () => {
+                  try {
+                    const scores: Record<string, number> = {}
+                    criteria.forEach(crit => {
+                      scores[crit.id] = parseFloat(fucomPriorityScores[crit.id]) || 1
+                    })
+
+                    const response = await fetch("/api/fucom-weights", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ criteria, priorityScores: scores }),
+                    })
+
+                    if (!response.ok) throw new Error("Failed to calculate FUCOM weights")
+
+                    const data: FUCOMResult = await response.json()
+                    setFucomResult(data)
+                    setIsFucomDialogOpen(false)
+                    const updatedCriteria = criteria.map(c => ({ ...c, weight: data.weights[c.id] || 0 }))
+                    setCriteria(updatedCriteria)
+                    sweepMethodAssets('weighting')
+                    setWeightMethod("fucom")
+                    handleCalculate(method, updatedCriteria)
+                  } catch (error) {
+                    console.error("FUCOM calculation error:", error)
+                    alert("Error calculating FUCOM weights")
+                  }
                 }}
               >
                 Calculate Weights

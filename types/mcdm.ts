@@ -8,12 +8,12 @@ export interface Criterion {
 export interface Alternative {
     id: string
     name: string
-    scores: Record<string, number | "">
+    scores: Record<string, number | string>
 }
 
-export type MCDMMethod = "wsm" | "wpm" | "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "multimoora" | "todim" | "codas" | "moosra" | "mairca" | "marcos" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2" | "mabac" | "gra" | "aras"
+export type MCDMMethod = "wsm" | "wpm" | "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "multimoora" | "todim" | "codas" | "moosra" | "mairca" | "marcos" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2" | "mabac" | "gra" | "aras" | "spotis" | "fuzzytopsis" | "fuzzyvikor" | "fuzzywaspas" | "fuzzyedas" | "fuzzymoora" | "fuzzymultimoora" | "fuzzytodim" | "fuzzycodas" | "fuzzymoosra" | "fuzzymairca" | "fuzzymabac" | "fuzzymarcos" | "fuzzycocoso" | "fuzzycopras" | "fuzzyswei" | "fuzzyswi"
 
-export type WeightMethod = "equal" | "entropy" | "critic" | "ahp" | "piprecia" | "merec" | "swara" | "wenslo"
+export type WeightMethod = "equal" | "entropy" | "critic" | "ahp" | "piprecia" | "merec" | "swara" | "wenslo" | "fucom"
     | "lopcow"
     | "dematel"
     | "sd"
@@ -194,3 +194,33 @@ export interface RankingWeightResult {
 
 export interface ROCResult extends RankingWeightResult { }
 export interface RRResult extends RankingWeightResult { }
+
+export interface FUCOMResult {
+    weights: Record<string, number>
+    rankedCriteria: string[]
+    comparativePriorities: Record<string, number>
+    comparativeWeights: Record<string, number>
+}
+
+export interface SPOTISResult {
+    scores: Record<string, number>
+    normalizedMatrix: Record<string, Record<string, number>>
+    distanceMatrix: Record<string, Record<string, number>>
+    bounds: Record<string, { min: number; max: number; best: number }>
+}
+
+export interface FuzzyNumber {
+    l: number;
+    m: number;
+    u: number;
+}
+
+export interface FuzzyTOPSISResult {
+    scores: Record<string, number>
+    fuzzyNormalizedMatrix: Record<string, Record<string, FuzzyNumber>>
+    fuzzyWeightedMatrix: Record<string, Record<string, FuzzyNumber>>
+    fpis: Record<string, FuzzyNumber>
+    fnis: Record<string, FuzzyNumber>
+    distances: Record<string, { positive: number; negative: number }>
+}
+

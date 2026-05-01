@@ -8,7 +8,7 @@ export interface Criterion {
 export interface Alternative {
   id: string
   name: string
-  scores: Record<string, number>
+  scores: Record<string, any>
 }
 
 export interface CalculationRequest {
@@ -39,6 +39,7 @@ export interface CalculationRequest {
   | "mabac"
   | "gra"
   | "aras"
+  | "fuzzytopsis"
   alternatives: Alternative[]
   criteria: Criterion[]
   vikorVValue?: number

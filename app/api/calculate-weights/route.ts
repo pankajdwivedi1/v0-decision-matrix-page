@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
             'gpow': '/api/gpow-weights',
             'lpwm': '/api/lpwm-weights',
             'pcwm': '/api/pcwm-weights',
+            'fucom': '/api/fucom-weights',
         };
 
         const apiEndpoint = methodMap[method];

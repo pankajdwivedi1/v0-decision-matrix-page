@@ -37,7 +37,7 @@ export function ResearchAssetHeader({
     };
 
     return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 mb-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-1.5 md:gap-4 py-1 sm:py-2 mb-1 sm:mb-2">
             <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
                     {/* Editable Table/Figure Label */}
@@ -68,28 +68,27 @@ export function ResearchAssetHeader({
                             </button>
                         )}
                     </div>
-                    {/* The Main Title */}
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-tight">
+                    <h3 className="text-[11px] sm:text-sm font-bold text-gray-900 uppercase tracking-tight">
                         {title}
                     </h3>
                 </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                 {children}
                 {/* AI Assistant Button */}
                 <Button
                     onClick={() => onAiAnalysis?.(assetKey)}
                     variant="outline"
                     size="sm"
-                    className="h-8 px-3 text-xs bg-gradient-to-r from-violet-50 to-purple-50 border-violet-200 text-violet-700 hover:from-violet-100 hover:to-purple-100 group shadow-sm transition-all"
+                    className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs bg-gradient-to-r from-violet-50 to-purple-50 border-violet-200 text-violet-700 hover:from-violet-100 hover:to-purple-100 group shadow-sm transition-all whitespace-nowrap"
                 >
                     <Sparkles className="w-3.5 h-3.5 mr-1.5 text-violet-600 group-hover:scale-110 transition-transform" />
                     AI Assistant
                 </Button>
 
                 {/* Include in AI Checkbox */}
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-gray-50 rounded-lg border border-gray-200">
                     <input
                         type="checkbox"
                         id={`include-${assetKey}`}

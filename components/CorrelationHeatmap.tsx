@@ -432,7 +432,7 @@ export default function CorrelationHeatmap({
                   const top = (i / (legendTicks.length - 1)) * 100;
                   return (
                     <div
-                      key={val}
+                      key={`legend-tick-${i}`}
                       className="absolute -right-3 w-4 h-[1px] bg-black"
                       style={{ top: `${top}%` }}
                     >

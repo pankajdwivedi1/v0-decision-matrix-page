@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { CalculationRequest, CalculationResponse } from "./types";
+import fs from "fs";
 
 // Import all calculation functions
 import { calculateSWEI } from "./swei";
@@ -29,6 +30,23 @@ import { calculateGRA } from "./gra";
 import { calculateARAS } from "./aras";
 import { calculateWSM } from "./wsm";
 import { calculateWPM } from "./wpm";
+import { calculateSPOTIS } from "./spotis";
+import { calculateFuzzyTOPSIS } from "./fuzzyTopsis";
+import { calculateFuzzyVIKOR } from "./fuzzyVikor";
+import { calculateFuzzyWASPAS } from "./fuzzyWaspas";
+import { calculateFuzzyEDAS } from "./fuzzyEdas";
+import { calculateFuzzyMOORA } from "./fuzzyMoora";
+import { calculateFuzzyMULTIMOORA } from "./fuzzyMultimoora";
+import { calculateFuzzyTODIM } from "./fuzzyTodim";
+import { calculateFuzzyCODAS } from "./fuzzyCodas";
+import { calculateFuzzyMOOSRA } from "./fuzzyMoosra";
+import { calculateFuzzyMAIRCA } from "./fuzzyMairca";
+import { calculateFuzzyMABAC } from "./fuzzyMabac";
+import { calculateFuzzyMARCOS } from "./fuzzyMarcos";
+import { calculateFuzzyCOCOSO } from "./fuzzyCocoso";
+import { calculateFuzzyCOPRAS } from "./fuzzyCopras";
+import { calculateFuzzySWEI } from "./fuzzySwei";
+import { calculateFuzzySWI } from "./fuzzySwi";
 
 // Helper: build ranking and response
 function buildResponse(
@@ -37,7 +55,7 @@ function buildResponse(
   alternatives: { id: string; name: string }[]
 ): CalculationResponse {
   // Methods where LOWER score is better
-  const ascendingMethods = ["swei", "swi", "vikor", "multimoora", "mairca"];
+  const ascendingMethods = ["swei", "swi", "vikor", "multimoora", "mairca", "spotis", "fuzzyswei", "fuzzyswi"];
   const isAscending = ascendingMethods.includes(method.toLowerCase());
 
   const ranking = alternatives
@@ -58,10 +76,14 @@ function buildResponse(
     method,
     results,
     ranking,
-    bestAlternative: {
+    bestAlternative: best ? {
       id: best.alternativeId,
       name: best.alternativeName,
       score: best.score,
+    } : {
+      id: "none",
+      name: "No Alternatives",
+      score: 0
     },
   };
 }
@@ -424,6 +446,208 @@ export async function POST(request: NextRequest) {
         };
         break;
       }
+      case "spotis": {
+        const spotisData = calculateSPOTIS(alternatives, criteria);
+        results = spotisData.scores;
+        (request as any).extraMetrics = {
+          spotisNormalizedMatrix: spotisData.normalizedMatrix,
+          spotisDistanceMatrix: spotisData.distanceMatrix,
+          spotisBounds: spotisData.bounds
+        };
+        break;
+      }
+      case "fuzzyvikor": {
+        const vikorData = calculateFuzzyVIKOR(alternatives, criteria, body.vikorVValue);
+        results = vikorData.scores;
+        (request as any).extraMetrics = {
+          fuzzyVikorNormalizedMatrix: vikorData.fuzzyNormalizedMatrix,
+          fuzzyVikorWeightedMatrix: vikorData.fuzzyWeightedMatrix,
+          fuzzyVikorFPIS: vikorData.fpis,
+          fuzzyVikorFNIS: vikorData.fnis,
+          fuzzyVikorSValues: vikorData.sValues,
+          fuzzyVikorRValues: vikorData.rValues,
+          fuzzyVikorQValues: vikorData.qValues
+        };
+        break;
+      }
+      case "fuzzywaspas": {
+        const waspasData = calculateFuzzyWASPAS(alternatives, criteria, body.waspasLambdaValue);
+        results = waspasData.scores;
+        (request as any).extraMetrics = {
+          fuzzyWaspasNormalizedMatrix: waspasData.fuzzyNormalizedMatrix,
+          fuzzyWaspasWeightedMatrix: waspasData.fuzzyWeightedMatrix,
+          fuzzyWaspasWsmScores: waspasData.wsmScores,
+          fuzzyWaspasWpmScores: waspasData.wpmScores,
+          fuzzyWaspasCombinedScores: waspasData.combinedScores
+        };
+        break;
+      }
+      case "fuzzyedas": {
+        const edasData = calculateFuzzyEDAS(alternatives, criteria);
+        results = edasData.scores;
+        (request as any).extraMetrics = {
+          fuzzyEdasAverageSolution: edasData.fuzzyAverageSolution,
+          fuzzyEdasPdaMatrix: edasData.fuzzyPdaMatrix,
+          fuzzyEdasNdaMatrix: edasData.fuzzyNdaMatrix,
+          fuzzyEdasSpValues: edasData.fuzzySpValues,
+          fuzzyEdasSnValues: edasData.fuzzySnValues,
+          fuzzyEdasNspValues: edasData.fuzzyNspValues,
+          fuzzyEdasNsnValues: edasData.fuzzyNsnValues,
+          fuzzyEdasAsValues: edasData.fuzzyAsValues
+        };
+        break;
+      }
+      case "fuzzymoora": {
+        const mooraData = calculateFuzzyMOORA(alternatives, criteria);
+        results = mooraData.scores;
+        (request as any).extraMetrics = {
+          fuzzyMooraNormalizedMatrix: mooraData.fuzzyNormalizedMatrix,
+          fuzzyMooraWeightedMatrix: mooraData.fuzzyWeightedMatrix,
+          fuzzyMooraBeneficialSum: mooraData.beneficialSum,
+          fuzzyMooraNonBeneficialSum: mooraData.nonBeneficialSum,
+          fuzzyMooraOverallAssessment: mooraData.overallAssessment
+        };
+        break;
+      }
+      case "fuzzymultimoora": {
+        const multimooraData = calculateFuzzyMULTIMOORA(alternatives, criteria);
+        results = multimooraData.scores;
+        (request as any).extraMetrics = {
+          fuzzyMultimooraNormalizedMatrix: multimooraData.fuzzyNormalizedMatrix,
+          fuzzyMultimooraWeightedMatrix: multimooraData.fuzzyWeightedMatrix,
+          fuzzyMultimooraRatioScores: multimooraData.ratioSystemScores,
+          fuzzyMultimooraRefScores: multimooraData.referencePointScores,
+          fuzzyMultimooraMultScores: multimooraData.fullMultiplicativeScores,
+          fuzzyMultimooraRatioRank: multimooraData.ratioSystemRanking,
+          fuzzyMultimooraRefRank: multimooraData.referencePointRanking,
+          fuzzyMultimooraMultRank: multimooraData.fullMultiplicativeRanking
+        };
+        break;
+      }
+      case "fuzzytodim": {
+        const todimData = calculateFuzzyTODIM(alternatives, criteria);
+        results = todimData.scores;
+        (request as any).extraMetrics = {
+          fuzzyTodimNormalizedMatrix: todimData.fuzzyNormalizedMatrix,
+          fuzzyTodimRelativeWeights: todimData.relativeWeights,
+          fuzzyTodimDominanceMatrix: todimData.dominanceMatrix
+        };
+        break;
+      }
+      case "fuzzycodas": {
+        const codasData = calculateFuzzyCODAS(alternatives, criteria, body.codasTauValue);
+        results = codasData.scores;
+        (request as any).extraMetrics = {
+          fuzzyCodasNormalizedMatrix: codasData.fuzzyNormalizedMatrix,
+          fuzzyCodasWeightedMatrix: codasData.fuzzyWeightedMatrix,
+          fuzzyCodasNegativeIdealSolution: codasData.negativeIdealSolution,
+          fuzzyCodasEuclideanDistances: codasData.euclideanDistances,
+          fuzzyCodasTaxicabDistances: codasData.taxicabDistances,
+          fuzzyCodasRelativeAssessmentScores: codasData.relativeAssessmentScores
+        };
+        break;
+      }
+      case "fuzzymoosra": {
+        const moosraData = calculateFuzzyMOOSRA(alternatives, criteria);
+        results = moosraData.scores;
+        (request as any).extraMetrics = {
+          fuzzyMoosraNormalizedMatrix: moosraData.fuzzyNormalizedMatrix,
+          fuzzyMoosraWeightedMatrix: moosraData.fuzzyWeightedMatrix,
+          fuzzyMoosraBeneficialSum: moosraData.beneficialSum,
+          fuzzyMoosraNonBeneficialSum: moosraData.nonBeneficialSum
+        };
+        break;
+      }
+      case "fuzzymairca": {
+        const maircaData = calculateFuzzyMAIRCA(alternatives, criteria);
+        results = maircaData.scores;
+        (request as any).extraMetrics = {
+          fuzzyMaircaNormalizedMatrix: maircaData.fuzzyNormalizedMatrix,
+          fuzzyMaircaTheoreticalRatings: maircaData.theoreticalRatings,
+          fuzzyMaircaRealRatings: maircaData.realRatings,
+          fuzzyMaircaGapMatrix: maircaData.gapMatrix,
+          fuzzyMaircaTotalGaps: maircaData.totalGaps
+        };
+        break;
+      }
+      case "fuzzymabac": {
+        const mabacData = calculateFuzzyMABAC(alternatives, criteria);
+        results = mabacData.scores;
+        (request as any).extraMetrics = {
+          fuzzyMabacNormalizedMatrix: mabacData.fuzzyNormalizedMatrix,
+          fuzzyMabacWeightedMatrix: mabacData.fuzzyWeightedMatrix,
+          fuzzyMabacBorderArea: mabacData.borderApproximationArea,
+          fuzzyMabacDistanceMatrix: mabacData.fuzzyDistanceMatrix
+        };
+        break;
+      }
+      case "fuzzycocoso": {
+        const cocosoData = calculateFuzzyCOCOSO(alternatives, criteria);
+        results = cocosoData.scores;
+        (request as any).extraMetrics = {
+          fuzzyCocosoNormalizedMatrix: cocosoData.fuzzyNormalizedMatrix,
+          fuzzyCocosoComparabilitySum: cocosoData.weightedComparabilitySum,
+          fuzzyCocosoComparabilityPower: cocosoData.weightedComparabilityPower,
+          fuzzyCocosoKia: cocosoData.kia,
+          fuzzyCocosoKib: cocosoData.kib,
+          fuzzyCocosoKic: cocosoData.kic
+        };
+        break;
+      }
+      case "fuzzycopras": {
+        const coprasData = calculateFuzzyCOPRAS(alternatives, criteria);
+        results = coprasData.scores;
+        (request as any).extraMetrics = {
+          fuzzyCoprasNormalizedMatrix: coprasData.fuzzyNormalizedMatrix,
+          fuzzyCoprasWeightedMatrix: coprasData.fuzzyWeightedMatrix,
+          fuzzyCoprasSPlus: coprasData.sPlus,
+          fuzzyCoprasSMinus: coprasData.sMinus,
+          fuzzyCoprasQi: coprasData.qi
+        };
+        break;
+      }
+      case "fuzzyswei": {
+        const sweiData = calculateFuzzySWEI(alternatives, criteria);
+        results = sweiData.scores;
+        (request as any).extraMetrics = {
+          fuzzySweiNormalizedMatrix: sweiData.fuzzyNormalizedMatrix,
+          fuzzySweiInformationMatrix: sweiData.fuzzyInformationMatrix,
+          fuzzySweiWeightedExponentialMatrix: sweiData.fuzzyWeightedExponentialMatrix
+        };
+        break;
+      }
+      case "fuzzyswi": {
+        const swiData = calculateFuzzySWI(alternatives, criteria);
+        results = swiData.scores;
+        (request as any).extraMetrics = {
+          fuzzySwiNormalizedMatrix: swiData.fuzzyNormalizedMatrix,
+          fuzzySwiInformationMatrix: swiData.fuzzyInformationMatrix,
+          fuzzySwiWeightedInformationMatrix: swiData.fuzzyWeightedInformationMatrix
+        };
+        break;
+      }
+      case "fuzzymarcos": {
+        const marcosData = calculateFuzzyMARCOS(alternatives, criteria);
+        results = marcosData.scores;
+        (request as any).extraMetrics = {
+          fuzzyMarcosNormalizedMatrix: marcosData.fuzzyNormalizedMatrix,
+          fuzzyMarcosWeightedMatrix: marcosData.fuzzyWeightedMatrix,
+          fuzzyMarcosUtilityDegrees: marcosData.utilityDegrees
+        };
+        break;
+      }
+      case "fuzzytopsis": {
+        const fuzzyData = calculateFuzzyTOPSIS(alternatives, criteria);
+        results = fuzzyData.scores;
+        (request as any).extraMetrics = {
+          fuzzyTopsisNormalizedMatrix: fuzzyData.fuzzyNormalizedMatrix,
+          fuzzyTopsisWeightedMatrix: fuzzyData.fuzzyWeightedMatrix,
+          fuzzyTopsisFPIS: fuzzyData.fpis,
+          fuzzyTopsisFNIS: fuzzyData.fnis,
+          fuzzyTopsisDistances: fuzzyData.distances
+        };
+        break;
+      }
       default:
         return NextResponse.json(
           { error: `Invalid method: ${method}` },
@@ -445,10 +669,15 @@ export async function POST(request: NextRequest) {
     console.log("===================");
 
     return NextResponse.json(response, { status: 200 });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Calculation error:", err);
+    try {
+      fs.writeFileSync("c:/Users/PANKAJ DWIVEDI/Desktop/decisionalgo/app/api/calculate/error_log.txt", String(err) + "\n" + err?.stack);
+    } catch (e) {
+      console.error("Failed to write error_log.txt", e);
+    }
     return NextResponse.json(
-      { error: "Internal server error during calculation" },
+      { error: "Internal server error during calculation: " + (err?.message || String(err)) },
       { status: 500 }
     );
   }

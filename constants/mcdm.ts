@@ -157,6 +157,108 @@ export const MCDM_METHODS: { value: MCDMMethod; label: string; description: stri
         description: "Weighted Product Model",
         formula: "Score = Π(r_ij ^ w_j)"
     },
+    {
+        value: "spotis",
+        label: "SPOTIS",
+        description: "Stable Preference Ordering Towards Ideal Solution",
+        formula: "Score = Σ(w_j × |(A_ij - S_best,j) / (S_max,j - S_min,j)|)"
+    },
+    {
+        value: "fuzzytopsis",
+        label: "Fuzzy TOPSIS",
+        description: "Technique for Order Preference by Similarity to Ideal Solution with Fuzzy Logic (Vertex Method)",
+        formula: "Score = d⁻ / (d⁺ + d⁻) where d is fuzzy vertex distance"
+    },
+    {
+        value: "fuzzyvikor",
+        label: "Fuzzy VIKOR",
+        description: "VlseKriterijumska Optimizacija I Kompromisno Resenje with Fuzzy Logic (Vertex Method)",
+        formula: "Q = v(S-S*)/(S⁻-S*) + (1-v)(R-R*)/(R⁻-R*)"
+    },
+    {
+        value: "fuzzywaspas",
+        label: "Fuzzy WASPAS",
+        description: "Weighted Aggregated Sum Product Assessment with Fuzzy Logic",
+        formula: "Q = λ * WSM + (1-λ) * WPM"
+    },
+    {
+        value: "fuzzyedas",
+        label: "Fuzzy EDAS",
+        description: "Evaluation based on Distance from Average Solution with Fuzzy Logic",
+        formula: "AS = 0.5 * (NSP + NSN)"
+    },
+    {
+        value: "fuzzymoora",
+        label: "Fuzzy MOORA",
+        description: "Multi-Objective Optimization on the basis of Ratio Analysis with Fuzzy Logic",
+        formula: "S = Benefit Sum - Cost Sum"
+    },
+    {
+        value: "fuzzymultimoora",
+        label: "Fuzzy MULTIMOORA",
+        description: "Multi-Objective Optimization on the basis of Ratio Analysis Multiplicative Form with Fuzzy Logic",
+        formula: "Aggregation of Ratio, Reference point, and Multiplicative assessments"
+    },
+    {
+        value: "fuzzytodim",
+        label: "Fuzzy TODIM",
+        description: "Tomada de Decisão Interativa e Multicritério with Fuzzy Logic",
+        formula: "Overall Dominance Degree Assessment"
+    },
+    {
+        value: "fuzzycodas",
+        label: "Fuzzy CODAS",
+        description: "Combinative Distance-based Assessment with Fuzzy Logic",
+        formula: "RA = Euclidean Distances + Taxicab Distances"
+    },
+    {
+        value: "fuzzymoosra",
+        label: "Fuzzy MOOSRA",
+        description: "Multi-Objective Optimization on the basis of Simple Ratio Analysis with Fuzzy Logic",
+        formula: "v = Beneficial Sum / Non-Beneficial Sum"
+    },
+    {
+        value: "fuzzymairca",
+        label: "Fuzzy MAIRCA",
+        description: "Multi-Attributive Ideal-Real Comparative Analysis with Fuzzy Logic",
+        formula: "G = Total Gap of theoretical vs real choices"
+    },
+    {
+        value: "fuzzymabac",
+        label: "Fuzzy MABAC",
+        description: "Multi-Attributive Border Approximation Area Comparison with Fuzzy Logic",
+        formula: "S = Sum of distances from Border Approximation Areas"
+    },
+    {
+        value: "fuzzymarcos",
+        label: "Fuzzy MARCOS",
+        description: "Measurement of Alternatives and Ranking according to Compromise Solution with Fuzzy Logic",
+        formula: "Aggregation of Utility Degrees relative to Ideal reference models"
+    },
+    {
+        value: "fuzzycocoso",
+        label: "Fuzzy COCOSO",
+        description: "Combined Compromise Solution with Fuzzy Logic",
+        formula: "Aggregation of Kia, Kib, and Kic values"
+    },
+    {
+        value: "fuzzycopras",
+        label: "Fuzzy COPRAS",
+        description: "Complex Proportional Assessment with Fuzzy Logic",
+        formula: "Qi = S⁺ + second term proportional costs"
+    },
+    {
+        value: "fuzzyswei",
+        label: "Fuzzy SWEI",
+        description: "Sum Weighted Exponential Information with Fuzzy Logic",
+        formula: "Score = Σ (log2(1/IDM))^Weight"
+    },
+    {
+        value: "fuzzyswi",
+        label: "Fuzzy SWI",
+        description: "Sum Weighted Information with Fuzzy Logic",
+        formula: "Score = Σ Weight * log2(1/IDM)"
+    },
 ]
 
 export const WEIGHT_METHODS: { value: WeightMethod; label: string; description: string }[] = [
@@ -199,6 +301,11 @@ export const WEIGHT_METHODS: { value: WeightMethod; label: string; description: 
         value: "wenslo",
         label: "WENSLO Weight",
         description: "WENSLO weight method determines weights based on objective calculation similar to Entropy and MEREC.",
+    },
+    {
+        value: "fucom",
+        label: "FUCOM Weight",
+        description: "Full Consistency Method (FUCOM) determines weights through a consistent comparison of criteria priority.",
     },
     {
         value: "lopcow",
