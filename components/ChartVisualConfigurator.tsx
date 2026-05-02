@@ -160,13 +160,13 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
       <Tabs defaultValue="elements" className="w-full">
         <div className="bg-slate-50/50 border-b border-slate-100 px-3 sm:px-4 pt-2 sm:pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
           <TabsList className="grid grid-cols-3 w-full sm:w-[350px] h-8 sm:h-10 bg-slate-100/50 p-1 rounded-lg">
-            <TabsTrigger value="elements" className="text-[8px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <TabsTrigger value="elements" className="text-[7px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
               <Box className="w-2.5 sm:w-3.5 h-2.5 sm:h-3.5" /> Elements
             </TabsTrigger>
-            <TabsTrigger value="style" className="text-[8px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <TabsTrigger value="style" className="text-[7px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
               <Brush className="w-2.5 sm:w-3.5 h-2.5 sm:h-3.5" /> Style
             </TabsTrigger>
-            <TabsTrigger value="layout" className="text-[8px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <TabsTrigger value="layout" className="text-[7px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
               <Layout className="w-2.5 sm:w-3.5 h-2.5 sm:h-3.5" /> Layout
             </TabsTrigger>
           </TabsList>
@@ -174,171 +174,133 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
           <div className="flex items-center gap-2 pr-2 mb-2 sm:mb-0">
             <div className="flex items-center gap-1 px-2 sm:px-3 py-0.5 sm:py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100 shadow-sm">
               <Settings className="w-2.5 sm:w-3 h-2.5 sm:h-3 animate-spin-slow" />
-              <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-wider">Editor Active</span>
+              <span className="text-[7px] sm:text-[10px] font-black uppercase tracking-wider">Editor Active</span>
             </div>
           </div>
         </div>
 
         <div className="p-4 sm:p-4 min-h-0">
           {/* ELEMENTS TAB */}
-          <TabsContent value="elements" className="mt-0 space-y-4 h-full">
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr] gap-6 items-stretch">
-              <div className="flex flex-col justify-between h-full space-y-3">
-                <Label className="text-[8px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Visibility</Label>
-                <div className="grid gap-2">
-                  <div className="space-y-2 p-2.5 bg-white border border-slate-200 rounded-lg group hover:border-blue-300 transition-all duration-300">
+          <TabsContent value="elements" className="mt-0 space-y-3 h-full">
+            <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1.8fr_1fr] gap-3 md:gap-6 items-start">
+              {/* VISIBILITY SECTION */}
+              <div className="space-y-2">
+                <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Visibility</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div className="col-span-2 md:col-span-1 space-y-1.5 p-1.5 sm:p-2.5 bg-white border border-slate-200 rounded-lg group hover:border-blue-300 transition-all duration-300">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Grid3X3 className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
-                        <span className="text-xs font-bold text-slate-700">Grid Lines</span>
+                      <div className="flex items-center gap-1.5">
+                        <Grid3X3 className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                        <span className="text-[7px] sm:text-xs font-bold text-slate-700">Grid Lines</span>
                       </div>
-                      <Switch checked={settings.showGridLines} onCheckedChange={(val: boolean) => updateSetting('showGridLines', val)} />
+                      <Switch className="scale-75 sm:scale-100 origin-right" checked={settings.showGridLines} onCheckedChange={(val: boolean) => updateSetting('showGridLines', val)} />
                     </div>
                     {settings.showGridLines && (
-                      <div className="flex gap-1 pt-1">
-                        <Button
+                      <div className="flex gap-0.5 sm:gap-1 pt-0.5">
+                         <Button
                           variant={settings.gridLinesMode === 'horizontal' ? 'default' : 'outline'}
                           size="sm"
-                          className="h-5 text-[9px] px-2"
+                          className="h-3.5 sm:h-5 text-[6px] sm:text-[9px] px-1 sm:px-2 flex-1"
                           onClick={() => updateSetting('gridLinesMode', 'horizontal')}
                         >HORZ</Button>
                         <Button
                           variant={settings.gridLinesMode === 'vertical' ? 'default' : 'outline'}
                           size="sm"
-                          className="h-5 text-[9px] px-2"
+                          className="h-3.5 sm:h-5 text-[6px] sm:text-[9px] px-1 sm:px-2 flex-1"
                           onClick={() => updateSetting('gridLinesMode', 'vertical')}
                         >VERT</Button>
                         <Button
                           variant={settings.gridLinesMode === 'both' ? 'default' : 'outline'}
                           size="sm"
-                          className="h-5 text-[9px] px-2"
+                          className="h-3.5 sm:h-5 text-[6px] sm:text-[9px] px-1 sm:px-2 flex-1"
                           onClick={() => updateSetting('gridLinesMode', 'both')}
                         >BOTH</Button>
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <Hash className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="text-xs font-bold text-slate-700">Data Labels</span>
+                  <div className="flex items-center justify-between p-1.5 sm:p-2 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors">
+                    <div className="flex items-center gap-1.5">
+                      <Hash className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-slate-400" />
+                      <span className="text-[7px] sm:text-xs font-bold text-slate-700">Data Labels</span>
                     </div>
-                    <Switch checked={settings.showDataLabels} onCheckedChange={(val: boolean) => updateSetting('showDataLabels', val)} />
+                    <Switch className="scale-75 sm:scale-100 origin-right" checked={settings.showDataLabels} onCheckedChange={(val: boolean) => updateSetting('showDataLabels', val)} />
                   </div>
-                  <div className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <Maximize2 className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="text-xs font-bold text-slate-700">Mirror Ticks</span>
+                  <div className="flex items-center justify-between p-1.5 sm:p-2 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors">
+                    <div className="flex items-center gap-1.5">
+                      <Maximize2 className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-slate-400" />
+                      <span className="text-[7px] sm:text-xs font-bold text-slate-700">Mirror Ticks</span>
                     </div>
-                    <Switch checked={settings.showMirrorTicks} onCheckedChange={(val: boolean) => updateSetting('showMirrorTicks', val)} />
+                    <Switch className="scale-75 sm:scale-100 origin-right" checked={settings.showMirrorTicks} onCheckedChange={(val: boolean) => updateSetting('showMirrorTicks', val)} />
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-col justify-between h-full space-y-3">
-                <Label className="text-[8px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Titles & Legend</Label>
-                <div className="flex flex-col md:flex-row items-stretch justify-between w-full gap-4">
-                  <div className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg group hover:border-blue-400 transition-all duration-300 flex-1">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <Monitor className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
-                        <span className="text-xs font-black text-slate-700 uppercase tracking-tighter">Legend Pos</span>
+              {/* TITLES & LEGEND SECTION */}
+              <div className="space-y-2">
+                <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Titles & Legend</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-2">
+                  <div className="flex items-center justify-between p-1.5 sm:p-2 bg-white border border-slate-200 rounded-lg group hover:border-blue-400 transition-all duration-300">
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <Monitor className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                        <span className="text-[7px] sm:text-[10px] font-black text-slate-700 uppercase tracking-tighter">Legend Pos</span>
                       </div>
-                      <div className="flex flex-col text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-tight">
-                        <span>{settings.legendPosition}</span>
-                        <div className="flex gap-2">
-                          <span>X: {settings.legendOffsetX}</span>
-                          <span>Y: {settings.legendOffsetY}</span>
-                        </div>
+                      <div className="text-[6px] font-bold text-slate-400 uppercase tracking-tight">
+                        {settings.legendPosition} (X:{settings.legendOffsetX} Y:{settings.legendOffsetY})
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-3 gap-1 bg-slate-50 p-1 rounded-lg border border-slate-100 shadow-inner">
+                    <div className="grid grid-cols-3 gap-0.5 bg-slate-50 p-0.5 rounded border border-slate-100 shadow-inner scale-90 sm:scale-100 origin-right">
                       <div />
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
-                        onMouseDown={() => startNudging(0, -1)}
-                        onMouseUp={stopNudging}
-                        onMouseLeave={stopNudging}
-                        title="Move Up (Tap: 0.5cm / Hold: Smooth)"
-                      >
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      </Button>
+                        variant="ghost" size="icon" className="h-4 sm:h-5 w-4 sm:w-5 rounded-sm p-0"
+                        onMouseDown={() => startNudging(0, -1)} onMouseUp={stopNudging} onMouseLeave={stopNudging}
+                      ><ChevronUp className="w-2.5 sm:w-3 h-2.5 sm:h-3" /></Button>
                       <div />
 
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
-                        onMouseDown={() => startNudging(-1, 0)}
-                        onMouseUp={stopNudging}
-                        onMouseLeave={stopNudging}
-                        title="Move Left (Tap: 0.5cm / Hold: Smooth)"
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                      </Button>
+                        variant="ghost" size="icon" className="h-4 sm:h-5 w-4 sm:w-5 rounded-sm p-0"
+                        onMouseDown={() => startNudging(-1, 0)} onMouseUp={stopNudging} onMouseLeave={stopNudging}
+                      ><ChevronLeft className="w-2.5 sm:w-3 h-2.5 sm:h-3" /></Button>
                       <Button
                         variant={settings.legendPosition === 'middle' && settings.legendOffsetX === 0 && settings.legendOffsetY === 0 ? 'default' : 'ghost'}
-                        size="icon"
-                        className={`h-6 w-6 rounded-sm transition-all ${settings.legendPosition === 'middle' && settings.legendOffsetX === 0 && settings.legendOffsetY === 0 ? 'bg-blue-600 text-white' : 'hover:bg-white text-slate-400 active:scale-90'}`}
-                        onClick={() => {
-                          onSettingsChange({ ...settings, legendPosition: 'middle', legendOffsetX: 0, legendOffsetY: 0 });
-                        }}
-                        title="Reset to Center"
-                      >
-                        <Circle className="w-2 h-2 fill-current opacity-70" />
-                      </Button>
+                        size="icon" className={`h-4 sm:h-5 w-4 sm:w-5 rounded-sm p-0 ${settings.legendPosition === 'middle' && settings.legendOffsetX === 0 && settings.legendOffsetY === 0 ? 'bg-blue-600 text-white' : ''}`}
+                        onClick={() => onSettingsChange({ ...settings, legendPosition: 'middle', legendOffsetX: 0, legendOffsetY: 0 })}
+                      ><Circle className="w-1.5 h-1.5 fill-current" /></Button>
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
-                        onMouseDown={() => startNudging(1, 0)}
-                        onMouseUp={stopNudging}
-                        onMouseLeave={stopNudging}
-                        title="Move Right (Tap: 0.5cm / Hold: Smooth)"
-                      >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </Button>
+                        variant="ghost" size="icon" className="h-4 sm:h-5 w-4 sm:w-5 rounded-sm p-0"
+                        onMouseDown={() => startNudging(1, 0)} onMouseUp={stopNudging} onMouseLeave={stopNudging}
+                      ><ChevronRight className="w-2.5 sm:w-3 h-2.5 sm:h-3" /></Button>
 
                       <div />
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 rounded-sm transition-all hover:bg-white text-slate-400 active:scale-90 active:bg-blue-50"
-                        onMouseDown={() => startNudging(0, 1)}
-                        onMouseUp={stopNudging}
-                        onMouseLeave={stopNudging}
-                        title="Move Down (Tap: 0.5cm / Hold: Smooth)"
-                      >
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </Button>
+                        variant="ghost" size="icon" className="h-4 sm:h-5 w-4 sm:w-5 rounded-sm p-0"
+                        onMouseDown={() => startNudging(0, 1)} onMouseUp={stopNudging} onMouseLeave={stopNudging}
+                      ><ChevronDown className="w-2.5 sm:w-3 h-2.5 sm:h-3" /></Button>
                       <div />
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-2 flex-1">
-                    <div className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors w-full">
-                      <div className="flex items-center gap-2">
-                        <Type className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-xs font-bold text-slate-700">Axis Titles</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="flex items-center justify-between p-1.5 sm:p-2 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors">
+                      <div className="flex items-center gap-1.5">
+                        <Type className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-slate-400" />
+                        <span className="text-[7px] sm:text-xs font-bold text-slate-700">Axis Titles</span>
                       </div>
-                      <Switch checked={settings.showAxisTitles} onCheckedChange={(val: boolean) => updateSetting('showAxisTitles', val)} />
+                      <Switch className="scale-75 sm:scale-100 origin-right" checked={settings.showAxisTitles} onCheckedChange={(val: boolean) => updateSetting('showAxisTitles', val)} />
                     </div>
 
-                    <div className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg w-full">
-                      <span className="text-xs font-bold text-slate-700 uppercase tracking-tighter">Legend Style</span>
-                      <div className="flex gap-1">
+                    <div className="flex items-center justify-between p-1.5 sm:p-2 bg-white border border-slate-200 rounded-lg">
+                      <span className="text-[6px] sm:text-[10px] font-black text-slate-700 uppercase tracking-tighter">Legend Style</span>
+                      <div className="flex gap-0.5">
                         <Button
                           variant={settings.legendLayout === 'horizontal' ? 'secondary' : 'ghost'}
-                          size="sm"
-                          className="h-5 text-[9px] px-2 font-bold"
+                          size="sm" className="h-3.5 sm:h-5 text-[6px] sm:text-[9px] px-1 sm:px-2 font-bold"
                           onClick={() => updateSetting('legendLayout', 'horizontal')}
                         >HORIZ</Button>
                         <Button
                           variant={settings.legendLayout === 'vertical' ? 'secondary' : 'ghost'}
-                          size="sm"
-                          className="h-5 text-[9px] px-2 font-bold"
+                          size="sm" className="h-3.5 sm:h-5 text-[6px] sm:text-[9px] px-1 sm:px-2 font-bold"
                           onClick={() => updateSetting('legendLayout', 'vertical')}
                         >VERT</Button>
                       </div>
@@ -347,27 +309,28 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                 </div>
               </div>
 
-              <div className="flex flex-col justify-between h-full space-y-3 col-span-2 md:col-span-1">
-                <Label className="text-[8px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Axis Labels</Label>
-                <div className="grid gap-2">
-                   <div className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-lg">
-                      <span className="text-[10px] font-black text-blue-500 w-4">X</span>
+              {/* AXIS LABELS SECTION */}
+              <div className="space-y-2 col-span-1">
+                <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Axis Labels</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="flex items-center gap-1 p-1 sm:p-2 bg-white border border-slate-200 rounded-lg">
+                       <span className="text-[7px] sm:text-[10px] font-black text-blue-500 w-3">X</span>
                       <Input
                         value={settings.xAxisTitle || ''}
                         onChange={(e) => updateSetting('xAxisTitle', e.target.value)}
                         disabled={!settings.showAxisTitles}
-                        placeholder="X-Axis Title"
-                        className="h-7 text-[11px] font-bold border-none shadow-none focus-visible:ring-0 p-0"
+                        placeholder="X Title"
+                        className="h-5 sm:h-7 text-[9px] sm:text-[11px] font-bold border-none shadow-none focus-visible:ring-0 p-0"
                       />
                    </div>
-                   <div className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-lg">
-                      <span className="text-[10px] font-black text-green-500 w-4">Y</span>
+                    <div className="flex items-center gap-1 p-1 sm:p-2 bg-white border border-slate-200 rounded-lg">
+                       <span className="text-[7px] sm:text-[10px] font-black text-green-500 w-3">Y</span>
                       <Input
                         value={settings.yAxisTitle || ''}
                         onChange={(e) => updateSetting('yAxisTitle', e.target.value)}
                         disabled={!settings.showAxisTitles}
-                        placeholder="Y-Axis Title"
-                        className="h-7 text-[11px] font-bold border-none shadow-none focus-visible:ring-0 p-0"
+                        placeholder="Y Title"
+                        className="h-5 sm:h-7 text-[9px] sm:text-[11px] font-bold border-none shadow-none focus-visible:ring-0 p-0"
                       />
                    </div>
                 </div>
@@ -376,24 +339,25 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
           </TabsContent>
 
           {/* STYLE TAB */}
-          <TabsContent value="style" className="mt-0 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="space-y-4 pt-1">
+          <TabsContent value="style" className="mt-0 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
+              {/* MASTER PALETTE */}
+              <div className="space-y-2 pt-1">
                 <div className="flex items-center justify-between underline decoration-slate-200 underline-offset-4">
-                  <Label className="text-[8px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Master Palette</Label>
-                  <Palette className="w-3.5 h-3.5 text-blue-500" />
+                  <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Master Palette</Label>
+                  <Palette className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-blue-500" />
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
                   {(['academic', 'grayscale', 'vibrant', 'fluorescent', 'viridis', 'magma', 'inferno', 'default'] as const).map((p) => (
                     <button
                       key={p}
                       onClick={() => updateSetting('colorPalette', p)}
-                      className={`p-2 rounded-xl border text-left transition-all ${settings.colorPalette === p ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                      className={`p-1 sm:p-2 rounded-lg sm:rounded-xl border text-left transition-all ${settings.colorPalette === p ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100' : 'border-slate-200 bg-white hover:border-slate-300'}`}
                     >
-                      <div className="text-[9px] font-black uppercase mb-1.5 text-slate-400 tracking-tighter">{p}</div>
+                      <div className="text-[6px] sm:text-[9px] font-black uppercase mb-0.5 sm:mb-1.5 text-slate-400 tracking-tighter truncate">{p}</div>
                       <div className="flex gap-0.5">
                         {paletteColors[p].slice(0, 4).map((c, i) => (
-                          <div key={i} className="w-full h-1.5 rounded-full" style={{ backgroundColor: c }} />
+                          <div key={i} className="w-full h-1 sm:h-1.5 rounded-full" style={{ backgroundColor: c }} />
                         ))}
                       </div>
                     </button>
@@ -401,127 +365,128 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                 </div>
               </div>
 
-              <div className="space-y-4 border-l border-slate-100 pl-8">
+              {/* VISUAL THEME & SLIDERS */}
+              <div className="space-y-3 md:border-l md:border-slate-100 md:pl-8">
                 <div className="flex items-center justify-between underline decoration-slate-200 underline-offset-4">
-                  <Label className="text-[8px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Visual Theme</Label>
-                  <Brush className="w-3.5 h-3.5 text-indigo-500" />
+                  <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Visual Theme</Label>
+                  <Brush className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-indigo-500" />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
                   {(['white', 'slate', 'dark', 'glass'] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => updateSetting('backgroundTheme', t)}
-                      className={`p-2 rounded-xl border text-left transition-all ${settings.backgroundTheme === t ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                      className={`p-1 sm:p-2 rounded-lg sm:rounded-xl border text-left transition-all ${settings.backgroundTheme === t ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100' : 'border-slate-200 bg-white hover:border-slate-300'}`}
                     >
-                      <div className="text-[9px] font-black uppercase mb-1.5 text-slate-400 tracking-tighter">{t}</div>
-                      <div className="w-full h-3 rounded border border-slate-100" style={{
+                      <div className="text-[6px] sm:text-[9px] font-black uppercase mb-0.5 sm:mb-1.5 text-slate-400 tracking-tighter truncate">{t}</div>
+                      <div className="w-full h-2 sm:h-3 rounded border border-slate-100" style={{
                         backgroundColor: t === 'white' ? '#fff' : t === 'slate' ? '#f8fafc' : t === 'dark' ? '#0f172a' : 'rgba(255,255,255,0.7)'
                       }} />
                     </button>
                   ))}
                 </div>
-                  <div className="pt-4 space-y-4 border-t border-slate-50">
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-black text-slate-400">
-                        <span>FILL OPACITY</span>
-                        <span>{Math.round(settings.barOpacity * 100)}%</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0.1" max="1" step="0.1"
-                        value={settings.barOpacity ?? 0.8}
-                        onChange={(e) => updateSetting('barOpacity', parseFloat(e.target.value))}
-                        className="w-full h-0.5 sm:h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
+
+                {/* COMPACT SLIDERS - SIDE BY SIDE ON MOBILE */}
+                <div className="pt-2 sm:pt-4 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 border-t border-slate-50">
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[7px] sm:text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                      <span className="truncate">Opacity</span>
+                      <span>{Math.round(settings.barOpacity * 100)}%</span>
                     </div>
-                    <div className="space-y-1 sm:space-y-1.5">
-                      <div className="flex justify-between text-[8px] sm:text-[10px] font-black text-slate-400">
-                        <span>SATURATION</span>
-                        <span>{Math.round(settings.barSaturation * 100)}%</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0" max="2" step="0.1"
-                        value={settings.barSaturation ?? 1.0}
-                        onChange={(e) => updateSetting('barSaturation', parseFloat(e.target.value))}
-                        className="w-full h-0.5 sm:h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
-                    </div>
-                    <div className="space-y-1 sm:space-y-1.5">
-                      <div className="flex justify-between text-[8px] sm:text-[10px] font-black text-slate-400">
-                        <span>BRIGHTNESS</span>
-                        <span>{Math.round(settings.barBrightness * 100)}%</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0" max="2" step="0.1"
-                        value={settings.barBrightness ?? 1.0}
-                        onChange={(e) => updateSetting('barBrightness', parseFloat(e.target.value))}
-                        className="w-full h-0.5 sm:h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
-                    </div>
+                    <input
+                      type="range" min="0.1" max="1" step="0.1"
+                      value={settings.barOpacity ?? 0.8}
+                      onChange={(e) => updateSetting('barOpacity', parseFloat(e.target.value))}
+                      className="w-full h-0.5 sm:h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
                   </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[7px] sm:text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                      <span className="truncate">Saturate</span>
+                      <span>{Math.round(settings.barSaturation * 100)}%</span>
+                    </div>
+                    <input
+                      type="range" min="0" max="2" step="0.1"
+                      value={settings.barSaturation ?? 1.0}
+                      onChange={(e) => updateSetting('barSaturation', parseFloat(e.target.value))}
+                      className="w-full h-0.5 sm:h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[7px] sm:text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                      <span className="truncate">Bright</span>
+                      <span>{Math.round(settings.barBrightness * 100)}%</span>
+                    </div>
+                    <input
+                      type="range" min="0" max="2" step="0.1"
+                      value={settings.barBrightness ?? 1.0}
+                      onChange={(e) => updateSetting('barBrightness', parseFloat(e.target.value))}
+                      className="w-full h-0.5 sm:h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-4 border-l border-slate-100 pl-8">
-                <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Line & Border</Label>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] sm:text-[11px] font-bold text-slate-600">Stroke Weight</span>
-                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md p-1">
-                      <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => updateSetting('borderWidth', Math.max(0.5, settings.borderWidth - 0.5))}>-</Button>
-                      <span className="text-xs font-black min-w-[20px] text-center">{settings.borderWidth}</span>
-                      <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => updateSetting('borderWidth', Math.min(4, settings.borderWidth + 0.5))}>+</Button>
+              <div className="space-y-3 md:border-l md:border-slate-100 md:pl-8">
+                <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Line & Border</Label>
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between p-1.5 sm:p-0 bg-white sm:bg-transparent border border-slate-100 sm:border-0 rounded-lg">
+                    <span className="text-[7px] sm:text-[11px] font-bold text-slate-600">Stroke Weight</span>
+                    <div className="flex items-center gap-1 sm:gap-2 bg-white border border-slate-200 rounded-md p-0.5 sm:p-1">
+                      <Button variant="ghost" size="icon" className="h-4 sm:h-5 w-4 sm:w-5" onClick={() => updateSetting('borderWidth', Math.max(0.5, settings.borderWidth - 0.5))}>-</Button>
+                      <span className="text-[7px] sm:text-xs font-black min-w-[15px] sm:min-w-[20px] text-center">{settings.borderWidth}</span>
+                      <Button variant="ghost" size="icon" className="h-4 sm:h-5 w-4 sm:w-5" onClick={() => updateSetting('borderWidth', Math.min(4, settings.borderWidth + 0.5))}>+</Button>
                     </div>
                   </div>
 
-                  {/* Line Style Selector */}
-                  <div className="space-y-2">
-                    <span className="text-[9px] sm:text-[11px] font-bold text-slate-600">Line Style</span>
-                    <div className="grid grid-cols-1 gap-1.5">
+                  {/* Line Style Selector - 2 Column on mobile */}
+                  <div className="space-y-1.5">
+                    <span className="text-[7px] sm:text-[11px] font-bold text-slate-600 pl-1">Line Style</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                       {([
-                        { value: 'uniform',     label: 'Uniform Solid',   preview: '────────' },
-                        { value: 'alternating', label: 'Alternating',     preview: '──── - ──── -' },
-                        { value: 'sequential',  label: 'Sequential Mix',  preview: '─ · ─── ···' },
-                        { value: 'dashed',      label: 'All Dashed',      preview: '── ── ── ──' },
-                        { value: 'dotted',      label: 'All Dotted',      preview: '· · · · · ·' },
+                        { value: 'uniform',     label: 'Uniform',   preview: '────' },
+                        { value: 'alternating', label: 'Alt',       preview: '── - ──' },
+                        { value: 'sequential',  label: 'Seq',       preview: '─ · ──' },
+                        { value: 'dashed',      label: 'Dash',      preview: '── ──' },
+                        { value: 'dotted',      label: 'Dot',       preview: '· · ·' },
                       ] as const).map(({ value, label, preview }) => (
                         <button
                           key={value}
                           onClick={() => updateSetting('lineStyle', value)}
-                          className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-left transition-all ${
+                          className={`flex items-center justify-between px-1.5 py-1 rounded-md sm:rounded-lg border text-left transition-all ${
                             settings.lineStyle === value
                               ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200'
                               : 'border-slate-200 bg-white hover:border-slate-300'
                           }`}
                         >
-                          <span className="text-[10px] font-black text-slate-600 uppercase tracking-tight">{label}</span>
-                          <span className="text-[10px] font-mono text-slate-400 tracking-tighter">{preview}</span>
+                          <span className="text-[7px] sm:text-[10px] font-black text-slate-600 uppercase tracking-tighter truncate">{label}</span>
+                          <span className="text-[7px] sm:text-[10px] font-mono text-slate-400 scale-75 origin-right">{preview}</span>
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] sm:text-[11px] font-bold text-slate-600">Precision</span>
-                    <Select value={(settings.resultsDecimalPlaces ?? 3).toString()} onValueChange={(val) => updateSetting('resultsDecimalPlaces', parseInt(val))}>
-                      <SelectTrigger className="h-8 text-xs font-bold w-20 bg-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">.1</SelectItem>
-                        <SelectItem value="2">.01</SelectItem>
-                        <SelectItem value="3">.001</SelectItem>
-                        <SelectItem value="4">.0001</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* ADVANCED SETTINGS GRID - 2 Column on mobile */}
+                  <div className="pt-2 border-t border-slate-50 grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-3">
+                    <div className="flex items-center justify-between p-1 sm:p-0 bg-slate-50/50 sm:bg-transparent rounded-md border border-slate-100 sm:border-0">
+                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-400 uppercase sm:normal-case">Precision</span>
+                      <Select value={(settings.resultsDecimalPlaces ?? 3).toString()} onValueChange={(val) => updateSetting('resultsDecimalPlaces', parseInt(val))}>
+                        <SelectTrigger className="h-5 sm:h-8 text-[7px] sm:text-xs font-bold w-12 sm:w-20 bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">.1</SelectItem>
+                          <SelectItem value="2">.01</SelectItem>
+                          <SelectItem value="3">.001</SelectItem>
+                          <SelectItem value="4">.0001</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div className="pt-2 border-t border-slate-50 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] sm:text-[11px] font-bold text-slate-600">Fill Pattern</span>
+                    <div className="flex items-center justify-between p-1 sm:p-0 bg-slate-50/50 sm:bg-transparent rounded-md border border-slate-100 sm:border-0">
+                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-400 uppercase sm:normal-case">Fill</span>
                       <Select value={settings.fillPattern || 'none'} onValueChange={(val: any) => updateSetting('fillPattern', val)}>
-                        <SelectTrigger className="h-8 text-[10px] font-bold w-24 bg-white">
+                        <SelectTrigger className="h-5 sm:h-8 text-[7px] sm:text-[10px] font-bold w-16 sm:w-24 bg-white">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -533,24 +498,10 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                       </Select>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] sm:text-[11px] font-bold text-slate-600">Separators</span>
-                        <Switch checked={settings.showSeparator} onCheckedChange={(val) => updateSetting('showSeparator', val)} />
-                      </div>
-                      <input 
-                        type="color" 
-                        value={settings.separatorColor || '#ffffff'} 
-                        onChange={(e) => updateSetting('separatorColor', e.target.value)}
-                        className="w-8 h-8 rounded border-none cursor-pointer bg-transparent"
-                        disabled={!settings.showSeparator}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] sm:text-[11px] font-bold text-slate-600">Grid Style</span>
+                    <div className="flex items-center justify-between p-1 sm:p-0 bg-slate-50/50 sm:bg-transparent rounded-md border border-slate-100 sm:border-0">
+                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-400 uppercase sm:normal-case">Grid</span>
                       <Select value={settings.gridStyle || 'normal'} onValueChange={(val: any) => updateSetting('gridStyle', val)}>
-                        <SelectTrigger className="h-8 text-[10px] font-bold w-24 bg-white">
+                        <SelectTrigger className="h-5 sm:h-8 text-[7px] sm:text-[10px] font-bold w-16 sm:w-24 bg-white">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -560,23 +511,23 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                       </Select>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] sm:text-[11px] font-bold text-slate-600">Frame Style</span>
+                    <div className="flex items-center justify-between p-1 sm:p-0 bg-slate-50/50 sm:bg-transparent rounded-md border border-slate-100 sm:border-0">
+                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-400 uppercase sm:normal-case">Frame</span>
                       <Select value={settings.frameStyle || 'L-Frame'} onValueChange={(val: any) => updateSetting('frameStyle', val)}>
-                        <SelectTrigger className="h-8 text-[10px] font-bold w-24 bg-white">
+                        <SelectTrigger className="h-5 sm:h-8 text-[7px] sm:text-[10px] font-bold w-16 sm:w-24 bg-white">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="L-Frame">L-Frame</SelectItem>
-                          <SelectItem value="Box">Box Frame</SelectItem>
+                          <SelectItem value="Box">Box</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] sm:text-[11px] font-bold text-slate-600">Ticks</span>
+                    <div className="flex items-center justify-between p-1 sm:p-0 bg-slate-50/50 sm:bg-transparent rounded-md border border-slate-100 sm:border-0">
+                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-400 uppercase sm:normal-case">Ticks</span>
                       <Select value={settings.tickDirection || 'outer'} onValueChange={(val: any) => updateSetting('tickDirection', val)}>
-                        <SelectTrigger className="h-8 text-[10px] font-bold w-24 bg-white">
+                        <SelectTrigger className="h-5 sm:h-8 text-[7px] sm:text-[10px] font-bold w-16 sm:w-24 bg-white">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -586,18 +537,30 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                       </Select>
                     </div>
 
-                    <div className="flex items-center justify-between border-t border-slate-50 pt-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] sm:text-[11px] font-bold text-slate-600">Zero Baseline</span>
-                        <Switch checked={settings.zeroBaseline} onCheckedChange={(val) => updateSetting('zeroBaseline', val)} />
+                    <div className="flex items-center justify-between p-1 sm:p-0 bg-slate-50/50 sm:bg-transparent rounded-md border border-slate-100 sm:border-0">
+                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-400 uppercase sm:normal-case">Sep</span>
+                      <div className="flex items-center gap-1">
+                        <Switch className="scale-75 sm:scale-100 origin-right" checked={settings.showSeparator} onCheckedChange={(val) => updateSetting('showSeparator', val)} />
+                        {settings.showSeparator && (
+                          <input 
+                            type="color" 
+                            value={settings.separatorColor || '#ffffff'} 
+                            onChange={(e) => updateSetting('separatorColor', e.target.value)}
+                            className="w-4 h-4 rounded border border-slate-200 cursor-pointer p-0"
+                          />
+                        )}
                       </div>
                     </div>
+                  </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] sm:text-[11px] font-bold text-slate-600">Direct Labels</span>
-                        <Switch checked={settings.directLabeling} onCheckedChange={(val) => updateSetting('directLabeling', val)} />
-                      </div>
+                  <div className="flex items-center justify-between border-t border-slate-50 pt-2 px-1 sm:px-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-600">Zero Baseline</span>
+                      <Switch className="scale-75 sm:scale-100 origin-right" checked={settings.zeroBaseline} onCheckedChange={(val) => updateSetting('zeroBaseline', val)} />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-600">Direct Labels</span>
+                      <Switch className="scale-75 sm:scale-100 origin-right" checked={settings.directLabeling} onCheckedChange={(val) => updateSetting('directLabeling', val)} />
                     </div>
                   </div>
                 </div>
@@ -606,154 +569,123 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
           </TabsContent>
 
           {/* LAYOUT TAB */}
-          <TabsContent value="layout" className="mt-0 space-y-4">
-            <div className="flex flex-col md:flex-row gap-8">
-              <div className="w-full md:w-[20%] space-y-4">
-                <Label className="text-[8px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Typography</Label>
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] sm:text-[11px] font-bold text-slate-600">Base Font</span>
-                  <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md p-1">
-                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => updateSetting('fontSize', Math.max(8, settings.fontSize - 1))}>-</Button>
-                    <span className="text-xs font-black min-w-[20px] text-center">{settings.fontSize}</span>
-                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => updateSetting('fontSize', Math.min(20, settings.fontSize + 1))}>+</Button>
+          <TabsContent value="layout" className="mt-0 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-8 items-start">
+              {/* TYPOGRAPHY & MARKERS SECTION */}
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Typography</Label>
+                  <div className="flex items-center justify-between p-1.5 sm:p-2 bg-white border border-slate-200 rounded-lg">
+                    <span className="text-[7px] sm:text-[11px] font-bold text-slate-600">Base Font</span>
+                    <div className="flex items-center gap-1 sm:gap-2 bg-white border border-slate-100 rounded-md p-0.5 sm:p-1">
+                      <Button variant="ghost" size="icon" className="h-4 sm:h-5 w-4 sm:w-5" onClick={() => updateSetting('fontSize', Math.max(8, settings.fontSize - 1))}>-</Button>
+                      <span className="text-[7px] sm:text-xs font-black min-w-[15px] sm:min-w-[20px] text-center">{settings.fontSize}</span>
+                      <Button variant="ghost" size="icon" className="h-4 sm:h-5 w-4 sm:w-5" onClick={() => updateSetting('fontSize', Math.min(20, settings.fontSize + 1))}>+</Button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="w-full md:w-[20%] space-y-4 border-l border-slate-100 pl-8">
-                <Label className="text-[8px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Data Markers</Label>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] sm:text-[11px] font-bold text-slate-600">Type</span>
-                    <Select value={settings.markerType || 'circle'} onValueChange={(val: any) => updateSetting('markerType', val)}>
-                      <SelectTrigger className="h-8 text-xs font-bold w-24 bg-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="circle">Circle</SelectItem>
-                        <SelectItem value="square">Square</SelectItem>
-                        <SelectItem value="triangle">Triangle</SelectItem>
-                        <SelectItem value="diamond">Diamond</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] sm:text-[11px] font-bold text-slate-600">Size</span>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateSetting('markerSize', Math.max(1, settings.markerSize - 1))}>-</Button>
-                      <span className="text-[9px] sm:text-[10px] font-black text-slate-700">{settings.markerSize}px</span>
-                      <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateSetting('markerSize', Math.min(10, settings.markerSize + 1))}>+</Button>
+                <div className="space-y-2">
+                  <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data Markers</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    <div className="flex flex-col gap-0.5 p-1 sm:p-2 bg-white border border-slate-200 rounded-lg">
+                      <span className="text-[6px] sm:text-[11px] font-bold text-slate-400 uppercase">Type</span>
+                      <Select value={settings.markerType || 'circle'} onValueChange={(val: any) => updateSetting('markerType', val)}>
+                        <SelectTrigger className="h-5 sm:h-8 text-[7px] sm:text-xs font-bold w-full bg-white border-none shadow-none p-0">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="circle">Circle</SelectItem>
+                          <SelectItem value="square">Square</SelectItem>
+                          <SelectItem value="triangle">Triangle</SelectItem>
+                          <SelectItem value="diamond">Diamond</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-0.5 p-1 sm:p-2 bg-white border border-slate-200 rounded-lg">
+                      <span className="text-[6px] sm:text-[11px] font-bold text-slate-400 uppercase">Size</span>
+                      <div className="flex items-center justify-between">
+                        <Button variant="ghost" size="icon" className="h-4 sm:h-4 w-4 sm:w-4 p-0" onClick={() => updateSetting('markerSize', Math.max(1, settings.markerSize - 1))}>-</Button>
+                        <span className="text-[7px] sm:text-[10px] font-black text-slate-700">{settings.markerSize}px</span>
+                        <Button variant="ghost" size="icon" className="h-4 sm:h-4 w-4 sm:w-4 p-0" onClick={() => updateSetting('markerSize', Math.min(10, settings.markerSize + 1))}>+</Button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="w-full md:w-[20%] space-y-4 border-l border-slate-100 pl-8">
-                <Label className="text-[8px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Placement Ofts</Label>
-                <div className="space-y-3">
-                  <div className="space-y-1 sm:space-y-1.5">
-                    <div className="flex justify-between text-[8px] sm:text-[10px] font-black text-slate-400">
+              {/* PLACEMENT OFFSETS */}
+              <div className="space-y-2">
+                <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Placement Ofts</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="space-y-1 p-1.5 sm:p-2 bg-white border border-slate-200 rounded-lg">
+                    <div className="flex justify-between text-[6px] sm:text-[10px] font-black text-slate-400 uppercase tracking-tighter">
                       <span>X-AXIS</span>
                       <span>{settings.xAxisOffset}px</span>
                     </div>
                     <input
-                      type="range"
-                      min="-50" max="50" step="1"
+                      type="range" min="-50" max="50" step="1"
                       value={settings.xAxisOffset ?? 0}
                       onChange={(e) => updateSetting('xAxisOffset', parseInt(e.target.value))}
                       className="w-full h-0.5 sm:h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                     />
                   </div>
-                  <div className="space-y-1 sm:space-y-1.5">
-                    <div className="flex justify-between text-[8px] sm:text-[10px] font-black text-slate-400">
+                  <div className="space-y-1 p-1.5 sm:p-2 bg-white border border-slate-200 rounded-lg">
+                    <div className="flex justify-between text-[6px] sm:text-[10px] font-black text-slate-400 uppercase tracking-tighter">
                       <span>Y-AXIS</span>
                       <span>{settings.yAxisOffset}px</span>
                     </div>
                     <input
-                      type="range"
-                      min="-50" max="50" step="1"
+                      type="range" min="-50" max="50" step="1"
                       value={settings.yAxisOffset ?? 0}
                       onChange={(e) => updateSetting('yAxisOffset', parseInt(e.target.value))}
-                      className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      className="w-full h-0.5 sm:h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="w-full md:w-[40%] space-y-4 border-l border-slate-100 pl-8">
-                <Label className="text-[8px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Scientific Layout</Label>
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                  <div className="space-y-1 sm:space-y-1.5">
-                    <div className="flex justify-between text-[7px] sm:text-[10px] font-black text-slate-400">
-                      <span>TOP</span>
-                      <span>{settings.marginTop}px</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0" max="150" step="5"
-                      value={settings.marginTop ?? 35}
-                      onChange={(e) => updateSetting('marginTop', parseInt(e.target.value))}
-                      className="w-full h-0.5 sm:h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
+              {/* SCIENTIFIC LAYOUT */}
+              <div className="space-y-2 md:col-span-2">
+                <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Scientific Layout & Presets</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-1.5 p-1.5 sm:p-3 bg-slate-50/50 border border-slate-100 rounded-lg col-span-2 sm:col-span-1">
+                    {[
+                      { key: 'marginTop', label: 'TOP' },
+                      { key: 'marginBottom', label: 'BOTTOM' },
+                      { key: 'marginLeft', label: 'LEFT' },
+                      { key: 'marginRight', label: 'RIGHT' }
+                    ].map((m) => (
+                      <div key={m.key} className="space-y-1">
+                        <div className="flex justify-between text-[6px] sm:text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                          <span>{m.label}</span>
+                          <span>{settings[m.key as keyof ChartSettings]}px</span>
+                        </div>
+                        <input
+                          type="range" min="0" max="150" step="5"
+                          value={settings[m.key as keyof ChartSettings] as number}
+                          onChange={(e) => updateSetting(m.key as any, parseInt(e.target.value))}
+                          className="w-full h-0.5 sm:h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                      </div>
+                    ))}
                   </div>
-                  <div className="space-y-1 sm:space-y-1.5">
-                    <div className="flex justify-between text-[7px] sm:text-[10px] font-black text-slate-400">
-                      <span>BOTTOM</span>
-                      <span>{settings.marginBottom}px</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0" max="150" step="5"
-                      value={settings.marginBottom ?? 35}
-                      onChange={(e) => updateSetting('marginBottom', parseInt(e.target.value))}
-                      className="w-full h-0.5 sm:h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
-                  </div>
-                  <div className="space-y-1 sm:space-y-1.5">
-                    <div className="flex justify-between text-[7px] sm:text-[10px] font-black text-slate-400">
-                      <span>LEFT</span>
-                      <span>{settings.marginLeft}px</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0" max="150" step="5"
-                      value={settings.marginLeft ?? 20}
-                      onChange={(e) => updateSetting('marginLeft', parseInt(e.target.value))}
-                      className="w-full h-0.5 sm:h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
-                  </div>
-                  <div className="space-y-1 sm:space-y-1.5">
-                    <div className="flex justify-between text-[7px] sm:text-[10px] font-black text-slate-400">
-                      <span>RIGHT</span>
-                      <span>{settings.marginRight}px</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0" max="150" step="5"
-                      value={settings.marginRight ?? 20}
-                      onChange={(e) => updateSetting('marginRight', parseInt(e.target.value))}
-                      className="w-full h-0.5 sm:h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
-                  </div>
-                </div>
 
-                <div className="w-full md:w-[20%] space-y-4 border-l border-slate-100 pl-8">
-                  <Label className="text-[8px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Scientific Presets</Label>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] sm:text-[11px] font-bold text-slate-600">Aspect Ratio</span>
+                  <div className="flex flex-col justify-between gap-1.5 p-1.5 sm:p-3 bg-white border border-slate-200 rounded-lg col-span-2 sm:col-span-1">
+                    <span className="text-[6px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Aspect Ratio Preset</span>
                     <Select value={settings.aspectRatio || 'auto'} onValueChange={(val: any) => updateSetting('aspectRatio', val)}>
-                      <SelectTrigger className="h-8 text-[10px] font-bold w-28 bg-white">
+                      <SelectTrigger className="h-5 sm:h-8 text-[7px] sm:text-xs font-bold w-full bg-slate-50 border-none">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="auto">Auto (Full)</SelectItem>
-                        <SelectItem value="1:1">1:1 (Square)</SelectItem>
-                        <SelectItem value="4:3">4:3 (Standard)</SelectItem>
-                        <SelectItem value="3:2">3:2 (Classic)</SelectItem>
-                        <SelectItem value="16:9">16:9 (Wide)</SelectItem>
-                        <SelectItem value="golden">Golden Ratio</SelectItem>
-                        <SelectItem value="journal-single">Single Column</SelectItem>
-                        <SelectItem value="journal-double">Double Column</SelectItem>
+                        <SelectItem value="auto">Auto</SelectItem>
+                        <SelectItem value="1:1">1:1 Square</SelectItem>
+                        <SelectItem value="4:3">4:3 Std</SelectItem>
+                        <SelectItem value="3:2">3:2 Classic</SelectItem>
+                        <SelectItem value="16:9">16:9 Wide</SelectItem>
+                        <SelectItem value="golden">Golden</SelectItem>
+                        <SelectItem value="journal-single">Single Col</SelectItem>
+                        <SelectItem value="journal-double">Double Col</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -766,10 +698,10 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
 
       <div className="px-3 sm:px-4 py-1 sm:py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <MousePointer2 className="w-2.5 sm:w-3 h-2.5 sm:h-3 text-slate-400" />
-          <span className="text-[7.5px] sm:text-[9px] font-black text-slate-400 uppercase tracking-widest italic">Live Preview Sync Enabled</span>
+          <MousePointer2 className="w-2 sm:w-3 h-2 sm:h-3 text-slate-400" />
+          <span className="text-[6.5px] sm:text-[9px] font-black text-slate-400 uppercase tracking-widest italic">Live Preview Sync Enabled</span>
         </div>
-        <div className="text-[7.5px] sm:text-[9px] font-medium text-slate-400 uppercase tracking-tighter">
+        <div className="text-[6.5px] sm:text-[9px] font-medium text-slate-400 uppercase tracking-tighter">
           Palette: <span className="text-blue-600 font-black">{settings.colorPalette}</span>
         </div>
       </div>

@@ -9776,9 +9776,9 @@ export default function MCDMCalculator() {
                             </Card>
                           )}
 
-                          <div className="space-y-6 animate-in fade-in duration-500">
-                            <Card className="border-gray-200 bg-white shadow-none w-full">
-                              <CardHeader className="pb-0 flex flex-col">
+                          <div className="space-y-8 animate-in fade-in duration-500">
+                            <div className="w-full transition-all duration-300">
+                              <div className="pb-0 flex flex-col px-0 sm:px-6 py-2 sm:py-4">
                                 <ResearchAssetHeader
                                   assetKey="sensitivity_comparison_table"
                                   defaultLabel={getSensitivityTableLabel()}
@@ -9788,9 +9788,9 @@ export default function MCDMCalculator() {
                                   onIncludeChange={handleIncludeChange}
                                   onAiAnalysis={() => handleAiAnalysis("sensitivity", { sensitivityData: sensitivityCriteriaWeights })}
                                 />
-                                <CardDescription className="text-xs text-gray-700">Ranking variations across weight methods</CardDescription>
-                              </CardHeader>
-                              <CardContent>
+                                <CardDescription className="text-[7px] sm:text-xs text-gray-700 px-0">Ranking variations across weight methods</CardDescription>
+                              </div>
+                              <div className="px-0 sm:px-6 pb-6">
                                 <div className="table-responsive border border-gray-200 rounded-lg overflow-x-auto">
                                   <table className="min-w-full text-[9px] border-collapse bg-white">
                                     <thead className="bg-gray-50">
@@ -9836,11 +9836,11 @@ export default function MCDMCalculator() {
                                     </tbody>
                                   </table>
                                 </div>
-                              </CardContent>
-                            </Card>
+                              </div>
+                            </div>
 
-                            <Card className="border-gray-200 bg-white shadow-none w-full">
-                              <CardHeader className="pb-0 flex flex-col">
+                            <div className="w-full transition-all duration-300">
+                              <div className="pb-0 flex flex-col px-0 sm:px-6 py-2 sm:py-4">
                                 <ResearchAssetHeader
                                   assetKey="sensitivity_graphical_variation"
                                   defaultLabel={getSensitivityFigureLabel()}
@@ -9850,9 +9850,9 @@ export default function MCDMCalculator() {
                                   onIncludeChange={handleIncludeChange}
                                   onAiAnalysis={() => handleAiAnalysis("sensitivity", { sensitivityData: sensitivityCriteriaWeights })}
                                 >
-                                  <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                                  <div className="flex items-center justify-between sm:justify-end gap-1 sm:gap-2 w-full sm:w-auto flex-wrap">
                                     <Select value={sensitivityChartType} onValueChange={setSensitivityChartType}>
-                                      <SelectTrigger className="w-28 sm:w-32 h-7 text-xs">
+                                      <SelectTrigger className="w-24 sm:w-32 h-6 sm:h-7 text-[7px] sm:text-xs">
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
@@ -9869,37 +9869,37 @@ export default function MCDMCalculator() {
                                         <SelectItem value="dual">Dual-Axis (Score & Rank)</SelectItem>
                                       </SelectContent>
                                     </Select>
-                                    <div className="flex items-center gap-1 sm:gap-1.5 bg-gray-50 p-0.5 sm:p-1 rounded-md border border-gray-200">
+                                    <div className="flex items-center gap-1 bg-gray-50 p-0.5 rounded-md border border-gray-200 ml-auto sm:ml-0">
                                       <Button
                                         onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation", 'jpeg')}
                                         variant="ghost"
                                         size="sm"
-                                        className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all"
+                                        className="h-5 sm:h-6 px-1.5 sm:px-2 text-[7px] sm:text-[10px] font-black hover:bg-white hover:shadow-sm transition-all"
                                       >
-                                        <Download className="w-3 h-3 mr-1 text-blue-600" /> JPEG
+                                        <Download className="w-2.5 sm:w-3 h-2.5 sm:h-3 mr-1 text-blue-600" /> JPEG
                                       </Button>
-                                      <div className="w-[1px] h-3 bg-gray-300 mx-0.5" />
+                                      <div className="w-[1px] h-3 bg-gray-200 mx-0.5" />
                                       <Button
                                         onClick={() => downloadChartAsJpeg(sensitivityGraphicalVariationRef, "sensitivity-graphical-variation", 'svg')}
                                         variant="ghost"
                                         size="sm"
-                                        className="h-6 px-2 text-[10px] font-bold hover:bg-white hover:shadow-sm transition-all text-indigo-600"
+                                        className="h-5 sm:h-6 px-1.5 sm:px-2 text-[7px] sm:text-[10px] font-black hover:bg-white hover:shadow-sm transition-all text-indigo-600"
                                       >
-                                        <Sparkles className="w-3 h-3 mr-1" /> SVG (VECTOR)
+                                        <Sparkles className="w-2.5 sm:w-3 h-2.5 sm:h-3 mr-1" /> SVG (VECTOR)
                                       </Button>
                                     </div>
                                   </div>
                                 </ResearchAssetHeader>
-                                <div className="w-full mt-3 px-0 sm:px-4 border-t pt-2">
+                                <div className="w-full mt-3 px-0 sm:px-0 border-t pt-2">
                                   <ChartVisualConfigurator
                                     settings={chartSettings}
                                     onSettingsChange={setChartSettings}
                                   />
                                 </div>
-                              </CardHeader>
-                              <CardContent className="px-0 sm:px-6 pt-6 mt-0">
+                              </div>
+                              <div className="px-0 sm:px-6 pb-6 pt-6 mt-0">
                                 <div className={`w-full max-w-7xl mx-auto transition-all duration-500 ${chartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }} ref={sensitivityGraphicalVariationRef}>
-                                  <ResponsiveContainer width="100%" height={getAspectRatioValue() ? undefined : (isMobile ? 400 : 600)} aspect={getAspectRatioValue()}>
+                                  <ResponsiveContainer width="100%" height={isMobile ? (getAspectRatioValue() ? 320 : 400) : (getAspectRatioValue() ? undefined : 600)} aspect={isMobile ? undefined : getAspectRatioValue()}>
                                     {sensitivityChartType === 'radar' ? (
                                       <RadarChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} cx="50%" cy="50%" outerRadius="80%" data={sensitivityWeightChartData}>
                                         {renderDefs(activeColors)}
@@ -9953,9 +9953,11 @@ export default function MCDMCalculator() {
                                         <Customized component={RightFrameBorder} />
                                         <XAxis
                                           dataKey="name"
-                                          tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 1) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={getTickLine('bottom')}
+                                          interval={isMobile ? "preserveStartEnd" : 0}
+                                          tickFormatter={(val) => isMobile ? val.replace('Robot-', 'R') : val}
                                           label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined} />
                                         <XAxis
                                           orientation="top"
@@ -10031,9 +10033,11 @@ export default function MCDMCalculator() {
                                         <Customized component={RightFrameBorder} />
                                         <XAxis
                                           dataKey="name"
-                                          tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 1) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={getTickLine('bottom')}
+                                          interval={isMobile ? "preserveStartEnd" : 0}
+                                          tickFormatter={(val) => isMobile ? val.replace('Robot-', 'R') : val}
                                           label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } }} />
                                         <XAxis
                                           orientation="top"
@@ -10120,9 +10124,11 @@ export default function MCDMCalculator() {
                                         <Customized component={RightFrameBorder} />
                                         <XAxis
                                           dataKey="name"
-                                          tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 1) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={getTickLine('bottom')}
+                                          interval={isMobile ? "preserveStartEnd" : 0}
+                                          tickFormatter={(val) => isMobile ? val.replace('Robot-', 'R') : val}
                                           label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } }} />
                                         <XAxis
                                           orientation="top"
@@ -10429,9 +10435,11 @@ export default function MCDMCalculator() {
                                           dataKey="name"
                                           type="category"
                                           allowDuplicatedCategory={false}
-                                          tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 1) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={getTickLine('bottom')}
+                                          interval={isMobile ? "preserveStartEnd" : 0}
+                                          tickFormatter={(val) => isMobile ? val.replace('Robot-', 'R') : val}
                                           label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } }} />
                                         <XAxis
                                           orientation="top"
@@ -10630,13 +10638,11 @@ export default function MCDMCalculator() {
                                             <Customized component={RightFrameBorder} />
                                             <XAxis
                                               dataKey="name"
-                                              tick={{ fontSize: chartSettings.fontSize, fill: theme.text }}
+                                              tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 1) : chartSettings.fontSize, fill: theme.text }}
                                               axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                               tickLine={getTickLine('bottom')}
-                                              interval={0}
-                                              tickFormatter={(val) => {
-                                                return val.replace('Robot-', 'R');
-                                              }}
+                                              interval={isMobile ? "preserveStartEnd" : 0}
+                                              tickFormatter={(val) => isMobile ? val.replace('Robot-', 'R') : val}
                                               label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
                                             />
                                             <XAxis
@@ -10774,10 +10780,11 @@ export default function MCDMCalculator() {
 
                                         <XAxis
                                           dataKey="name"
-                                          tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 1) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={{ stroke: theme.border, strokeWidth: 1 }}
-                                          interval={0}
+                                          interval={isMobile ? "preserveStartEnd" : 0}
+                                          tickFormatter={(val) => isMobile ? val.replace('Robot-', 'R') : val}
                                           label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined} />
                                         <XAxis
                                           orientation="top"
@@ -10871,8 +10878,8 @@ export default function MCDMCalculator() {
                                     )}
                                   </ResponsiveContainer>
                                 </div>
-                              </CardContent>
-                            </Card>
+                              </div>
+                            </div>
                           </div>
                         </>
                       )
