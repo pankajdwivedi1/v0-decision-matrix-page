@@ -281,7 +281,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="flex items-center justify-between p-1.5 sm:p-2 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors">
                       <div className="flex items-center gap-1.5">
                         <Type className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-slate-400" />
@@ -312,7 +312,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
               {/* AXIS LABELS SECTION */}
               <div className="space-y-2 col-span-1">
                 <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Axis Labels</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                     <div className="flex items-center gap-1 p-1 sm:p-2 bg-white border border-slate-200 rounded-lg">
                        <span className="text-[7px] sm:text-[10px] font-black text-blue-500 w-3">X</span>
                       <Input
@@ -347,7 +347,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                   <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Master Palette</Label>
                   <Palette className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-blue-500" />
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+                <div className="grid grid-cols-4 gap-1 sm:gap-2">
                   {(['academic', 'grayscale', 'vibrant', 'fluorescent', 'viridis', 'magma', 'inferno', 'default'] as const).map((p) => (
                     <button
                       key={p}
@@ -371,7 +371,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                   <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Visual Theme</Label>
                   <Brush className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-indigo-500" />
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+                <div className="grid grid-cols-4 gap-1 sm:gap-2">
                   {(['white', 'slate', 'dark', 'glass'] as const).map((t) => (
                     <button
                       key={t}
@@ -387,9 +387,9 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                 </div>
 
                 {/* COMPACT SLIDERS - SIDE BY SIDE ON MOBILE */}
-                <div className="pt-2 sm:pt-4 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 border-t border-slate-50">
+                <div className="pt-2 sm:pt-4 grid grid-cols-3 gap-2 sm:gap-4 border-t border-slate-50">
                   <div className="space-y-1">
-                    <div className="flex justify-between text-[7px] sm:text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                    <div className="flex justify-between text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-tighter">
                       <span className="truncate">Opacity</span>
                       <span>{Math.round(settings.barOpacity * 100)}%</span>
                     </div>
@@ -401,7 +401,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     />
                   </div>
                   <div className="space-y-1">
-                    <div className="flex justify-between text-[7px] sm:text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                    <div className="flex justify-between text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-tighter">
                       <span className="truncate">Saturate</span>
                       <span>{Math.round(settings.barSaturation * 100)}%</span>
                     </div>
@@ -413,7 +413,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     />
                   </div>
                   <div className="space-y-1">
-                    <div className="flex justify-between text-[7px] sm:text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                    <div className="flex justify-between text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-tighter">
                       <span className="truncate">Bright</span>
                       <span>{Math.round(settings.barBrightness * 100)}%</span>
                     </div>
@@ -431,47 +431,37 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                 <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Line & Border</Label>
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between p-1.5 sm:p-0 bg-white sm:bg-transparent border border-slate-100 sm:border-0 rounded-lg">
-                    <span className="text-[7px] sm:text-[11px] font-bold text-slate-600">Stroke Weight</span>
+                    <span className="text-[7px] md:text-[11px] font-bold text-slate-600">Stroke Weight</span>
                     <div className="flex items-center gap-1 sm:gap-2 bg-white border border-slate-200 rounded-md p-0.5 sm:p-1">
                       <Button variant="ghost" size="icon" className="h-4 sm:h-5 w-4 sm:w-5" onClick={() => updateSetting('borderWidth', Math.max(0.5, settings.borderWidth - 0.5))}>-</Button>
-                      <span className="text-[7px] sm:text-xs font-black min-w-[15px] sm:min-w-[20px] text-center">{settings.borderWidth}</span>
+                      <span className="text-[7px] md:text-xs font-black min-w-[15px] sm:min-w-[20px] text-center">{settings.borderWidth}</span>
                       <Button variant="ghost" size="icon" className="h-4 sm:h-5 w-4 sm:w-5" onClick={() => updateSetting('borderWidth', Math.min(4, settings.borderWidth + 0.5))}>+</Button>
                     </div>
                   </div>
 
-                  {/* Line Style Selector - 2 Column on mobile */}
-                  <div className="space-y-1.5">
-                    <span className="text-[7px] sm:text-[11px] font-bold text-slate-600 pl-1">Line Style</span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
-                      {([
-                        { value: 'uniform',     label: 'Uniform',   preview: '────' },
-                        { value: 'alternating', label: 'Alt',       preview: '── - ──' },
-                        { value: 'sequential',  label: 'Seq',       preview: '─ · ──' },
-                        { value: 'dashed',      label: 'Dash',      preview: '── ──' },
-                        { value: 'dotted',      label: 'Dot',       preview: '· · ·' },
-                      ] as const).map(({ value, label, preview }) => (
-                        <button
-                          key={value}
-                          onClick={() => updateSetting('lineStyle', value)}
-                          className={`flex items-center justify-between px-1.5 py-1 rounded-md sm:rounded-lg border text-left transition-all ${
-                            settings.lineStyle === value
-                              ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200'
-                              : 'border-slate-200 bg-white hover:border-slate-300'
-                          }`}
-                        >
-                          <span className="text-[7px] sm:text-[10px] font-black text-slate-600 uppercase tracking-tighter truncate">{label}</span>
-                          <span className="text-[7px] sm:text-[10px] font-mono text-slate-400 scale-75 origin-right">{preview}</span>
-                        </button>
-                      ))}
-                    </div>
+                  {/* Line Style Selector - Compact Dropdown */}
+                  <div className="flex items-center justify-between p-1 sm:p-0 bg-slate-50/50 sm:bg-transparent rounded-md border border-slate-100 sm:border-0">
+                    <span className="text-[7px] md:text-[11px] font-bold text-slate-600 pl-1">Line Style</span>
+                    <Select value={settings.lineStyle || 'uniform'} onValueChange={(val: any) => updateSetting('lineStyle', val)}>
+                      <SelectTrigger className="h-5 sm:h-8 text-[7px] md:text-[10px] font-bold w-24 sm:w-36 bg-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="uniform">Uniform ────</SelectItem>
+                        <SelectItem value="alternating">Alt ── - ──</SelectItem>
+                        <SelectItem value="sequential">Seq ─ · ──</SelectItem>
+                        <SelectItem value="dashed">Dash ── ──</SelectItem>
+                        <SelectItem value="dotted">Dot · · ·</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* ADVANCED SETTINGS GRID - 2 Column on mobile */}
-                  <div className="pt-2 border-t border-slate-50 grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-3">
+                  <div className="pt-2 border-t border-slate-50 grid grid-cols-2 gap-1.5 sm:gap-3">
                     <div className="flex items-center justify-between p-1 sm:p-0 bg-slate-50/50 sm:bg-transparent rounded-md border border-slate-100 sm:border-0">
-                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-400 uppercase sm:normal-case">Precision</span>
+                      <span className="text-[7px] md:text-[11px] font-bold text-slate-400 uppercase md:normal-case">Precision</span>
                       <Select value={(settings.resultsDecimalPlaces ?? 3).toString()} onValueChange={(val) => updateSetting('resultsDecimalPlaces', parseInt(val))}>
-                        <SelectTrigger className="h-5 sm:h-8 text-[7px] sm:text-xs font-bold w-12 sm:w-20 bg-white">
+                        <SelectTrigger className="h-5 sm:h-8 text-[7px] md:text-xs font-bold w-12 sm:w-20 bg-white">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -484,9 +474,9 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     </div>
 
                     <div className="flex items-center justify-between p-1 sm:p-0 bg-slate-50/50 sm:bg-transparent rounded-md border border-slate-100 sm:border-0">
-                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-400 uppercase sm:normal-case">Fill</span>
+                      <span className="text-[7px] md:text-[11px] font-bold text-slate-400 uppercase md:normal-case">Fill</span>
                       <Select value={settings.fillPattern || 'none'} onValueChange={(val: any) => updateSetting('fillPattern', val)}>
-                        <SelectTrigger className="h-5 sm:h-8 text-[7px] sm:text-[10px] font-bold w-16 sm:w-24 bg-white">
+                        <SelectTrigger className="h-5 sm:h-8 text-[7px] md:text-[10px] font-bold w-16 sm:w-24 bg-white">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -499,9 +489,9 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     </div>
 
                     <div className="flex items-center justify-between p-1 sm:p-0 bg-slate-50/50 sm:bg-transparent rounded-md border border-slate-100 sm:border-0">
-                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-400 uppercase sm:normal-case">Grid</span>
+                      <span className="text-[7px] md:text-[11px] font-bold text-slate-400 uppercase md:normal-case">Grid</span>
                       <Select value={settings.gridStyle || 'normal'} onValueChange={(val: any) => updateSetting('gridStyle', val)}>
-                        <SelectTrigger className="h-5 sm:h-8 text-[7px] sm:text-[10px] font-bold w-16 sm:w-24 bg-white">
+                        <SelectTrigger className="h-5 sm:h-8 text-[7px] md:text-[10px] font-bold w-16 sm:w-24 bg-white">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -512,9 +502,9 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     </div>
 
                     <div className="flex items-center justify-between p-1 sm:p-0 bg-slate-50/50 sm:bg-transparent rounded-md border border-slate-100 sm:border-0">
-                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-400 uppercase sm:normal-case">Frame</span>
+                      <span className="text-[7px] md:text-[11px] font-bold text-slate-400 uppercase md:normal-case">Frame</span>
                       <Select value={settings.frameStyle || 'L-Frame'} onValueChange={(val: any) => updateSetting('frameStyle', val)}>
-                        <SelectTrigger className="h-5 sm:h-8 text-[7px] sm:text-[10px] font-bold w-16 sm:w-24 bg-white">
+                        <SelectTrigger className="h-5 sm:h-8 text-[7px] md:text-[10px] font-bold w-16 sm:w-24 bg-white">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -525,9 +515,9 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     </div>
 
                     <div className="flex items-center justify-between p-1 sm:p-0 bg-slate-50/50 sm:bg-transparent rounded-md border border-slate-100 sm:border-0">
-                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-400 uppercase sm:normal-case">Ticks</span>
+                      <span className="text-[7px] md:text-[11px] font-bold text-slate-400 uppercase md:normal-case">Ticks</span>
                       <Select value={settings.tickDirection || 'outer'} onValueChange={(val: any) => updateSetting('tickDirection', val)}>
-                        <SelectTrigger className="h-5 sm:h-8 text-[7px] sm:text-[10px] font-bold w-16 sm:w-24 bg-white">
+                        <SelectTrigger className="h-5 sm:h-8 text-[7px] md:text-[10px] font-bold w-16 sm:w-24 bg-white">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -538,7 +528,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                     </div>
 
                     <div className="flex items-center justify-between p-1 sm:p-0 bg-slate-50/50 sm:bg-transparent rounded-md border border-slate-100 sm:border-0">
-                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-400 uppercase sm:normal-case">Sep</span>
+                      <span className="text-[7px] md:text-[11px] font-bold text-slate-400 uppercase md:normal-case">Sep</span>
                       <div className="flex items-center gap-1">
                         <Switch className="scale-75 sm:scale-100 origin-right" checked={settings.showSeparator} onCheckedChange={(val) => updateSetting('showSeparator', val)} />
                         {settings.showSeparator && (
@@ -555,11 +545,11 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
 
                   <div className="flex items-center justify-between border-t border-slate-50 pt-2 px-1 sm:px-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-600">Zero Baseline</span>
+                      <span className="text-[7px] md:text-[11px] font-bold text-slate-600">Zero Baseline</span>
                       <Switch className="scale-75 sm:scale-100 origin-right" checked={settings.zeroBaseline} onCheckedChange={(val) => updateSetting('zeroBaseline', val)} />
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[7px] sm:text-[11px] font-bold text-slate-600">Direct Labels</span>
+                      <span className="text-[7px] md:text-[11px] font-bold text-slate-600">Direct Labels</span>
                       <Switch className="scale-75 sm:scale-100 origin-right" checked={settings.directLabeling} onCheckedChange={(val) => updateSetting('directLabeling', val)} />
                     </div>
                   </div>
@@ -587,7 +577,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
 
                 <div className="space-y-2">
                   <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data Markers</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  <div className="grid grid-cols-2 gap-1.5">
                     <div className="flex flex-col gap-0.5 p-1 sm:p-2 bg-white border border-slate-200 rounded-lg">
                       <span className="text-[6px] sm:text-[11px] font-bold text-slate-400 uppercase">Type</span>
                       <Select value={settings.markerType || 'circle'} onValueChange={(val: any) => updateSetting('markerType', val)}>
@@ -617,7 +607,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
               {/* PLACEMENT OFFSETS */}
               <div className="space-y-2">
                 <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Placement Ofts</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1 p-1.5 sm:p-2 bg-white border border-slate-200 rounded-lg">
                     <div className="flex justify-between text-[6px] sm:text-[10px] font-black text-slate-400 uppercase tracking-tighter">
                       <span>X-AXIS</span>
@@ -648,7 +638,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
               {/* SCIENTIFIC LAYOUT */}
               <div className="space-y-2 md:col-span-2">
                 <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Scientific Layout & Presets</Label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div className="grid grid-cols-2 gap-1.5 p-1.5 sm:p-3 bg-slate-50/50 border border-slate-100 rounded-lg col-span-2 sm:col-span-1">
                     {[
                       { key: 'marginTop', label: 'TOP' },
@@ -657,7 +647,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                       { key: 'marginRight', label: 'RIGHT' }
                     ].map((m) => (
                       <div key={m.key} className="space-y-1">
-                        <div className="flex justify-between text-[6px] sm:text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                        <div className="flex justify-between text-[6px] md:text-[9px] font-black text-slate-400 uppercase tracking-tighter">
                           <span>{m.label}</span>
                           <span>{settings[m.key as keyof ChartSettings]}px</span>
                         </div>
