@@ -8,7 +8,7 @@ import { Activity, BarChart2 } from 'lucide-react';
 interface Alternative {
   id: string;
   name: string;
-  scores: Record<string, number | "">;
+  scores: Record<string, number | string | any>;
 }
 
 interface Criterion {

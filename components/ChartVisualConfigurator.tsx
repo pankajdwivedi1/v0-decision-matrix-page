@@ -95,6 +95,10 @@ export interface ChartSettings {
   // Legend Fine-tuning
   legendOffsetX: number;
   legendOffsetY: number;
+
+  // Axis Widths
+  yAxisWidth?: number;
+  yAxisWidthRight?: number;
 }
 
 interface ChartVisualConfiguratorProps {
@@ -182,12 +186,12 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
         <div className="p-4 sm:p-4 min-h-0">
           {/* ELEMENTS TAB */}
           <TabsContent value="elements" className="mt-0 space-y-3 h-full">
-            <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1.8fr_1fr] gap-3 md:gap-6 items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-[1.2fr_1.8fr_1fr] gap-3 sm:gap-6 items-start">
               {/* VISIBILITY SECTION */}
-              <div className="space-y-2">
+              <div className="space-y-2 min-w-0">
                 <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Visibility</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <div className="col-span-2 md:col-span-1 space-y-1.5 p-1.5 sm:p-2.5 bg-white border border-slate-200 rounded-lg group hover:border-blue-300 transition-all duration-300">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="col-span-2 sm:col-span-1 space-y-1.5 p-1.5 sm:p-2.5 bg-white border border-slate-200 rounded-lg group hover:border-blue-300 transition-all duration-300">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <Grid3X3 className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
@@ -236,9 +240,9 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
               </div>
 
               {/* TITLES & LEGEND SECTION */}
-              <div className="space-y-2">
+              <div className="space-y-2 min-w-0">
                 <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Titles & Legend</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div className="flex items-center justify-between p-1.5 sm:p-2 bg-white border border-slate-200 rounded-lg group hover:border-blue-400 transition-all duration-300">
                     <div className="flex flex-col gap-0.5">
                       <div className="flex items-center gap-1.5">
@@ -310,7 +314,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
               </div>
 
               {/* AXIS LABELS SECTION */}
-              <div className="space-y-2 col-span-1">
+              <div className="space-y-2 col-span-1 min-w-0">
                 <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Axis Labels</Label>
                 <div className="grid grid-cols-2 gap-2">
                     <div className="flex items-center gap-1 p-1 sm:p-2 bg-white border border-slate-200 rounded-lg">

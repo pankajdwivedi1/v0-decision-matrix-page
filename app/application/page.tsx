@@ -291,6 +291,8 @@ export default function MCDMCalculator() {
     markerType: 'circle',
     lineStyle: 'uniform',
     resultsDecimalPlaces: 3,
+    yAxisWidth: 60,
+    yAxisWidthRight: 60,
 
     // Custom Labels
     xAxisTitle: "Alternatives",
@@ -1493,8 +1495,8 @@ export default function MCDMCalculator() {
       const response = await fetch("/api/fucom-weights", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          criteria: crits, 
+        body: JSON.stringify({
+          criteria: crits,
           priorityScores: Object.fromEntries(
             Object.entries(fucomPriorityScores).map(([id, score]) => [id, parseFloat(score) || 1])
           )
@@ -2822,630 +2824,630 @@ export default function MCDMCalculator() {
     const finalWeightMethod = weightMethodOverride || weightMethod
     let currentCriteria = [...criteria]
 
-    const processedAlternatives = isFuzzyMode 
-      ? getProcessedAlternatives(alternatives, fuzzyScaleType, customFuzzyScales) 
+    const processedAlternatives = isFuzzyMode
+      ? getProcessedAlternatives(alternatives, fuzzyScaleType, customFuzzyScales)
       : alternatives
 
     {
       const alternatives = processedAlternatives
 
-    // Reset previous weight calculation results
-    setEntropyResult(null)
-    setCriticResult(null)
-    setAhpResult(null)
-    setPipreciaResult(null)
-    setWensloResult(null)
-    setLopcowResult(null)
-    setDematelResult(null)
-    setSdResult(null)
-    setVarianceResult(null)
-    setMadResult(null)
+      // Reset previous weight calculation results
+      setEntropyResult(null)
+      setCriticResult(null)
+      setAhpResult(null)
+      setPipreciaResult(null)
+      setWensloResult(null)
+      setLopcowResult(null)
+      setDematelResult(null)
+      setSdResult(null)
+      setVarianceResult(null)
+      setMadResult(null)
 
-    setDbwResult(null)
-    setSvpResult(null)
-    setMdmResult(null)
-    setLswResult(null)
-    setGpowResult(null)
-    setLpwmResult(null)
-    setPcwmResult(null)
-    setRocResult(null)
-    setRrResult(null)
-    setFucomResult(null)
+      setDbwResult(null)
+      setSvpResult(null)
+      setMdmResult(null)
+      setLswResult(null)
+      setGpowResult(null)
+      setLpwmResult(null)
+      setPcwmResult(null)
+      setRocResult(null)
+      setRrResult(null)
+      setFucomResult(null)
 
-    // Calculate equal weights if equal method is selected
-    if (finalWeightMethod === "equal") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/equal-weights", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            criteria,
-          }),
-        })
+      // Calculate equal weights if equal method is selected
+      if (finalWeightMethod === "equal") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/equal-weights", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              criteria,
+            }),
+          })
 
-        if (!response.ok) {
-          throw new Error("Failed to calculate equal weights")
+          if (!response.ok) {
+            throw new Error("Failed to calculate equal weights")
+          }
+
+          const data = await response.json()
+
+          // Update criteria with calculated equal weights
+          currentCriteria = currentCriteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || (1 / criteria.length),
+          }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating equal weights:", error)
+          // Fallback to client-side calculation if API fails
+          const equalWeight = 1 / criteria.length
+          currentCriteria = currentCriteria.map((crit) => ({
+            ...crit,
+            weight: equalWeight,
+          }))
+          setCriteria(currentCriteria)
+        } finally {
+          setIsLoading(false)
         }
-
-        const data = await response.json()
-
-        // Update criteria with calculated equal weights
-        currentCriteria = currentCriteria.map((crit) => ({
-          ...crit,
-          weight: data.weights[crit.id] || (1 / criteria.length),
-        }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating equal weights:", error)
-        // Fallback to client-side calculation if API fails
-        const equalWeight = 1 / criteria.length
-        currentCriteria = currentCriteria.map((crit) => ({
-          ...crit,
-          weight: equalWeight,
-        }))
-        setCriteria(currentCriteria)
-      } finally {
-        setIsLoading(false)
       }
-    }
 
-    // Calculate entropy weights if entropy method is selected
-    if (finalWeightMethod === "entropy") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/entropy-weights", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            alternatives,
-            criteria,
-          }),
-        })
+      // Calculate entropy weights if entropy method is selected
+      if (finalWeightMethod === "entropy") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/entropy-weights", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              alternatives,
+              criteria,
+            }),
+          })
 
-        if (!response.ok) {
-          throw new Error("Failed to calculate entropy weights")
+          if (!response.ok) {
+            throw new Error("Failed to calculate entropy weights")
+          }
+
+          const data: EntropyResult = await response.json()
+
+          // Save full entropy result for display (normalisation, entropy, diversity, weights)
+          setEntropyResult(data)
+
+          // Update criteria with calculated entropy weights
+          currentCriteria = currentCriteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating entropy weights:", error)
+          alert("Error calculating entropy weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
         }
-
-        const data: EntropyResult = await response.json()
-
-        // Save full entropy result for display (normalisation, entropy, diversity, weights)
-        setEntropyResult(data)
-
-        // Update criteria with calculated entropy weights
-        currentCriteria = currentCriteria.map((crit) => ({
-          ...crit,
-          weight: data.weights[crit.id] || crit.weight,
-        }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating entropy weights:", error)
-        alert("Error calculating entropy weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
       }
-    }
 
-    // Calculate CRITIC weights if CRITIC weight is selected
-    if (finalWeightMethod === "critic") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/critic-weights", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            alternatives,
-            criteria,
-          }),
-        })
+      // Calculate CRITIC weights if CRITIC weight is selected
+      if (finalWeightMethod === "critic") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/critic-weights", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              alternatives,
+              criteria,
+            }),
+          })
 
-        if (!response.ok) {
-          throw new Error("Failed to calculate CRITIC weights")
+          if (!response.ok) {
+            throw new Error("Failed to calculate CRITIC weights")
+          }
+
+          const data: CriticResult = await response.json()
+
+          // Save full CRITIC result for display
+          setCriticResult(data)
+
+          // Update criteria with calculated CRITIC weights
+          currentCriteria = currentCriteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating CRITIC weights:", error)
+          alert("Error calculating CRITIC weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
         }
-
-        const data: CriticResult = await response.json()
-
-        // Save full CRITIC result for display
-        setCriticResult(data)
-
-        // Update criteria with calculated CRITIC weights
-        currentCriteria = currentCriteria.map((crit) => ({
-          ...crit,
-          weight: data.weights[crit.id] || crit.weight,
-        }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating CRITIC weights:", error)
-        alert("Error calculating CRITIC weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
       }
-    }
 
-    // Calculate AHP weights if AHP method is selected
-    if (finalWeightMethod === "ahp") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/ahp-weights", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            criteria,
-          }),
-        })
+      // Calculate AHP weights if AHP method is selected
+      if (finalWeightMethod === "ahp") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/ahp-weights", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              criteria,
+            }),
+          })
 
-        if (!response.ok) {
-          throw new Error("Failed to calculate AHP weights")
+          if (!response.ok) {
+            throw new Error("Failed to calculate AHP weights")
+          }
+
+          const data: AHPResult = await response.json()
+
+          setAhpResult(data)
+          currentCriteria = currentCriteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating AHP weights:", error)
+          alert("Error calculating AHP weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
         }
-
-        const data: AHPResult = await response.json()
-
-        setAhpResult(data)
-        currentCriteria = currentCriteria.map((crit) => ({
-          ...crit,
-          weight: data.weights[crit.id] || crit.weight,
-        }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating AHP weights:", error)
-        alert("Error calculating AHP weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
       }
-    }
 
-    // Calculate PIPRECIA weights if PIPRECIA method is selected
-    if (finalWeightMethod === "piprecia") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/piprecia-weights", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            criteria,
-          }),
-        })
+      // Calculate PIPRECIA weights if PIPRECIA method is selected
+      if (finalWeightMethod === "piprecia") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/piprecia-weights", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              criteria,
+            }),
+          })
 
-        if (!response.ok) {
-          throw new Error("Failed to calculate PIPRECIA weights")
+          if (!response.ok) {
+            throw new Error("Failed to calculate PIPRECIA weights")
+          }
+
+          const data: PipreciaResult = await response.json()
+
+          setPipreciaResult(data)
+          currentCriteria = currentCriteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating PIPRECIA weights:", error)
+          alert("Error calculating PIPRECIA weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
         }
-
-        const data: PipreciaResult = await response.json()
-
-        setPipreciaResult(data)
-        currentCriteria = currentCriteria.map((crit) => ({
-          ...crit,
-          weight: data.weights[crit.id] || crit.weight,
-        }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating PIPRECIA weights:", error)
-        alert("Error calculating PIPRECIA weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
       }
-    }
 
-    // Calculate MEREC weights if MEREC method is selected
-    if (finalWeightMethod === "merec") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/merec-weights", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            alternatives,
-            criteria,
-          }),
-        })
+      // Calculate MEREC weights if MEREC method is selected
+      if (finalWeightMethod === "merec") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/merec-weights", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              alternatives,
+              criteria,
+            }),
+          })
 
-        if (!response.ok) {
-          throw new Error("Failed to calculate MEREC weights")
+          if (!response.ok) {
+            throw new Error("Failed to calculate MEREC weights")
+          }
+
+          const data: MERECResult = await response.json()
+
+          // Save full MEREC result for display
+          setMerecResult(data)
+
+          // Update criteria with calculated MEREC weights
+          currentCriteria = currentCriteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating MEREC weights:", error)
+          alert("Error calculating MEREC weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
         }
-
-        const data: MERECResult = await response.json()
-
-        // Save full MEREC result for display
-        setMerecResult(data)
-
-        // Update criteria with calculated MEREC weights
-        currentCriteria = currentCriteria.map((crit) => ({
-          ...crit,
-          weight: data.weights[crit.id] || crit.weight,
-        }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating MEREC weights:", error)
-        alert("Error calculating MEREC weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
       }
-    }
 
-    // Calculate WENSLO weights if WENSLO method is selected
-    if (finalWeightMethod === "wenslo") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/wenslo-weights", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            alternatives,
-            criteria,
-          }),
-        })
+      // Calculate WENSLO weights if WENSLO method is selected
+      if (finalWeightMethod === "wenslo") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/wenslo-weights", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              alternatives,
+              criteria,
+            }),
+          })
 
-        if (!response.ok) {
-          throw new Error("Failed to calculate WENSLO weights")
+          if (!response.ok) {
+            throw new Error("Failed to calculate WENSLO weights")
+          }
+
+          const data: WensloResult = await response.json()
+
+          setWensloResult(data)
+          currentCriteria = currentCriteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating WENSLO weights:", error)
+          alert("Error calculating WENSLO weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
         }
-
-        const data: WensloResult = await response.json()
-
-        setWensloResult(data)
-        currentCriteria = currentCriteria.map((crit) => ({
-          ...crit,
-          weight: data.weights[crit.id] || crit.weight,
-        }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating WENSLO weights:", error)
-        alert("Error calculating WENSLO weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
       }
-    }
 
-    // Calculate LOPCOW weights if LOPCOW method is selected
-    if (finalWeightMethod === "lopcow") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/lopcow-weights", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            alternatives,
-            criteria,
-          }),
-        })
+      // Calculate LOPCOW weights if LOPCOW method is selected
+      if (finalWeightMethod === "lopcow") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/lopcow-weights", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              alternatives,
+              criteria,
+            }),
+          })
 
-        if (!response.ok) {
-          throw new Error("Failed to calculate LOPCOW weights")
+          if (!response.ok) {
+            throw new Error("Failed to calculate LOPCOW weights")
+          }
+
+          const data: LopcowResult = await response.json()
+
+          setLopcowResult(data)
+          currentCriteria = currentCriteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating LOPCOW weights:", error)
+          alert("Error calculating LOPCOW weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
         }
-
-        const data: LopcowResult = await response.json()
-
-        setLopcowResult(data)
-        currentCriteria = currentCriteria.map((crit) => ({
-          ...crit,
-          weight: data.weights[crit.id] || crit.weight,
-        }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating LOPCOW weights:", error)
-        alert("Error calculating LOPCOW weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
       }
-    }
 
 
 
-    // Calculate DEMATEL weights if DEMATEL method is selected
-    if (finalWeightMethod === "dematel") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/dematel-weights", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            alternatives,
-            criteria,
-          }),
-        })
+      // Calculate DEMATEL weights if DEMATEL method is selected
+      if (finalWeightMethod === "dematel") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/dematel-weights", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              alternatives,
+              criteria,
+            }),
+          })
 
-        if (!response.ok) {
-          throw new Error("Failed to calculate DEMATEL weights")
+          if (!response.ok) {
+            throw new Error("Failed to calculate DEMATEL weights")
+          }
+
+          const data: DematelResult = await response.json()
+
+          setDematelResult(data)
+          currentCriteria = currentCriteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating DEMATEL weights:", error)
+          alert("Error calculating DEMATEL weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
         }
-
-        const data: DematelResult = await response.json()
-
-        setDematelResult(data)
-        currentCriteria = currentCriteria.map((crit) => ({
-          ...crit,
-          weight: data.weights[crit.id] || crit.weight,
-        }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating DEMATEL weights:", error)
-        alert("Error calculating DEMATEL weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
       }
-    }
 
-    if (finalWeightMethod === "sd") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/sd-weights", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ alternatives, criteria }),
-        })
-        if (!response.ok) throw new Error("Failed to calculate SD weights")
-        const data: SDResult = await response.json()
-        setSdResult(data)
-        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating SD weights:", error)
-        alert("Error calculating SD weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
+      if (finalWeightMethod === "sd") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/sd-weights", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ alternatives, criteria }),
+          })
+          if (!response.ok) throw new Error("Failed to calculate SD weights")
+          const data: SDResult = await response.json()
+          setSdResult(data)
+          currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating SD weights:", error)
+          alert("Error calculating SD weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
+        }
       }
-    }
 
-    if (finalWeightMethod === "variance") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/variance-weights", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ alternatives, criteria }),
-        })
-        if (!response.ok) throw new Error("Failed to calculate Variance weights")
-        const data: VarianceResult = await response.json()
-        setVarianceResult(data)
-        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating Variance weights:", error)
-        alert("Error calculating Variance weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
+      if (finalWeightMethod === "variance") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/variance-weights", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ alternatives, criteria }),
+          })
+          if (!response.ok) throw new Error("Failed to calculate Variance weights")
+          const data: VarianceResult = await response.json()
+          setVarianceResult(data)
+          currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating Variance weights:", error)
+          alert("Error calculating Variance weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
+        }
       }
-    }
 
-    if (finalWeightMethod === "mad") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/mad-weights", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ alternatives, criteria }),
-        })
-        if (!response.ok) throw new Error("Failed to calculate MAD weights")
-        const data: MADResult = await response.json()
-        setMadResult(data)
-        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating MAD weights:", error)
-        alert("Error calculating MAD weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
+      if (finalWeightMethod === "mad") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/mad-weights", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ alternatives, criteria }),
+          })
+          if (!response.ok) throw new Error("Failed to calculate MAD weights")
+          const data: MADResult = await response.json()
+          setMadResult(data)
+          currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating MAD weights:", error)
+          alert("Error calculating MAD weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
+        }
       }
-    }
 
-    if (finalWeightMethod === "dbw") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/dbw-weights", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ alternatives, criteria }),
-        })
-        if (!response.ok) throw new Error("Failed to calculate DBW weights")
-        const data: DBWResult = await response.json()
-        setDbwResult(data)
-        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating DBW weights:", error)
-        alert("Error calculating DBW weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
+      if (finalWeightMethod === "dbw") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/dbw-weights", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ alternatives, criteria }),
+          })
+          if (!response.ok) throw new Error("Failed to calculate DBW weights")
+          const data: DBWResult = await response.json()
+          setDbwResult(data)
+          currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating DBW weights:", error)
+          alert("Error calculating DBW weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
+        }
       }
-    }
 
-    if (finalWeightMethod === "svp") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/svp-weights", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ alternatives, criteria }),
-        })
-        if (!response.ok) throw new Error("Failed to calculate SVP weights")
-        const data: SVPResult = await response.json()
-        setSvpResult(data)
-        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating SVP weights:", error)
-        alert("Error calculating SVP weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
+      if (finalWeightMethod === "svp") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/svp-weights", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ alternatives, criteria }),
+          })
+          if (!response.ok) throw new Error("Failed to calculate SVP weights")
+          const data: SVPResult = await response.json()
+          setSvpResult(data)
+          currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating SVP weights:", error)
+          alert("Error calculating SVP weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
+        }
       }
-    }
 
-    if (finalWeightMethod === "mdm") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/mdm-weights", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ alternatives, criteria }),
-        })
-        if (!response.ok) throw new Error("Failed to calculate MDM weights")
-        const data: MDMResult = await response.json()
-        setMdmResult(data)
-        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating MDM weights:", error)
-        alert("Error calculating MDM weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
+      if (finalWeightMethod === "mdm") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/mdm-weights", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ alternatives, criteria }),
+          })
+          if (!response.ok) throw new Error("Failed to calculate MDM weights")
+          const data: MDMResult = await response.json()
+          setMdmResult(data)
+          currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating MDM weights:", error)
+          alert("Error calculating MDM weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
+        }
       }
-    }
 
-    if (finalWeightMethod === "lsw") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/lsw-weights", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ alternatives, criteria }),
-        })
-        if (!response.ok) throw new Error("Failed to calculate LSW weights")
-        const data: LSWResult = await response.json()
-        setLswResult(data)
-        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating LSW weights:", error)
-        alert("Error calculating LSW weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
+      if (finalWeightMethod === "lsw") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/lsw-weights", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ alternatives, criteria }),
+          })
+          if (!response.ok) throw new Error("Failed to calculate LSW weights")
+          const data: LSWResult = await response.json()
+          setLswResult(data)
+          currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating LSW weights:", error)
+          alert("Error calculating LSW weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
+        }
       }
-    }
 
-    if (finalWeightMethod === "gpow") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/gpow-weights", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ alternatives, criteria }),
-        })
-        if (!response.ok) throw new Error("Failed to calculate GPOW weights")
-        const data: GPOWResult = await response.json()
-        setGpowResult(data)
-        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating GPOW weights:", error)
-        alert("Error calculating GPOW weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
+      if (finalWeightMethod === "gpow") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/gpow-weights", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ alternatives, criteria }),
+          })
+          if (!response.ok) throw new Error("Failed to calculate GPOW weights")
+          const data: GPOWResult = await response.json()
+          setGpowResult(data)
+          currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating GPOW weights:", error)
+          alert("Error calculating GPOW weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
+        }
       }
-    }
 
-    if (finalWeightMethod === "lpwm") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/lpwm-weights", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ alternatives, criteria }),
-        })
-        if (!response.ok) throw new Error("Failed to calculate LPWM weights")
-        const data: LPWMResult = await response.json()
-        setLpwmResult(data)
-        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating LPWM weights:", error)
-        alert("Error calculating LPWM weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
+      if (finalWeightMethod === "lpwm") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/lpwm-weights", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ alternatives, criteria }),
+          })
+          if (!response.ok) throw new Error("Failed to calculate LPWM weights")
+          const data: LPWMResult = await response.json()
+          setLpwmResult(data)
+          currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating LPWM weights:", error)
+          alert("Error calculating LPWM weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
+        }
       }
-    }
 
-    if (["roc", "rr"].includes(finalWeightMethod)) {
-      setIsLoading(true)
-      try {
-        const response = await fetch(`/api/${finalWeightMethod}-weights`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            criteria,
-            ranks: Object.fromEntries(Object.entries(criteriaRanks).map(([id, r]) => [id, parseInt(r) || 0]))
-          }),
-        })
-        if (!response.ok) throw new Error(`Failed to calculate ${finalWeightMethod.toUpperCase()} weights`)
-        const data = await response.json()
-        if (finalWeightMethod === "roc") setRocResult(data)
-        else setRrResult(data)
+      if (["roc", "rr"].includes(finalWeightMethod)) {
+        setIsLoading(true)
+        try {
+          const response = await fetch(`/api/${finalWeightMethod}-weights`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              criteria,
+              ranks: Object.fromEntries(Object.entries(criteriaRanks).map(([id, r]) => [id, parseInt(r) || 0]))
+            }),
+          })
+          if (!response.ok) throw new Error(`Failed to calculate ${finalWeightMethod.toUpperCase()} weights`)
+          const data = await response.json()
+          if (finalWeightMethod === "roc") setRocResult(data)
+          else setRrResult(data)
 
-        currentCriteria = currentCriteria.map((crit) => ({
-          ...crit,
-          weight: data.weights[crit.id] || crit.weight,
-        }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error(`Error calculating ${finalWeightMethod} weights:`, error)
-        alert(`Error calculating ${finalWeightMethod} weights. Using equal weight instead.`)
-      } finally {
-        setIsLoading(false)
+          currentCriteria = currentCriteria.map((crit) => ({
+            ...crit,
+            weight: data.weights[crit.id] || crit.weight,
+          }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error(`Error calculating ${finalWeightMethod} weights:`, error)
+          alert(`Error calculating ${finalWeightMethod} weights. Using equal weight instead.`)
+        } finally {
+          setIsLoading(false)
+        }
       }
-    }
 
-    if (finalWeightMethod === "pcwm") {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/pcwm-weights", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ alternatives, criteria }),
-        })
-        if (!response.ok) throw new Error("Failed to calculate PCWM weights")
-        const data: PCWMResult = await response.json()
-        setPcwmResult(data)
-        currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
-        setCriteria(currentCriteria)
-      } catch (error) {
-        console.error("Error calculating PCWM weights:", error)
-        alert("Error calculating PCWM weights. Using equal weight instead.")
-      } finally {
-        setIsLoading(false)
+      if (finalWeightMethod === "pcwm") {
+        setIsLoading(true)
+        try {
+          const response = await fetch("/api/pcwm-weights", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ alternatives, criteria }),
+          })
+          if (!response.ok) throw new Error("Failed to calculate PCWM weights")
+          const data: PCWMResult = await response.json()
+          setPcwmResult(data)
+          currentCriteria = currentCriteria.map((crit) => ({ ...crit, weight: data.weights[crit.id] || crit.weight }))
+          setCriteria(currentCriteria)
+        } catch (error) {
+          console.error("Error calculating PCWM weights:", error)
+          alert("Error calculating PCWM weights. Using equal weight instead.")
+        } finally {
+          setIsLoading(false)
+        }
       }
-    }
 
-    if (finalWeightMethod === "fucom") {
-      if (fucomResult) {
-        currentCriteria = criteria.map((crit) => ({
-          ...crit,
-          weight: fucomResult.weights[crit.id] || 0,
-        }))
-        setCriteria(currentCriteria)
+      if (finalWeightMethod === "fucom") {
+        if (fucomResult) {
+          currentCriteria = criteria.map((crit) => ({
+            ...crit,
+            weight: fucomResult.weights[crit.id] || 0,
+          }))
+          setCriteria(currentCriteria)
+        }
       }
-    }
 
-    // Check if we need to return to a specific tab after completing input
-    if (shouldNavigate) {
-      if (returnToTab === "rankingComparison") {
-        alert("Data has uploaded")
-        setHomeTab("rankingComparison")
-        setCurrentStep("home")
-      } else if (returnToTab === "sensitivityAnalysis") {
-        alert("Data has uploaded")
-        setHomeTab("sensitivityAnalysis")
-        setCurrentStep("home")
-      } else {
-        setCurrentStep("matrix")
+      // Check if we need to return to a specific tab after completing input
+      if (shouldNavigate) {
+        if (returnToTab === "rankingComparison") {
+          alert("Data has uploaded")
+          setHomeTab("rankingComparison")
+          setCurrentStep("home")
+        } else if (returnToTab === "sensitivityAnalysis") {
+          alert("Data has uploaded")
+          setHomeTab("sensitivityAnalysis")
+          setCurrentStep("home")
+        } else {
+          setCurrentStep("matrix")
+        }
+        // Always clear returnToTab after it has been used for navigation
+        setReturnToTab(null)
       }
-      // Always clear returnToTab after it has been used for navigation
-      setReturnToTab(null)
-    }
     }
     return { success: true, updatedCriteria: currentCriteria }
   }
@@ -3573,7 +3575,7 @@ export default function MCDMCalculator() {
       console.error("Export error:", error)
       alert("Failed to export to Excel")
     }
-    }
+  }
 
   const handleCalculate = async (methodOverride?: string, criteriaOverride?: Criterion[]) => {
     setIsLoading(true)
@@ -5222,7 +5224,7 @@ export default function MCDMCalculator() {
                                         type="number"
                                         step="any"
                                         min="0"
-                                        value={alt.scores[crit.id] ?? ""}
+                                        value={(typeof alt.scores[crit.id] === 'object' && alt.scores[crit.id] !== null ? (alt.scores[crit.id] as any).m : (alt.scores[crit.id] ?? "")) as any}
                                         onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
                                         onKeyDown={handleKeyDown}
                                         className="text-center text-[10px] h-7 border-gray-100 text-black w-full shadow-none bg-white rounded-md p-1 focus:ring-1 focus:ring-blue-400"
@@ -5886,9 +5888,7 @@ export default function MCDMCalculator() {
                                   width: "max-content",
                                   maxWidth: "95%",
                                   zIndex: 50,
-                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                  display: "flex",
-                                  justifyContent: "center",
+                                  boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                   whiteSpace: "nowrap"
                                 }} />
                                 <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
@@ -5924,9 +5924,7 @@ export default function MCDMCalculator() {
                                   width: "max-content",
                                   maxWidth: "95%",
                                   zIndex: 50,
-                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                  display: "flex",
-                                  justifyContent: "center",
+                                  boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                   whiteSpace: "nowrap"
                                 }} />
                                 {sensitivityWeightComparisonResults.map((res, i) => (
@@ -5954,9 +5952,7 @@ export default function MCDMCalculator() {
                                   width: "max-content",
                                   maxWidth: "95%",
                                   zIndex: 50,
-                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                  display: "flex",
-                                  justifyContent: "center",
+                                  boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                   whiteSpace: "nowrap"
                                 }} />
                                 {sensitivityWeightComparisonResults.map((res, i) => (
@@ -6011,9 +6007,7 @@ export default function MCDMCalculator() {
                                   width: "max-content",
                                   maxWidth: "95%",
                                   zIndex: 50,
-                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                  display: "flex",
-                                  justifyContent: "center",
+                                  boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                   whiteSpace: "nowrap"
                                 }} />
                                 {sensitivityWeightComparisonResults.map((res, i) => (
@@ -6041,9 +6035,7 @@ export default function MCDMCalculator() {
                                   width: "max-content",
                                   maxWidth: "95%",
                                   zIndex: 50,
-                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                  display: "flex",
-                                  justifyContent: "center",
+                                  boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                   whiteSpace: "nowrap"
                                 }} />
                                 {sensitivityWeightComparisonResults.map((res, i) => (
@@ -6178,9 +6170,7 @@ export default function MCDMCalculator() {
                                   width: "max-content",
                                   maxWidth: "95%",
                                   zIndex: 50,
-                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                  display: "flex",
-                                  justifyContent: "center",
+                                  boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                   whiteSpace: "nowrap"
                                 }} />
                                 {sensitivityWeightComparisonResults.map((res, i) => (
@@ -6437,9 +6427,7 @@ export default function MCDMCalculator() {
                                     width: "max-content",
                                     maxWidth: "95%",
                                     zIndex: 50,
-                                    boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                    display: "flex",
-                                    justifyContent: "center",
+                                    boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                     whiteSpace: "nowrap"
                                   }} />
                                   {sensitivityWeightComparisonResults.map((res, i) => (
@@ -6595,13 +6583,13 @@ export default function MCDMCalculator() {
                                 onIncludeChange={handleIncludeChange}
                                 onLabelChange={handleAssetLabelChange}
                               />
-                              
+
                               {/* Crisp Spread Selector for editable numerical values */}
                               {alternatives.some(alt => Object.values(alt.scores).some(val => typeof val === "number" || (!Object.values(LINGUISTIC_SCALES).flat().some(s => s.value === val)))) && (
                                 <div className="flex items-center gap-2 bg-white px-3 py-1 border border-blue-100 rounded-lg shadow-sm">
                                   <span className="text-[10px] font-bold text-blue-700 uppercase">Spread:</span>
-                                  <Select 
-                                    value={String(fuzzyCrispSpread)} 
+                                  <Select
+                                    value={String(fuzzyCrispSpread)}
                                     onValueChange={(val) => {
                                       const spreadNum = parseFloat(val);
                                       setFuzzyCrispSpread(spreadNum);
@@ -6624,7 +6612,7 @@ export default function MCDMCalculator() {
                                 </div>
                               )}
                             </div>
-                            
+
                             <CardContent className="pt-4 px-6 pb-6">
                               <div className="table-responsive border border-blue-100 rounded-lg overflow-x-auto bg-white shadow-inner">
                                 <table className="min-w-full text-xs border-collapse">
@@ -7612,9 +7600,7 @@ export default function MCDMCalculator() {
                                           transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
                                           width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                           zIndex: 50,
-                                          boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                          display: "flex",
-                                          justifyContent: "center",
+                                          boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                           whiteSpace: "nowrap"
                                         }}
                                         iconSize={chartSettings.markerSize + 4}
@@ -7717,9 +7703,7 @@ export default function MCDMCalculator() {
                                               transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                               width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                               zIndex: 50,
-                                              boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                              display: "flex",
-                                              justifyContent: "center",
+                                              boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                               whiteSpace: "nowrap"
                                             }}
                                             iconSize={chartSettings.markerSize + 4}
@@ -8126,9 +8110,7 @@ export default function MCDMCalculator() {
                                               transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
                                               width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                               zIndex: 50,
-                                              boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                              display: "flex",
-                                              justifyContent: "center",
+                                              boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                               whiteSpace: "nowrap"
                                             }}
                                             iconSize={chartSettings.markerSize + 4}
@@ -8212,9 +8194,7 @@ export default function MCDMCalculator() {
                                               transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
                                               width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                               zIndex: 50,
-                                              boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                              display: "flex",
-                                              justifyContent: "center",
+                                              boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                               whiteSpace: "nowrap"
                                             }}
                                             iconSize={chartSettings.markerSize + 4}
@@ -8298,9 +8278,7 @@ export default function MCDMCalculator() {
                                               transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
                                               width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                               zIndex: 50,
-                                              boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                              display: "flex",
-                                              justifyContent: "center",
+                                              boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                               whiteSpace: "nowrap"
                                             }}
                                             iconSize={chartSettings.markerSize + 4}
@@ -8421,9 +8399,7 @@ export default function MCDMCalculator() {
                                               transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
                                               width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                               zIndex: 50,
-                                              boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                              display: "flex",
-                                              justifyContent: "center",
+                                              boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                               whiteSpace: "nowrap"
                                             }}
                                             iconSize={chartSettings.markerSize + 4}
@@ -8543,9 +8519,7 @@ export default function MCDMCalculator() {
                                               transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
                                               width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                               zIndex: 50,
-                                              boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                              display: "flex",
-                                              justifyContent: "center",
+                                              boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                               whiteSpace: "nowrap"
                                             }}
                                             iconSize={chartSettings.markerSize + 4}
@@ -8764,9 +8738,7 @@ export default function MCDMCalculator() {
                                               transform: `${legCfg.align === 'center' ? 'translateX(-50%)' : ''} translate(${chartSettings.legendOffsetX}px, ${chartSettings.legendOffsetY}px)`,
                                               width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
                                               zIndex: 50,
-                                              boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                              display: "flex",
-                                              justifyContent: "center",
+                                              boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                               whiteSpace: "nowrap"
                                             }}
                                             iconSize={chartSettings.markerSize + 4}
@@ -9153,9 +9125,7 @@ export default function MCDMCalculator() {
                                   width: "max-content",
                                   maxWidth: "95%",
                                   zIndex: 50,
-                                  boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                  display: "flex",
-                                  justifyContent: "center",
+                                  boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                   whiteSpace: "nowrap"
                                 }} />
                               </RadarChart>
@@ -9255,13 +9225,13 @@ export default function MCDMCalculator() {
                                 onIncludeChange={handleIncludeChange}
                                 onLabelChange={handleAssetLabelChange}
                               />
-                              
+
                               {/* Crisp Spread Selector for editable numerical values */}
                               {alternatives.some(alt => Object.values(alt.scores).some(val => typeof val === "number" || (!Object.values(LINGUISTIC_SCALES).flat().some(s => s.value === val)))) && (
                                 <div className="flex items-center gap-2 bg-white px-3 py-1 border border-blue-100 rounded-lg shadow-sm">
                                   <span className="text-[10px] font-bold text-blue-700 uppercase">Spread:</span>
-                                  <Select 
-                                    value={String(fuzzyCrispSpread)} 
+                                  <Select
+                                    value={String(fuzzyCrispSpread)}
                                     onValueChange={(val) => {
                                       const spreadNum = parseFloat(val);
                                       setFuzzyCrispSpread(spreadNum);
@@ -9284,7 +9254,7 @@ export default function MCDMCalculator() {
                                 </div>
                               )}
                             </div>
-                            
+
                             <CardContent className="pt-4 px-6 pb-6">
                               <div className="table-responsive border border-blue-100 rounded-lg overflow-x-auto bg-white shadow-inner">
                                 <table className="min-w-full text-xs border-collapse">
@@ -9712,7 +9682,66 @@ export default function MCDMCalculator() {
                       }[chartSettings.backgroundTheme] || { bg: '#ffffff', text: '#000000', border: '#000000' };
 
                       const markerShape = chartSettings.markerType;
-                      
+
+                      // Mobile-specific overrides: respects settings but defaults to narrow widths
+                      const mL = isMobile ? (chartSettings.marginLeft || 0) : (chartSettings.marginLeft || 40);
+                      const mR = isMobile ? (chartSettings.marginRight || 4) : (chartSettings.marginRight || 40);
+                      const mT = chartSettings.marginTop;
+                      const mB = chartSettings.marginBottom;
+                      // YAxis widths: respects Base Font setting for responsiveness
+                      const yAxisW = isMobile ? Math.max(20, chartSettings.fontSize * 2) : (chartSettings.yAxisWidth || 60);
+                      const yAxisRightW = isMobile ? 1 : (chartSettings.yAxisWidthRight || 60);
+                      // Legend font: respects Base Font setting, halved on mobile
+                      const legendFontSize = isMobile
+                        ? Math.max(7, chartSettings.fontSize - 3)
+                        : chartSettings.fontSize;
+                      // Legend formatter: forces text to use legendFontSize reliably
+                      const legendFormatter = (value: string) => (
+                        <span style={{ fontSize: legendFontSize + 'px', fontWeight: 700, color: theme.text }}>
+                          {value}
+                        </span>
+                      );
+
+                      // Mobile compact legend: wraps items in tight rows, no overflow beyond chart width
+                      const mobileLegendContent = isMobile
+                        ? (props: any) => {
+                          if (!props.payload) return null;
+                          const bg = chartSettings.backgroundTheme === 'dark'
+                            ? 'rgba(30,41,59,0.95)' : 'rgba(255,255,255,0.97)';
+                          return (
+                            <div style={{
+                              display: 'flex',
+                              flexDirection: chartSettings.legendLayout === 'vertical' ? 'column' : 'row',
+                              flexWrap: 'wrap',
+                              gap: chartSettings.legendLayout === 'vertical' ? '4px' : '1px 5px',
+                              justifyContent: 'center',
+                              alignItems: chartSettings.legendLayout === 'vertical' ? 'flex-start' : 'center',
+                              padding: '2px 4px',
+                              backgroundColor: bg,
+                              border: isMobile ? "none" : `${chartSettings.borderWidth}px solid ${theme.border}`,
+                              boxShadow: '1px 1px 0px rgba(0,0,0,0.8)',
+                              maxWidth: '100%',
+                            }}>
+                              {props.payload.map((entry: any, idx: number) => {
+                                const isLine = entry.type === 'line' || entry.type === 'plainline';
+                                return (
+                                  <span key={idx} style={{ display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
+                                    <svg width="8" height="6" style={{ flexShrink: 0 }}>
+                                      {isLine
+                                        ? <line x1="0" y1="3" x2="8" y2="3" stroke={entry.color} strokeWidth="2" strokeDasharray={entry.payload?.strokeDasharray || '0'} />
+                                        : <rect x="0" y="1" width="8" height="4" fill={entry.color} />}
+                                    </svg>
+                                    <span style={{ fontSize: legendFontSize + 'px', fontWeight: 700, color: theme.text }}>
+                                      {entry.value}
+                                    </span>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          );
+                        }
+                        : undefined;
+
                       const RightFrameBorder = (props: any) => {
                         const { viewBox } = props;
                         if (!viewBox || viewBox.width == null || viewBox.height == null) return null;
@@ -9897,11 +9926,11 @@ export default function MCDMCalculator() {
                                   />
                                 </div>
                               </div>
-                              <div className="px-0 sm:px-6 pb-6 pt-6 mt-0">
+                              <div className="px-0 pb-6 pt-6 mt-0 -mx-0">
                                 <div className={`w-full max-w-7xl mx-auto transition-all duration-500 ${chartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }} ref={sensitivityGraphicalVariationRef}>
-                                  <ResponsiveContainer width="100%" height={isMobile ? (getAspectRatioValue() ? 320 : 400) : (getAspectRatioValue() ? undefined : 600)} aspect={isMobile ? undefined : getAspectRatioValue()}>
+                                  <ResponsiveContainer width="100%" height={getAspectRatioValue() ? undefined : (isMobile ? 480 : 600)} aspect={getAspectRatioValue()}>
                                     {sensitivityChartType === 'radar' ? (
-                                      <RadarChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} cx="50%" cy="50%" outerRadius="80%" data={sensitivityWeightChartData}>
+                                      <RadarChart margin={{ top: mT, right: mR, left: mL, bottom: mB }} cx="50%" cy="50%" outerRadius="80%" data={sensitivityWeightChartData}>
                                         {renderDefs(activeColors)}
                                         <Customized component={RightFrameBorder} />
                                         {chartSettings.showGridLines && <PolarGrid stroke={chartSettings.gridColor} strokeWidth={1} opacity={chartSettings.gridOpacity} />}
@@ -9912,24 +9941,25 @@ export default function MCDMCalculator() {
                                           align={chartSettings.legendPosition === 'left' ? 'left' : chartSettings.legendPosition === 'right' ? 'right' : 'center'}
                                           layout={chartSettings.legendLayout}
                                           wrapperStyle={{
-                                            fontSize: `${chartSettings.fontSize}px`,
+                                            fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                             color: theme.text,
                                             fontWeight: 700,
                                             backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-                                            border: `${chartSettings.borderWidth}px solid ${theme.border}`,
-                                            padding: "4px 8px",
+                                            border: isMobile ? "none" : `${chartSettings.borderWidth}px solid ${theme.border}`,
+                                            padding: isMobile ? "2px 4px" : "4px 8px",
                                             top: 70,
                                             left: chartSettings.legendPosition === 'left' ? 10 : chartSettings.legendPosition === 'right' ? undefined : "50%",
                                             right: chartSettings.legendPosition === 'right' ? 10 : undefined,
                                             transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
-                                            width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
+                                            width: isMobile ? "max-content" : ((chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content"),
                                             zIndex: 50,
-                                            boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                            display: "flex",
-                                            justifyContent: "center",
-                                            whiteSpace: "nowrap"
+                                            boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                            whiteSpace: isMobile ? 'normal' : 'nowrap',
+                                            maxWidth: isMobile ? 'calc(100% - 10px)' : '95%',
                                           }}
-                                          iconSize={8}
+                                          content={mobileLegendContent}
+                                          formatter={legendFormatter}
+                                          iconSize={isMobile ? 6 : 8}
                                         />
                                         <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize + 1}px`, borderRadius: "4px", border: `1px solid ${theme.border}`, backgroundColor: theme.bg, color: theme.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                         {sensitivityWeightComparisonResults.map((res, i) => (
@@ -9947,7 +9977,7 @@ export default function MCDMCalculator() {
                                     ) : sensitivityChartType === "bar" ? (
                                       <BarChart
                                         data={sensitivityWeightChartData}
-                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                        margin={{ top: mT, right: mR, left: mL, bottom: mB }}
                                       >
                                         {renderDefs(activeColors)}
                                         <Customized component={RightFrameBorder} />
@@ -9969,7 +9999,7 @@ export default function MCDMCalculator() {
                                         />
                                         <YAxis
                                           label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
-                                          interval={0}
+                                          width={yAxisW}
                                           domain={[0, (alternatives.length || 8) || 'dataMax']}
                                           ticks={Array.from({ length: ((alternatives.length || 8) || 0) + 1 }, (_, i) => i)}
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
@@ -9978,6 +10008,7 @@ export default function MCDMCalculator() {
                                         <YAxis
                                           orientation="right"
                                           yAxisId="right_border"
+                                          width={yAxisRightW}
                                           domain={[1, (alternatives.length || 8)]}
                                           tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fill: theme.text } : false}
                                           ticks={chartSettings.showMirrorTicks ? Array.from({ length: (alternatives.length || 8) }, (_, i) => i + 1) : undefined}
@@ -9991,24 +10022,25 @@ export default function MCDMCalculator() {
                                           align={chartSettings.legendPosition === 'left' ? 'left' : chartSettings.legendPosition === 'right' ? 'right' : 'center'}
                                           layout={chartSettings.legendLayout}
                                           wrapperStyle={{
-                                            fontSize: `${chartSettings.fontSize}px`,
+                                            fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                             color: theme.text,
                                             fontWeight: 700,
                                             backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-                                            border: `${chartSettings.borderWidth}px solid ${theme.border}`,
-                                            padding: "4px 8px",
+                                            border: isMobile ? "none" : `${chartSettings.borderWidth}px solid ${theme.border}`,
+                                            padding: isMobile ? "2px 4px" : "4px 8px",
                                             top: 70,
                                             left: chartSettings.legendPosition === 'left' ? 10 : chartSettings.legendPosition === 'right' ? undefined : "50%",
                                             right: chartSettings.legendPosition === 'right' ? 10 : undefined,
                                             transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
-                                            width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
+                                            width: isMobile ? "max-content" : ((chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content"),
                                             zIndex: 50,
-                                            boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                            display: "flex",
-                                            justifyContent: "center",
-                                            whiteSpace: "nowrap"
+                                            boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                            whiteSpace: isMobile ? 'normal' : 'nowrap',
+                                            maxWidth: isMobile ? 'calc(100% - 10px)' : '95%',
                                           }}
-                                          iconSize={8}
+                                          content={mobileLegendContent}
+                                          formatter={legendFormatter}
+                                          iconSize={isMobile ? 6 : 8}
                                         />
                                         {sensitivityWeightComparisonResults.map((res, i) => (
                                           <Bar key={res.weightLabel} dataKey={`${res.weightLabel} Rank`} fill={getFillPattern(activeColors[i % activeColors.length], i % activeColors.length)} name={res.weightLabel.replace(" Weight", "")} fillOpacity={chartSettings.barOpacity} />
@@ -10027,7 +10059,7 @@ export default function MCDMCalculator() {
                                     ) : sensitivityChartType === "stackedBar" ? (
                                       <BarChart
                                         data={sensitivityWeightChartData}
-                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                        margin={{ top: mT, right: mR, left: mL, bottom: mB }}
                                       >
                                         {renderDefs(activeColors)}
                                         <Customized component={RightFrameBorder} />
@@ -10049,6 +10081,7 @@ export default function MCDMCalculator() {
                                         />
                                         <YAxis
                                           label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                          width={yAxisW}
                                           domain={[0, (alternatives.length * (sensitivityWeightComparisonResults.length || 1)) || 'dataMax']}
                                           ticks={Array.from({ length: (alternatives.length || 0) + 1 }, (_, i) => i * (sensitivityWeightComparisonResults.length || 1))}
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
@@ -10057,6 +10090,7 @@ export default function MCDMCalculator() {
                                         <YAxis
                                           orientation="right"
                                           yAxisId="right_border"
+                                          width={yAxisRightW}
                                           domain={[0, (alternatives.length * (sensitivityWeightComparisonResults.length || 1)) || 'dataMax']}
                                           ticks={Array.from({ length: (alternatives.length || 0) + 1 }, (_, i) => i * (sensitivityWeightComparisonResults.length || 1))}
                                           tickFormatter={(val) => (val / (sensitivityWeightComparisonResults.length || 1)).toString()}
@@ -10071,11 +10105,11 @@ export default function MCDMCalculator() {
                                           align={chartSettings.legendPosition === 'left' ? 'left' : chartSettings.legendPosition === 'right' ? 'right' : 'center'}
                                           layout={chartSettings.legendLayout}
                                           wrapperStyle={{
-                                            fontSize: `${chartSettings.fontSize}px`,
+                                            fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                             color: theme.text,
                                             fontWeight: 700,
                                             backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-                                            border: `${chartSettings.borderWidth}px solid ${theme.border}`,
+                                            border: isMobile ? "none" : `${chartSettings.borderWidth}px solid ${theme.border}`,
                                             padding: "4px 8px",
                                             top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
@@ -10083,14 +10117,14 @@ export default function MCDMCalculator() {
                                             right: chartSettings.legendPosition === 'right' ? 10 : undefined,
                                             transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
-                                            maxWidth: "95%",
+                                            maxWidth: isMobile ? "calc(100% - 10px)" : "95%",
                                             zIndex: 50,
-                                            boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                            display: "flex",
-                                            justifyContent: "center",
-                                            whiteSpace: "nowrap"
+                                            boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                            whiteSpace: isMobile ? 'normal' : 'nowrap',
                                           }}
-                                          iconSize={8}
+                                          content={mobileLegendContent}
+                                          formatter={legendFormatter}
+                                          iconSize={isMobile ? 6 : 8}
                                         />
                                         {sensitivityWeightComparisonResults.map((res, i) => (
                                           <Bar
@@ -10118,7 +10152,7 @@ export default function MCDMCalculator() {
                                     ) : sensitivityChartType === "area" ? (
                                       <AreaChart
                                         data={sensitivityWeightChartData}
-                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                        margin={{ top: mT, right: mR, left: mL, bottom: mB }}
                                       >
                                         {renderDefs(activeColors)}
                                         <Customized component={RightFrameBorder} />
@@ -10140,6 +10174,7 @@ export default function MCDMCalculator() {
                                         />
                                         <YAxis
                                           label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                          width={yAxisW}
                                           interval={0}
                                           domain={[0, (alternatives.length || 8) || 'dataMax']}
                                           ticks={Array.from({ length: ((alternatives.length || 8) || 0) + 1 }, (_, i) => i)}
@@ -10149,6 +10184,7 @@ export default function MCDMCalculator() {
                                         <YAxis
                                           orientation="right"
                                           yAxisId="right_border"
+                                          width={yAxisRightW}
                                           domain={[1, (alternatives.length || 8)]}
                                           tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fill: theme.text } : false}
                                           ticks={chartSettings.showMirrorTicks ? Array.from({ length: (alternatives.length || 8) }, (_, i) => i + 1) : undefined}
@@ -10162,11 +10198,11 @@ export default function MCDMCalculator() {
                                           align={chartSettings.legendPosition === 'left' ? 'left' : chartSettings.legendPosition === 'right' ? 'right' : 'center'}
                                           layout={chartSettings.legendLayout}
                                           wrapperStyle={{
-                                            fontSize: `${chartSettings.fontSize}px`,
+                                            fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                             color: theme.text,
                                             fontWeight: 700,
                                             backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-                                            border: `${chartSettings.borderWidth}px solid ${theme.border}`,
+                                            border: isMobile ? "none" : `${chartSettings.borderWidth}px solid ${theme.border}`,
                                             padding: "4px 8px",
                                             top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
@@ -10174,14 +10210,14 @@ export default function MCDMCalculator() {
                                             right: chartSettings.legendPosition === 'right' ? 10 : undefined,
                                             transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
-                                            maxWidth: "95%",
+                                            maxWidth: isMobile ? "calc(100% - 10px)" : "95%",
                                             zIndex: 50,
-                                            boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                            display: "flex",
-                                            justifyContent: "center",
-                                            whiteSpace: "nowrap"
+                                            boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                            whiteSpace: isMobile ? 'normal' : 'nowrap',
                                           }}
-                                          iconSize={8}
+                                          content={mobileLegendContent}
+                                          formatter={legendFormatter}
+                                          iconSize={isMobile ? 6 : 8}
                                         />
                                         {sensitivityWeightComparisonResults.map((res, i) => {
                                           const _dash = getSensitivityDash(i);
@@ -10216,7 +10252,7 @@ export default function MCDMCalculator() {
                                     ) : sensitivityChartType === "stackedArea" ? (
                                       <AreaChart
                                         data={sensitivityWeightChartData}
-                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                        margin={{ top: mT, right: mR, left: mL, bottom: mB }}
                                       >
                                         {renderDefs(activeColors)}
                                         <Customized component={RightFrameBorder} />
@@ -10236,6 +10272,7 @@ export default function MCDMCalculator() {
                                         />
                                         <YAxis
                                           label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                          width={yAxisW}
                                           domain={[0, (alternatives.length * (sensitivityWeightComparisonResults.length || 1)) || 'dataMax']}
                                           ticks={Array.from({ length: (alternatives.length || 0) + 1 }, (_, i) => i * (sensitivityWeightComparisonResults.length || 1))}
                                           tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
@@ -10244,6 +10281,7 @@ export default function MCDMCalculator() {
                                         <YAxis
                                           orientation="right"
                                           yAxisId="right_border"
+                                          width={yAxisRightW}
                                           domain={[0, (alternatives.length * (sensitivityWeightComparisonResults.length || 1)) || 'dataMax']}
                                           ticks={Array.from({ length: (alternatives.length || 0) + 1 }, (_, i) => i * (sensitivityWeightComparisonResults.length || 1))}
                                           tickFormatter={(val) => (val / (sensitivityWeightComparisonResults.length || 1)).toString()}
@@ -10258,11 +10296,11 @@ export default function MCDMCalculator() {
                                           align={chartSettings.legendPosition === 'left' ? 'left' : chartSettings.legendPosition === 'right' ? 'right' : 'center'}
                                           layout={chartSettings.legendLayout}
                                           wrapperStyle={{
-                                            fontSize: `${chartSettings.fontSize}px`,
+                                            fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                             color: theme.text,
                                             fontWeight: 700,
                                             backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-                                            border: `${chartSettings.borderWidth}px solid ${theme.border}`,
+                                            border: isMobile ? "none" : `${chartSettings.borderWidth}px solid ${theme.border}`,
                                             padding: "4px 8px",
                                             top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
@@ -10270,14 +10308,14 @@ export default function MCDMCalculator() {
                                             right: chartSettings.legendPosition === 'right' ? 10 : undefined,
                                             transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
-                                            maxWidth: "95%",
+                                            maxWidth: isMobile ? "calc(100% - 10px)" : "95%",
                                             zIndex: 50,
-                                            boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                            display: "flex",
-                                            justifyContent: "center",
-                                            whiteSpace: "nowrap"
+                                            boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                            whiteSpace: isMobile ? 'normal' : 'nowrap',
                                           }}
-                                          iconSize={8}
+                                          content={mobileLegendContent}
+                                          formatter={legendFormatter}
+                                          iconSize={isMobile ? 6 : 8}
                                         />
                                         {sensitivityWeightComparisonResults.map((res, i) => {
                                           const _dash = getSensitivityDash(i);
@@ -10331,7 +10369,7 @@ export default function MCDMCalculator() {
                                             max
                                           };
                                         })}
-                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                        margin={{ top: mT, right: mR, left: mL, bottom: mB }}
                                       >
 
                                         <XAxis
@@ -10355,11 +10393,12 @@ export default function MCDMCalculator() {
                                           type="category"
                                           dataKey="name"
                                           tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }}
-                                          width={130}
+                                          width={isMobile ? 60 : 130}
                                           axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                                         <YAxis
                                           orientation="right"
                                           yAxisId="right_border"
+                                          width={yAxisRightW}
                                           type="category"
                                           dataKey="name"
                                           tick={false}
@@ -10387,25 +10426,23 @@ export default function MCDMCalculator() {
                                           align={chartSettings.legendPosition === 'left' ? 'left' : chartSettings.legendPosition === 'right' ? 'right' : 'center'}
                                           layout={chartSettings.legendLayout}
                                           wrapperStyle={{
-                                            fontSize: `${chartSettings.fontSize}px`,
+                                            fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                             color: theme.text,
                                             fontWeight: 700,
                                             backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-                                            border: `${chartSettings.borderWidth}px solid ${theme.border}`,
+                                            border: isMobile ? "none" : `${chartSettings.borderWidth}px solid ${theme.border}`,
                                             padding: "4px 8px",
-                                            top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 40 : undefined,
+                                            top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
                                             left: chartSettings.legendPosition === 'left' ? 10 : chartSettings.legendPosition === 'right' ? undefined : "50%",
                                             right: chartSettings.legendPosition === 'right' ? 10 : undefined,
                                             transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
-                                            maxWidth: "95%",
                                             zIndex: 50,
-                                            boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                            display: "flex",
-                                            justifyContent: "center",
-                                            whiteSpace: "nowrap"
+                                            boxShadow: chartSettings.backgroundTheme === 'dark' ? "none" : "2px 2px 0px rgba(0,0,0,0.1)",
+                                            whiteSpace: isMobile ? 'normal' : 'nowrap',
                                           }}
+                                          content={mobileLegendContent}
                                         />
                                         {/* Barbell Style Range */}
                                         <Bar dataKey="start" stackId="a" fill="transparent" legendType="none" />
@@ -10427,7 +10464,7 @@ export default function MCDMCalculator() {
                                     ) : sensitivityChartType === "scatter" ? (
                                       <ScatterChart
                                         data={sensitivityWeightChartData}
-                                        margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                        margin={{ top: mT, right: mR, left: mL, bottom: mB }}
                                       >
                                         {renderDefs(activeColors)}
                                         <Customized component={RightFrameBorder} />
@@ -10451,6 +10488,7 @@ export default function MCDMCalculator() {
                                         />
                                         <YAxis
                                           type="number"
+                                          width={yAxisW}
                                           reversed
                                           dataKey="rank"
                                           name="Rank"
@@ -10463,6 +10501,7 @@ export default function MCDMCalculator() {
                                         <YAxis
                                           orientation="right"
                                           yAxisId="right_border"
+                                          width={yAxisRightW}
                                           reversed
                                           domain={[1, alternatives.length || 'dataMax']}
                                           tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fill: theme.text, fontWeight: 700 } : false}
@@ -10477,26 +10516,25 @@ export default function MCDMCalculator() {
                                           align={chartSettings.legendPosition === 'left' ? 'left' : chartSettings.legendPosition === 'right' ? 'right' : 'center'}
                                           layout={chartSettings.legendLayout}
                                           wrapperStyle={{
-                                            fontSize: `${chartSettings.fontSize}px`,
+                                            fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                             color: theme.text,
                                             fontWeight: 700,
                                             backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-                                            border: `${chartSettings.borderWidth}px solid ${theme.border}`,
+                                            border: isMobile ? "none" : `${chartSettings.borderWidth}px solid ${theme.border}`,
                                             padding: "4px 8px",
-                                            top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 40 : undefined,
+                                            top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
                                             left: chartSettings.legendPosition === 'left' ? 10 : chartSettings.legendPosition === 'right' ? undefined : "50%",
                                             right: chartSettings.legendPosition === 'right' ? 10 : undefined,
                                             transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
-                                            maxWidth: "95%",
                                             zIndex: 50,
-                                            boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                            display: "flex",
-                                            justifyContent: "center",
-                                            whiteSpace: "nowrap"
+                                            boxShadow: chartSettings.backgroundTheme === 'dark' ? "none" : "2px 2px 0px rgba(0,0,0,0.1)",
+                                            whiteSpace: isMobile ? 'normal' : 'nowrap',
                                           }}
-                                          iconSize={8}
+                                          content={mobileLegendContent}
+                                          formatter={legendFormatter}
+                                          iconSize={isMobile ? 6 : 8}
                                         />
                                         {sensitivityWeightComparisonResults.map((res, i) => {
                                           const color = activeColors[i % activeColors.length];
@@ -10539,7 +10577,7 @@ export default function MCDMCalculator() {
                                         })).sort((a, b) => b.value - a.value);
 
                                         return (
-                                          <RadialBarChart margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                          <RadialBarChart margin={{ top: mT, right: mR, left: mL, bottom: mB }}
                                             cx="50%"
                                             cy="50%"
                                             innerRadius="15%"
@@ -10571,26 +10609,25 @@ export default function MCDMCalculator() {
                                               align={chartSettings.legendPosition === 'left' ? 'left' : chartSettings.legendPosition === 'right' ? 'right' : 'center'}
                                               layout={chartSettings.legendLayout}
                                               wrapperStyle={{
-                                                fontSize: `${chartSettings.fontSize}px`,
+                                                fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                                 color: theme.text,
                                                 fontWeight: 700,
                                                 backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-                                                border: `${chartSettings.borderWidth}px solid ${theme.border}`,
+                                                border: isMobile ? "none" : `${chartSettings.borderWidth}px solid ${theme.border}`,
                                                 padding: "4px 8px",
-                                                top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 40 : undefined,
+                                                top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                                 bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
                                                 left: chartSettings.legendPosition === 'left' ? 30 : chartSettings.legendPosition === 'right' ? undefined : "50%",
                                                 right: chartSettings.legendPosition === 'right' ? 30 : undefined,
                                                 transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                                 width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
-                                                maxWidth: "95%",
                                                 zIndex: 50,
-                                                boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                display: "flex",
-                                                justifyContent: "center",
-                                                whiteSpace: "nowrap"
+                                                boxShadow: chartSettings.backgroundTheme === 'dark' ? "none" : "2px 2px 0px rgba(0,0,0,0.1)",
+                                                whiteSpace: isMobile ? 'normal' : 'nowrap',
                                               }}
-                                              iconSize={8}
+                                              content={mobileLegendContent}
+                                              formatter={legendFormatter}
+                                              iconSize={isMobile ? 6 : 8}
                                             />
                                             <Tooltip
                                               content={({ active, payload }) => {
@@ -10629,153 +10666,155 @@ export default function MCDMCalculator() {
 
                                       return (
                                         <ComposedChart
-                                            data={sensitivityWeightChartData}
-                                            margin={{ top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
-                                            barGap={0}
-                                            barCategoryGap="25%"
-                                          >
-                                            {renderDefs(activeColors)}
-                                            <Customized component={RightFrameBorder} />
-                                            <XAxis
-                                              dataKey="name"
-                                              tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 1) : chartSettings.fontSize, fill: theme.text }}
-                                              axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
-                                              tickLine={getTickLine('bottom')}
-                                              interval={isMobile ? "preserveStartEnd" : 0}
-                                              tickFormatter={(val) => isMobile ? val.replace('Robot-', 'R') : val}
-                                              label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
-                                            />
-                                            <XAxis
-                                              orientation="top"
-                                              xAxisId="top_border"
-                                              dataKey="name"
-                                              axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
-                                              tick={false}
-                                              tickLine={false}
-                                            />
-                                            <YAxis
-                                              yAxisId="left"
-                                              tick={{ fontSize: chartSettings.fontSize, fill: theme.text }}
-                                              axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
-                                              tickLine={getTickLine('left')}
-                                              label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
-                                              domain={[0, (max: number) => Math.ceil(max * 10) / 10]}
-                                              tickFormatter={(val: number) => val.toFixed(1)}
-                                            />
-                                            <YAxis
-                                              yAxisId="right"
-                                              orientation="right"
-                                              tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text } : false}
-                                              axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
-                                              tickLine={chartSettings.showMirrorTicks ? getTickLine('right') : false}
-                                              domain={[1, totalAlts || 10]}
-                                              reversed
-                                              ticks={chartSettings.showMirrorTicks ? rankingTicks : undefined}
-                                              interval={0}
-                                              allowDecimals={false} />
-                                            <Tooltip
-                                              cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                                              content={({ active, payload, label }) => {
-                                                if (active && payload && payload.length) {
-                                                  return (
-                                                    <div className="bg-white border-2 border-slate-200 p-2 shadow-lg text-[10px] min-w-[150px]" style={{ backgroundColor: theme.bg, borderColor: theme.border, color: theme.text }}>
-                                                      <p className="font-bold border-b mb-1 pb-1" style={{ borderColor: theme.border }}>{label}</p>
-                                                      {payload.map((entry: any, index: number) => {
-                                                        const isRank = entry.name.includes("Rank");
-                                                        return (
-                                                          <p key={index} className="flex justify-between py-0.5">
-                                                            <span style={{ color: entry.color }} className="font-medium">{entry.name}:</span>
-                                                            <span className="font-bold ml-4">
-                                                              {isRank ? entry.value : Number(entry.value).toFixed(resultsDecimalPlaces)}
-                                                            </span>
-                                                          </p>
-                                                        );
-                                                      })}
-                                                    </div>
-                                                  );
-                                                }
-                                                return null;
-                                              }}
-                                            />
-                                            <Legend
-                                              verticalAlign={chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right' ? 'middle' : chartSettings.legendPosition}
-                                              align={chartSettings.legendPosition === 'left' ? 'left' : chartSettings.legendPosition === 'right' ? 'right' : 'center'}
-                                              layout={chartSettings.legendLayout}
-                                              wrapperStyle={{
-                                                fontSize: `${chartSettings.fontSize}px`,
-                                                color: theme.text,
-                                                fontWeight: 700,
-                                                backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-                                                border: `${chartSettings.borderWidth}px solid ${theme.border}`,
-                                                padding: "4px 8px",
-                                                top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 40 : undefined,
-                                                bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
-                                                left: chartSettings.legendPosition === 'left' ? 30 : chartSettings.legendPosition === 'right' ? undefined : "50%",
-                                                right: chartSettings.legendPosition === 'right' ? 30 : undefined,
-                                                transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
-                                                width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
-                                                maxWidth: "95%",
-                                                zIndex: 50,
-                                                boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                                display: "flex",
-                                                justifyContent: "center",
-                                                whiteSpace: "nowrap"
-                                              }}
-                                              iconSize={8}
-                                            />
+                                          data={sensitivityWeightChartData}
+                                          margin={{ top: mT, right: mR, left: mL, bottom: mB }}
+                                          barGap={0}
+                                          barCategoryGap="25%"
+                                        >
+                                          {renderDefs(activeColors)}
+                                          <Customized component={RightFrameBorder} />
+                                          <XAxis
+                                            dataKey="name"
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 1) : chartSettings.fontSize, fill: theme.text }}
+                                            axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
+                                            tickLine={getTickLine('bottom')}
+                                            interval={isMobile ? "preserveStartEnd" : 0}
+                                            tickFormatter={(val) => isMobile ? val.replace('Robot-', 'R') : val}
+                                            label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                          />
+                                          <XAxis
+                                            orientation="top"
+                                            xAxisId="top_border"
+                                            dataKey="name"
+                                            axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
+                                            tick={false}
+                                            tickLine={false}
+                                          />
+                                          <YAxis
+                                            yAxisId="left"
+                                            width={yAxisW}
+                                            domain={[0, (max: number) => Math.ceil(max * 10) / 10]}
+                                            tickFormatter={(val: number) => val.toFixed(1)}
+                                            tick={{ fontSize: chartSettings.fontSize, fill: theme.text }}
+                                            axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
+                                            tickLine={getTickLine('left')}
+                                            label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                          />
+                                          <YAxis
+                                            yAxisId="right"
+                                            orientation="right"
+                                            width={yAxisRightW}
+                                            tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text } : false}
+                                            axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
+                                            tickLine={chartSettings.showMirrorTicks ? getTickLine('right') : false}
+                                            domain={[1, totalAlts || 10]}
+                                            reversed
+                                            ticks={chartSettings.showMirrorTicks ? rankingTicks : undefined}
+                                            interval={0}
+                                            allowDecimals={false} />
+                                          <Tooltip
+                                            cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                                            content={({ active, payload, label }) => {
+                                              if (active && payload && payload.length) {
+                                                return (
+                                                  <div className="bg-white border-2 border-slate-200 p-2 shadow-lg text-[10px] min-w-[150px]" style={{ backgroundColor: theme.bg, borderColor: theme.border, color: theme.text }}>
+                                                    <p className="font-bold border-b mb-1 pb-1" style={{ borderColor: theme.border }}>{label}</p>
+                                                    {payload.map((entry: any, index: number) => {
+                                                      const isRank = entry.name.includes("Rank");
+                                                      return (
+                                                        <p key={index} className="flex justify-between py-0.5">
+                                                          <span style={{ color: entry.color }} className="font-medium">{entry.name}:</span>
+                                                          <span className="font-bold ml-4">
+                                                            {isRank ? entry.value : Number(entry.value).toFixed(resultsDecimalPlaces)}
+                                                          </span>
+                                                        </p>
+                                                      );
+                                                    })}
+                                                  </div>
+                                                );
+                                              }
+                                              return null;
+                                            }}
+                                          />
+                                          <Legend
+                                            verticalAlign={chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right' ? 'middle' : chartSettings.legendPosition}
+                                            align={chartSettings.legendPosition === 'left' ? 'left' : chartSettings.legendPosition === 'right' ? 'right' : 'center'}
+                                            layout={chartSettings.legendLayout}
+                                            wrapperStyle={{
+                                              fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
+                                              color: theme.text,
+                                              fontWeight: 700,
+                                              backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                              border: isMobile ? "none" : `${chartSettings.borderWidth}px solid ${theme.border}`,
+                                              padding: "4px 8px",
+                                              top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
+                                              bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
+                                              left: chartSettings.legendPosition === 'left' ? 30 : chartSettings.legendPosition === 'right' ? undefined : "50%",
+                                              right: chartSettings.legendPosition === 'right' ? 30 : undefined,
+                                              transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
+                                              width: 'auto',
+                                              maxWidth: 'auto',
+                                              zIndex: 50,
+                                              boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                              whiteSpace: isMobile ? 'normal' : 'nowrap',
+                                            }}
+                                            content={mobileLegendContent}
+                                            formatter={legendFormatter}
+                                            iconSize={isMobile ? 6 : 8}
+                                          />
 
-                                            {sensitivityWeightComparisonResults.map((res, i) => {
-                                              const cleanLabel = res.weightLabel.replace(" Weight", "");
-                                              return (
-                                                <Bar
-                                                  key={`bar-${res.weightLabel}`}
-                                                  yAxisId="left"
-                                                  dataKey={`${res.weightLabel} Score`}
-                                                  fill={getFillPattern(activeColors[i % activeColors.length], i % activeColors.length)}
-                                                  name={cleanLabel}
-                                                  barSize={15}
-                                                  fillOpacity={chartSettings.barOpacity}
-                                                />
-                                              );
-                                            })}
-
-                                            {sensitivityWeightComparisonResults.map((res, i) => {
-                                              const cleanLabel = res.weightLabel.replace(" Weight", "");
-                                              const _dash = getSensitivityDash(i);
-                                              const seriesColor = activeColors[i % activeColors.length];
-
-                                              return (
-                                                <Line
-                                                  key={`line-${res.weightLabel}-${i}`}
-                                                  yAxisId="right"
-                                                  type="linear"
-                                                  dataKey={`${res.weightLabel} Rank`}
-                                                  stroke={seriesColor}
-                                                  strokeWidth={chartSettings.borderWidth + 0.5}
-                                                  strokeDasharray={_dash}
-                                                  name={`${cleanLabel} Rank`}
-                                                  dot={makeCustomDot(seriesColor, `line-${res.weightLabel}-${i}`)}
-                                                  legendType={_dash !== '0' ? 'plainline' : 'line'}
-                                                />
-                                              );
-                                            })}
-                                            {chartSettings.showGridLines && (
-                                              <CartesianGrid
-                                                strokeDasharray={chartSettings.gridStyle === 'hairline' ? "1 1" : "3 3"}
-                                                horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
-                                                vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
-                                                stroke={chartSettings.gridColor}
-                                                opacity={chartSettings.gridOpacity}
-                                                style={{ pointerEvents: 'none' }}
+                                          {sensitivityWeightComparisonResults.map((res, i) => {
+                                            const cleanLabel = res.weightLabel.replace(" Weight", "");
+                                            return (
+                                              <Bar
+                                                key={`bar-${res.weightLabel}`}
+                                                yAxisId="left"
+                                                dataKey={`${res.weightLabel} Score`}
+                                                fill={getFillPattern(activeColors[i % activeColors.length], i % activeColors.length)}
+                                                name={cleanLabel}
+                                                barSize={15}
+                                                fillOpacity={chartSettings.barOpacity}
                                               />
-                                            )}
-                                          </ComposedChart>
+                                            );
+                                          })}
+
+                                          {sensitivityWeightComparisonResults.map((res, i) => {
+                                            const cleanLabel = res.weightLabel.replace(" Weight", "");
+                                            const _dash = getSensitivityDash(i);
+                                            const seriesColor = activeColors[i % activeColors.length];
+
+                                            return (
+                                              <Line
+                                                key={`line-${res.weightLabel}-${i}`}
+                                                yAxisId="right"
+                                                type="linear"
+                                                dataKey={`${res.weightLabel} Rank`}
+                                                stroke={seriesColor}
+                                                strokeWidth={chartSettings.borderWidth + 0.5}
+                                                strokeDasharray={_dash}
+                                                name={`${cleanLabel} Rank`}
+                                                dot={makeCustomDot(seriesColor, `line-${res.weightLabel}-${i}`)}
+                                                legendType={_dash !== '0' ? 'plainline' : 'line'}
+                                              />
+                                            );
+                                          })}
+                                          {chartSettings.showGridLines && (
+                                            <CartesianGrid
+                                              strokeDasharray={chartSettings.gridStyle === 'hairline' ? "1 1" : "3 3"}
+                                              horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
+                                              vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
+                                              stroke={chartSettings.gridColor}
+                                              opacity={chartSettings.gridOpacity}
+                                              style={{ pointerEvents: 'none' }}
+                                            />
+                                          )}
+                                        </ComposedChart>
                                       );
                                     })()
                                     ) : (
                                       <LineChart
                                         data={sensitivityWeightChartData}
-                                        margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }}
+                                        margin={{ top: mT, right: mR, left: mL, bottom: mB }}
                                       >
 
                                         <XAxis
@@ -10786,6 +10825,7 @@ export default function MCDMCalculator() {
                                           interval={isMobile ? "preserveStartEnd" : 0}
                                           tickFormatter={(val) => isMobile ? val.replace('Robot-', 'R') : val}
                                           label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined} />
+
                                         <XAxis
                                           orientation="top"
                                           xAxisId="top_border"
@@ -10795,17 +10835,20 @@ export default function MCDMCalculator() {
                                           tickLine={false}
                                         />
                                         <YAxis
+
+                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                          width={yAxisW}
                                           reversed
                                           domain={[1, alternatives.length]}
                                           ticks={Array.from({ length: alternatives.length }, (_, i) => i + 1)}
                                           tick={{ fontSize: chartSettings.fontSize, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={{ stroke: theme.border, strokeWidth: 1 }}
-                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
                                         />
                                         <YAxis
                                           orientation="right"
                                           yAxisId="right_border"
+                                          width={yAxisRightW}
                                           reversed
                                           domain={[1, alternatives.length]}
                                           tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fill: theme.text } : false}
@@ -10819,27 +10862,29 @@ export default function MCDMCalculator() {
                                           verticalAlign={chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right' ? 'middle' : chartSettings.legendPosition}
                                           align={chartSettings.legendPosition === 'left' ? 'left' : chartSettings.legendPosition === 'right' ? 'right' : 'center'}
                                           layout={chartSettings.legendLayout}
+
                                           wrapperStyle={{
-                                            fontSize: `${chartSettings.fontSize}px`,
+                                            fontSize: `${legendFontSize}px`,
                                             color: theme.text,
                                             fontWeight: 700,
                                             backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-                                            border: `${chartSettings.borderWidth}px solid ${theme.border}`,
+                                            border: isMobile ? "none" : `${chartSettings.borderWidth}px solid ${theme.border}`,
                                             padding: "4px 8px",
-                                            top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 40 : undefined,
+                                            top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                             bottom: chartSettings.legendPosition === 'bottom' ? 5 : undefined,
-                                            left: chartSettings.legendPosition === 'left' ? 30 : chartSettings.legendPosition === 'right' ? undefined : "50%",
-                                            right: chartSettings.legendPosition === 'right' ? 30 : undefined,
+                                            left: chartSettings.legendPosition === 'left' ? 10 : chartSettings.legendPosition === 'right' ? undefined : "50%",
+                                            right: chartSettings.legendPosition === 'right' ? 10 : undefined,
                                             transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
-                                            width: (chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content",
-                                            maxWidth: "95%",
+                                            width: isMobile ? "max-content" : "fit-content",
+                                            display: isMobile ? "flex" : "table",
                                             zIndex: 50,
-                                            boxShadow: "2px 2px 0px rgba(0,0,0,1)",
-                                            display: "flex",
-                                            justifyContent: "center",
-                                            whiteSpace: "nowrap"
+                                            boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                            whiteSpace: isMobile ? 'normal' : 'nowrap',
+                                            maxWidth: isMobile ? 'calc(100% - 10px)' : '95%',
                                           }}
-                                          iconSize={8}
+                                          content={mobileLegendContent}
+                                          formatter={legendFormatter}
+                                          iconSize={isMobile ? 6 : 8}
                                         />
                                         {sensitivityWeightComparisonResults.map((res, i) => {
                                           const _dash = getSensitivityDash(i);
@@ -11442,16 +11487,14 @@ export default function MCDMCalculator() {
                               key={crit.id}
                               className="text-xs font-bold text-center py-2 px-3 min-w-28 border-r border-gray-300 last:border-r-0"
                             >
-                              <div className={`flex flex-col items-center gap-0.5 rounded-t-md py-1 px-1 transition-colors ${
-                                crit.type === "beneficial" ? "bg-green-50/50" : "bg-red-50/50"
-                              }`}>
+                              <div className={`flex flex-col items-center gap-0.5 rounded-t-md py-1 px-1 transition-colors ${crit.type === "beneficial" ? "bg-green-50/50" : "bg-red-50/50"
+                                }`}>
                                 <div className="flex items-center gap-1">
                                   <Input
                                     value={crit.name}
                                     onChange={(e) => updateCriterion(crit.id, { name: e.target.value })}
-                                    className={`text-[11px] h-6 border-transparent focus:border-blue-400 text-center shadow-none font-extrabold bg-transparent ${
-                                      crit.type === "beneficial" ? "text-green-800" : "text-red-800"
-                                    }`}
+                                    className={`text-[11px] h-6 border-transparent focus:border-blue-400 text-center shadow-none font-extrabold bg-transparent ${crit.type === "beneficial" ? "text-green-800" : "text-red-800"
+                                      }`}
                                   />
                                   <span className={`text-xs font-black ${crit.type === "beneficial" ? "text-green-600" : "text-red-600"}`}>
                                     {crit.type === "beneficial" ? "▲" : "▼"}
@@ -11465,9 +11508,8 @@ export default function MCDMCalculator() {
                         <TableRow className="bg-gray-50 border-b border-gray-300">
                           <TableHead className="text-xs font-semibold text-black py-2 px-3 border-r border-gray-300">Max/Min</TableHead>
                           {criteria.map((crit) => (
-                            <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-2 px-3 border-r border-gray-300 last:border-r-0 ${
-                              crit.type === "beneficial" ? "bg-green-50/30" : "bg-red-50/30"
-                            }`}>
+                            <TableHead key={crit.id} className={`text-[10px] font-bold text-center py-2 px-3 border-r border-gray-300 last:border-r-0 ${crit.type === "beneficial" ? "bg-green-50/30" : "bg-red-50/30"
+                              }`}>
                               <div className="flex flex-col items-center">
                                 <Select
                                   value={crit.type}
@@ -11475,9 +11517,8 @@ export default function MCDMCalculator() {
                                     updateCriterion(crit.id, { type: value as "beneficial" | "non-beneficial" })
                                   }
                                 >
-                                  <SelectTrigger className={`text-[10px] h-6 border-gray-200 bg-white shadow-none w-full font-bold ${
-                                    crit.type === "beneficial" ? "text-green-700" : "text-red-700"
-                                  }`}>
+                                  <SelectTrigger className={`text-[10px] h-6 border-gray-200 bg-white shadow-none w-full font-bold ${crit.type === "beneficial" ? "text-green-700" : "text-red-700"
+                                    }`}>
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -11510,7 +11551,7 @@ export default function MCDMCalculator() {
                                 {isFuzzyMode ? (
                                   <div className="flex flex-col gap-1 w-full">
                                     <Select
-                                      value={alt.scores[crit.id]?.toString() || ""}
+                                      value={typeof alt.scores[crit.id] === 'object' ? "" : (alt.scores[crit.id]?.toString() || "")}
                                       onValueChange={(value) => updateAlternativeScore(alt.id, crit.id, value)}
                                     >
                                       <SelectTrigger className="text-xs h-7 border-gray-300 bg-white text-black shadow-none w-full font-bold">
@@ -11539,7 +11580,7 @@ export default function MCDMCalculator() {
                                     type="number"
                                     inputMode="decimal"
                                     placeholder="0"
-                                    value={alt.scores[crit.id] ?? ""}
+                                    value={(typeof alt.scores[crit.id] === 'object' && alt.scores[crit.id] !== null ? (alt.scores[crit.id] as any).m : (alt.scores[crit.id] ?? "")) as any}
                                     onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
                                     onKeyDown={handleKeyDown}
                                     className="text-center text-xs h-7 border-gray-300 text-black w-full shadow-none bg-white font-semibold"
@@ -11988,7 +12029,7 @@ export default function MCDMCalculator() {
                       <CardTitle className="text-sm font-bold">Evaluation Matrix</CardTitle>
                       <CardDescription className="text-[10px]">Review your decision matrix before calculation</CardDescription>
                     </div>
-                    <FuzzyModeSelector 
+                    <FuzzyModeSelector
                       isFuzzyMode={isFuzzyMode}
                       setIsFuzzyMode={setIsFuzzyMode}
                       fuzzyScaleType={fuzzyScaleType}
@@ -12014,9 +12055,8 @@ export default function MCDMCalculator() {
                               key={crit.id}
                               className="text-black font-bold text-center min-w-[120px] text-[10px] border-r border-gray-300 px-0 py-0"
                             >
-                              <div className={`flex flex-col items-center justify-center h-full py-1.5 ${
-                                crit.type === "beneficial" ? "bg-green-50/20" : "bg-red-50/20"
-                              }`}>
+                              <div className={`flex flex-col items-center justify-center h-full py-1.5 ${crit.type === "beneficial" ? "bg-green-50/20" : "bg-red-50/20"
+                                }`}>
                                 <div className="flex items-center gap-1 mb-0.5">
                                   <span className={`font-black ${crit.type === "beneficial" ? "text-green-800" : "text-red-800"}`}>
                                     {crit.name}
@@ -12064,17 +12104,17 @@ export default function MCDMCalculator() {
                                           ))}
                                         </SelectContent>
                                       </Select>
-                                      
-                                      <FuzzyTripletInput 
+
+                                      <FuzzyTripletInput
                                         value={(() => {
                                           const score = alt.scores[crit.id];
                                           // 1. Check if already a triplet object
                                           if (typeof score === 'object' && score !== null && 'l' in score) return score as any;
-                                          
+
                                           // 2. Check if it matches a linguistic term
                                           const item = customFuzzyScales[fuzzyScaleType].find((s: any) => s.value === score);
                                           if (item) return item.triplet;
-                                          
+
                                           // 3. Fallback: Convert crisp number to triplet using spread
                                           const numValue = typeof score === 'number' ? score : parseFloat(score as string);
                                           if (!isNaN(numValue)) {
@@ -12097,7 +12137,7 @@ export default function MCDMCalculator() {
                                         type="number"
                                         inputMode="decimal"
                                         placeholder="0"
-                                        value={alt.scores[crit.id] ?? ""}
+                                        value={(typeof alt.scores[crit.id] === 'object' && alt.scores[crit.id] !== null ? (alt.scores[crit.id] as any).m : (alt.scores[crit.id] ?? "")) as any}
                                         onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
                                         className="h-6 border-transparent focus:border-blue-400 text-center shadow-none p-0 text-[10px] w-full"
                                       />
@@ -16043,13 +16083,13 @@ export default function MCDMCalculator() {
                         onIncludeChange={handleIncludeChange}
                         onLabelChange={handleAssetLabelChange}
                       />
-                      
+
                       {/* Crisp Spread Selector for editable numerical values */}
                       {alternatives.some(alt => Object.values(alt.scores).some(val => typeof val === "number" || (!Object.values(LINGUISTIC_SCALES).flat().some(s => s.value === val)))) && (
                         <div className="flex items-center gap-2 bg-white px-3 py-1 border border-blue-100 rounded-lg shadow-sm">
                           <span className="text-[10px] font-bold text-blue-700 uppercase">Spread:</span>
-                          <Select 
-                            value={String(fuzzyCrispSpread)} 
+                          <Select
+                            value={String(fuzzyCrispSpread)}
                             onValueChange={(val) => {
                               const spreadNum = parseFloat(val);
                               setFuzzyCrispSpread(spreadNum);
@@ -16072,7 +16112,7 @@ export default function MCDMCalculator() {
                         </div>
                       )}
                     </div>
-                    
+
                     <CardContent className="pt-4 px-6 pb-6">
                       <div className="table-responsive border border-blue-100 rounded-lg overflow-x-auto bg-white shadow-inner">
                         <table className="min-w-full text-xs border-collapse">
@@ -16414,7 +16454,7 @@ export default function MCDMCalculator() {
                                       border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
                                       padding: "4px 8px",
                                       zIndex: 50,
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                       whiteSpace: "nowrap",
                                       width: "fit-content",
                                       left: legCfg.align === 'center' ? '50%' : undefined,
@@ -16474,7 +16514,7 @@ export default function MCDMCalculator() {
                                       backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
                                       border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
                                       padding: "4px 8px",
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                       borderRadius: "4px",
                                       width: "fit-content",
                                       left: legCfg.align === 'center' ? '50%' : undefined,
@@ -16549,7 +16589,7 @@ export default function MCDMCalculator() {
                                       border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
                                       padding: "4px 8px",
                                       zIndex: 50,
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                       whiteSpace: "nowrap",
                                       width: "fit-content",
                                       left: legCfg.align === 'center' ? '50%' : undefined,
@@ -16658,7 +16698,7 @@ export default function MCDMCalculator() {
                                       border: `1px solid ${themeColors.border}`,
                                       padding: "4px 8px",
                                       zIndex: 50,
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                       whiteSpace: "nowrap",
                                       width: "fit-content",
                                       left: legCfg.align === 'center' ? '50%' : undefined,
@@ -16736,7 +16776,7 @@ export default function MCDMCalculator() {
                                       backgroundColor: "rgba(255, 255, 255, 0.95)",
                                       border: `1px solid ${themeColors.border}`,
                                       padding: "4px 8px",
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                       zIndex: 50,
                                       whiteSpace: "nowrap"
                                     }}
@@ -16844,7 +16884,7 @@ export default function MCDMCalculator() {
                                       border: `1px solid ${themeColors.border}`,
                                       padding: "4px 8px",
                                       zIndex: 50,
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                       whiteSpace: "nowrap",
                                       width: "fit-content",
                                       left: legCfg.align === 'center' ? '50%' : undefined,
@@ -16963,7 +17003,7 @@ export default function MCDMCalculator() {
                                       border: `1px solid ${themeColors.border}`,
                                       padding: "4px 8px",
                                       zIndex: 50,
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                       whiteSpace: "nowrap",
                                       width: "fit-content",
                                       left: legCfg.align === 'center' ? '50%' : undefined,
@@ -17080,7 +17120,7 @@ export default function MCDMCalculator() {
                                       border: `1px solid ${themeColors.border}`,
                                       padding: "4px 8px",
                                       zIndex: 50,
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                       whiteSpace: "nowrap",
                                       width: "fit-content",
                                       left: legCfg.align === 'center' ? '50%' : undefined,
@@ -17204,7 +17244,7 @@ export default function MCDMCalculator() {
                                       border: `1px solid ${themeColors.border}`,
                                       padding: "4px 8px",
                                       zIndex: 50,
-                                      boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                      boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                       whiteSpace: "nowrap",
                                       width: "fit-content",
                                       left: legCfg.align === 'center' ? '50%' : undefined,
@@ -17313,7 +17353,7 @@ export default function MCDMCalculator() {
                                     border: `1px solid ${themeColors.border}`,
                                     padding: "4px 8px",
                                     zIndex: 50,
-                                    boxShadow: "2px 2px 0px rgba(0,0,0,1)",
+                                    boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                     whiteSpace: "nowrap",
                                     width: "fit-content",
                                     left: legCfg.align === 'center' ? '50%' : undefined,

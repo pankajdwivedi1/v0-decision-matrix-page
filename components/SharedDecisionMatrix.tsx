@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowRight, ArrowDown } from "lucide-react";
-import { Criterion, Alternative } from "@/types/mcdm";
+import { Criterion, Alternative, FuzzyNumber } from "@/types/mcdm";
 import { FuzzyTripletInput } from "./FuzzyTripletInput";
 
 interface SharedDecisionMatrixProps {
@@ -12,7 +12,7 @@ interface SharedDecisionMatrixProps {
   isFuzzyMode: boolean;
   fuzzyScaleType: number;
   customFuzzyScales: any;
-  updateAlternativeScore: (altId: string, critId: string, value: string) => void;
+  updateAlternativeScore: (altId: string, critId: string, value: string | number | FuzzyNumber) => void;
   handleKeyDown?: (e: React.KeyboardEvent) => void;
 }
 
@@ -104,7 +104,7 @@ export const SharedDecisionMatrix: React.FC<SharedDecisionMatrixProps> = ({
                       type="number"
                       step="any"
                       min="0"
-                      value={alt.scores[crit.id] ?? ""}
+                      value={(typeof alt.scores[crit.id] === 'object' && alt.scores[crit.id] !== null ? (alt.scores[crit.id] as any).m : (alt.scores[crit.id] ?? "")) as any}
                       onChange={(e) => updateAlternativeScore(alt.id, crit.id, e.target.value)}
                       onKeyDown={handleKeyDown}
                       className="text-center text-[10px] h-7 border-gray-100 text-black w-full shadow-none bg-white rounded-md p-1 focus:ring-1 focus:ring-blue-400"
