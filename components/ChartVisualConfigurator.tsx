@@ -186,7 +186,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
         <div className="p-4 sm:p-4 min-h-0">
           {/* ELEMENTS TAB */}
           <TabsContent value="elements" className="mt-0 space-y-3 h-full">
-            <div className="grid grid-cols-1 sm:grid-cols-[1.2fr_1.8fr_1fr] gap-3 sm:gap-6 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1.8fr_1fr] gap-3 md:gap-6 items-start">
               {/* VISIBILITY SECTION */}
               <div className="space-y-2 min-w-0">
                 <Label className="text-[7px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Visibility</Label>
@@ -294,17 +294,17 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                       <Switch className="scale-75 sm:scale-100 origin-right" checked={settings.showAxisTitles} onCheckedChange={(val: boolean) => updateSetting('showAxisTitles', val)} />
                     </div>
 
-                    <div className="flex items-center justify-between p-1.5 sm:p-2 bg-white border border-slate-200 rounded-lg">
+                    <div className="flex flex-col gap-1 p-1.5 sm:p-2 bg-white border border-slate-200 rounded-lg">
                       <span className="text-[6px] sm:text-[10px] font-black text-slate-700 uppercase tracking-tighter">Legend Style</span>
                       <div className="flex gap-0.5">
                         <Button
                           variant={settings.legendLayout === 'horizontal' ? 'secondary' : 'ghost'}
-                          size="sm" className="h-3.5 sm:h-5 text-[6px] sm:text-[9px] px-1 sm:px-2 font-bold"
+                          size="sm" className="h-3.5 sm:h-5 text-[6px] sm:text-[9px] px-1 sm:px-2 font-bold flex-1"
                           onClick={() => updateSetting('legendLayout', 'horizontal')}
                         >HORIZ</Button>
                         <Button
                           variant={settings.legendLayout === 'vertical' ? 'secondary' : 'ghost'}
-                          size="sm" className="h-3.5 sm:h-5 text-[6px] sm:text-[9px] px-1 sm:px-2 font-bold"
+                          size="sm" className="h-3.5 sm:h-5 text-[6px] sm:text-[9px] px-1 sm:px-2 font-bold flex-1"
                           onClick={() => updateSetting('legendLayout', 'vertical')}
                         >VERT</Button>
                       </div>
