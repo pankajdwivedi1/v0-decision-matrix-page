@@ -4222,7 +4222,7 @@ export default function MCDMCalculator() {
           />
           <div className="flex items-center gap-3">
             <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">Select Plot Style</span>
+              <span className="text-[8px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-tight">Select Plot Style</span>
               <Select value={weightResultsChartType} onValueChange={setWeightResultsChartType}>
                 <SelectTrigger className="h-9 text-[11px] w-48 border-gray-300 bg-white hover:bg-gray-50 transition-colors font-medium text-black">
                   <span className="flex items-center gap-2">
@@ -6684,7 +6684,7 @@ export default function MCDMCalculator() {
                           onClick={() => setComparisonWeightOpen((prev) => !prev)}
                           className="flex w-full items-center justify-between mb-2"
                         >
-                          <p className="text-[10px] font-semibold text-black">Weight method (choose one)</p>
+                          <p className="font-semibold text-black" style={{ fontSize: isMobile ? "7px" : "10px" }}>Weight method (choose one)</p>
                           {comparisonWeightOpen ? (
                             <ChevronDown className="w-4 h-4 text-black" />
                           ) : (
@@ -6694,7 +6694,7 @@ export default function MCDMCalculator() {
                         {comparisonWeightOpen && (
                           <div className="grid grid-cols-2 gap-2 mt-2 max-h-[200px] overflow-y-auto">
                             {WEIGHT_METHODS.map((w) => (
-                              <label key={w.value} className="flex items-start gap-2 text-[10px] text-black cursor-pointer hover:bg-gray-50 p-1 rounded leading-none">
+                              <label key={w.value} className="flex items-start gap-2 text-black cursor-pointer hover:bg-gray-50 p-1 rounded leading-none" style={{ fontSize: isMobile ? "7px" : "10px" }}>
                                 <input
                                   type="checkbox"
                                   checked={comparisonWeightMethod === w.value}
@@ -6723,7 +6723,7 @@ export default function MCDMCalculator() {
                                   className="mt-0.5"
                                 />
                                 <span className="flex-1">
-                                  <span className="font-normal">{w.label}</span>
+                                  <span className="font-normal leading-tight" style={{ fontSize: isMobile ? "7px" : "10px" }}>{w.label}</span>
                                 </span>
                                 <div
                                   className="flex items-center gap-1 bg-indigo-50/50 px-1 py-0 rounded border border-indigo-100 hover:bg-indigo-100 transition-colors"
@@ -6753,7 +6753,7 @@ export default function MCDMCalculator() {
                           onClick={() => setComparisonRankingOpen((prev) => !prev)}
                           className="flex w-full items-center justify-between mb-2"
                         >
-                          <p className="text-[10px] font-semibold text-black">
+                          <p className="font-semibold text-black" style={{ fontSize: isMobile ? "7px" : "10px" }}>
                             Ranking methods Reference ({selectedRankingMethods.length} selected)
                           </p>
                           {comparisonRankingOpen ? (
@@ -6765,7 +6765,7 @@ export default function MCDMCalculator() {
                         {comparisonRankingOpen && (
                           <div className="grid grid-cols-2 gap-2 mt-2 max-h-[200px] overflow-y-auto">
                             {MCDM_METHODS.map((m) => (
-                              <label key={m.value} className="flex items-start gap-2 text-[10px] text-black cursor-pointer hover:bg-gray-50 p-1 rounded leading-none">
+                              <label key={m.value} className="flex items-start gap-2 text-black cursor-pointer hover:bg-gray-50 p-1 rounded leading-none" style={{ fontSize: isMobile ? "7px" : "10px" }}>
                                 <input
                                   type="checkbox"
                                   checked={selectedRankingMethods.includes(m.value)}
@@ -6774,7 +6774,7 @@ export default function MCDMCalculator() {
                                   className="mt-0.5"
                                 />
                                 <span className="flex-1">
-                                  <span className="font-normal">{m.label}</span>
+                                  <span className="font-normal leading-tight" style={{ fontSize: isMobile ? "7px" : "10px" }}>{m.label}</span>
                                 </span>
                                 <div
                                   className="flex items-center gap-1 bg-indigo-50/50 px-1 py-0 rounded border border-indigo-100 hover:bg-indigo-100 transition-colors"
@@ -6803,8 +6803,8 @@ export default function MCDMCalculator() {
                       <div className="border border-teal-200 bg-teal-50 rounded-lg p-3">
                         <div className="flex items-center justify-between">
                           <div>
-                            <label className="text-xs font-semibold text-teal-900">VIKOR v-value (Compromise):</label>
-                            <p className="text-[10px] text-teal-700">Weight of "majority of criteria" (v) vs "individual regret" (1-v)</p>
+                            <label className="text-[9px] sm:text-xs font-semibold text-teal-900">VIKOR v-value (Compromise):</label>
+                            <p className="text-[8px] sm:text-[10px] text-teal-700">Weight of "majority of criteria" (v) vs "individual regret" (1-v)</p>
                           </div>
                           <Input
                             type="number"
@@ -6826,8 +6826,8 @@ export default function MCDMCalculator() {
                       <div className="border border-teal-200 bg-teal-50 rounded-lg p-3">
                         <div className="flex items-center justify-between">
                           <div>
-                            <label className="text-xs font-semibold text-teal-900">WASPAS lambda:</label>
-                            <p className="text-[10px] text-teal-700">Weight of WSM (λ) vs WPM (1-λ)</p>
+                            <label className="text-[9px] sm:text-xs font-semibold text-teal-900">WASPAS lambda:</label>
+                            <p className="text-[8px] sm:text-[10px] text-teal-700">Weight of WSM (λ) vs WPM (1-λ)</p>
                           </div>
                           <Input
                             type="number"
@@ -6849,8 +6849,8 @@ export default function MCDMCalculator() {
                       <div className="border border-teal-200 bg-teal-50 rounded-lg p-3">
                         <div className="flex items-center justify-between">
                           <div>
-                            <label className="text-xs font-semibold text-teal-900">CODAS tau-value:</label>
-                            <p className="text-[10px] text-teal-700">Threshold parameter (typically 0.01-0.05)</p>
+                            <label className="text-[9px] sm:text-xs font-semibold text-teal-900">CODAS tau-value:</label>
+                            <p className="text-[8px] sm:text-[10px] text-teal-700">Threshold parameter (typically 0.01-0.05)</p>
                           </div>
                           <Input
                             type="number"
@@ -7423,7 +7423,7 @@ export default function MCDMCalculator() {
                                       : "Chart comparing alternative ranks across selected methods."}
                             </CardDescription>
                           </CardHeader>
-                          <CardContent className={`${(comparisonChartType === "heatmap" || comparisonChartType === "scientific") ? "h-auto" : "h-[800px] sm:h-[600px]"} p-0 sm:px-6 sm:py-2 mt-0`}>
+                          <CardContent className={`${(comparisonChartType === "heatmap" || comparisonChartType === "scientific") ? "h-auto" : "h-auto w-full"} p-0 sm:px-6 sm:py-2 mt-0`}>
                             {(() => {
                               const activeColors = getPaletteColors(chartSettings.colorPalette);
 
@@ -7443,6 +7443,38 @@ export default function MCDMCalculator() {
                               } as any)[chartSettings.legendPosition] || { verticalAlign: 'top' as const, align: 'center' as const, layout: 'horizontal' as const };
 
                               const legLayout = chartSettings.legendLayout || legCfg.layout;
+
+                              const compLegFontSize = isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize;
+                              const compCustomLegend = (props: any) => {
+                                if (!props.payload) return null;
+                                const validItems = props.payload.filter((e: any) =>
+                                  e.type !== 'none' && e.color !== 'transparent' && e.color !== 'rgba(0,0,0,0)'
+                                );
+                                const isVert = legLayout === 'vertical';
+                                const chunkSize = isVert ? 1 : (isMobile ? 3 : validItems.length);
+                                const rows: any[][] = [];
+                                for (let i = 0; i < validItems.length; i += chunkSize) rows.push(validItems.slice(i, i + chunkSize));
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: isVert ? 'flex-start' : 'center', gap: '0px', maxWidth: '100%' }}>
+                                    {rows.map((rowItems: any[], rowIdx: number) => (
+                                      <div key={rowIdx} style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'nowrap' }}>
+                                        {rowItems.map((entry: any, idx: number) => (
+                                          <span key={idx} style={{ display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+                                            <svg width="10" height="10" style={{ flexShrink: 0, display: 'block' }}>
+                                              {entry.type === 'line' || entry.type === 'plainline' ? (
+                                                <line x1="0" y1="5" x2="10" y2="5" stroke={entry.color} strokeWidth="2" strokeDasharray={entry.payload?.strokeDasharray || '0'} />
+                                              ) : (
+                                                <rect x="1" y="2" width="8" height="6" fill={entry.color} />
+                                              )}
+                                            </svg>
+                                            <span style={{ fontSize: compLegFontSize + 'px', fontWeight: 700, color: themeColors.text, lineHeight: 1 }}>{entry.value}</span>
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              };
 
                               if (comparisonChartType === "heatmap") {
                                 return (
@@ -7501,11 +7533,13 @@ export default function MCDMCalculator() {
 
                               const isDualLike = comparisonChartType === "normalization-min-max" || comparisonChartType === "dual";
                               const maxRankVal = Math.max(0, ...comparisonChartData.flatMap(row => comparisonChartAlternatives.map(alt => Number(row[alt] || 0))));
+                              const yAxisRightW = isMobile ? 1 : (chartSettings.yAxisWidthRight || 60);
                               const rightAxisProps = {
+                                width: yAxisRightW,
                                 orientation: "right" as const,
                                 yAxisId: "right_border",
                                 domain: [0, maxRankVal > 0 ? maxRankVal : 'auto'] as [number, number | string],
-                                tick: { fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text },
+                                tick: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text },
                                 tickLine: { stroke: themeColors.border, strokeWidth: 1 },
                                 axisLine: { stroke: themeColors.border, strokeWidth: chartSettings.borderWidth },
                                 allowDecimals: false,
@@ -7520,7 +7554,7 @@ export default function MCDMCalculator() {
                                   : Array.from({ length: Math.ceil(totalAlts / 2) + 1 }, (_, i) => i * 2);
 
                                 chartElement = (
-                                  <ResponsiveContainer width="100%" height="100%">
+                                  <ResponsiveContainer width="100%" height={getAspectRatioValue() ? undefined : (isMobile ? 480 : 600)} aspect={getAspectRatioValue()}>
                                     <ComposedChart
                                       data={comparisonDualAxisData}
                                       margin={{
@@ -7535,20 +7569,20 @@ export default function MCDMCalculator() {
                                       <XAxis
                                         dataKey="name"
                                         xAxisId="main"
-                                        tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                        tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                         axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                         tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
                                         label={chartSettings.showAxisTitles ? {
                                           value: chartSettings.xAxisTitle || 'Alternatives',
                                           position: 'insideBottom',
                                           offset: chartSettings.xAxisOffset,
-                                          style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: themeColors.text }
+                                          style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                         } : undefined}
                                       />
                                       <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
                                       <YAxis
                                         yAxisId="left"
-                                        tick={{ fontSize: chartSettings.fontSize, fill: themeColors.text, fontWeight: 700 }}
+                                        tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                         axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                         tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
                                         label={chartSettings.showAxisTitles ? {
@@ -7556,7 +7590,7 @@ export default function MCDMCalculator() {
                                           angle: -90,
                                           position: 'insideLeft',
                                           offset: chartSettings.yAxisOffset,
-                                          style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: themeColors.text }
+                                          style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                         } : undefined}
                                         domain={isNormChart ? [0, totalAlts] : [0, (max: number) => Math.ceil(max * 10) / 10]}
                                         reversed={isNormChart}
@@ -7566,7 +7600,7 @@ export default function MCDMCalculator() {
                                       <YAxis
                                         yAxisId="right"
                                         orientation="right"
-                                        tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                        tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                         axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                         tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
                                         label={chartSettings.showAxisTitles ? {
@@ -7574,7 +7608,7 @@ export default function MCDMCalculator() {
                                           angle: 90,
                                           position: 'insideRight',
                                           offset: 0,
-                                          style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: themeColors.text }
+                                          style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                         } : undefined}
                                         domain={isNormChart ? [0, 1] : [1, totalAlts || 10]}
                                         reversed={!isNormChart}
@@ -7585,15 +7619,16 @@ export default function MCDMCalculator() {
                                         contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text }}
                                       />
                                       <Legend
-                                        {...legCfg}
-                                        layout={legLayout}
+                                            {...legCfg}
+                                            content={compCustomLegend}
+                                            layout={legLayout}
                                         wrapperStyle={{
-                                          fontSize: `${chartSettings.fontSize}px`,
+                                          fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                           color: themeColors.text,
                                           fontWeight: 700,
                                           backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
                                           border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
-                                          padding: "4px 8px",
+                                          padding: "1px 4px",
                                           top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                           left: legCfg.align === 'center' ? '50%' : legCfg.align === 'left' ? 10 : undefined,
                                           right: legCfg.align === 'right' ? 10 : undefined,
@@ -7603,8 +7638,9 @@ export default function MCDMCalculator() {
                                           boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                           whiteSpace: "nowrap"
                                         }}
-                                        iconSize={chartSettings.markerSize + 4}
-                                      />
+                                        iconSize={isMobile ? Math.max(6, chartSettings.markerSize - 2) : chartSettings.markerSize + 4}
+                                            itemStyle={{ margin: '1px 0', padding: '0' }}
+                                          />
                                       {comparisonResults.map((res, i) => (
                                         <Bar
                                           key={`bar-${res.label}`}
@@ -7666,7 +7702,7 @@ export default function MCDMCalculator() {
                                 switch (comparisonChartType) {
                                   case "radar":
                                     chartElement = (
-                                      <ResponsiveContainer width="100%" height="100%">
+                                      <ResponsiveContainer width="100%" height={getAspectRatioValue() ? undefined : (isMobile ? 480 : 600)} aspect={getAspectRatioValue()}>
                                         <RadarChart
                                           margin={{
                                             top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10,
@@ -7679,11 +7715,11 @@ export default function MCDMCalculator() {
                                           {renderDefs(activeColors)}
                                           <Customized component={RightFrameBorder} />
                                           {chartSettings.showGridLines && <PolarGrid stroke={chartSettings.gridColor} strokeWidth={1} opacity={chartSettings.gridOpacity} />}
-                                          <PolarAngleAxis dataKey="method" tick={{ fontSize: chartSettings.fontSize, fill: themeColors.text, fontWeight: 'bold' }} />
+                                          <PolarAngleAxis dataKey="method" tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }} />
                                           <PolarRadiusAxis
                                             angle={30}
                                             domain={[1, maxRankVal > 0 ? maxRankVal : 'dataMax']}
-                                            tick={{ fontSize: chartSettings.fontSize - 2, fill: themeColors.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                           />
                                           <Legend
@@ -7691,12 +7727,12 @@ export default function MCDMCalculator() {
                                             align={chartSettings.legendPosition === 'left' ? 'left' : chartSettings.legendPosition === 'right' ? 'right' : 'center'}
                                             layout={chartSettings.legendLayout}
                                             wrapperStyle={{
-                                              fontSize: `${chartSettings.fontSize}px`,
+                                              fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                               color: themeColors.text,
                                               fontWeight: 700,
                                               backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
                                               border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
-                                              padding: "4px 8px",
+                                              padding: "1px 4px",
                                               top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                               left: chartSettings.legendPosition === 'left' ? 10 : chartSettings.legendPosition === 'right' ? undefined : "50%",
                                               right: chartSettings.legendPosition === 'right' ? 10 : undefined,
@@ -7706,7 +7742,8 @@ export default function MCDMCalculator() {
                                               boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                               whiteSpace: "nowrap"
                                             }}
-                                            iconSize={chartSettings.markerSize + 4}
+                                            iconSize={isMobile ? Math.max(6, chartSettings.markerSize - 2) : chartSettings.markerSize + 4}
+                                            itemStyle={{ margin: '1px 0', padding: '0' }}
                                           />
                                           <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                           {comparisonChartAlternatives.map((alt, idx) => (
@@ -8057,7 +8094,7 @@ export default function MCDMCalculator() {
                                   }
                                   case "stackedBar":
                                     chartElement = (
-                                      <ResponsiveContainer width="100%" height="100%">
+                                      <ResponsiveContainer width="100%" height={getAspectRatioValue() ? undefined : (isMobile ? 480 : 600)} aspect={getAspectRatioValue()}>
                                         <BarChart
                                           data={comparisonChartData}
                                           margin={{
@@ -8069,12 +8106,12 @@ export default function MCDMCalculator() {
                                         >
                                           <XAxis
                                             dataKey="method"
-                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                             label={chartSettings.showAxisTitles ? {
                                               value: chartSettings.xAxisTitle || 'MCDM Methods',
                                               position: 'insideBottom',
                                               offset: chartSettings.xAxisOffset,
-                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text }
+                                              style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
@@ -8086,24 +8123,25 @@ export default function MCDMCalculator() {
                                               angle: -90,
                                               position: 'insideLeft',
                                               offset: chartSettings.yAxisOffset,
-                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text }
+                                              style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
-                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                           />
                                           <YAxis {...rightAxisProps} />
                                           <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                           <Legend
                                             {...legCfg}
+                                            content={compCustomLegend}
                                             layout={legLayout}
                                             wrapperStyle={{
-                                              fontSize: `${chartSettings.fontSize}px`,
+                                              fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                               color: themeColors.text,
                                               fontWeight: 700,
                                               backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
                                               border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
-                                              padding: "4px 8px",
+                                              padding: "1px 4px",
                                               top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                               left: legCfg.align === 'center' ? '50%' : legCfg.align === 'left' ? 10 : undefined,
                                               right: legCfg.align === 'right' ? 10 : undefined,
@@ -8113,7 +8151,8 @@ export default function MCDMCalculator() {
                                               boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                               whiteSpace: "nowrap"
                                             }}
-                                            iconSize={chartSettings.markerSize + 4}
+                                            iconSize={isMobile ? Math.max(6, chartSettings.markerSize - 2) : chartSettings.markerSize + 4}
+                                            itemStyle={{ margin: '1px 0', padding: '0' }}
                                           />
                                           {comparisonChartAlternatives.map((alt, idx) => (
                                             <Bar
@@ -8141,7 +8180,7 @@ export default function MCDMCalculator() {
                                     break;
                                   case "bar":
                                     chartElement = (
-                                      <ResponsiveContainer width="100%" height="100%">
+                                      <ResponsiveContainer width="100%" height={getAspectRatioValue() ? undefined : (isMobile ? 480 : 600)} aspect={getAspectRatioValue()}>
                                         <BarChart
                                           data={comparisonChartData}
                                           margin={{
@@ -8153,12 +8192,12 @@ export default function MCDMCalculator() {
                                         >
                                           <XAxis
                                             dataKey="method"
-                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                             label={chartSettings.showAxisTitles ? {
                                               value: chartSettings.xAxisTitle || 'MCDM Methods',
                                               position: 'insideBottom',
                                               offset: chartSettings.xAxisOffset,
-                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text }
+                                              style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
@@ -8170,24 +8209,25 @@ export default function MCDMCalculator() {
                                               angle: -90,
                                               position: 'insideLeft',
                                               offset: chartSettings.yAxisOffset,
-                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text }
+                                              style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
-                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                           />
                                           <YAxis {...rightAxisProps} />
                                           <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                           <Legend
                                             {...legCfg}
+                                            content={compCustomLegend}
                                             layout={legLayout}
                                             wrapperStyle={{
-                                              fontSize: `${chartSettings.fontSize}px`,
+                                              fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                               color: themeColors.text,
                                               fontWeight: 700,
                                               backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
                                               border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
-                                              padding: "4px 8px",
+                                              padding: "1px 4px",
                                               top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                               left: legCfg.align === 'center' ? '50%' : legCfg.align === 'left' ? 10 : undefined,
                                               right: legCfg.align === 'right' ? 10 : undefined,
@@ -8197,7 +8237,8 @@ export default function MCDMCalculator() {
                                               boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                               whiteSpace: "nowrap"
                                             }}
-                                            iconSize={chartSettings.markerSize + 4}
+                                            iconSize={isMobile ? Math.max(6, chartSettings.markerSize - 2) : chartSettings.markerSize + 4}
+                                            itemStyle={{ margin: '1px 0', padding: '0' }}
                                           />
                                           {comparisonChartAlternatives.map((alt, idx) => (
                                             <Bar
@@ -8225,7 +8266,7 @@ export default function MCDMCalculator() {
                                   case "area":
                                   case "stackedArea":
                                     chartElement = (
-                                      <ResponsiveContainer width="100%" height="100%">
+                                      <ResponsiveContainer width="100%" height={getAspectRatioValue() ? undefined : (isMobile ? 480 : 600)} aspect={getAspectRatioValue()}>
                                         <AreaChart
                                           data={comparisonChartData}
                                           margin={{
@@ -8237,12 +8278,12 @@ export default function MCDMCalculator() {
                                         >
                                           <XAxis
                                             dataKey="method"
-                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                             label={chartSettings.showAxisTitles ? {
                                               value: chartSettings.xAxisTitle || 'MCDM Methods',
                                               position: 'insideBottom',
                                               offset: chartSettings.xAxisOffset,
-                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text }
+                                              style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
@@ -8254,24 +8295,25 @@ export default function MCDMCalculator() {
                                               angle: -90,
                                               position: 'insideLeft',
                                               offset: chartSettings.yAxisOffset,
-                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text }
+                                              style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
-                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                           />
                                           <YAxis {...rightAxisProps} />
                                           <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                           <Legend
                                             {...legCfg}
+                                            content={compCustomLegend}
                                             layout={legLayout}
                                             wrapperStyle={{
-                                              fontSize: `${chartSettings.fontSize}px`,
+                                              fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                               color: themeColors.text,
                                               fontWeight: 700,
                                               backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
                                               border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
-                                              padding: "4px 8px",
+                                              padding: "1px 4px",
                                               top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                               left: legCfg.align === 'center' ? '50%' : legCfg.align === 'left' ? 10 : undefined,
                                               right: legCfg.align === 'right' ? 10 : undefined,
@@ -8281,7 +8323,8 @@ export default function MCDMCalculator() {
                                               boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                               whiteSpace: "nowrap"
                                             }}
-                                            iconSize={chartSettings.markerSize + 4}
+                                            iconSize={isMobile ? Math.max(6, chartSettings.markerSize - 2) : chartSettings.markerSize + 4}
+                                            itemStyle={{ margin: '1px 0', padding: '0' }}
                                           />
                                           {comparisonChartAlternatives.map((alt, idx) => (
                                             <Area
@@ -8321,7 +8364,7 @@ export default function MCDMCalculator() {
                                     });
 
                                     chartElement = (
-                                      <ResponsiveContainer width="100%" height="100%">
+                                      <ResponsiveContainer width="100%" height={getAspectRatioValue() ? undefined : (isMobile ? 480 : 600)} aspect={getAspectRatioValue()}>
                                         <ComposedChart
                                           data={hybridData}
                                           margin={{
@@ -8336,12 +8379,12 @@ export default function MCDMCalculator() {
                                           <XAxis
                                             dataKey="alternative"
                                             xAxisId="main"
-                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                             label={chartSettings.showAxisTitles ? {
                                               value: chartSettings.xAxisTitle || "Alternatives",
                                               position: "insideBottom",
                                               offset: chartSettings.xAxisOffset,
-                                              style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: themeColors.text }
+                                              style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
@@ -8353,13 +8396,13 @@ export default function MCDMCalculator() {
                                             reversed={true}
                                             domain={[0, "auto"]}
                                             allowDecimals={false}
-                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                             label={chartSettings.showAxisTitles ? {
                                               value: chartSettings.yAxisTitle || "Ordinal Ranking (1 = Top)",
                                               angle: -90,
                                               position: "insideLeft",
                                               offset: chartSettings.yAxisOffset,
-                                              style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: themeColors.text }
+                                              style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
@@ -8368,13 +8411,13 @@ export default function MCDMCalculator() {
                                             yAxisId="score"
                                             orientation="right"
                                             domain={[0, "auto"]}
-                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                             label={chartSettings.showAxisTitles ? {
                                               value: "Algorithm Performance Scores",
                                               angle: 90,
                                               position: "insideRight",
                                               offset: 0,
-                                              style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: themeColors.text }
+                                              style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
@@ -8385,14 +8428,15 @@ export default function MCDMCalculator() {
                                           />
                                           <Legend
                                             {...legCfg}
+                                            content={compCustomLegend}
                                             layout={legLayout}
                                             wrapperStyle={{
-                                              fontSize: `${chartSettings.fontSize}px`,
+                                              fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                               color: themeColors.text,
                                               fontWeight: 700,
                                               backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
                                               border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
-                                              padding: "4px 8px",
+                                              padding: "1px 4px",
                                               top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                               left: legCfg.align === 'center' ? '50%' : legCfg.align === 'left' ? 10 : undefined,
                                               right: legCfg.align === 'right' ? 10 : undefined,
@@ -8402,7 +8446,8 @@ export default function MCDMCalculator() {
                                               boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                               whiteSpace: "nowrap"
                                             }}
-                                            iconSize={chartSettings.markerSize + 4}
+                                            iconSize={isMobile ? Math.max(6, chartSettings.markerSize - 2) : chartSettings.markerSize + 4}
+                                            itemStyle={{ margin: '1px 0', padding: '0' }}
                                           />
                                           {comparisonResults.map((res, idx) => (
                                             <Bar
@@ -8460,7 +8505,7 @@ export default function MCDMCalculator() {
                                     break;
                                   case "scatter":
                                     chartElement = (
-                                      <ResponsiveContainer width="100%" height="100%">
+                                      <ResponsiveContainer width="100%" height={getAspectRatioValue() ? undefined : (isMobile ? 480 : 600)} aspect={getAspectRatioValue()}>
                                         <ScatterChart
                                           margin={{
                                             top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? chartSettings.marginTop : 10,
@@ -8474,13 +8519,13 @@ export default function MCDMCalculator() {
                                             dataKey="x"
                                             type="category"
                                             allowDuplicatedCategory={false}
-                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                             name="Method"
                                             label={chartSettings.showAxisTitles ? {
                                               value: chartSettings.xAxisTitle || 'MCDM Methods',
                                               position: 'insideBottom',
                                               offset: chartSettings.xAxisOffset,
-                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text }
+                                              style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
@@ -8495,24 +8540,25 @@ export default function MCDMCalculator() {
                                               angle: -90,
                                               position: 'insideLeft',
                                               offset: chartSettings.yAxisOffset,
-                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text }
+                                              style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
-                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                           />
                                           <YAxis {...rightAxisProps} />
                                           <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                           <Legend
                                             {...legCfg}
+                                            content={compCustomLegend}
                                             layout={legLayout}
                                             wrapperStyle={{
-                                              fontSize: `${chartSettings.fontSize}px`,
+                                              fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                               color: themeColors.text,
                                               fontWeight: 700,
                                               backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
                                               border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
-                                              padding: "4px 8px",
+                                              padding: "1px 4px",
                                               top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                               left: legCfg.align === 'center' ? '50%' : legCfg.align === 'left' ? 10 : undefined,
                                               right: legCfg.align === 'right' ? 10 : undefined,
@@ -8522,7 +8568,8 @@ export default function MCDMCalculator() {
                                               boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                               whiteSpace: "nowrap"
                                             }}
-                                            iconSize={chartSettings.markerSize + 4}
+                                            iconSize={isMobile ? Math.max(6, chartSettings.markerSize - 2) : chartSettings.markerSize + 4}
+                                            itemStyle={{ margin: '1px 0', padding: '0' }}
                                           />
                                           {comparisonChartAlternatives.map((alt, idx) => (
                                             <Scatter
@@ -8684,7 +8731,7 @@ export default function MCDMCalculator() {
                                     break;
                                   default:
                                     chartElement = (
-                                      <ResponsiveContainer width="100%" height="100%">
+                                      <ResponsiveContainer width="100%" height={getAspectRatioValue() ? undefined : (isMobile ? 480 : 600)} aspect={getAspectRatioValue()}>
                                         <LineChart
                                           data={comparisonChartData}
                                           margin={{
@@ -8696,12 +8743,12 @@ export default function MCDMCalculator() {
                                         >
                                           <XAxis
                                             dataKey="method"
-                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                             label={chartSettings.showAxisTitles ? {
                                               value: chartSettings.xAxisTitle || 'MCDM Methods',
                                               position: 'insideBottom',
                                               offset: chartSettings.xAxisOffset,
-                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text }
+                                              style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
@@ -8709,13 +8756,13 @@ export default function MCDMCalculator() {
                                           <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
                                           <YAxis
                                             allowDecimals={false}
-                                            tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                             label={chartSettings.showAxisTitles ? {
                                               value: chartSettings.yAxisTitle || 'Ordinal Ranking',
                                               angle: -90,
                                               position: 'insideLeft',
                                               offset: chartSettings.yAxisOffset,
-                                              style: { fontSize: chartSettings.fontSize + 1, fontWeight: 700, fill: themeColors.text }
+                                              style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
@@ -8724,14 +8771,15 @@ export default function MCDMCalculator() {
                                           <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                           <Legend
                                             {...legCfg}
+                                            content={compCustomLegend}
                                             layout={legLayout}
                                             wrapperStyle={{
-                                              fontSize: `${chartSettings.fontSize}px`,
+                                              fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`,
                                               color: themeColors.text,
                                               fontWeight: 700,
                                               backgroundColor: chartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
                                               border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
-                                              padding: "4px 8px",
+                                              padding: "1px 4px",
                                               top: (chartSettings.legendPosition === 'top' || chartSettings.legendPosition === 'middle') ? 70 : undefined,
                                               left: legCfg.align === 'center' ? '50%' : legCfg.align === 'left' ? 10 : undefined,
                                               right: legCfg.align === 'right' ? 10 : undefined,
@@ -8741,7 +8789,8 @@ export default function MCDMCalculator() {
                                               boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                               whiteSpace: "nowrap"
                                             }}
-                                            iconSize={chartSettings.markerSize + 4}
+                                            iconSize={isMobile ? Math.max(6, chartSettings.markerSize - 2) : chartSettings.markerSize + 4}
+                                            itemStyle={{ margin: '1px 0', padding: '0' }}
                                           />
                                           {comparisonChartAlternatives.map((alt, idx) => (
                                             <Line
@@ -8855,12 +8904,13 @@ export default function MCDMCalculator() {
                           </table>
 
                           <div className="mt-12 mb-8 pt-8 border-t border-indigo-100 flex flex-col items-center">
-                            <div className="text-center text-[10px] text-indigo-400 mb-6 uppercase font-bold tracking-[0.2em]">Visual Correlation Analysis</div>
+                            <div className="text-center text-[8px] sm:text-[10px] text-indigo-400 mb-4 sm:mb-6 uppercase font-bold tracking-[0.2em]">Visual Correlation Analysis</div>
                             <CorrelationHeatmap
                               data={spearmanCorrelation}
                               assetKey="ranking_spearman_heatmap"
                               defaultLabel={getComparisonFigureLabel()}
                               title="Spearman Correlation"
+                              isMobile={isMobile}
                               onLabelChange={handleAssetLabelChange}
                               included={selectedAiAssets.has("ranking_spearman_heatmap")}
                               onIncludeChange={handleIncludeChange}
@@ -8868,7 +8918,7 @@ export default function MCDMCalculator() {
                             />
                           </div>
                           <div className="mt-4 p-3 bg-indigo-50/50 rounded-lg border border-indigo-100">
-                            <p className="text-[10px] text-indigo-800 leading-relaxed italic font-medium">
+                            <p className="text-[8px] sm:text-[10px] text-indigo-800 leading-relaxed italic font-medium">
                               <strong>Note for Q1 Journals:</strong> Report these correlation coefficients to demonstrate that your findings are
                               robust and not sensitive to the choice of the aggregation algorithm. Higher correlation indicates
                               strong consensus among methods.
@@ -8936,12 +8986,13 @@ export default function MCDMCalculator() {
                           </table>
 
                           <div className="mt-12 mb-8 pt-8 border-t border-indigo-100 flex flex-col items-center">
-                            <div className="text-center text-[10px] text-indigo-400 mb-6 uppercase font-bold tracking-[0.2em]">Visual Kendall Tau Analysis</div>
+                            <div className="text-center text-[8px] sm:text-[10px] text-indigo-400 mb-4 sm:mb-6 uppercase font-bold tracking-[0.2em]">Visual Kendall Tau Analysis</div>
                             <CorrelationHeatmap
                               data={kendallTau}
                               assetKey="ranking_kendall_heatmap"
                               defaultLabel={getComparisonFigureLabel()}
                               title="Kendall's Tau Correlation"
+                              isMobile={isMobile}
                               onLabelChange={handleAssetLabelChange}
                               included={selectedAiAssets.has("ranking_kendall_heatmap")}
                               onIncludeChange={handleIncludeChange}
@@ -8950,7 +9001,7 @@ export default function MCDMCalculator() {
                           </div>
 
                           <div className="mt-4 p-3 bg-indigo-50/50 rounded-lg border border-indigo-100">
-                            <p className="text-[10px] text-indigo-800 leading-relaxed italic font-medium">
+                            <p className="text-[8px] sm:text-[10px] text-indigo-800 leading-relaxed italic font-medium">
                               <strong>Note for Kendall's Tau:</strong> This measures the ordinal association between rankings.
                               A value of 1.0 indicates perfect agreement, while -1.0 indicates perfect disagreement.
                             </p>
@@ -8980,7 +9031,7 @@ export default function MCDMCalculator() {
                           </CardDescription>
                         </CardHeader>
                         <CardContent className="p-6">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                          <div className="flex flex-nowrap sm:grid sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4 overflow-x-auto pb-3 sm:pb-0 scrollbar-hide">
                             {comparisonResults.map(res => {
                               let totalVar = 0;
                               res.ranking.forEach(alt => {
@@ -8996,12 +9047,12 @@ export default function MCDMCalculator() {
                               const robustness = Math.max(0, 100 - (totalVar / (n * n / 2) || 0) * 100);
 
                               return (
-                                <div key={res.label} className="p-3 border rounded-lg bg-gray-50/50 flex flex-col items-center justify-center space-y-1">
-                                  <span className="text-[10px] font-bold text-gray-500 uppercase">{res.label}</span>
-                                  <span className={`text-lg font-bold ${robustness > 85 ? 'text-green-600' : robustness > 60 ? 'text-blue-600' : 'text-orange-600'}`}>
+                                <div key={res.label} className="min-w-[80px] sm:min-w-0 p-2 sm:p-3 border rounded-lg bg-gray-50/50 flex flex-col items-center justify-center space-y-0.5 sm:space-y-1">
+                                  <span className="text-[6.5px] sm:text-[10px] font-bold text-gray-500 uppercase">{res.label}</span>
+                                  <span className={`text-[12px] sm:text-lg font-bold ${robustness > 85 ? 'text-green-600' : robustness > 60 ? 'text-blue-600' : 'text-orange-600'}`}>
                                     {robustness.toFixed(1)}%
                                   </span>
-                                  <span className="text-[9px] text-gray-400">Robustness Index</span>
+                                  <span className="text-[6px] sm:text-[9px] text-gray-400 font-medium">Robustness Index</span>
                                 </div>
                               )
                             })}
@@ -9410,8 +9461,8 @@ export default function MCDMCalculator() {
                         <div className="border border-teal-200 bg-teal-50 rounded-lg p-3 md:col-span-3">
                           <div className="flex items-center justify-between">
                             <div>
-                              <label className="text-xs font-semibold text-teal-900">WASPAS lambda:</label>
-                              <p className="text-[10px] text-teal-700">Weight of WSM (λ) vs WPM (1-λ)</p>
+                              <label className="text-[9px] sm:text-xs font-semibold text-teal-900">WASPAS lambda:</label>
+                              <p className="text-[8px] sm:text-[10px] text-teal-700">Weight of WSM (λ) vs WPM (1-λ)</p>
                             </div>
                             <Input
                               type="number"
@@ -9433,8 +9484,8 @@ export default function MCDMCalculator() {
                         <div className="border border-teal-200 bg-teal-50 rounded-lg p-3 md:col-span-3">
                           <div className="flex items-center justify-between">
                             <div>
-                              <label className="text-xs font-semibold text-teal-900">CODAS tau-value:</label>
-                              <p className="text-[10px] text-teal-700">Threshold parameter (typically 0.01-0.05)</p>
+                              <label className="text-[9px] sm:text-xs font-semibold text-teal-900">CODAS tau-value:</label>
+                              <p className="text-[8px] sm:text-[10px] text-teal-700">Threshold parameter (typically 0.01-0.05)</p>
                             </div>
                             <Input
                               type="number"
@@ -11881,7 +11932,7 @@ export default function MCDMCalculator() {
                   {/* Middle: Weight Method Selector Moved Here */}
                   <div className="flex flex-row md:flex-row items-center md:items-center gap-2 md:gap-4 flex-1 md:justify-center">
                     <div className="flex flex-col gap-1 flex-1 md:min-w-[160px] md:flex-none md:w-auto">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase px-1 tracking-wider">Weight Method</span>
+                      <span className="text-[8px] sm:text-[10px] font-bold text-gray-500 uppercase px-1 tracking-wider">Weight Method</span>
                       <Select value={weightMethod} onValueChange={(val: WeightMethod) => {
                         if (val === "piprecia") {
                           setIsPipreciaDialogOpen(true)
@@ -15887,7 +15938,7 @@ export default function MCDMCalculator() {
                   {/* Middle: Selectors */}
                   <div className="flex flex-row md:flex-row items-end md:items-center gap-2 md:gap-4 flex-1 md:justify-center results-selectors">
                     <div className="flex flex-col gap-1 flex-1 md:min-w-[160px] md:flex-none md:w-auto">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase px-1 tracking-wider">Weight Method</span>
+                      <span className="text-[8px] sm:text-[10px] font-bold text-gray-500 uppercase px-1 tracking-wider">Weight Method</span>
                       <Select value={weightMethod} onValueChange={(val: WeightMethod) => handleWeightMethodChange(val)}>
                         <SelectTrigger className="h-9 text-xs border-gray-200 text-black bg-white shadow-sm hover:border-gray-300 transition-colors w-full">
                           <SelectValue placeholder="Select Weight Method" />
@@ -15914,7 +15965,7 @@ export default function MCDMCalculator() {
                     </div>
 
                     <div className="flex flex-col gap-1 flex-1 md:min-w-[160px] md:flex-none md:w-auto">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase px-1 tracking-wider">Ranking Method</span>
+                      <span className="text-[8px] sm:text-[10px] font-bold text-gray-500 uppercase px-1 tracking-wider">Ranking Method</span>
                       <Select value={method} onValueChange={(val: MCDMMethod) => handleRankingMethodChange(val)}>
                         <SelectTrigger className="h-9 text-xs border-gray-200 text-black bg-white shadow-sm hover:border-gray-300 transition-colors w-full">
                           <SelectValue placeholder="Select Ranking Method" />
@@ -16446,8 +16497,9 @@ export default function MCDMCalculator() {
                                   <PolarRadiusAxis angle={30} domain={[0, (max: number) => max * 1.1]} tick={{ fontSize: chartSettings.fontSize - 2, fontWeight: 700, fill: themeColors.text }} />
                                   <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                   <Legend
-                                    {...legCfg}
-                                    layout={legLayout}
+                                            {...legCfg}
+                                            formatter={(value) => <span style={{ fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`, fontWeight: 700, color: themeColors.text }}>{value}</span>}
+                                            layout={legLayout}
                                     wrapperStyle={{
                                       fontSize: `${chartSettings.fontSize - 1}px`,
                                       color: themeColors.text,
@@ -16506,8 +16558,9 @@ export default function MCDMCalculator() {
                                   </RadialBar>
                                   <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} />
                                   <Legend
-                                    {...legCfg}
-                                    layout={legLayout}
+                                            {...legCfg}
+                                            formatter={(value) => <span style={{ fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`, fontWeight: 700, color: themeColors.text }}>{value}</span>}
+                                            layout={legLayout}
                                     iconSize={chartSettings.markerSize + 4}
                                     wrapperStyle={{
                                       fontSize: `${chartSettings.fontSize - 1}px`,
@@ -16581,8 +16634,9 @@ export default function MCDMCalculator() {
                                     } : undefined} />
                                   <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                   <Legend
-                                    {...legCfg}
-                                    layout={legLayout}
+                                            {...legCfg}
+                                            formatter={(value) => <span style={{ fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`, fontWeight: 700, color: themeColors.text }}>{value}</span>}
+                                            layout={legLayout}
                                     wrapperStyle={{
                                       fontSize: `${chartSettings.fontSize - 1}px`,
                                       color: themeColors.text,
@@ -16690,8 +16744,9 @@ export default function MCDMCalculator() {
 
                                   <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: "rgba(255,255,255,0.9)" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                   <Legend
-                                    {...legCfg}
-                                    layout={legLayout}
+                                            {...legCfg}
+                                            formatter={(value) => <span style={{ fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`, fontWeight: 700, color: themeColors.text }}>{value}</span>}
+                                            layout={legLayout}
                                     wrapperStyle={{
                                       fontSize: `${chartSettings.fontSize - 1}px`,
                                       color: themeColors.text,
@@ -16769,8 +16824,9 @@ export default function MCDMCalculator() {
 
                                   <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: "rgba(255,255,255,0.9)" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                   <Legend
-                                    {...legCfg}
-                                    layout={legLayout}
+                                            {...legCfg}
+                                            formatter={(value) => <span style={{ fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`, fontWeight: 700, color: themeColors.text }}>{value}</span>}
+                                            layout={legLayout}
                                     wrapperStyle={{
                                       fontSize: `${chartSettings.fontSize - 1}px`,
                                       color: themeColors.text,
@@ -16876,8 +16932,9 @@ export default function MCDMCalculator() {
                                   />
 
                                   <Legend
-                                    {...legCfg}
-                                    layout={legLayout}
+                                            {...legCfg}
+                                            formatter={(value) => <span style={{ fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`, fontWeight: 700, color: themeColors.text }}>{value}</span>}
+                                            layout={legLayout}
                                     wrapperStyle={{
                                       fontSize: `${chartSettings.fontSize - 1}px`,
                                       color: themeColors.text,
@@ -16995,8 +17052,9 @@ export default function MCDMCalculator() {
                                   />
 
                                   <Legend
-                                    {...legCfg}
-                                    layout={legLayout}
+                                            {...legCfg}
+                                            formatter={(value) => <span style={{ fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`, fontWeight: 700, color: themeColors.text }}>{value}</span>}
+                                            layout={legLayout}
                                     wrapperStyle={{
                                       fontSize: `${chartSettings.fontSize - 1}px`,
                                       color: themeColors.text,
@@ -17112,8 +17170,9 @@ export default function MCDMCalculator() {
                                   />
 
                                   <Legend
-                                    {...legCfg}
-                                    layout={legLayout}
+                                            {...legCfg}
+                                            formatter={(value) => <span style={{ fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`, fontWeight: 700, color: themeColors.text }}>{value}</span>}
+                                            layout={legLayout}
                                     wrapperStyle={{
                                       fontSize: `${chartSettings.fontSize - 1}px`,
                                       color: themeColors.text,
@@ -17236,8 +17295,9 @@ export default function MCDMCalculator() {
                                   />
 
                                   <Legend
-                                    {...legCfg}
-                                    layout={legLayout}
+                                            {...legCfg}
+                                            formatter={(value) => <span style={{ fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`, fontWeight: 700, color: themeColors.text }}>{value}</span>}
+                                            layout={legLayout}
                                     wrapperStyle={{
                                       fontSize: `${chartSettings.fontSize - 1}px`,
                                       color: themeColors.text,
@@ -17345,8 +17405,9 @@ export default function MCDMCalculator() {
                                   />
                                 )}
                                 <Legend
-                                  {...legCfg}
-                                  layout={legLayout}
+                                            {...legCfg}
+                                            formatter={(value) => <span style={{ fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize}px`, fontWeight: 700, color: themeColors.text }}>{value}</span>}
+                                            layout={legLayout}
                                   wrapperStyle={{
                                     fontSize: `${chartSettings.fontSize - 1}px`,
                                     color: themeColors.text,

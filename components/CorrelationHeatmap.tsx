@@ -3,12 +3,14 @@
 import React, { useMemo, useState, useRef, useCallback } from "react";
 import { ResearchAssetHeader } from "./ResearchAssetHeader";
 import { Card, CardContent } from "@/components/ui/card";
+import { Download } from "lucide-react";
 
 interface CorrelationHeatmapProps {
   data: Record<string, Record<string, number>>;
   assetKey: string;
   defaultLabel: string;
   title: string;
+  isMobile?: boolean;
   onLabelChange?: (key: string, label: string) => void;
   onAiAnalysis?: (key: string) => void;
   included?: boolean;
@@ -107,10 +109,10 @@ function DimSlider({
   onChange: (v: number) => void;
 }) {
   return (
-    <div className="flex flex-col gap-1 min-w-[120px]">
+    <div className="flex flex-col gap-1 min-w-0">
       <div className="flex justify-between items-center">
-        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">{label}</span>
-        <span className="text-[10px] font-bold text-gray-700 bg-gray-100 rounded px-1.5 py-0.5">
+        <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500">{label}</span>
+        <span className="text-[8px] sm:text-[10px] font-bold text-gray-700 bg-gray-100 rounded px-1 sm:px-1.5 py-0.5">
           {value}{unit}
         </span>
       </div>
@@ -118,7 +120,7 @@ function DimSlider({
         type="range"
         min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-gray-800"
+        className="w-full h-1.5 bg-gray-200 rounded-full appearance-none cursor-pointer accent-blue-600"
       />
     </div>
   );
@@ -131,6 +133,7 @@ export default function CorrelationHeatmap({
   assetKey,
   defaultLabel,
   title,
+  isMobile = false,
   onLabelChange,
   onAiAnalysis,
   included,
@@ -204,8 +207,8 @@ export default function CorrelationHeatmap({
   }, [colorScheme, cellWidth, cellHeight, title]);
 
   return (
-    <Card className="border-gray-100 bg-white shadow-none w-full mb-12 overflow-hidden">
-      <div className="px-6 pt-4">
+    <Card className="border-gray-100 bg-white shadow-none w-full mb-6 sm:mb-12 overflow-hidden">
+      <div className="px-3 sm:px-6 pt-2 sm:pt-4">
         <ResearchAssetHeader
           assetKey={assetKey}
           defaultLabel={defaultLabel}
@@ -217,14 +220,14 @@ export default function CorrelationHeatmap({
         />
       </div>
 
-      <CardContent className="p-12 flex flex-col items-center justify-center">
+      <CardContent className="p-4 sm:p-12 flex flex-col items-center justify-center">
 
         {/* ── Toolbar: Palette + Settings + Download ── */}
-        <div className="w-full flex flex-wrap items-start justify-between gap-4 mb-8">
+        <div className="w-full flex flex-wrap items-start justify-between gap-2 sm:gap-4 mb-4 sm:mb-8">
 
           {/* Color Palette swatches */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-[11px] font-black uppercase tracking-widest text-gray-500">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <span className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest text-gray-500">
               Color Palette:
             </span>
             {(Object.keys(SCHEMES) as SchemeKey[]).map((key) => {
@@ -235,16 +238,16 @@ export default function CorrelationHeatmap({
                   key={key}
                   onClick={() => setColorScheme(key)}
                   title={s.label}
-                  className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 focus:outline-none"
+                  className="flex flex-col items-center gap-0.5 sm:gap-1 group transition-transform hover:scale-110 focus:outline-none"
                 >
                   <div
-                    className={`w-8 h-8 rounded-md border-2 shadow-sm transition-all ${isActive
-                      ? "border-gray-900 ring-2 ring-offset-1 ring-gray-700 scale-110"
+                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-md border-2 shadow-sm transition-all ${isActive
+                      ? "border-gray-900 ring-1 sm:ring-2 ring-offset-1 ring-gray-700 scale-110"
                       : "border-gray-300 hover:border-gray-600"
                       }`}
                     style={{ background: `linear-gradient(135deg, ${s.swatch[0]} 0%, ${s.swatch[1]} 100%)` }}
                   />
-                  <span className={`text-[9px] font-bold uppercase tracking-wide transition-colors ${isActive ? "text-gray-900" : "text-gray-400 group-hover:text-gray-600"
+                  <span className={`text-[7px] sm:text-[9px] font-bold uppercase tracking-wide transition-colors ${isActive ? "text-gray-900" : "text-gray-400 group-hover:text-gray-600"
                     }`}>
                     {s.label}
                   </span>
@@ -254,17 +257,14 @@ export default function CorrelationHeatmap({
           </div>
 
           {/* Right: Settings toggle + Download */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Settings toggle button */}
             <button
               onClick={() => setShowSettings((v) => !v)}
               title="Dimension Settings"
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-black uppercase tracking-widest transition-all ${showSettings
-                ? "bg-gray-900 text-white border-gray-900"
-                : "bg-white text-gray-600 border-gray-300 hover:border-gray-600 hover:text-gray-900"
-                }`}
+              className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg border text-[9px] sm:text-[11px] font-black uppercase tracking-widest transition-all ${showSettings ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-700 border-gray-300 shadow-sm"}`}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
                   d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
               </svg>
@@ -276,11 +276,11 @@ export default function CorrelationHeatmap({
               onClick={handleDownload}
               disabled={downloading}
               title="Download high-quality PNG"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border bg-gray-900 text-white border-gray-900 text-[11px] font-black uppercase tracking-widest hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg border bg-pink-500 text-white border-pink-500 text-[9px] sm:text-[11px] font-black uppercase tracking-widest hover:bg-pink-600 shadow-md transition-all disabled:opacity-50"
             >
               {downloading ? (
                 <>
-                  <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-3.5 sm:h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                   </svg>
@@ -288,11 +288,8 @@ export default function CorrelationHeatmap({
                 </>
               ) : (
                 <>
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
-                      d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
-                  </svg>
-                  Download PNG
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"></path></svg>
+                  <span className="hidden sm:inline ml-1">PNG</span>
                 </>
               )}
             </button>
@@ -301,7 +298,7 @@ export default function CorrelationHeatmap({
 
         {/* ── Dimension Settings Panel ── */}
         {showSettings && (
-          <div className="w-full mb-8 p-5 rounded-xl border border-gray-200 bg-gray-50 grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="w-full mb-4 sm:mb-8 p-3 sm:p-5 rounded-xl border border-gray-200 bg-gray-50 grid grid-cols-3 gap-2 sm:gap-6">
             <DimSlider
               label="Box Width"
               value={cellWidth} min={40} max={150} step={5} unit="px"
@@ -331,123 +328,124 @@ export default function CorrelationHeatmap({
         )}
 
         {/* ── Heatmap (captured for download) ── */}
-        <div
-          ref={heatmapRef}
-          className="flex flex-col items-start bg-white p-10 select-none"
-        >
-          {/* TOP BOXED LABELS */}
-          <div className="flex">
-            <div
-              style={{ width: leftWidth, height: headerHeight }}
-              className="border-t border-l border-b border-black bg-gray-100"
-            />
-            <div className="flex" style={{ width: totalWidth }}>
-              {labels.map((label, idx) => (
-                <div
-                  key={`top-box-${label}`}
-                  style={{ width: cellWidth, height: headerHeight }}
-                  className={`flex items-center justify-center border-t border-b border-black bg-gray-50 border-l ${idx === labels.length - 1 ? "border-r" : ""
-                    }`}
-                >
-                  <span className="text-gray-900 text-[11px] font-black uppercase truncate px-1">
-                    {label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-start">
-            {/* LEFT BOXED LABELS */}
-            <div className="flex flex-col">
-              {labels.map((label) => (
-                <div
-                  key={`left-box-${label}`}
-                  style={{ height: cellHeight, width: leftWidth }}
-                  className="flex items-center justify-center border-l border-b border-r border-black bg-gray-50"
-                >
-                  <span className="text-gray-900 text-[11px] font-black uppercase truncate px-1">
-                    {label}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Matrix Grid */}
-            <div
-              className="grid border-r border-black shadow-md"
-              style={{
-                gridTemplateColumns: `repeat(${labels.length}, ${cellWidth}px)`,
-                width: totalWidth,
-                height: totalHeight,
-              }}
-            >
-              {labels.map((rowLabel) =>
-                labels.map((colLabel) => {
-                  const value = data[rowLabel]?.[colLabel] ?? 0;
-                  const norm = normalize(value);
-                  const textColor = scheme.getTextColor(norm);
-                  return (
-                    <div
-                      key={`${rowLabel}-${colLabel}`}
-                      style={{
-                        width: cellWidth,
-                        height: cellHeight,
-                        backgroundColor: scheme.getColor(norm),
-                      }}
-                      className="flex items-center justify-center border-b border-r border-black/20"
-                    >
-                      <span
-                        className={`font-bold ${textColor}`}
-                        style={{ fontSize: `${fontSize}px` }}
-                      >
-                        {value.toFixed(2)}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Rotated "Correlation" label */}
-            <div
-              className="flex items-center justify-center mx-4"
-              style={{ height: totalHeight, minWidth: "24px" }}
-            >
-              <span
-                className="text-[11px] font-black uppercase text-gray-700 tracking-widest whitespace-nowrap"
-                style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-              >
-                Correlation
-              </span>
-            </div>
-
-            {/* Color Bar LEGEND */}
-            <div className="flex flex-col items-center h-full self-stretch mr-16">
+        <div className="w-full overflow-x-auto pb-4">
+          <div
+            ref={heatmapRef}
+            className="flex flex-col items-start bg-white p-4 sm:p-10 select-none min-w-max mx-auto"
+          >
+            {/* TOP BOXED LABELS */}
+            <div className="flex">
               <div
-                className="w-5 border border-black relative rounded-sm shadow-sm"
-                style={{ height: totalHeight, background: scheme.gradient }}
+                style={{ width: leftWidth, height: headerHeight }}
+                className="border-t border-l border-b border-black bg-gray-100"
+              />
+              <div className="flex" style={{ width: totalWidth }}>
+                {labels.map((label, idx) => (
+                  <div
+                    key={`top-box-${label}`}
+                    style={{ width: cellWidth, height: headerHeight }}
+                    className={`flex items-center justify-center border-t border-b border-black bg-gray-50 border-l ${idx === labels.length - 1 ? "border-r" : ""
+                      }`}
+                  >
+                    <span className="text-gray-900 font-black uppercase truncate px-1" style={{ fontSize: `${fontSize}px` }}>
+                      {label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-start">
+              {/* LEFT BOXED LABELS */}
+              <div className="flex flex-col">
+                {labels.map((label) => (
+                  <div
+                    key={`left-box-${label}`}
+                    style={{ height: cellHeight, width: leftWidth }}
+                    className="flex items-center justify-center border-l border-b border-r border-black bg-gray-50"
+                  >
+                    <span className="text-gray-900 font-black uppercase truncate px-1" style={{ fontSize: `${fontSize}px` }}>
+                      {label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Matrix Grid */}
+              <div
+                className="grid border-r border-black shadow-md"
+                style={{
+                  gridTemplateColumns: `repeat(${labels.length}, ${cellWidth}px)`,
+                  width: totalWidth,
+                  height: totalHeight,
+                }}
               >
-                {legendTicks.map((val, i) => {
-                  const top = (i / (legendTicks.length - 1)) * 100;
-                  return (
-                    <div
-                      key={`legend-tick-${i}`}
-                      className="absolute -right-3 w-4 h-[1px] bg-black"
-                      style={{ top: `${top}%` }}
-                    >
-                      <span className="absolute left-6 -top-2 text-[11px] font-bold text-gray-700 whitespace-nowrap">
-                        {val.toFixed(2)}
-                      </span>
-                    </div>
-                  );
-                })}
+                {labels.map((rowLabel) =>
+                  labels.map((colLabel) => {
+                    const value = data[rowLabel]?.[colLabel] ?? 0;
+                    const norm = normalize(value);
+                    const textColor = scheme.getTextColor(norm);
+                    return (
+                      <div
+                        key={`${rowLabel}-${colLabel}`}
+                        style={{
+                          width: cellWidth,
+                          height: cellHeight,
+                          backgroundColor: scheme.getColor(norm),
+                        }}
+                        className="flex items-center justify-center border-b border-r border-black/20"
+                      >
+                        <span
+                          className={`font-bold ${textColor}`}
+                          style={{ fontSize: `${fontSize}px` }}
+                        >
+                          {value.toFixed(2)}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Rotated "Correlation" label */}
+              <div
+                className="flex items-center justify-center mx-2 sm:mx-4"
+                style={{ height: totalHeight, minWidth: "24px" }}
+              >
+                <span
+                  className="font-black uppercase text-gray-700 tracking-widest whitespace-nowrap" style={{ fontSize: `${fontSize}px`, writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+                >
+                  Correlation
+                </span>
+              </div>
+
+              {/* Color Bar LEGEND */}
+              <div className="flex flex-col items-center h-full self-stretch mr-8 sm:mr-16">
+                <div
+                  className="w-5 border border-black relative rounded-sm shadow-sm"
+                  style={{ height: totalHeight, background: scheme.gradient }}
+                >
+                  {legendTicks.map((val, i) => {
+                    const top = (i / (legendTicks.length - 1)) * 100;
+                    return (
+                      <div
+                        key={`legend-tick-${i}`}
+                        className="absolute -right-3 w-4 h-[1px] bg-black"
+                        style={{ top: `${top}%` }}
+                      >
+                        <span className="absolute left-6 -top-2 font-bold text-gray-700 whitespace-nowrap" style={{ fontSize: `${fontSize}px` }}>
+                          {val.toFixed(2)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-16 text-center text-gray-300 text-[10px] font-bold tracking-[0.3em] uppercase">
+        <div className="mt-8 sm:mt-16 text-center text-gray-300 text-[8px] sm:text-[10px] font-bold tracking-[0.3em] uppercase">
           Pairwise {title} Matrix
         </div>
       </CardContent>
