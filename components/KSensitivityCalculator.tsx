@@ -1392,12 +1392,15 @@ export default function KSensitivityCalculator({
 
     const labelStyle = (value: string, isVertical = false) => ({
       value,
-      fontSize: kSensChartSettings.fontSize + 1,
-      fill: theme.text,
-      fontWeight: 'bold',
       position: (isVertical ? 'insideLeft' : 'insideBottom') as 'insideLeft' | 'insideBottom',
-      offset: isVertical ? kSensChartSettings.yAxisOffset || -5 : kSensChartSettings.xAxisOffset || -10,
-      angle: isVertical ? -90 : 0
+      offset: isVertical ? (kSensChartSettings.yAxisOffset ?? 15) : (kSensChartSettings.xAxisOffset ?? -10),
+      angle: isVertical ? -90 : 0,
+      style: {
+        fontSize: `${isMobile ? Math.max(7, kSensChartSettings.fontSize - 3) : kSensChartSettings.fontSize}px`,
+        fill: theme.text,
+        fontWeight: 'bold',
+        textAnchor: 'middle',
+      }
     });
 
     const gridProps = kSensChartSettings.showGridLines ? {
@@ -1483,19 +1486,19 @@ export default function KSensitivityCalculator({
       }
     };
 
-    const mL = isMobile ? (kSensChartSettings.marginLeft < 40 ? kSensChartSettings.marginLeft : 5) : (Number(kSensChartSettings.marginLeft) || 80);
-    const mR = isMobile ? (kSensChartSettings.marginRight < 40 ? kSensChartSettings.marginRight : 5) : (Number(kSensChartSettings.marginRight) || 100);
-    const mT = Number(kSensChartSettings.marginTop || 40);
-    const mB = Number(kSensChartSettings.marginBottom || 80);
+    const mL = isMobile ? (kSensChartSettings.marginLeft || 0) : (kSensChartSettings.marginLeft || 40);
+    const mR = isMobile ? (kSensChartSettings.marginRight || 4) : (kSensChartSettings.marginRight || 40);
+    const mT = kSensChartSettings.marginTop;
+    const mB = kSensChartSettings.marginBottom;
 
-    const yAxisW = isMobile ? Math.max(25, kSensChartSettings.fontSize * 2.2) : (kSensChartSettings.yAxisWidth || 60);
-    const yAxisRightW = isMobile ? (kSensChartSettings.showMirrorTicks ? Math.max(25, kSensChartSettings.fontSize * 2.2) : 1) : (kSensChartSettings.yAxisWidthRight || 60);
+    const yAxisW = isMobile ? Math.max(20, kSensChartSettings.fontSize * 2) : (kSensChartSettings.yAxisWidth || 60);
+    const yAxisRightW = isMobile ? 1 : (kSensChartSettings.yAxisWidthRight || 60);
 
     const commonChartProps = {
       margin: { top: mT, right: mR, left: mL, bottom: mB }
     };
 
-    const legendFontSize = isMobile ? Math.max(7, kSensChartSettings.fontSize - 3) : kSensChartSettings.fontSize - 1;
+    const legendFontSize = isMobile ? Math.max(7, kSensChartSettings.fontSize - 3) : kSensChartSettings.fontSize;
 
     const legendFormatter = (value: string) => (
       <span style={{ fontSize: legendFontSize + 'px', fontWeight: 700, color: theme.text }}>
@@ -1533,7 +1536,7 @@ export default function KSensitivityCalculator({
           maxWidth: '100%',
         }}>
           {rows.map((rowItems, rowIdx) => (
-            <div key={rowIdx} style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <div key={rowIdx} style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'nowrap' }}>
               {rowItems.map((entry: any, idx: number) => {
                 const isLine = entry.type === 'line' || entry.type === 'plainline';
                 const isCircle = entry.type === 'circle';
@@ -1573,23 +1576,20 @@ export default function KSensitivityCalculator({
       wrapperStyle: {
         fontSize: `${legendFontSize}px`,
         color: theme.text,
-        backgroundColor: legendBgColor,
-        border: `1px solid #000`,
-        borderRadius: '6px',
-        padding: "8px 12px",
-        top: ((kSensChartSettings.legendPosition === 'top' || kSensChartSettings.legendPosition === 'middle') ? 70 : undefined),
-        bottom: kSensChartSettings.legendPosition === 'bottom' ? 5 : undefined,
-        left: (kSensChartSettings.legendPosition === 'left' ? 30 : kSensChartSettings.legendPosition === 'right' ? undefined : "50%"),
-        right: kSensChartSettings.legendPosition === 'right' ? 30 : undefined,
+        fontWeight: 700,
+        backgroundColor: kSensChartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+        border: isMobile ? "none" : `${kSensChartSettings.borderWidth}px solid ${theme.border}`,
+        padding: isMobile ? "2px 4px" : "4px 8px",
+        top: 70,
+        left: kSensChartSettings.legendPosition === 'left' ? 10 : kSensChartSettings.legendPosition === 'right' ? undefined : "50%",
+        right: kSensChartSettings.legendPosition === 'right' ? 10 : undefined,
         transform: `${(kSensChartSettings.legendPosition === 'left' || kSensChartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${kSensChartSettings.legendOffsetX || 0}px, ${kSensChartSettings.legendOffsetY || 0}px)`,
-        width: 'fit-content',
-        maxWidth: isMobile ? '90%' : '100%',
+        width: isMobile ? "max-content" : ((kSensChartSettings.legendPosition === 'left' || kSensChartSettings.legendPosition === 'right') ? "150px" : "max-content"),
+        height: "auto",
         zIndex: 50,
-        boxShadow: 'none',
-        display: "flex",
-        flexWrap: isMobile ? "wrap" : "nowrap",
-        justifyContent: "center",
-        whiteSpace: isMobile ? "normal" : "nowrap"
+        boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+        whiteSpace: isMobile ? 'normal' : 'nowrap',
+        maxWidth: isMobile ? 'calc(100% - 10px)' : '95%',
       }
     };
 
@@ -1700,7 +1700,7 @@ export default function KSensitivityCalculator({
 
         return (
           <div ref={chartRef} className={`max-w-7xl mx-auto relative transition-all duration-500 rounded-xl overflow-hidden ${kSensChartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text, border: `1.5px solid ${theme.border}` }}>
-            <ResponsiveContainer width="100%" height={chartAspectRatio ? undefined : 750} aspect={chartAspectRatio}>
+            <ResponsiveContainer width="100%" height={chartAspectRatio ? undefined : (isMobile ? 480 : 750)} aspect={chartAspectRatio}>
               <RadarChart data={radarData} outerRadius="75%" margin={{ ...commonChartProps.margin, top: 60 }}>
                 {kSensChartSettings.showGridLines && (
                   <PolarGrid
@@ -1874,7 +1874,7 @@ export default function KSensitivityCalculator({
 
       return (
         <div ref={chartRef} className={`max-w-7xl mx-auto relative transition-all duration-500 ${kSensChartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }}>
-          <ResponsiveContainer width="100%" height={chartAspectRatio ? undefined : 600} aspect={chartAspectRatio}>
+          <ResponsiveContainer width="100%" height={chartAspectRatio ? undefined : (isMobile ? 480 : 600)} aspect={chartAspectRatio}>
             <LineChart data={parallelData} margin={commonChartProps.margin}>
 
               <XAxis
@@ -1907,7 +1907,7 @@ export default function KSensitivityCalculator({
                     strokeWidth={kSensChartSettings.borderWidth || 1.5}
                     dot={false}
                     activeDot={{ r: (kSensChartSettings.markerSize || 4) + 1 }}
-                    baseColor={colorsArr[idx % colorsArr.length]}
+                    {...{ baseColor: colorsArr[idx % colorsArr.length] } as any}
                   >
                     {dataLabelComponent}
                   </Line>
@@ -1961,7 +1961,7 @@ export default function KSensitivityCalculator({
     return (
       <div ref={chartRef} className={`max-w-7xl mx-auto w-full overflow-hidden transition-all duration-500 ${kSensChartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }}>
         {['line', 'area', 'stackedArea'].includes(kSensChartType) ? (
-          <ResponsiveContainer width="100%" height={chartAspectRatio ? undefined : 600} aspect={chartAspectRatio}>
+          <ResponsiveContainer width="100%" height={chartAspectRatio ? undefined : (isMobile ? 480 : 600)} aspect={chartAspectRatio}>
             {['area', 'stackedArea'].includes(kSensChartType) ? (
               <AreaChart data={data} margin={commonChartProps.margin}>
                 {renderDefs()}
@@ -1996,7 +1996,7 @@ export default function KSensitivityCalculator({
                       fillOpacity={kSensChartSettings.fillPattern === 'none' ? (kSensChartType === 'stackedArea' ? (kSensChartSettings.barOpacity || 0.8) : (kSensChartSettings.barOpacity * 0.75 || 0.75)) : 1}
                       activeDot={kSensChartSettings.markerSize > 0 ? { r: kSensChartSettings.markerSize + 1 } : false}
                       dot={kSensChartSettings.markerSize > 0 ? makeCustomDot(color) : false}
-                      baseColor={color}
+                      {...{ baseColor: color } as any}
                     >
                       {dataLabelComponent}
                       {kSensChartSettings.directLabeling && (
@@ -2084,7 +2084,7 @@ export default function KSensitivityCalculator({
                       dot={kSensChartSettings.markerSize > 0 ? makeCustomDot(color) : false}
                       activeDot={kSensChartSettings.markerSize > 0 ? { r: kSensChartSettings.markerSize + 2 } : { r: 4 }}
                       legendType={dashArray !== '0' ? 'plainline' : 'line'}
-                      baseColor={color}
+                      {...{ baseColor: color } as any}
                     >
                       {dataLabelComponent}
                       {kSensChartSettings.directLabeling && (
@@ -2110,7 +2110,7 @@ export default function KSensitivityCalculator({
             )}
           </ResponsiveContainer>
         ) : kSensChartType === 'scatter' ? (
-          <ResponsiveContainer width="100%" height={chartAspectRatio ? undefined : 600} aspect={chartAspectRatio}>
+          <ResponsiveContainer width="100%" height={chartAspectRatio ? undefined : (isMobile ? 480 : 600)} aspect={chartAspectRatio}>
             <ScatterChart
               data={data}
               margin={commonChartProps.margin}
@@ -2154,7 +2154,7 @@ export default function KSensitivityCalculator({
                 const scatterData = data.map((d: any, i: number) => ({ x: i, y: isWeightView ? d[item.name] : d[item.name] }));
                 const color = colorsArr[idx % colorsArr.length];
                 return (
-                  <Scatter key={item.name} name={item.name} data={scatterData} fill={color} shape={kSensChartSettings.markerType || 'circle'} baseColor={color}>
+                  <Scatter key={item.name} name={item.name} data={scatterData} fill={color} shape={kSensChartSettings.markerType || 'circle'} {...{ baseColor: color } as any}>
                     {dataLabelComponent}
                   </Scatter>
                 );
@@ -2164,7 +2164,7 @@ export default function KSensitivityCalculator({
             </ScatterChart>
           </ResponsiveContainer>
         ) : kSensChartType === 'dual' ? (
-          <ResponsiveContainer width="100%" height={chartAspectRatio ? undefined : 600} aspect={chartAspectRatio}>
+          <ResponsiveContainer width="100%" height={chartAspectRatio ? undefined : (isMobile ? 480 : 600)} aspect={chartAspectRatio}>
             <ComposedChart
               data={data}
               margin={commonChartProps.margin}
@@ -2226,7 +2226,7 @@ export default function KSensitivityCalculator({
                     stroke={kSensChartSettings.showSeparator ? (kSensChartSettings.separatorColor || '#000') : 'none'}
                     strokeWidth={kSensChartSettings.showSeparator ? (kSensChartSettings.borderWidth || 0.5) : 0}
                     name={alt.name}
-                    baseColor={color}
+                    {...{ baseColor: color } as any}
                   >
                     {dataLabelComponent}
                   </Bar>
@@ -2247,7 +2247,7 @@ export default function KSensitivityCalculator({
                     name={alt.name}
                     legendType="none"
                     dot={kSensChartSettings.markerSize > 0 ? makeCustomDot(seriesColor) : false}
-                    baseColor={seriesColor}
+                    {...{ baseColor: seriesColor } as any}
                   />
                 );
               })}
@@ -2375,18 +2375,18 @@ export default function KSensitivityCalculator({
             </div>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={chartAspectRatio ? undefined : 600} aspect={chartAspectRatio}>
+          <ResponsiveContainer width="100%" height={chartAspectRatio ? undefined : (isMobile ? 480 : 600)} aspect={chartAspectRatio}>
             {['bar', 'stackedBar', 'column'].includes(kSensChartType) ? (
               <BarChart
                 data={data}
                 margin={commonChartProps.margin}
               >
                 {renderDefs()}
-                <XAxis dataKey="variation" tick={{ fontSize: kSensChartSettings.fontSize, fill: '#000', fontWeight: 'bold' }} axisLine={{ stroke: '#000', strokeWidth: 1.5 }} tickLine={getTickLine('bottom')} interval={0} tickFormatter={isWeightView ? (val: string) => val.replace('%', '') : undefined} label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.xAxisTitle) as any) : undefined} />
+                <XAxis dataKey="variation" tick={{ fontSize: isMobile ? Math.max(7, kSensChartSettings.fontSize - 3) : kSensChartSettings.fontSize, fill: '#000', fontWeight: 700 }} axisLine={{ stroke: '#000', strokeWidth: 1.5 }} tickLine={getTickLine('bottom')} interval={0} tickFormatter={isWeightView ? (val: string) => val.replace('%', '') : undefined} label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.xAxisTitle) as any) : undefined} />
                 <YAxis
                   reversed={!isWeightView && kSensChartType !== 'stackedBar'}
                   width={yAxisW}
-                  tick={{ fontSize: kSensChartSettings.fontSize, fill: '#000', fontWeight: 'bold' }}
+                  tick={{ fontSize: isMobile ? Math.max(7, kSensChartSettings.fontSize - 3) : kSensChartSettings.fontSize, fill: '#000', fontWeight: 700 }}
                   axisLine={{ stroke: '#000', strokeWidth: 1.5 }}
                   tickLine={getTickLine('left')}
                   domain={(isWeightView || kSensChartType === 'stackedBar') ? [0, 'auto'] : [0.5, alternatives.length]}
@@ -2440,8 +2440,9 @@ export default function KSensitivityCalculator({
                 <YAxis
                   orientation="right"
                   yAxisId="right_border"
+                  width={yAxisRightW}
                   axisLine={{ stroke: '#000', strokeWidth: 1.5 }}
-                  tick={kSensChartSettings.showMirrorTicks ? { fontSize: kSensChartSettings.fontSize, fill: '#000', fontWeight: 'bold' } : false}
+                  tick={kSensChartSettings.showMirrorTicks ? { fontSize: isMobile ? Math.max(7, kSensChartSettings.fontSize - 3) : kSensChartSettings.fontSize, fill: '#000', fontWeight: 700 } : false}
                   tickLine={kSensChartSettings.showMirrorTicks ? getTickLine('right') : false}
                   reversed={!isWeightView}
                   domain={isWeightView ? [0, 'auto'] : [1, alternatives.length]}

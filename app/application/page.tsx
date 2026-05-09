@@ -9934,8 +9934,8 @@ export default function MCDMCalculator() {
                                         {renderDefs(activeColors)}
                                         <Customized component={RightFrameBorder} />
                                         {chartSettings.showGridLines && <PolarGrid stroke={chartSettings.gridColor} strokeWidth={1} opacity={chartSettings.gridOpacity} />}
-                                        <PolarAngleAxis dataKey="name" tick={{ fontSize: chartSettings.fontSize, fill: theme.text, fontWeight: 'bold' }} />
-                                        <PolarRadiusAxis angle={30} domain={[0, 'dataMax']} tick={{ fontSize: chartSettings.fontSize - 2, fill: theme.text }} />
+                                        <PolarAngleAxis dataKey="name" tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }} />
+                                        <PolarRadiusAxis angle={30} domain={[0, 'dataMax']} tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }} />
                                         <Legend
                                           verticalAlign={chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right' ? 'middle' : chartSettings.legendPosition}
                                           align={chartSettings.legendPosition === 'left' ? 'left' : chartSettings.legendPosition === 'right' ? 'right' : 'center'}
@@ -9952,6 +9952,7 @@ export default function MCDMCalculator() {
                                             right: chartSettings.legendPosition === 'right' ? 10 : undefined,
                                             transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: isMobile ? "max-content" : ((chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content"),
+                                            height: "auto",
                                             zIndex: 50,
                                             boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                             whiteSpace: isMobile ? 'normal' : 'nowrap',
@@ -9983,12 +9984,12 @@ export default function MCDMCalculator() {
                                         <Customized component={RightFrameBorder} />
                                         <XAxis
                                           dataKey="name"
-                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 1) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={getTickLine('bottom')}
                                           interval={isMobile ? "preserveStartEnd" : 0}
                                           tickFormatter={(val) => isMobile ? val.replace('Robot-', 'R') : val}
-                                          label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined} />
+                                          label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text, textAnchor: 'middle' } } : undefined} />
                                         <XAxis
                                           orientation="top"
                                           xAxisId="top_border"
@@ -9998,11 +9999,11 @@ export default function MCDMCalculator() {
                                           tickLine={false}
                                         />
                                         <YAxis
-                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text, textAnchor: 'middle' } } : undefined}
                                           width={yAxisW}
                                           domain={[0, (alternatives.length || 8) || 'dataMax']}
                                           ticks={Array.from({ length: ((alternatives.length || 8) || 0) + 1 }, (_, i) => i)}
-                                          tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={getTickLine('left')} />
                                         <YAxis
@@ -10010,7 +10011,7 @@ export default function MCDMCalculator() {
                                           yAxisId="right_border"
                                           width={yAxisRightW}
                                           domain={[1, (alternatives.length || 8)]}
-                                          tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fill: theme.text } : false}
+                                          tick={chartSettings.showMirrorTicks ? { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text } : false}
                                           ticks={chartSettings.showMirrorTicks ? Array.from({ length: (alternatives.length || 8) }, (_, i) => i + 1) : undefined}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={chartSettings.showMirrorTicks ? getTickLine('right') : false}
@@ -10033,6 +10034,7 @@ export default function MCDMCalculator() {
                                             right: chartSettings.legendPosition === 'right' ? 10 : undefined,
                                             transform: `${(chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${chartSettings.legendOffsetX || 0}px, ${chartSettings.legendOffsetY || 0}px)`,
                                             width: isMobile ? "max-content" : ((chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content"),
+                                            height: "auto",
                                             zIndex: 50,
                                             boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
                                             whiteSpace: isMobile ? 'normal' : 'nowrap',
@@ -10065,12 +10067,12 @@ export default function MCDMCalculator() {
                                         <Customized component={RightFrameBorder} />
                                         <XAxis
                                           dataKey="name"
-                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 1) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={getTickLine('bottom')}
                                           interval={isMobile ? "preserveStartEnd" : 0}
                                           tickFormatter={(val) => isMobile ? val.replace('Robot-', 'R') : val}
-                                          label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } }} />
+                                          label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text, textAnchor: 'middle' } }} />
                                         <XAxis
                                           orientation="top"
                                           xAxisId="top_border"
@@ -10080,11 +10082,11 @@ export default function MCDMCalculator() {
                                           tickLine={false}
                                         />
                                         <YAxis
-                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text, textAnchor: 'middle' } } : undefined}
                                           width={yAxisW}
                                           domain={[0, (alternatives.length * (sensitivityWeightComparisonResults.length || 1)) || 'dataMax']}
                                           ticks={Array.from({ length: (alternatives.length || 0) + 1 }, (_, i) => i * (sensitivityWeightComparisonResults.length || 1))}
-                                          tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={getTickLine('left')} />
                                         <YAxis
@@ -10094,7 +10096,7 @@ export default function MCDMCalculator() {
                                           domain={[0, (alternatives.length * (sensitivityWeightComparisonResults.length || 1)) || 'dataMax']}
                                           ticks={Array.from({ length: (alternatives.length || 0) + 1 }, (_, i) => i * (sensitivityWeightComparisonResults.length || 1))}
                                           tickFormatter={(val) => (val / (sensitivityWeightComparisonResults.length || 1)).toString()}
-                                          tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fill: theme.text, fontWeight: 700 } : false}
+                                          tick={chartSettings.showMirrorTicks ? { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text } : false}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={chartSettings.showMirrorTicks ? getTickLine('right') : false}
                                         />
@@ -10158,12 +10160,12 @@ export default function MCDMCalculator() {
                                         <Customized component={RightFrameBorder} />
                                         <XAxis
                                           dataKey="name"
-                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 1) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={getTickLine('bottom')}
                                           interval={isMobile ? "preserveStartEnd" : 0}
                                           tickFormatter={(val) => isMobile ? val.replace('Robot-', 'R') : val}
-                                          label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } }} />
+                                          label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text, textAnchor: 'middle' } }} />
                                         <XAxis
                                           orientation="top"
                                           xAxisId="top_border"
@@ -10173,12 +10175,12 @@ export default function MCDMCalculator() {
                                           tickLine={false}
                                         />
                                         <YAxis
-                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text, textAnchor: 'middle' } } : undefined}
                                           width={yAxisW}
                                           interval={0}
                                           domain={[0, (alternatives.length || 8) || 'dataMax']}
                                           ticks={Array.from({ length: ((alternatives.length || 8) || 0) + 1 }, (_, i) => i)}
-                                          tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={getTickLine('left')} />
                                         <YAxis
@@ -10186,7 +10188,7 @@ export default function MCDMCalculator() {
                                           yAxisId="right_border"
                                           width={yAxisRightW}
                                           domain={[1, (alternatives.length || 8)]}
-                                          tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fill: theme.text } : false}
+                                          tick={chartSettings.showMirrorTicks ? { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text } : false}
                                           ticks={chartSettings.showMirrorTicks ? Array.from({ length: (alternatives.length || 8) }, (_, i) => i + 1) : undefined}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={chartSettings.showMirrorTicks ? getTickLine('right') : false}
@@ -10258,10 +10260,10 @@ export default function MCDMCalculator() {
                                         <Customized component={RightFrameBorder} />
                                         <XAxis
                                           dataKey="name"
-                                          tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={getTickLine('bottom')}
-                                          label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } }} />
+                                          label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text, textAnchor: 'middle' } }} />
                                         <XAxis
                                           orientation="top"
                                           xAxisId="top_border"
@@ -10271,11 +10273,11 @@ export default function MCDMCalculator() {
                                           tickLine={false}
                                         />
                                         <YAxis
-                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text, textAnchor: 'middle' } } : undefined}
                                           width={yAxisW}
                                           domain={[0, (alternatives.length * (sensitivityWeightComparisonResults.length || 1)) || 'dataMax']}
                                           ticks={Array.from({ length: (alternatives.length || 0) + 1 }, (_, i) => i * (sensitivityWeightComparisonResults.length || 1))}
-                                          tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={getTickLine('left')} />
                                         <YAxis
@@ -10285,7 +10287,7 @@ export default function MCDMCalculator() {
                                           domain={[0, (alternatives.length * (sensitivityWeightComparisonResults.length || 1)) || 'dataMax']}
                                           ticks={Array.from({ length: (alternatives.length || 0) + 1 }, (_, i) => i * (sensitivityWeightComparisonResults.length || 1))}
                                           tickFormatter={(val) => (val / (sensitivityWeightComparisonResults.length || 1)).toString()}
-                                          tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fill: theme.text, fontWeight: 700 } : false}
+                                          tick={chartSettings.showMirrorTicks ? { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text } : false}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={chartSettings.showMirrorTicks ? getTickLine('right') : false}
                                         />
@@ -10472,12 +10474,12 @@ export default function MCDMCalculator() {
                                           dataKey="name"
                                           type="category"
                                           allowDuplicatedCategory={false}
-                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 1) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={getTickLine('bottom')}
                                           interval={isMobile ? "preserveStartEnd" : 0}
                                           tickFormatter={(val) => isMobile ? val.replace('Robot-', 'R') : val}
-                                          label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } }} />
+                                          label={{ value: chartSettings.xAxisTitle || 'Alternatives', position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text, textAnchor: 'middle' } }} />
                                         <XAxis
                                           orientation="top"
                                           xAxisId="top_border"
@@ -10492,10 +10494,10 @@ export default function MCDMCalculator() {
                                           reversed
                                           dataKey="rank"
                                           name="Rank"
-                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text, textAnchor: 'middle' } } : undefined}
                                           interval={0}
                                           domain={[1, alternatives.length || 'dataMax']}
-                                          tick={{ fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={getTickLine('left')} />
                                         <YAxis
@@ -10504,7 +10506,7 @@ export default function MCDMCalculator() {
                                           width={yAxisRightW}
                                           reversed
                                           domain={[1, alternatives.length || 'dataMax']}
-                                          tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fill: theme.text, fontWeight: 700 } : false}
+                                          tick={chartSettings.showMirrorTicks ? { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text } : false}
                                           ticks={chartSettings.showMirrorTicks ? Array.from({ length: alternatives.length }, (_, i) => i + 1) : undefined}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={chartSettings.showMirrorTicks ? getTickLine('right') : false}
@@ -10675,12 +10677,12 @@ export default function MCDMCalculator() {
                                           <Customized component={RightFrameBorder} />
                                           <XAxis
                                             dataKey="name"
-                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 1) : chartSettings.fontSize, fill: theme.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                             axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={getTickLine('bottom')}
                                             interval={isMobile ? "preserveStartEnd" : 0}
                                             tickFormatter={(val) => isMobile ? val.replace('Robot-', 'R') : val}
-                                            label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                            label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text, textAnchor: 'middle' } } : undefined}
                                           />
                                           <XAxis
                                             orientation="top"
@@ -10695,16 +10697,16 @@ export default function MCDMCalculator() {
                                             width={yAxisW}
                                             domain={[0, (max: number) => Math.ceil(max * 10) / 10]}
                                             tickFormatter={(val: number) => val.toFixed(1)}
-                                            tick={{ fontSize: chartSettings.fontSize, fill: theme.text }}
+                                            tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                             axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={getTickLine('left')}
-                                            label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                            label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text, textAnchor: 'middle' } } : undefined}
                                           />
                                           <YAxis
                                             yAxisId="right"
                                             orientation="right"
                                             width={yAxisRightW}
-                                            tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fontWeight: 700, fill: theme.text } : false}
+                                            tick={chartSettings.showMirrorTicks ? { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text } : false}
                                             axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                             tickLine={chartSettings.showMirrorTicks ? getTickLine('right') : false}
                                             domain={[1, totalAlts || 10]}
@@ -10819,12 +10821,12 @@ export default function MCDMCalculator() {
 
                                         <XAxis
                                           dataKey="name"
-                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 1) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={{ stroke: theme.border, strokeWidth: 1 }}
                                           interval={isMobile ? "preserveStartEnd" : 0}
                                           tickFormatter={(val) => isMobile ? val.replace('Robot-', 'R') : val}
-                                          label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined} />
+                                          label={chartSettings.showAxisTitles ? { value: chartSettings.xAxisTitle, position: 'insideBottom', offset: chartSettings.xAxisOffset, style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text, textAnchor: 'middle' } } : undefined} />
 
                                         <XAxis
                                           orientation="top"
@@ -10836,12 +10838,12 @@ export default function MCDMCalculator() {
                                         />
                                         <YAxis
 
-                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: chartSettings.fontSize + 1, fontStyle: 'italic', fill: theme.text } } : undefined}
+                                          label={chartSettings.showAxisTitles ? { value: chartSettings.yAxisTitle, angle: -90, position: 'insideLeft', offset: chartSettings.yAxisOffset, style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text, textAnchor: 'middle' } } : undefined}
                                           width={yAxisW}
                                           reversed
                                           domain={[1, alternatives.length]}
                                           ticks={Array.from({ length: alternatives.length }, (_, i) => i + 1)}
-                                          tick={{ fontSize: chartSettings.fontSize, fill: theme.text }}
+                                          tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text }}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={{ stroke: theme.border, strokeWidth: 1 }}
                                         />
@@ -10851,7 +10853,7 @@ export default function MCDMCalculator() {
                                           width={yAxisRightW}
                                           reversed
                                           domain={[1, alternatives.length]}
-                                          tick={chartSettings.showMirrorTicks ? { fontSize: chartSettings.fontSize, fill: theme.text } : false}
+                                          tick={chartSettings.showMirrorTicks ? { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: theme.text } : false}
                                           ticks={chartSettings.showMirrorTicks ? Array.from({ length: alternatives.length }, (_, i) => i + 1) : undefined}
                                           axisLine={{ stroke: theme.border, strokeWidth: chartSettings.borderWidth }}
                                           tickLine={chartSettings.showMirrorTicks ? { stroke: theme.border, strokeWidth: 1 } : false}
