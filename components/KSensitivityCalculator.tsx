@@ -1536,12 +1536,21 @@ export default function KSensitivityCalculator({
             <div key={rowIdx} style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
               {rowItems.map((entry: any, idx: number) => {
                 const isLine = entry.type === 'line' || entry.type === 'plainline';
+                const isCircle = entry.type === 'circle';
+                const isSquare = entry.type === 'square';
+                const colorToUse = entry.payload?.baseColor || entry.color;
                 return (
-                  <span key={idx} style={{ display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
-                    <svg width="8" height="6" style={{ flexShrink: 0 }}>
-                      {isLine
-                        ? <line x1="0" y1="3" x2="8" y2="3" stroke={entry.color} strokeWidth="2" strokeDasharray={entry.payload?.strokeDasharray || '0'} />
-                        : <rect x="0" y="1" width="8" height="4" fill={entry.color} />}
+                  <span key={idx} style={{ display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+                    <svg width="10" height="10" style={{ flexShrink: 0, display: 'block' }}>
+                      {isLine ? (
+                        <line x1="0" y1="5" x2="10" y2="5" stroke={colorToUse} strokeWidth="2" strokeDasharray={entry.payload?.strokeDasharray || '0'} />
+                      ) : isCircle ? (
+                        <circle cx="5" cy="5" r="4" fill={colorToUse} />
+                      ) : isSquare ? (
+                        <rect x="1" y="1" width="8" height="8" fill={colorToUse} />
+                      ) : (
+                        <rect x="1" y="2" width="8" height="6" fill={colorToUse} />
+                      )}
                     </svg>
                     <span style={{ fontSize: legendFontSize + 'px', fontWeight: 700, color: theme.text }}>
                       {entry.value}
@@ -1898,6 +1907,7 @@ export default function KSensitivityCalculator({
                     strokeWidth={kSensChartSettings.borderWidth || 1.5}
                     dot={false}
                     activeDot={{ r: (kSensChartSettings.markerSize || 4) + 1 }}
+                    baseColor={colorsArr[idx % colorsArr.length]}
                   >
                     {dataLabelComponent}
                   </Line>
@@ -1986,6 +1996,7 @@ export default function KSensitivityCalculator({
                       fillOpacity={kSensChartSettings.fillPattern === 'none' ? (kSensChartType === 'stackedArea' ? (kSensChartSettings.barOpacity || 0.8) : (kSensChartSettings.barOpacity * 0.75 || 0.75)) : 1}
                       activeDot={kSensChartSettings.markerSize > 0 ? { r: kSensChartSettings.markerSize + 1 } : false}
                       dot={kSensChartSettings.markerSize > 0 ? makeCustomDot(color) : false}
+                      baseColor={color}
                     >
                       {dataLabelComponent}
                       {kSensChartSettings.directLabeling && (
@@ -2073,6 +2084,7 @@ export default function KSensitivityCalculator({
                       dot={kSensChartSettings.markerSize > 0 ? makeCustomDot(color) : false}
                       activeDot={kSensChartSettings.markerSize > 0 ? { r: kSensChartSettings.markerSize + 2 } : { r: 4 }}
                       legendType={dashArray !== '0' ? 'plainline' : 'line'}
+                      baseColor={color}
                     >
                       {dataLabelComponent}
                       {kSensChartSettings.directLabeling && (
@@ -2142,7 +2154,7 @@ export default function KSensitivityCalculator({
                 const scatterData = data.map((d: any, i: number) => ({ x: i, y: isWeightView ? d[item.name] : d[item.name] }));
                 const color = colorsArr[idx % colorsArr.length];
                 return (
-                  <Scatter key={item.name} name={item.name} data={scatterData} fill={color} shape={kSensChartSettings.markerType || 'circle'}>
+                  <Scatter key={item.name} name={item.name} data={scatterData} fill={color} shape={kSensChartSettings.markerType || 'circle'} baseColor={color}>
                     {dataLabelComponent}
                   </Scatter>
                 );
@@ -2214,6 +2226,7 @@ export default function KSensitivityCalculator({
                     stroke={kSensChartSettings.showSeparator ? (kSensChartSettings.separatorColor || '#000') : 'none'}
                     strokeWidth={kSensChartSettings.showSeparator ? (kSensChartSettings.borderWidth || 0.5) : 0}
                     name={alt.name}
+                    baseColor={color}
                   >
                     {dataLabelComponent}
                   </Bar>
@@ -2234,6 +2247,7 @@ export default function KSensitivityCalculator({
                     name={alt.name}
                     legendType="none"
                     dot={kSensChartSettings.markerSize > 0 ? makeCustomDot(seriesColor) : false}
+                    baseColor={seriesColor}
                   />
                 );
               })}
