@@ -259,9 +259,9 @@ export default function MCDMCalculator() {
     colorPalette: 'default',
     backgroundTheme: 'white',
     borderWidth: 1.5,
-    barOpacity: 0.8,
-    barSaturation: 1.0,
-    barBrightness: 1.0,
+    barOpacity: 1.5,
+    barSaturation: 1.8,
+    barBrightness: 0.8,
     fillPattern: 'none',
     separatorColor: '#ffffff',
     showSeparator: false,
@@ -436,7 +436,7 @@ export default function MCDMCalculator() {
 
   // Persistence for chartSettings
   useEffect(() => {
-    const savedChartSettings = localStorage.getItem("chartSettings")
+    const savedChartSettings = localStorage.getItem("chartSettings_v2")
     if (savedChartSettings) {
       try {
         setChartSettings(prev => ({ ...prev, ...JSON.parse(savedChartSettings) }))
@@ -447,7 +447,7 @@ export default function MCDMCalculator() {
   }, [])
 
   useEffect(() => {
-    localStorage.setItem("chartSettings", JSON.stringify(chartSettings))
+    localStorage.setItem("chartSettings_v2", JSON.stringify(chartSettings))
   }, [chartSettings])
 
   const handleResetAndHome = () => {
