@@ -410,7 +410,7 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                         <span style={{ fontSize: "7px" }}>{Math.round((settings[m.key as keyof ChartSettings] as number) * 100)}%</span>
                       </div>
                       <input
-                        type="range" min={m.key === 'barOpacity' ? "0.1" : "0"} max="2" step="0.1"
+                        type="range" min={m.key === 'barOpacity' ? "0.1" : "0"} max={m.key === 'barOpacity' ? "1" : "2"} step="0.1"
                         value={settings[m.key as keyof ChartSettings] as number}
                         onChange={(e) => updateSetting(m.key as any, parseFloat(e.target.value))}
                         className="w-full h-0.5 sm:h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"

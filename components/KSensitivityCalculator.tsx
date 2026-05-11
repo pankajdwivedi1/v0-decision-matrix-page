@@ -330,9 +330,9 @@ export default function KSensitivityCalculator({
     colorPalette: 'academic',
     backgroundTheme: 'white',
     borderWidth: 2,
-    barOpacity: 1.5,
-    barSaturation: 1.8,
-    barBrightness: 0.8,
+    barOpacity: 1.0,
+    barSaturation: 1.0,
+    barBrightness: 1.0,
     fillPattern: 'none',
     separatorColor: '#ffffff',
     showSeparator: false,
@@ -1384,10 +1384,10 @@ export default function KSensitivityCalculator({
       tooltipBg: kSensChartSettings.backgroundTheme === 'dark' ? '#0f172a' : '#ffffff',
     };
 
-    const tickStyle = { 
-      fontSize: isMobile ? Math.max(7, kSensChartSettings.fontSize - 2) : kSensChartSettings.fontSize, 
-      fill: theme.text, 
-      fontWeight: 'bold' 
+    const tickStyle = {
+      fontSize: isMobile ? Math.max(7, kSensChartSettings.fontSize - 2) : kSensChartSettings.fontSize,
+      fill: theme.text,
+      fontWeight: 'bold'
     };
 
     const labelStyle = (value: string, isVertical = false) => ({
@@ -1491,7 +1491,7 @@ export default function KSensitivityCalculator({
     const mT = kSensChartSettings.marginTop;
     const mB = kSensChartSettings.marginBottom;
 
-    const yAxisW = isMobile ? Math.max(20, kSensChartSettings.fontSize * 2) : (kSensChartSettings.yAxisWidth || 60);
+    const yAxisW = isMobile ? Math.max(45, kSensChartSettings.fontSize * 3) : (kSensChartSettings.yAxisWidth || 60);
     const yAxisRightW = isMobile ? 1 : (kSensChartSettings.yAxisWidthRight || 60);
 
     const commonChartProps = {
@@ -1511,7 +1511,7 @@ export default function KSensitivityCalculator({
 
     const customLegendContent = (props: any) => {
       if (!props.payload) return null;
-      
+
       const validItems = props.payload.filter((entry: any) =>
         entry.type !== 'none' &&
         entry.color !== 'transparent' &&
@@ -1521,7 +1521,7 @@ export default function KSensitivityCalculator({
 
       const isVertical = kSensChartSettings.legendLayout === 'vertical';
       const chunkSize = isVertical ? 1 : (isMobile ? 3 : validItems.length);
-      
+
       const rows = [];
       for (let i = 0; i < validItems.length; i += chunkSize) {
         rows.push(validItems.slice(i, i + chunkSize));
@@ -1568,8 +1568,8 @@ export default function KSensitivityCalculator({
     };
 
     const legendProps: any = {
-      verticalAlign: (kSensChartSettings.legendPosition === 'left' || kSensChartSettings.legendPosition === 'right' ? 'middle' : kSensChartSettings.legendPosition) as 'top' | 'bottom' | 'middle',
-      align: (kSensChartSettings.legendPosition === 'left' ? 'left' : kSensChartSettings.legendPosition === 'right' ? 'right' : 'center') as 'left' | 'center' | 'right',
+      verticalAlign: 'top',
+      height: 0,
       layout: kSensChartSettings.legendLayout as 'horizontal' | 'vertical',
       content: customLegendContent,
       formatter: legendFormatter,
@@ -1580,7 +1580,9 @@ export default function KSensitivityCalculator({
         backgroundColor: kSensChartSettings.backgroundTheme === 'dark' ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
         border: isMobile ? "none" : `${kSensChartSettings.borderWidth}px solid ${theme.border}`,
         padding: isMobile ? "2px 4px" : "4px 8px",
-        top: 70,
+        position: 'absolute',
+        top: kSensChartSettings.legendPosition === 'top' || kSensChartSettings.legendPosition === 'middle' ? 10 : undefined,
+        bottom: kSensChartSettings.legendPosition === 'bottom' ? 10 : undefined,
         left: kSensChartSettings.legendPosition === 'left' ? 10 : kSensChartSettings.legendPosition === 'right' ? undefined : "50%",
         right: kSensChartSettings.legendPosition === 'right' ? 10 : undefined,
         transform: `${(kSensChartSettings.legendPosition === 'left' || kSensChartSettings.legendPosition === 'right') ? "" : "translateX(-50%)"} translate(${kSensChartSettings.legendOffsetX || 0}px, ${kSensChartSettings.legendOffsetY || 0}px)`,
@@ -1590,6 +1592,7 @@ export default function KSensitivityCalculator({
         boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
         whiteSpace: isMobile ? 'normal' : 'nowrap',
         maxWidth: isMobile ? 'calc(100% - 10px)' : '95%',
+        pointerEvents: 'auto'
       }
     };
 
@@ -1682,6 +1685,19 @@ export default function KSensitivityCalculator({
       );
     }
 
+    const manualLegendPayload = (isWeightView ? workingCriteria : alternatives).map((item, idx) => ({
+      value: item.name,
+      color: colorsArr[idx % colorsArr.length],
+      type: isWeightView ? 'circle' : 'square',
+      payload: { baseColor: colorsArr[idx % colorsArr.length] }
+    }));
+
+    const standaloneLegend = !kSensChartSettings.directLabeling && (
+      <div style={legendProps.wrapperStyle}>
+        {customLegendContent({ payload: manualLegendPayload })}
+      </div>
+    );
+
     if (kSensChartType === 'radar') {
 
       if (isWeightView) {
@@ -1732,18 +1748,7 @@ export default function KSensitivityCalculator({
                     borderRadius: '0'
                   }}
                 />
-                <Legend
-                  {...legendProps}
-                  iconSize={12}
-                  iconType="plainline"
-                  wrapperStyle={{
-                    ...legendProps.wrapperStyle,
-                    padding: "10px",
-                    border: "1.5px solid #000",
-                    backgroundColor: "#fff",
-                    boxShadow: "3px 3px 0px rgba(0,0,0,1)"
-                  }}
-                />
+
                 {workingCriteria.map((crit, idx) => {
                   const isTarget = crit.id === selectedCriterionToVary;
                   const color = colorsArr[idx % colorsArr.length];
@@ -1775,6 +1780,7 @@ export default function KSensitivityCalculator({
               <span className="text-[10px] font-black uppercase tracking-widest text-blue-900 block">Publication Quality Asset</span>
               <span className="text-xs font-bold text-gray-800">Weight Stability Analysis (Forensic Radar)</span>
             </div>
+            {standaloneLegend}
           </div>
         );
       }
@@ -1810,7 +1816,8 @@ export default function KSensitivityCalculator({
       });
 
       return (
-        <div ref={chartRef} className={`max-w-7xl mx-auto relative transition-all duration-500 ${kSensChartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }}>
+        <div ref={chartRef} className={`max-w-7xl mx-auto w-full overflow-hidden transition-all duration-500 relative ${kSensChartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }}>
+          {standaloneLegend}
           <ResponsiveContainer width="100%" height={chartAspectRatio ? undefined : 750} aspect={chartAspectRatio}>
             <RadarChart data={radarData} outerRadius="80%" margin={commonChartProps.margin}>
               {kSensChartSettings.showGridLines && (
@@ -1838,7 +1845,7 @@ export default function KSensitivityCalculator({
                 contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }}
                 formatter={(val: number) => `Rank ${Math.round(maxRank + 1 - val)}`}
               />
-              <Legend {...legendProps} iconSize={8} iconType="circle" />
+
               {alternatives.map((alt, altIdx) => (
                 <Radar
                   key={alt.name}
@@ -1895,7 +1902,7 @@ export default function KSensitivityCalculator({
                 formatter={(value: number) => (value * 100).toFixed(2) + '%'}
                 contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }}
               />
-              <Legend {...legendProps} iconSize={8} iconType="circle" />
+
               {kSensVariationRange.map((v, idx) => {
                 const label = `${v}%`;
                 return (
@@ -1958,8 +1965,11 @@ export default function KSensitivityCalculator({
       );
     };
 
+
+
     return (
-      <div ref={chartRef} className={`max-w-7xl mx-auto w-full overflow-hidden transition-all duration-500 ${kSensChartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }}>
+      <div ref={chartRef} className={`max-w-7xl mx-auto w-full overflow-hidden transition-all duration-500 relative ${kSensChartSettings.backgroundTheme === 'glass' ? 'backdrop-blur-md bg-white/30' : ''}`} style={{ backgroundColor: theme.bg, color: theme.text }}>
+        {standaloneLegend}
         {['line', 'area', 'stackedArea'].includes(kSensChartType) ? (
           <ResponsiveContainer width="100%" height={chartAspectRatio ? undefined : (isMobile ? 480 : 600)} aspect={chartAspectRatio}>
             {['area', 'stackedArea'].includes(kSensChartType) ? (
@@ -1972,7 +1982,7 @@ export default function KSensitivityCalculator({
                 <YAxis orientation="right" yAxisId="right_border" width={yAxisRightW} axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={kSensChartSettings.showMirrorTicks ? tickStyle : false} tickLine={kSensChartSettings.showMirrorTicks ? getTickLine('right') : false} domain={isWeightView ? (kSensChartType === 'stackedArea' ? [0, 1] : [0, 'auto']) : [1, alternatives.length]} />
                 <Area yAxisId="right_border" type="linear" dataKey={isWeightView ? (workingCriteria[0]?.name) : (alternatives[0]?.name)} fill="none" stroke="none" fillOpacity={0} isAnimationActive={false} legendType="none" />
                 <Tooltip contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }} />
-                {!kSensChartSettings.directLabeling && <Legend {...legendProps} iconSize={8} iconType={isWeightView ? "circle" : "square"} />}
+
                 {(isWeightView ? workingCriteria : [...alternatives].sort((a, b) => {
                   const var0 = (kSensResults?.[criterionName] || []).find((v: any) => v.variation === 0);
                   const rA = var0?.rankings?.[a.name]?.rank || 0;
@@ -2068,7 +2078,7 @@ export default function KSensitivityCalculator({
                 />
 
                 <Tooltip contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }} />
-                {!kSensChartSettings.directLabeling && <Legend {...legendProps} iconSize={8} iconType="circle" />}
+
                 {(isWeightView ? workingCriteria : alternatives).map((item, idx) => {
                   const color = colorsArr[idx % colorsArr.length];
                   const dashArray = getStrokeDasharray(idx);
@@ -2149,7 +2159,7 @@ export default function KSensitivityCalculator({
               <YAxis orientation="right" yAxisId="right_border" width={yAxisRightW} axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }} tick={kSensChartSettings.showMirrorTicks ? tickStyle : false} tickLine={kSensChartSettings.showMirrorTicks ? getTickLine('right') : false} domain={isWeightView ? [0, 'auto'] : [1, alternatives.length]} />
               <Scatter yAxisId="right_border" data={[{ x: 0, y: 0 }]} fill="transparent" isAnimationActive={false} legendType="none" />
               <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }} />
-              <Legend {...legendProps} iconSize={8} iconType="circle" />
+
               {(isWeightView ? workingCriteria : alternatives).map((item, idx) => {
                 const scatterData = data.map((d: any, i: number) => ({ x: i, y: isWeightView ? d[item.name] : d[item.name] }));
                 const color = colorsArr[idx % colorsArr.length];
@@ -2210,7 +2220,7 @@ export default function KSensitivityCalculator({
                 cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                 contentStyle={{ fontSize: `${kSensChartSettings.fontSize}px`, backgroundColor: theme.tooltipBg, color: theme.text, border: `1px solid ${theme.border}` }}
               />
-              <Legend {...legendProps} iconSize={10} />
+
               {kSensChartSettings.zeroBaseline && <ReferenceLine y={0} yAxisId="left" stroke={theme.chartBorder} strokeWidth={2} strokeOpacity={0.8} />}
               {renderDefs()}
               {alternatives.map((alt, i) => {
@@ -2380,6 +2390,8 @@ export default function KSensitivityCalculator({
               <BarChart
                 data={data}
                 margin={commonChartProps.margin}
+                barCategoryGap={isMobile ? "10%" : "20%"}
+                barGap={isMobile ? 1 : 2}
               >
                 {renderDefs()}
                 <XAxis dataKey="variation" tick={{ fontSize: isMobile ? Math.max(7, kSensChartSettings.fontSize - 3) : kSensChartSettings.fontSize, fill: '#000', fontWeight: 700 }} axisLine={{ stroke: '#000', strokeWidth: 1.5 }} tickLine={getTickLine('bottom')} interval={0} tickFormatter={isWeightView ? (val: string) => val.replace('%', '') : undefined} label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.xAxisTitle) as any) : undefined} />
@@ -2403,7 +2415,7 @@ export default function KSensitivityCalculator({
                     return `Rank: ${v}`;
                   }}
                 />
-                <Legend {...legendProps} iconSize={10} />
+
                 {(isWeightView ? workingCriteria : alternatives).map((item, idx) => {
                   const color = colorsArr[idx % colorsArr.length];
                   const fill = kSensChartSettings.fillPattern === 'none' ? color : `url(#pattern-${idx % colorsArr.length})`;
