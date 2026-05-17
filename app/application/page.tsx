@@ -262,6 +262,8 @@ export default function MCDMCalculator() {
     barOpacity: 1.0,
     barSaturation: 1.0,
     barBrightness: 1.0,
+    barWidthPercent: 80,
+    barGap: 4,
     fillPattern: 'none',
     separatorColor: '#ffffff',
     showSeparator: false,
@@ -326,16 +328,60 @@ export default function MCDMCalculator() {
 
   // --- SCIENTIFIC CHART HELPERS ---
   const getPaletteColors = (palette: string) => {
-    switch (palette) {
-      case 'academic': return ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
-      case 'grayscale': return ['#333333', '#666666', '#999999', '#cccccc', '#444444', '#777777', '#aaaaaa', '#dddddd', '#111111', '#999999'];
-      case 'vibrant': return ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#a855f7', '#6366f1'];
-      case 'fluorescent': return ['#ff00ff', '#00ffff', '#ffff00', '#00ff00', '#ff0000', '#0000ff', '#ff8000', '#8000ff', '#00ff80', '#ff0080'];
-      case 'viridis': return ['#440154', '#482878', '#3e4989', '#31688e', '#26828e', '#1f9e89', '#35b779', '#6ece58', '#b5de2b', '#fde725'];
-      case 'magma': return ['#000004', '#140e36', '#3b0f70', '#63118e', '#8c2981', '#b63679', '#de4968', '#f3735e', '#fca06e', '#fdee9b'];
-      case 'inferno': return ['#000004', '#160b39', '#420a68', '#6a176e', '#932667', '#bc3754', '#dd513a', '#f37819', '#fca50a', '#fcfdbf'];
-      default: return CHART_COLORS;
-    }
+    // Raw palette colors
+    const raw = (() => {
+      switch (palette) {
+        case 'academic': return ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
+        case 'grayscale': return ['#333333', '#666666', '#999999', '#cccccc', '#444444', '#777777', '#aaaaaa', '#dddddd', '#111111', '#999999'];
+        case 'vibrant': return ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#a855f7', '#6366f1'];
+        case 'fluorescent': return ['#ff00ff', '#00ffff', '#ffff00', '#00ff00', '#ff0000', '#0000ff', '#ff8000', '#8000ff', '#00ff80', '#ff0080'];
+        case 'viridis': return ['#440154', '#482878', '#3e4989', '#31688e', '#26828e', '#1f9e89', '#35b779', '#6ece58', '#b5de2b', '#fde725'];
+        case 'magma': return ['#000004', '#140e36', '#3b0f70', '#63118e', '#8c2981', '#b63679', '#de4968', '#f3735e', '#fca06e', '#fdee9b'];
+        case 'inferno': return ['#000004', '#160b39', '#420a68', '#6a176e', '#932667', '#bc3754', '#dd513a', '#f37819', '#fca50a', '#fcfdbf'];
+        default: return CHART_COLORS;
+      }
+    })();
+
+    // Apply barSaturation + barBrightness from chartSettings
+    const sat = chartSettings.barSaturation ?? 1;
+    const bri = chartSettings.barBrightness ?? 1;
+    if (sat === 1 && bri === 1) return raw; // fast-path when defaults
+
+    return raw.map((hex: string) => {
+      let r = parseInt(hex.slice(1, 3), 16) / 255;
+      let g = parseInt(hex.slice(3, 5), 16) / 255;
+      let b = parseInt(hex.slice(5, 7), 16) / 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h = 0, s = 0, l = (max + min) / 2;
+      if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+      }
+      s = Math.min(1, s * sat);
+      l = Math.min(1, l * bri);
+      const hue2rgb = (p: number, q: number, t: number) => {
+        if (t < 0) t += 1; if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      if (s === 0) { r = g = b = l; } else {
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+      const toHex = (x: number) => { const o = Math.round(x * 255).toString(16); return o.length === 1 ? '0' + o : o; };
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    });
   };
 
   const makeCustomDot = (color: string, id: string | number = color) => (props: any) => {
@@ -364,52 +410,114 @@ export default function MCDMCalculator() {
     return { stroke, strokeWidth: 1, transform: isInner ? (orientation === 'left' ? 'translateX(6px)' : orientation === 'right' ? 'translateX(-6px)' : orientation === 'top' ? 'translateY(6px)' : 'translateY(-6px)') : '' };
   };
 
+  // Palette-keyed suffix: changes when palette/sat/brightness changes, busts the SVG pattern cache.
+  const getPagePatternId = (index: number) =>
+    `pp-${chartSettings.colorPalette}-${Math.round((chartSettings.barSaturation ?? 1) * 100)}-${Math.round((chartSettings.barBrightness ?? 1) * 100)}-${Math.round((chartSettings.barOpacity ?? 1) * 100)}-${index}`;
+
   const renderDefs = (colors: string[] = []) => {
-    const stroke = chartSettings.separatorColor || '#ffffff';
-    const showSep = chartSettings.showSeparator;
-    // Default colors if none provided
     const finalColors = colors.length > 0 ? colors : ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
 
     return (
       <defs>
-        {/* Generic patterns for simple cases */}
-        <pattern id="pattern-striped" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <rect width="8" height="8" fill="transparent" />
-          <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,255,255,0.3)" strokeWidth="4" />
-        </pattern>
-        <pattern id="pattern-dotted" width="4" height="4" patternUnits="userSpaceOnUse">
-          <circle cx="1" cy="1" r="1" fill="rgba(255,255,255,0.4)" />
-        </pattern>
-        <pattern id="pattern-grid" width="10" height="10" patternUnits="userSpaceOnUse">
-          <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
-        </pattern>
+        {finalColors.map((color, i) => {
+          const patternId = getPagePatternId(i);
+          const patternProps = { id: patternId, width: 8, height: 8, patternUnits: "userSpaceOnUse" as const };
+          const opacity = chartSettings.barOpacity ?? 1;
+          const rectFill = <rect width="100%" height="100%" fill={color} fillOpacity={opacity} />;
 
-        {/* Color-specific patterns */}
-        {finalColors.map((color, i) => (
-          <Fragment key={`pattern-defs-${i}`}>
-            <pattern id={`pattern-striped-${i}`} width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-              <rect width="8" height="8" fill={color} />
-              <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,255,255,0.3)" strokeWidth="4" />
-            </pattern>
-            <pattern id={`pattern-dotted-${i}`} width="4" height="4" patternUnits="userSpaceOnUse">
-              <rect width="4" height="4" fill={color} />
-              <circle cx="1" cy="1" r="1" fill="rgba(255,255,255,0.4)" />
-            </pattern>
-            <pattern id={`pattern-grid-${i}`} width="10" height="10" patternUnits="userSpaceOnUse">
-              <rect width="10" height="10" fill={color} />
-              <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
-            </pattern>
-          </Fragment>
-        ))}
+          let currentPattern = chartSettings.fillPattern;
+          if (currentPattern === 'mixed') {
+            const mixedPatterns: any[] = ['striped', 'crosshatch', 'grid', 'dots-dense', 'weave', 'horizontal'];
+            currentPattern = mixedPatterns[i % mixedPatterns.length];
+          }
+
+          if (currentPattern === 'none') return null;
+
+          switch (currentPattern) {
+            case 'striped':
+              return (
+                <pattern key={patternId} {...patternProps} patternTransform="rotate(45)">
+                  {rectFill}
+                  <line x1="0" y1="0" x2="0" y2="8" stroke="white" strokeWidth="2" strokeOpacity="0.4" />
+                </pattern>
+              );
+            case 'dotted':
+              return (
+                <pattern key={patternId} {...patternProps}>
+                  {rectFill}
+                  <circle cx="4" cy="4" r="1.5" fill="white" fillOpacity="0.4" />
+                </pattern>
+              );
+            case 'grid':
+              return (
+                <pattern key={patternId} {...patternProps}>
+                  {rectFill}
+                  <path d="M 8 0 L 0 0 0 8" fill="none" stroke="white" strokeWidth="1" strokeOpacity="0.4" />
+                </pattern>
+              );
+            case 'weave':
+              return (
+                <pattern key={patternId} {...patternProps} width="4" height="4">
+                  {rectFill}
+                  <path d="M 0 2 L 4 2 M 2 0 L 2 4" stroke="white" strokeWidth="0.8" strokeOpacity="0.5" />
+                  <path d="M 0 0 L 4 4 M 4 0 L 0 4" stroke="black" strokeWidth="0.5" strokeOpacity="0.3" />
+                </pattern>
+              );
+            case 'hatch-right':
+              return (
+                <pattern key={patternId} {...patternProps} width="6" height="6" patternTransform="rotate(-45)">
+                  {rectFill}
+                  <line x1="0" y1="0" x2="0" y2="6" stroke="black" strokeWidth="1" strokeOpacity="0.5" />
+                </pattern>
+              );
+            case 'crosshatch':
+              return (
+                <pattern key={patternId} {...patternProps} width="4" height="4">
+                  {rectFill}
+                  <path d="M 0 0 L 4 4 M 4 0 L 0 4" stroke="black" strokeWidth="0.6" strokeOpacity="0.5" />
+                </pattern>
+              );
+            case 'dots-dense':
+              return (
+                <pattern key={patternId} {...patternProps} width="2.5" height="2.5">
+                  {rectFill}
+                  <circle cx="1.25" cy="1.25" r="0.6" fill="black" fillOpacity="0.4" />
+                </pattern>
+              );
+            case 'horizontal':
+              return (
+                <pattern key={patternId} {...patternProps} width="6" height="6">
+                  {rectFill}
+                  <path d="M 0 3 L 6 3" stroke="black" strokeWidth="1" strokeOpacity="0.5" />
+                </pattern>
+              );
+            case 'checkerboard':
+              return (
+                <pattern key={patternId} {...patternProps} width="10" height="10">
+                  {rectFill}
+                  <rect x="0" y="0" width="5" height="5" fill="black" fillOpacity="0.2" />
+                  <rect x="5" y="5" width="5" height="5" fill="black" fillOpacity="0.2" />
+                </pattern>
+              );
+            case 'carbon':
+              return (
+                <pattern key={patternId} {...patternProps} width="12" height="12">
+                  {rectFill}
+                  <path d="M 0 0 L 6 6 M 6 12 L 12 6" stroke="white" strokeWidth="2" strokeOpacity="0.3" />
+                  <path d="M 6 0 L 12 6 M 0 6 L 6 12" stroke="black" strokeWidth="2" strokeOpacity="0.3" />
+                </pattern>
+              );
+            default:
+              return null;
+          }
+        })}
       </defs>
     );
   };
 
   const getFillPattern = (color: string, index: number = 0) => {
-    if (chartSettings.fillPattern === 'striped') return `url(#pattern-striped-${index})`;
-    if (chartSettings.fillPattern === 'dotted') return `url(#pattern-dotted-${index})`;
-    if (chartSettings.fillPattern === 'grid') return `url(#pattern-grid-${index})`;
-    return color;
+    if (chartSettings.fillPattern === 'none') return color;
+    return `url(#${getPagePatternId(index)})`;
   };
 
   // Persistence for navigation state
@@ -5098,11 +5206,25 @@ export default function MCDMCalculator() {
                       <CardDescription className="text-xs text-gray-500">Review and edit the decision matrix before calculation</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
-                        <p className="font-semibold">✓ Data has uploaded</p>
-                        <p className="mt-1">
-                          {alternatives.length} alternatives × {criteria.length} criteria
-                        </p>
+                      <div className="flex items-center justify-between text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
+                        <div>
+                          <p className="font-semibold">✓ Data has uploaded</p>
+                          <p className="mt-1">
+                            {alternatives.length} alternatives × {criteria.length} criteria
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-[10px] sm:text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                          onClick={() => {
+                            setAlternatives([]);
+                            setCriteria([]);
+                            localStorage.removeItem("decisionMatrixData");
+                          }}
+                        >
+                          Remove Data
+                        </Button>
                       </div>
 
                       <SharedDecisionMatrix
@@ -5240,11 +5362,25 @@ export default function MCDMCalculator() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-3">
-                        <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded mx-3 sm:mx-0">
-                          <p className="font-semibold">✓ Data has uploaded</p>
-                          <p className="mt-1">
-                            {alternatives.length} alternatives × {criteria.length} criteria
-                          </p>
+                        <div className="flex items-center justify-between text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded mx-3 sm:mx-0">
+                          <div>
+                            <p className="font-semibold">✓ Data has uploaded</p>
+                            <p className="mt-1">
+                              {alternatives.length} alternatives × {criteria.length} criteria
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[10px] sm:text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            onClick={() => {
+                              setAlternatives([]);
+                              setCriteria([]);
+                              localStorage.removeItem("decisionMatrixData");
+                            }}
+                          >
+                            Remove Data
+                          </Button>
                         </div>
 
                         <div className="table-responsive border border-gray-300 rounded-lg overflow-x-auto">
@@ -5964,7 +6100,8 @@ export default function MCDMCalculator() {
                                 ))}
                               </RadarChart>
                             ) : weightChartType === 'bar' ? (
-                              <BarChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} data={sensitivityCriteriaWeights}>
+                              <BarChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} data={sensitivityCriteriaWeights} barCategoryGap={`${100 - (chartSettings.barWidthPercent || 80)}%`}>
+                                {renderDefs(CHART_COLORS)}
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                                 <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
@@ -5988,11 +6125,12 @@ export default function MCDMCalculator() {
                                   whiteSpace: "nowrap"
                                 }} />
                                 {sensitivityWeightComparisonResults.map((res, i) => (
-                                  <Bar key={res.weightLabel} dataKey={res.weightLabel} fill={CHART_COLORS[i % CHART_COLORS.length]} name={res.weightLabel} />
+                                  <Bar key={res.weightLabel} dataKey={res.weightLabel} fill={getFillPattern(CHART_COLORS[i % CHART_COLORS.length], i)} fillOpacity={chartSettings.fillPattern === 'none' ? (chartSettings.barOpacity || 1) : 1} name={res.weightLabel} />
                                 ))}
                               </BarChart>
                             ) : weightChartType === 'stackedBar' ? (
-                              <BarChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} data={sensitivityCriteriaWeights}>
+                              <BarChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} data={sensitivityCriteriaWeights} barCategoryGap={`${100 - (chartSettings.barWidthPercent || 80)}%`}>
+                                {renderDefs(CHART_COLORS)}
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 700, fill: "#000" }} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} tickLine={{ stroke: "#000", strokeWidth: 1 }} />
                                 <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: "#000", strokeWidth: 1.5 }} />
@@ -6016,7 +6154,7 @@ export default function MCDMCalculator() {
                                   whiteSpace: "nowrap"
                                 }} />
                                 {sensitivityWeightComparisonResults.map((res, i) => (
-                                  <Bar key={res.weightLabel} stackId="a" dataKey={res.weightLabel} fill={CHART_COLORS[i % CHART_COLORS.length]} name={res.weightLabel} />
+                                  <Bar key={res.weightLabel} stackId="a" dataKey={res.weightLabel} fill={getFillPattern(CHART_COLORS[i % CHART_COLORS.length], i)} fillOpacity={chartSettings.fillPattern === 'none' ? (chartSettings.barOpacity || 1) : 1} name={res.weightLabel} />
                                 ))}
                               </BarChart>
                             ) : weightChartType === 'stackedMethodBar' ? (
@@ -6034,14 +6172,15 @@ export default function MCDMCalculator() {
                                 });
 
                                 return (
-                                  <BarChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} data={transposedData}>
+                                  <BarChart margin={{ top: chartSettings.legendPosition === 'top' ? chartSettings.marginTop : 10, right: chartSettings.marginRight, left: chartSettings.marginLeft, bottom: chartSettings.marginBottom }} data={transposedData} barCategoryGap={`${100 - (chartSettings.barWidthPercent || 80)}%`}>
+                                    {renderDefs(CHART_COLORS)}
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" vertical={false} />
                                     <XAxis dataKey="method" tick={{ fontSize: 12, fill: "#000" }} axisLine={{ stroke: "#000", strokeWidth: 1 }} />
                                     <YAxis label={{ value: 'Weight value', angle: -90, position: 'insideLeft', fontSize: 12, fill: "#000" }} axisLine={{ stroke: "#000", strokeWidth: 1 }} tick={{ fontSize: 12, fill: "#000" }} />
                                     <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                     <Legend wrapperStyle={{ fontSize: "12px", color: "#000", display: "flex", flexWrap: "wrap", justifyContent: "center", border: "1px solid #000", padding: "5px", borderRadius: "4px" }} />
                                     {criteriaList.map((crit, i) => (
-                                      <Bar key={crit} stackId="a" dataKey={crit} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#000" strokeWidth={1} name={crit} />
+                                      <Bar key={crit} stackId="a" dataKey={crit} fill={getFillPattern(CHART_COLORS[i % CHART_COLORS.length], i)} fillOpacity={chartSettings.fillPattern === 'none' ? (chartSettings.barOpacity || 1) : 1} stroke="#000" strokeWidth={1} name={crit} />
                                     ))}
                                   </BarChart>
                                 );
@@ -6612,11 +6751,25 @@ export default function MCDMCalculator() {
                   <CardContent className="space-y-4">
                     {isFullyDataFilled ? (
                       <div className="space-y-3">
-                        <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded mx-3 sm:mx-0">
-                          <p className="font-semibold">✓ Data has uploaded</p>
-                          <p className="mt-1">
-                            {alternatives.length} alternatives × {criteria.length} criteria
-                          </p>
+                        <div className="flex items-center justify-between text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded mx-3 sm:mx-0">
+                          <div>
+                            <p className="font-semibold">✓ Data has uploaded</p>
+                            <p className="mt-1">
+                              {alternatives.length} alternatives × {criteria.length} criteria
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[10px] sm:text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            onClick={() => {
+                              setAlternatives([]);
+                              setCriteria([]);
+                              localStorage.removeItem("decisionMatrixData");
+                            }}
+                          >
+                            Remove Data
+                          </Button>
                         </div>
 
                         {/* Editable Decision Matrix Table */}
@@ -7650,7 +7803,7 @@ export default function MCDMCalculator() {
                                 yAxisId: "right_border",
                                 domain: [0, maxRankVal > 0 ? maxRankVal : 'auto'] as [number, number | string],
                                 tick: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text },
-                                tickLine: { stroke: themeColors.border, strokeWidth: 1 },
+                                tickLine: getTickLine('right'),
                                 axisLine: { stroke: themeColors.border, strokeWidth: chartSettings.borderWidth },
                                 allowDecimals: false,
                               };
@@ -7673,15 +7826,17 @@ export default function MCDMCalculator() {
                                         left: chartSettings.marginLeft,
                                         bottom: chartSettings.marginBottom
                                       }}
-                                      barGap={0}
-                                      barCategoryGap="25%"
+                                      barGap={chartSettings.barGap ?? 4}
+                                      barCategoryGap={`${100 - (chartSettings.barWidthPercent || 80)}%`}
                                     >
+                                      {renderDefs(activeColors)}
+                                      <Customized component={RightFrameBorder} />
                                       <XAxis
                                         dataKey="name"
                                         xAxisId="main"
                                         tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                         axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
-                                        tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                        tickLine={getTickLine('bottom')}
                                         label={chartSettings.showAxisTitles ? {
                                           value: chartSettings.xAxisTitle || 'Alternatives',
                                           position: 'insideBottom',
@@ -7735,15 +7890,19 @@ export default function MCDMCalculator() {
                                           xAxisId="main"
                                           yAxisId="left"
                                           dataKey={isNormChart ? `${res.label} Rank` : `${res.label} Score`}
-                                          fill={activeColors[i % activeColors.length]}
+                                          fill={getFillPattern(activeColors[i % activeColors.length], i)}
+                                          stroke={activeColors[i % activeColors.length]}
+                                          strokeWidth={chartSettings.borderWidth * 0.5}
                                           name={isNormChart ? `${res.label} Rank` : res.label}
                                           barSize={15}
                                           fillOpacity={chartSettings.barOpacity}
                                         />
                                       ))}
                                       {comparisonResults.map((res, i) => {
-                                        const isDashed = i % 2 !== 0;
                                         const seriesColor = activeColors[i % activeColors.length];
+                                        const ls = chartSettings.lineStyle || 'uniform';
+                                        const DASH = ['0','8 4','2 3','8 4 2 4','16 4'];
+                                        const dash = ls === 'uniform' ? '0' : ls === 'dashed' ? '8 4' : ls === 'dotted' ? '2 3' : ls === 'alternating' ? (i % 2 === 0 ? '0' : '8 4') : DASH[i % DASH.length];
                                         return (
                                           <Line
                                             key={`line-${res.label}-${i}`}
@@ -7753,7 +7912,7 @@ export default function MCDMCalculator() {
                                             dataKey={isNormChart ? `${res.label} Score (Norm)` : `${res.label} Rank`}
                                             stroke={seriesColor}
                                             strokeWidth={chartSettings.borderWidth}
-                                            strokeDasharray={isDashed ? "5 5" : "0"}
+                                            strokeDasharray={dash}
                                             name={isNormChart ? `${res.label} Score (Norm)` : `${res.label} Rank`}
                                             dot={(chartSettings.markerType as string) !== 'none' ? (props: any) => {
                                               const { cx, cy, index } = props;
@@ -7769,13 +7928,13 @@ export default function MCDMCalculator() {
                                               }
                                               return <circle key={`dot-${res.label}-${index}`} cx={cx} cy={cy} r={mSize} fill={seriesColor} />;
                                             } : false}
-                                            legendType={isDashed ? "plainline" : "line"}
+                                            legendType={dash !== '0' ? "plainline" : "line"}
                                           />
                                         );
                                       })}
                                       {chartSettings.showGridLines && (
                                         <CartesianGrid
-                                          strokeDasharray="3 3"
+                                          strokeDasharray={chartSettings.gridStyle === 'hairline' ? "1 1" : "3 3"}
                                           horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
                                           vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
                                           stroke={chartSettings.gridColor}
@@ -8138,7 +8297,11 @@ export default function MCDMCalculator() {
                                             left: chartSettings.marginLeft,
                                             bottom: chartSettings.marginBottom
                                           }}
+                                          barGap={chartSettings.barGap ?? 4}
+                                          barCategoryGap={`${100 - (chartSettings.barWidthPercent || 80)}%`}
                                         >
+                                          {renderDefs(activeColors)}
+                                          <Customized component={RightFrameBorder} />
                                           <XAxis
                                             dataKey="method"
                                             tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
@@ -8149,7 +8312,7 @@ export default function MCDMCalculator() {
                                               style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
-                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                            tickLine={getTickLine('bottom')}
                                           />
                                           <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
                                           <YAxis
@@ -8172,14 +8335,16 @@ export default function MCDMCalculator() {
                                               key={alt}
                                               stackId="a"
                                               dataKey={alt}
-                                              fill={activeColors[idx % activeColors.length]}
+                                              fill={getFillPattern(activeColors[idx % activeColors.length], idx)}
+                                              stroke={activeColors[idx % activeColors.length]}
+                                              strokeWidth={chartSettings.borderWidth * 0.5}
                                               name={alt}
                                               fillOpacity={chartSettings.barOpacity}
                                             />
                                           ))}
                                           {chartSettings.showGridLines && (
                                             <CartesianGrid
-                                              strokeDasharray="3 3"
+                                              strokeDasharray={chartSettings.gridStyle === 'hairline' ? "1 1" : "3 3"}
                                               horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
                                               vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
                                               stroke={chartSettings.gridColor}
@@ -8202,7 +8367,11 @@ export default function MCDMCalculator() {
                                             left: chartSettings.marginLeft,
                                             bottom: chartSettings.marginBottom
                                           }}
+                                          barGap={chartSettings.barGap ?? 4}
+                                          barCategoryGap={`${100 - (chartSettings.barWidthPercent || 80)}%`}
                                         >
+                                          {renderDefs(activeColors)}
+                                          <Customized component={RightFrameBorder} />
                                           <XAxis
                                             dataKey="method"
                                             tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
@@ -8213,7 +8382,7 @@ export default function MCDMCalculator() {
                                               style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
-                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                            tickLine={getTickLine('bottom')}
                                           />
                                           <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
                                           <YAxis
@@ -8235,7 +8404,9 @@ export default function MCDMCalculator() {
                                             <Bar
                                               key={alt}
                                               dataKey={alt}
-                                              fill={activeColors[idx % activeColors.length]}
+                                              fill={getFillPattern(activeColors[idx % activeColors.length], idx)}
+                                              stroke={activeColors[idx % activeColors.length]}
+                                              strokeWidth={chartSettings.borderWidth * 0.5}
                                               name={alt}
                                               fillOpacity={chartSettings.barOpacity}
                                             />
@@ -8267,6 +8438,8 @@ export default function MCDMCalculator() {
                                             bottom: chartSettings.marginBottom
                                           }}
                                         >
+                                          {renderDefs(activeColors)}
+                                          <Customized component={RightFrameBorder} />
                                           <XAxis
                                             dataKey="method"
                                             tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
@@ -8277,7 +8450,7 @@ export default function MCDMCalculator() {
                                               style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
-                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                            tickLine={getTickLine('bottom')}
                                           />
                                           <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
                                           <YAxis
@@ -8289,7 +8462,7 @@ export default function MCDMCalculator() {
                                               style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
-                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                            tickLine={getTickLine('left')}
                                             tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                           />
                                           <YAxis {...rightAxisProps} />
@@ -8302,14 +8475,14 @@ export default function MCDMCalculator() {
                                               key={alt}
                                               dataKey={alt}
                                               stroke={activeColors[idx % activeColors.length]}
-                                              fill={activeColors[idx % activeColors.length]}
+                                              fill={getFillPattern(activeColors[idx % activeColors.length], idx)}
                                               fillOpacity={chartSettings.barOpacity / 2.5}
                                               name={alt}
                                             />
                                           ))}
                                           {chartSettings.showGridLines && (
                                             <CartesianGrid
-                                              strokeDasharray="3 3"
+                                              strokeDasharray={chartSettings.gridStyle === 'hairline' ? "1 1" : "3 3"}
                                               horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
                                               vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
                                               stroke={chartSettings.gridColor}
@@ -8342,9 +8515,11 @@ export default function MCDMCalculator() {
                                             left: chartSettings.marginLeft,
                                             bottom: chartSettings.marginBottom
                                           }}
-                                          barGap={0}
-                                          barCategoryGap="25%"
+                                          barGap={chartSettings.barGap ?? 4}
+                                          barCategoryGap={`${100 - (chartSettings.barWidthPercent || 80)}%`}
                                         >
+                                          {renderDefs(activeColors)}
+                                          <Customized component={RightFrameBorder} />
                                           <XAxis
                                             dataKey="alternative"
                                             xAxisId="main"
@@ -8356,7 +8531,7 @@ export default function MCDMCalculator() {
                                               style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
-                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                            tickLine={getTickLine('bottom')}
                                             interval={0}
                                           />
                                           <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
@@ -8374,7 +8549,7 @@ export default function MCDMCalculator() {
                                               style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
-                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                            tickLine={getTickLine('left')}
                                           />
                                           <YAxis
                                             yAxisId="score"
@@ -8389,7 +8564,7 @@ export default function MCDMCalculator() {
                                               style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
-                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                            tickLine={getTickLine('right')}
                                           />
                                           <Tooltip
                                             contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }}
@@ -8403,42 +8578,51 @@ export default function MCDMCalculator() {
                                               yAxisId="rank"
                                               dataKey={res.label}
                                               name={`${res.label} Rank`}
-                                              fill={activeColors[idx % activeColors.length]}
+                                              fill={getFillPattern(activeColors[idx % activeColors.length], idx)}
+                                              stroke={activeColors[idx % activeColors.length]}
+                                              strokeWidth={chartSettings.borderWidth * 0.5}
                                               barSize={15}
                                               fillOpacity={chartSettings.barOpacity}
                                             />
                                           ))}
-                                          {comparisonResults.map((res, idx) => (
-                                            <Line
-                                              key={`${res.label}_score_line`}
-                                              xAxisId="main"
-                                              yAxisId="score"
-                                              type="monotone"
-                                              dataKey={`${res.label}_score`}
-                                              name={`${res.label} Score`}
-                                              stroke={activeColors[idx % activeColors.length]}
-                                              strokeWidth={chartSettings.borderWidth}
-                                              dot={(chartSettings.markerType as string) !== 'none' ? (props: any) => {
-                                                const { cx, cy, index } = props;
-                                                const mSize = chartSettings.markerSize;
-                                                const seriesColor = activeColors[idx % activeColors.length];
-                                                if (chartSettings.markerType === "square") {
-                                                  return <rect key={`dot-${res.label}-${index}`} x={cx - mSize} y={cy - mSize} width={mSize * 2} height={mSize * 2} fill={seriesColor} />;
-                                                }
-                                                if (chartSettings.markerType === "triangle") {
-                                                  return <path key={`dot-${res.label}-${index}`} d={`M${cx},${cy - mSize} L${cx - mSize},${cy + mSize} L${cx + mSize},${cy + mSize} Z`} fill={seriesColor} />;
-                                                }
-                                                if (chartSettings.markerType === "diamond") {
-                                                  return <path key={`dot-${res.label}-${index}`} d={`M${cx},${cy - mSize} L${cx + mSize},${cy} L${cx},${cy + mSize} L${cx - mSize},${cy} Z`} fill={seriesColor} />;
-                                                }
-                                                return <circle key={`dot-${res.label}-${index}`} cx={cx} cy={cy} r={mSize} fill={seriesColor} />;
-                                              } : false}
-                                              activeDot={{ r: chartSettings.markerSize + 2 }}
-                                            />
-                                          ))}
+                                          {comparisonResults.map((res, idx) => {
+                                            const seriesColor = activeColors[idx % activeColors.length];
+                                            const ls = chartSettings.lineStyle || 'uniform';
+                                            const DASH = ['0','8 4','2 3','8 4 2 4','16 4'];
+                                            const dash = ls === 'uniform' ? '0' : ls === 'dashed' ? '8 4' : ls === 'dotted' ? '2 3' : ls === 'alternating' ? (idx % 2 === 0 ? '0' : '8 4') : DASH[idx % DASH.length];
+                                            return (
+                                              <Line
+                                                key={`${res.label}_score_line`}
+                                                xAxisId="main"
+                                                yAxisId="score"
+                                                type="monotone"
+                                                dataKey={`${res.label}_score`}
+                                                name={`${res.label} Score`}
+                                                stroke={seriesColor}
+                                                strokeWidth={chartSettings.borderWidth}
+                                                strokeDasharray={dash}
+                                                dot={(chartSettings.markerType as string) !== 'none' ? (props: any) => {
+                                                  const { cx, cy, index } = props;
+                                                  const mSize = chartSettings.markerSize;
+                                                  if (chartSettings.markerType === "square") {
+                                                    return <rect key={`dot-${res.label}-${index}`} x={cx - mSize} y={cy - mSize} width={mSize * 2} height={mSize * 2} fill={seriesColor} />;
+                                                  }
+                                                  if (chartSettings.markerType === "triangle") {
+                                                    return <path key={`dot-${res.label}-${index}`} d={`M${cx},${cy - mSize} L${cx - mSize},${cy + mSize} L${cx + mSize},${cy + mSize} Z`} fill={seriesColor} />;
+                                                  }
+                                                  if (chartSettings.markerType === "diamond") {
+                                                    return <path key={`dot-${res.label}-${index}`} d={`M${cx},${cy - mSize} L${cx + mSize},${cy} L${cx},${cy + mSize} L${cx - mSize},${cy} Z`} fill={seriesColor} />;
+                                                  }
+                                                  return <circle key={`dot-${res.label}-${index}`} cx={cx} cy={cy} r={mSize} fill={seriesColor} />;
+                                                } : false}
+                                                activeDot={{ r: chartSettings.markerSize + 2 }}
+                                                legendType={dash !== '0' ? "plainline" : "line"}
+                                              />
+                                            );
+                                          })}
                                           {chartSettings.showGridLines && (
                                             <CartesianGrid
-                                              strokeDasharray="3 3"
+                                              strokeDasharray={chartSettings.gridStyle === 'hairline' ? "1 1" : "3 3"}
                                               horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
                                               vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
                                               stroke={chartSettings.gridColor}
@@ -8461,6 +8645,8 @@ export default function MCDMCalculator() {
                                             bottom: chartSettings.marginBottom
                                           }}
                                         >
+                                          {renderDefs(activeColors)}
+                                          <Customized component={RightFrameBorder} />
                                           <XAxis
                                             xAxisId="bottom"
                                             dataKey="x"
@@ -8475,7 +8661,7 @@ export default function MCDMCalculator() {
                                               style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
-                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                            tickLine={getTickLine('bottom')}
                                           />
                                           <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
                                           <YAxis
@@ -8490,7 +8676,7 @@ export default function MCDMCalculator() {
                                               style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
-                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                            tickLine={getTickLine('left')}
                                             tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
                                           />
                                           <YAxis {...rightAxisProps} />
@@ -8509,7 +8695,7 @@ export default function MCDMCalculator() {
                                           ))}
                                           {chartSettings.showGridLines && (
                                             <CartesianGrid
-                                              strokeDasharray="3 3"
+                                              strokeDasharray={chartSettings.gridStyle === 'hairline' ? "1 1" : "3 3"}
                                               horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
                                               vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
                                               stroke={chartSettings.gridColor}
@@ -8637,6 +8823,8 @@ export default function MCDMCalculator() {
                                             bottom: chartSettings.marginBottom
                                           }}
                                         >
+                                          {renderDefs(activeColors)}
+                                          <Customized component={RightFrameBorder} />
                                           <XAxis
                                             dataKey="method"
                                             tick={{ fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text }}
@@ -8647,7 +8835,7 @@ export default function MCDMCalculator() {
                                               style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
-                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                            tickLine={getTickLine('bottom')}
                                           />
                                           <XAxis orientation="top" xAxisId="top_border" tick={false} axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }} />
                                           <YAxis
@@ -8661,40 +8849,46 @@ export default function MCDMCalculator() {
                                               style: { fontSize: isMobile ? Math.max(7, chartSettings.fontSize - 3) : chartSettings.fontSize, fontWeight: 700, fill: themeColors.text, textAnchor: 'middle' }
                                             } : undefined}
                                             axisLine={{ stroke: themeColors.border, strokeWidth: chartSettings.borderWidth }}
-                                            tickLine={{ stroke: themeColors.border, strokeWidth: 1 }}
+                                            tickLine={getTickLine('left')}
                                           />
                                           <YAxis {...rightAxisProps} />
                                           <Tooltip contentStyle={{ fontSize: `${chartSettings.fontSize}px`, borderRadius: "4px", border: `1px solid ${themeColors.border}`, backgroundColor: themeColors.bg, color: themeColors.text, boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
                                           {/* Legend removed for standalone absolute overlay */}
-                                          {comparisonChartAlternatives.map((alt, idx) => (
-                                            <Line
-                                              key={alt}
-                                              type={comparisonChartType === "step" ? "step" : "monotone"}
-                                              dataKey={alt}
-                                              stroke={activeColors[idx % activeColors.length]}
-                                              strokeWidth={chartSettings.borderWidth}
-                                              strokeDasharray={["0", "5 5", "3 3", "10 5", "2 2", "15 5"][idx % 6]}
-                                              activeDot={{ r: chartSettings.markerSize + 2 }}
-                                              dot={(chartSettings.markerType as string) !== 'none' ? (props: any) => {
-                                                const { cx, cy, index } = props;
-                                                const mSize = chartSettings.markerSize;
-                                                const seriesColor = activeColors[idx % activeColors.length];
-                                                if (chartSettings.markerType === "square") {
-                                                  return <rect key={`dot-${alt}-${index}`} x={cx - mSize} y={cy - mSize} width={mSize * 2} height={mSize * 2} fill={seriesColor} />;
-                                                }
-                                                if (chartSettings.markerType === "triangle") {
-                                                  return <path key={`dot-${alt}-${index}`} d={`M${cx},${cy - mSize} L${cx - mSize},${cy + mSize} L${cx + mSize},${cy + mSize} Z`} fill={seriesColor} />;
-                                                }
-                                                if (chartSettings.markerType === "diamond") {
-                                                  return <path key={`dot-${alt}-${index}`} d={`M${cx},${cy - mSize} L${cx + mSize},${cy} L${cx},${cy + mSize} L${cx - mSize},${cy} Z`} fill={seriesColor} />;
-                                                }
-                                                return <circle key={`dot-${alt}-${index}`} cx={cx} cy={cy} r={mSize} fill={seriesColor} />;
-                                              } : false}
-                                            />
-                                          ))}
+                                          {comparisonChartAlternatives.map((alt, idx) => {
+                                            const seriesColor = activeColors[idx % activeColors.length];
+                                            const ls = chartSettings.lineStyle || 'uniform';
+                                            const DASH = ['0','8 4','2 3','8 4 2 4','16 4'];
+                                            const dash = ls === 'uniform' ? '0' : ls === 'dashed' ? '8 4' : ls === 'dotted' ? '2 3' : ls === 'alternating' ? (idx % 2 === 0 ? '0' : '8 4') : DASH[idx % DASH.length];
+                                            return (
+                                              <Line
+                                                key={alt}
+                                                type={comparisonChartType === "step" ? "step" : "monotone"}
+                                                dataKey={alt}
+                                                stroke={seriesColor}
+                                                strokeWidth={chartSettings.borderWidth}
+                                                strokeDasharray={dash}
+                                                activeDot={{ r: chartSettings.markerSize + 2 }}
+                                                dot={(chartSettings.markerType as string) !== 'none' ? (props: any) => {
+                                                  const { cx, cy, index } = props;
+                                                  const mSize = chartSettings.markerSize;
+                                                  if (chartSettings.markerType === "square") {
+                                                    return <rect key={`dot-${alt}-${index}`} x={cx - mSize} y={cy - mSize} width={mSize * 2} height={mSize * 2} fill={seriesColor} />;
+                                                  }
+                                                  if (chartSettings.markerType === "triangle") {
+                                                    return <path key={`dot-${alt}-${index}`} d={`M${cx},${cy - mSize} L${cx - mSize},${cy + mSize} L${cx + mSize},${cy + mSize} Z`} fill={seriesColor} />;
+                                                  }
+                                                  if (chartSettings.markerType === "diamond") {
+                                                    return <path key={`dot-${alt}-${index}`} d={`M${cx},${cy - mSize} L${cx + mSize},${cy} L${cx},${cy + mSize} L${cx - mSize},${cy} Z`} fill={seriesColor} />;
+                                                  }
+                                                  return <circle key={`dot-${alt}-${index}`} cx={cx} cy={cy} r={mSize} fill={seriesColor} />;
+                                                } : false}
+                                                legendType={dash !== '0' ? "plainline" : "line"}
+                                              />
+                                            );
+                                          })}
                                           {chartSettings.showGridLines && (
                                             <CartesianGrid
-                                              strokeDasharray="3 3"
+                                              strokeDasharray={chartSettings.gridStyle === 'hairline' ? "1 1" : "3 3"}
                                               horizontal={chartSettings.gridLinesMode === 'horizontal' || chartSettings.gridLinesMode === 'both'}
                                               vertical={chartSettings.gridLinesMode === 'vertical' || chartSettings.gridLinesMode === 'both'}
                                               stroke={chartSettings.gridColor}
@@ -9120,11 +9314,25 @@ export default function MCDMCalculator() {
                   <CardContent className="space-y-4">
                     {isFullyDataFilled ? (
                       <>
-                        <div className="text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
-                          <p className="font-semibold">✓ Data has uploaded</p>
-                          <p className="mt-1">
-                            {alternatives.length} alternatives × {criteria.length} criteria
-                          </p>
+                        <div className="flex items-center justify-between text-[11px] text-green-700 bg-green-50 border border-green-200 p-2 rounded">
+                          <div>
+                            <p className="font-semibold">✓ Data has uploaded</p>
+                            <p className="mt-1">
+                              {alternatives.length} alternatives × {criteria.length} criteria
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[10px] sm:text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            onClick={() => {
+                              setAlternatives([]);
+                              setCriteria([]);
+                              localStorage.removeItem("decisionMatrixData");
+                            }}
+                          >
+                            Remove Data
+                          </Button>
                         </div>
 
                         {/* Editable Decision Matrix Table */}
@@ -9949,6 +10157,8 @@ export default function MCDMCalculator() {
                                       <BarChart
                                         data={sensitivityWeightChartData}
                                         margin={{ top: mT, right: mR, left: mL, bottom: mB }}
+                                        barCategoryGap={`${100 - (chartSettings.barWidthPercent || 80)}%`}
+                                        barGap={chartSettings.barGap ?? 4}
                                       >
                                         {renderDefs(activeColors)}
                                         <Customized component={RightFrameBorder} />
@@ -10007,6 +10217,8 @@ export default function MCDMCalculator() {
                                       <BarChart
                                         data={sensitivityWeightChartData}
                                         margin={{ top: mT, right: mR, left: mL, bottom: mB }}
+                                        barCategoryGap={`${100 - (chartSettings.barWidthPercent || 80)}%`}
+                                        barGap={chartSettings.barGap ?? 4}
                                       >
                                         {renderDefs(activeColors)}
                                         <Customized component={RightFrameBorder} />
@@ -10470,7 +10682,7 @@ export default function MCDMCalculator() {
                                         <ComposedChart
                                           data={sensitivityWeightChartData}
                                           margin={{ top: mT, right: mR, left: mL, bottom: mB }}
-                                          barGap={0}
+                                          barGap={chartSettings.barGap ?? 4}
                                           barCategoryGap="25%"
                                         >
                                           {renderDefs(activeColors)}

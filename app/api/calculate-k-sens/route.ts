@@ -118,9 +118,9 @@ export async function POST(request: NextRequest) {
                 else if (methodLower === "promethee") scores = calculatePROMETHEE(alternatives, criteria).scores;
                 else if (methodLower === "promethee1") scores = calculatePROMETHEE1(alternatives, criteria).scores;
                 else if (methodLower === "promethee2") scores = calculatePROMETHEE2(alternatives, criteria).scores;
-                else if (methodLower === "electre") scores = calculateELECTRE(alternatives, criteria);
-                else if (methodLower === "electre1") scores = calculateELECTRE1(alternatives, criteria);
-                else if (methodLower === "electre2") scores = calculateELECTRE2(alternatives, criteria);
+                else if (methodLower === "electre") scores = calculateELECTRE(alternatives, criteria).scores;
+                else if (methodLower === "electre1") scores = calculateELECTRE1(alternatives, criteria).scores;
+                else if (methodLower === "electre2") scores = calculateELECTRE2(alternatives, criteria).scores;
                 else if (methodLower === "mabac") scores = calculateMABAC(alternatives, criteria).scores;
                 else if (methodLower === "gra") scores = calculateGRA(alternatives, criteria).scores;
                 else if (methodLower === "aras") scores = calculateARAS(alternatives, criteria).scores;

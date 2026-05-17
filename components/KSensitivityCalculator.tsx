@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ import { ChartVisualConfigurator, ChartSettings } from "@/components/ChartVisual
 
 
 // ─── 3D Bar Chart Component (True Matplotlib Clone) ───────────────────
-const ThreeDChart = ({ data, criteria, variationRange, elev: elevDeg, azim: azimDeg, type = 'bar' }: any) => {
+const ThreeDChart = ({ data, criteria, variationRange, elev: elevDeg, azim: azimDeg, type = 'bar', settings }: any) => {
   const width = 900;
   const height = 700;
 
@@ -44,17 +44,23 @@ const ThreeDChart = ({ data, criteria, variationRange, elev: elevDeg, azim: azim
     const y1 = x * Math.sin(azim) + y * Math.cos(azim);
     const y2 = y1 * Math.cos(elev) - z * Math.sin(elev);
     const z2 = y1 * Math.sin(elev) + z * Math.cos(elev);
-    return { x: 400 + x1, y: 380 - z2, depth: y2 };
+    return { x: 450 + x1, y: 380 - z2, depth: y2 };
   };
 
   const getJetColor = (p: number) => {
     const stops = [[0, 0, 131], [0, 0, 255], [0, 255, 255], [0, 255, 0], [255, 255, 0], [255, 0, 0], [128, 0, 0]];
     const idx = Math.min(stops.length - 2, Math.floor(p * (stops.length - 1)));
     const rem = (p * (stops.length - 1)) - idx;
-    const r = Math.round(stops[idx][0] + (stops[idx + 1][0] - stops[idx][0]) * rem);
-    const g = Math.round(stops[idx][1] + (stops[idx + 1][1] - stops[idx][1]) * rem);
-    const b = Math.round(stops[idx][2] + (stops[idx + 1][2] - stops[idx][2]) * rem);
-    return `rgb(${r},${g},${b})`;
+    const start = stops[idx];
+    const end = stops[idx + 1];
+    const r = Math.round(start[0] + (end[0] - start[0]) * rem);
+    const g = Math.round(start[1] + (end[1] - start[1]) * rem);
+    const b = Math.round(start[2] + (end[2] - start[2]) * rem);
+
+    // Apply saturation and brightness from settings
+    const s = settings?.barSaturation ?? 1;
+    const br = settings?.barBrightness ?? 1;
+    return `rgb(${Math.min(255, r * br)},${Math.min(255, g * br)},${Math.min(255, b * br)})`;
   };
 
   const xMin = - (variationRange.length / 2) * xSpacing;
@@ -80,7 +86,8 @@ const ThreeDChart = ({ data, criteria, variationRange, elev: elevDeg, azim: azim
         ];
         elements.push({
           type: 'bar',
-          color: getJetColor(vIdx / (variationRange.length - 1)),
+          color: getJetColor(vIdx / (Math.max(1, variationRange.length - 1))),
+          idx: vIdx,
           v: vpts,
           depth: vpts.reduce((acc, p) => acc + p.depth, 0) / 8
         });
@@ -97,7 +104,7 @@ const ThreeDChart = ({ data, criteria, variationRange, elev: elevDeg, azim: azim
         const base = project(x, y, 0);
         elements.push({
           type: type,
-          color: getJetColor(vIdx / (variationRange.length - 1)),
+          color: getJetColor(vIdx / (Math.max(1, variationRange.length - 1))),
           pt, base,
           depth: pt.depth
         });
@@ -123,7 +130,7 @@ const ThreeDChart = ({ data, criteria, variationRange, elev: elevDeg, azim: azim
 
         elements.push({
           type: 'surface',
-          color: getJetColor(i / (variationRange.length - 1)),
+          color: getJetColor(i / (Math.max(1, variationRange.length - 1))),
           v: pts,
           depth: pts.reduce((acc, p) => acc + p.depth, 0) / 4
         });
@@ -132,7 +139,7 @@ const ThreeDChart = ({ data, criteria, variationRange, elev: elevDeg, azim: azim
   }
 
   elements.sort((a, b) => b.depth - a.depth);
-  const zTicks = [0, 10, 20, 30, 40];
+  const zTicks = [0, 10, 20, 30, 40, 50];
 
   const pX1 = project(xMin, yMin, 0);
   const pX2 = project(cageXMax, yMin, 0);
@@ -142,10 +149,95 @@ const ThreeDChart = ({ data, criteria, variationRange, elev: elevDeg, azim: azim
   const pY2 = project(cageXMax, cageYMax, 0);
   const angleY = Math.atan2(pY2.y - pY1.y, pY2.x - pY1.x) * (180 / Math.PI);
 
+  const fillPattern = settings?.fillPattern || 'none';
+
   return (
     <div className="flex flex-col items-center justify-center p-4 bg-white select-none">
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
-        {/* Cage Planes - Moved to Back Sides (xMin and cageYMax) */}
+        <defs>
+          {/* Reusable Patterns for 3D Faces */}
+          {variationRange.map((_: any, i: number) => {
+            const color = getJetColor(i / (Math.max(1, variationRange.length - 1)));
+            const patternId = `pattern-3d-${i}`;
+            const patternProps = { id: patternId, width: 8, height: 8, patternUnits: "userSpaceOnUse" as const };
+            const opacity = settings?.barOpacity ?? 1;
+
+            let currentPattern = fillPattern;
+            if (currentPattern === 'mixed') {
+              const mixedPatterns: any[] = ['striped', 'crosshatch', 'grid', 'dots-dense', 'weave', 'horizontal'];
+              currentPattern = mixedPatterns[i % mixedPatterns.length];
+            }
+
+            return (
+              <React.Fragment key={i}>
+                {currentPattern === 'striped' && (
+                  <pattern {...patternProps} patternTransform="rotate(45)">
+                    <rect width="8" height="8" fill={color} fillOpacity={opacity} />
+                    <line x1="0" y1="0" x2="0" y2="8" stroke="white" strokeWidth="2" strokeOpacity="0.4" />
+                  </pattern>
+                )}
+                {currentPattern === 'dotted' && (
+                  <pattern {...patternProps}>
+                    <rect width="8" height="8" fill={color} fillOpacity={opacity} />
+                    <circle cx="4" cy="4" r="1.5" fill="white" fillOpacity="0.4" />
+                  </pattern>
+                )}
+                {currentPattern === 'grid' && (
+                  <pattern {...patternProps}>
+                    <rect width="8" height="8" fill={color} fillOpacity={opacity} />
+                    <path d="M 8 0 L 0 0 0 8" fill="none" stroke="white" strokeWidth="1" strokeOpacity="0.4" />
+                  </pattern>
+                )}
+                {currentPattern === 'weave' && (
+                  <pattern {...patternProps} width="4" height="4">
+                    <rect width="4" height="4" fill={color} fillOpacity={opacity} />
+                    <path d="M 0 2 L 4 2 M 2 0 L 2 4" stroke="white" strokeWidth="0.8" strokeOpacity="0.5" />
+                    <path d="M 0 0 L 4 4 M 4 0 L 0 4" stroke="black" strokeWidth="0.5" strokeOpacity="0.3" />
+                  </pattern>
+                )}
+                {currentPattern === 'hatch-right' && (
+                  <pattern {...patternProps} width="5" height="5" patternTransform="rotate(-45)">
+                    <rect width="5" height="5" fill={color} fillOpacity={opacity} />
+                    <line x1="0" y1="0" x2="0" y2="5" stroke="black" strokeWidth="0.8" strokeOpacity="0.5" />
+                  </pattern>
+                )}
+                {currentPattern === 'crosshatch' && (
+                  <pattern {...patternProps} width="4" height="4">
+                    <rect width="4" height="4" fill={color} fillOpacity={opacity} />
+                    <path d="M 0 0 L 4 4 M 4 0 L 0 4" stroke="black" strokeWidth="0.5" strokeOpacity="0.4" />
+                  </pattern>
+                )}
+                {currentPattern === 'dots-dense' && (
+                  <pattern {...patternProps} width="2.5" height="2.5">
+                    <rect width="2.5" height="2.5" fill={color} fillOpacity={opacity} />
+                    <circle cx="1.25" cy="1.25" r="0.6" fill="black" fillOpacity="0.4" />
+                  </pattern>
+                )}
+                {currentPattern === 'horizontal' && (
+                  <pattern {...patternProps} width="6" height="6">
+                    <rect width="6" height="6" fill={color} fillOpacity={opacity} />
+                    <path d="M 0 3 L 6 3" stroke="black" strokeWidth="1" strokeOpacity="0.5" />
+                  </pattern>
+                )}
+                {currentPattern === 'checkerboard' && (
+                  <pattern {...patternProps} width="10" height="10">
+                    <rect width="10" height="10" fill={color} fillOpacity={opacity} />
+                    <rect x="0" y="0" width="5" height="5" fill="black" fillOpacity="0.2" />
+                    <rect x="5" y="5" width="5" height="5" fill="black" fillOpacity="0.2" />
+                  </pattern>
+                )}
+                {currentPattern === 'carbon' && (
+                  <pattern {...patternProps} width="12" height="12">
+                    <rect width="12" height="12" fill={color} fillOpacity={opacity} />
+                    <path d="M 0 0 L 6 6 M 6 12 L 12 6" stroke="white" strokeWidth="2" strokeOpacity="0.3" />
+                    <path d="M 6 0 L 12 6 M 0 6 L 6 12" stroke="black" strokeWidth="2" strokeOpacity="0.3" />
+                  </pattern>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </defs>
+
         {/* Floor */}
         <path d={`M ${project(xMin, yMin, 0).x} ${project(xMin, yMin, 0).y} L ${project(cageXMax, yMin, 0).x} ${project(cageXMax, yMin, 0).y} L ${project(cageXMax, cageYMax, 0).x} ${project(cageXMax, cageYMax, 0).y} L ${project(xMin, cageYMax, 0).x} ${project(xMin, cageYMax, 0).y} Z`} fill="#f9f9f9" stroke="#999" strokeWidth="0.8" />
 
@@ -181,11 +273,20 @@ const ThreeDChart = ({ data, criteria, variationRange, elev: elevDeg, azim: azim
         {elements.map((el: any, i: number) => {
           if (el.type === 'bar') {
             const v = el.v;
+            const topFill = fillPattern === 'none' ? el.color : `url(#pattern-3d-${el.idx})`;
+            const opacity = settings?.barOpacity ?? 1;
+
             return (
               <g key={`el-${i}`}>
-                <path d={`M ${v[4].x} ${v[4].y} L ${v[5].x} ${v[5].y} L ${v[6].x} ${v[6].y} L ${v[7].x} ${v[7].y} Z`} fill={el.color} stroke="#000" strokeWidth="0.3" />
-                <path d={`M ${v[0].x} ${v[0].y} L ${v[1].x} ${v[1].y} L ${v[5].x} ${v[5].y} L ${v[4].x} ${v[4].y} Z`} fill={el.color} opacity="0.9" stroke="#000" strokeWidth="0.3" />
-                <path d={`M ${v[1].x} ${v[1].y} L ${v[2].x} ${v[2].y} L ${v[6].x} ${v[6].y} L ${v[5].x} ${v[5].y} Z`} fill={el.color} opacity="0.8" stroke="#000" strokeWidth="0.3" />
+                {/* Top Face - Apply Pattern */}
+                <path d={`M ${v[4].x} ${v[4].y} L ${v[5].x} ${v[5].y} L ${v[6].x} ${v[6].y} L ${v[7].x} ${v[7].y} Z`} fill={topFill} fillOpacity={opacity} stroke="#000" strokeWidth="0.4" />
+
+                {/* Front/Side Faces - Solid color with dynamic shading */}
+                {/* Front Face (Lightest shading) */}
+                <path d={`M ${v[0].x} ${v[0].y} L ${v[1].x} ${v[1].y} L ${v[5].x} ${v[5].y} L ${v[4].x} ${v[4].y} Z`} fill={el.color} fillOpacity={opacity * 0.9} stroke="#000" strokeWidth="0.3" />
+
+                {/* Right/Side Face (Darkest shading for depth) */}
+                <path d={`M ${v[1].x} ${v[1].y} L ${v[2].x} ${v[2].y} L ${v[6].x} ${v[6].y} L ${v[5].x} ${v[5].y} Z`} fill={el.color} fillOpacity={opacity * 0.75} stroke="#000" strokeWidth="0.3" />
               </g>
             );
           } else if (el.type === 'scatter') {
@@ -204,61 +305,59 @@ const ThreeDChart = ({ data, criteria, variationRange, elev: elevDeg, azim: azim
           return null;
         })}
 
-        {/* Labels - Positioned on the "Open" sides */}
+        {/* Labels and Titles (rest of the component) */}
         {variationRange.map((v: number, i: number) => {
           const p = project(xMin + i * xSpacing + dx / 2, yMin - 12, 0);
-          return <text key={`vl-${i}`} x={p.x} y={p.y + 12} fontSize="10" textAnchor="middle" fill="#000" fontWeight="bold">{v}</text>
+          return <text key={`vl-${i}`} x={p.x} y={p.y + 12} fontSize="11" textAnchor="middle" fill="#000" fontWeight="bold">{v}</text>
         })}
         {criteria.map((c: any, i: number) => {
           const p = project(cageXMax + 8, yMin + i * ySpacing + dy / 2, 0);
-          return <text key={`cl-${i}`} x={p.x} y={p.y + 4} fontSize="10" textAnchor="start" fill="#000" fontWeight="bold">{c.name}</text>
+          return <text key={`cl-${i}`} x={p.x} y={p.y + 4} fontSize="11" textAnchor="start" fill="#000" fontWeight="bold">{c.name}</text>
         })}
         {zTicks.map(z => {
           const p = project(xMin, yMin, (z / 100) * zScale);
           return (
             <g key={`zt-${z}`}>
               <line x1={p.x} y1={p.y} x2={p.x - 4} y2={p.y} stroke="#000" strokeWidth="1" />
-              <text x={p.x - 22} y={p.y + 4} fontSize="10" fill="#000" fontWeight="bold" textAnchor="start">{z}</text>
+              <text x={p.x - 24} y={p.y + 4} fontSize="11" fill="#000" fontWeight="bold" textAnchor="start">{z}%</text>
             </g>
           );
         })}
 
-        {/* Axis Titles - Screen-Space Centered for Perfect Alignment */}
         {(() => {
-          // X-Axis (Weight Variation) center
           const pXStart = project(xMin + dx / 2, yMin, 0);
           const pXEnd = project(xMaxBound + dx / 2, yMin, 0);
           const titleX_x = (pXStart.x + pXEnd.x) / 2;
           const titleX_y = (pXStart.y + pXEnd.y) / 2 + 55;
 
-          // Y-Axis (Criteria) center
           const pYStart = project(cageXMax, yMin + dy / 2, 0);
           const pYEnd = project(cageXMax, yMaxBound + dy / 2, 0);
-          const titleY_x = (pYStart.x + pYEnd.x) / 2 + 60;
+          const titleY_x = (pYStart.x + pYEnd.x) / 2 + 75;
           const titleY_y = (pYStart.y + pYEnd.y) / 2 + 10;
 
           return (
             <g>
               <text
                 x={titleX_x} y={titleX_y}
-                fontSize="14" textAnchor="middle" fill="#000" fontWeight="black"
+                fontSize="15" textAnchor="middle" fill="#000" fontWeight="900"
                 transform={`rotate(${angleX}, ${titleX_x}, ${titleX_y})`}
+                style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
               >
                 Weight Variation (%)
               </text>
               <text
                 x={titleY_x} y={titleY_y}
-                fontSize="14" textAnchor="middle" fill="#000" fontWeight="black"
+                fontSize="15" textAnchor="middle" fill="#000" fontWeight="900"
                 transform={`rotate(${angleY}, ${titleY_x}, ${titleY_y})`}
+                style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
               >
-                Criteria
+                Criteria Mass
               </text>
             </g>
           );
         })()}
 
-        {/* Z-Axis Title - Moved to Left for clarity with more padding */}
-        <text x={project(xMin, yMin, 0.2 * zScale).x - 65} y={project(xMin, yMin, 0.2 * zScale).y} transform={`rotate(-90, ${project(xMin, yMin, 0.2 * zScale).x - 65}, ${project(xMin, yMin, 0.2 * zScale).y})`} fontSize="14" textAnchor="middle" fill="#000" fontWeight="black">Weight (%)</text>
+        <text x={project(xMin, yMin, 0.25 * zScale).x - 75} y={project(xMin, yMin, 0.25 * zScale).y} transform={`rotate(-90, ${project(xMin, yMin, 0.25 * zScale).x - 75}, ${project(xMin, yMin, 0.25 * zScale).y})`} fontSize="15" textAnchor="middle" fill="#000" fontWeight="900" style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>Normalized Weight</text>
       </svg>
     </div>
   );
@@ -333,6 +432,8 @@ export default function KSensitivityCalculator({
     barOpacity: 1.0,
     barSaturation: 1.0,
     barBrightness: 1.0,
+    barWidthPercent: 80,
+    barGap: 4,
     fillPattern: 'none',
     separatorColor: '#ffffff',
     showSeparator: false,
@@ -1363,6 +1464,13 @@ export default function KSensitivityCalculator({
 
     const colorsArr = baseColors.map(adjustColor);
 
+    // A prefix that changes whenever palette/saturation/brightness changes so the browser
+    // is forced to re-resolve the SVG pattern references (avoids stale pattern cache).
+    const patternPrefix = `p-${kSensChartSettings.colorPalette}-${Math.round((kSensChartSettings.barSaturation || 1) * 100)}-${Math.round((kSensChartSettings.barBrightness || 1) * 100)}-${Math.round((kSensChartSettings.barOpacity || 1) * 100)}`;
+    const getPatternId = (idx: number) => `${patternPrefix}-${idx}`;
+    const getPatternFill = (idx: number) => `url(#${getPatternId(idx)})`;
+
+
     // Show a themed loading state when analyzing
     if (isAnalyzing) {
       return (
@@ -1509,6 +1617,111 @@ export default function KSensitivityCalculator({
     const legendBgColor = kSensChartSettings.backgroundTheme === 'dark'
       ? 'rgba(30,41,59,0.95)' : 'rgba(255,255,255,0.97)';
 
+    // Helper: render a mini SVG swatch that matches the bar's fill pattern + color
+    const renderLegendSwatch = (colorToUse: string, itemIdx: number, swatchType: string) => {
+      const pattern = kSensChartSettings.fillPattern;
+      const opacity = kSensChartSettings.barOpacity ?? 1;
+
+      let currentPattern: ChartSettings['fillPattern'] = pattern;
+      if (currentPattern === 'mixed') {
+        const mixedPatterns: ChartSettings['fillPattern'][] = ['striped', 'crosshatch', 'grid', 'dots-dense', 'weave', 'horizontal'];
+        currentPattern = mixedPatterns[itemIdx % mixedPatterns.length];
+      }
+
+      const pid = `leg-pat-${itemIdx}`;
+
+      const buildInlineDef = () => {
+        const base = <rect width="10" height="10" fill={colorToUse} fillOpacity={opacity} />;
+        switch (currentPattern) {
+          case 'striped': return (
+            <pattern id={pid} width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              {base}<line x1="0" y1="0" x2="0" y2="4" stroke="white" strokeWidth="1" strokeOpacity="0.5" />
+            </pattern>
+          );
+          case 'dotted': return (
+            <pattern id={pid} width="5" height="5" patternUnits="userSpaceOnUse">
+              {base}<circle cx="2.5" cy="2.5" r="1" fill="white" fillOpacity="0.5" />
+            </pattern>
+          );
+          case 'grid': return (
+            <pattern id={pid} width="5" height="5" patternUnits="userSpaceOnUse">
+              {base}<path d="M 5 0 L 0 0 0 5" fill="none" stroke="white" strokeWidth="0.6" strokeOpacity="0.5" />
+            </pattern>
+          );
+          case 'weave': return (
+            <pattern id={pid} width="4" height="4" patternUnits="userSpaceOnUse">
+              {base}
+              <path d="M 0 2 L 4 2 M 2 0 L 2 4" stroke="white" strokeWidth="0.6" strokeOpacity="0.6" />
+              <path d="M 0 0 L 4 4 M 4 0 L 0 4" stroke="black" strokeWidth="0.4" strokeOpacity="0.3" />
+            </pattern>
+          );
+          case 'hatch-right': return (
+            <pattern id={pid} width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+              {base}<line x1="0" y1="0" x2="0" y2="4" stroke="black" strokeWidth="0.8" strokeOpacity="0.5" />
+            </pattern>
+          );
+          case 'crosshatch': return (
+            <pattern id={pid} width="4" height="4" patternUnits="userSpaceOnUse">
+              {base}<path d="M 0 0 L 4 4 M 4 0 L 0 4" stroke="black" strokeWidth="0.5" strokeOpacity="0.5" />
+            </pattern>
+          );
+          case 'dots-dense': return (
+            <pattern id={pid} width="2.5" height="2.5" patternUnits="userSpaceOnUse">
+              {base}<circle cx="1.25" cy="1.25" r="0.5" fill="black" fillOpacity="0.4" />
+            </pattern>
+          );
+          case 'horizontal': return (
+            <pattern id={pid} width="5" height="5" patternUnits="userSpaceOnUse">
+              {base}<path d="M 0 2.5 L 5 2.5" stroke="black" strokeWidth="0.8" strokeOpacity="0.5" />
+            </pattern>
+          );
+          case 'checkerboard': return (
+            <pattern id={pid} width="6" height="6" patternUnits="userSpaceOnUse">
+              {base}
+              <rect x="0" y="0" width="3" height="3" fill="black" fillOpacity="0.2" />
+              <rect x="3" y="3" width="3" height="3" fill="black" fillOpacity="0.2" />
+            </pattern>
+          );
+          case 'carbon': return (
+            <pattern id={pid} width="6" height="6" patternUnits="userSpaceOnUse">
+              {base}
+              <path d="M 0 0 L 3 3 M 3 6 L 6 3" stroke="white" strokeWidth="1" strokeOpacity="0.3" />
+              <path d="M 3 0 L 6 3 M 0 3 L 3 6" stroke="black" strokeWidth="1" strokeOpacity="0.3" />
+            </pattern>
+          );
+          default: return null;
+        }
+      };
+
+      if (swatchType === 'line' || swatchType === 'plainline') {
+        return (
+          <svg width="14" height="10" style={{ flexShrink: 0, display: 'block' }}>
+            <line x1="0" y1="5" x2="14" y2="5" stroke={colorToUse} strokeWidth="2" />
+          </svg>
+        );
+      }
+
+      if (pattern === 'none' || !buildInlineDef()) {
+        // Solid color swatch
+        return (
+          <svg width="12" height="10" style={{ flexShrink: 0, display: 'block' }}>
+            <rect x="0" y="1" width="12" height="8" fill={colorToUse} fillOpacity={opacity} />
+          </svg>
+        );
+      }
+
+      // Patterned swatch: embed inline defs so the pattern is self-contained
+      return (
+        <svg width="12" height="10" style={{ flexShrink: 0, display: 'block' }}>
+          <defs>{buildInlineDef()}</defs>
+          {/* base solid color layer */}
+          <rect x="0" y="1" width="12" height="8" fill={colorToUse} fillOpacity={opacity} />
+          {/* pattern overlay */}
+          <rect x="0" y="1" width="12" height="8" fill={`url(#${pid})`} />
+        </svg>
+      );
+    };
+
     const customLegendContent = (props: any) => {
       if (!props.payload) return null;
 
@@ -1538,23 +1751,11 @@ export default function KSensitivityCalculator({
           {rows.map((rowItems, rowIdx) => (
             <div key={rowIdx} style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'nowrap' }}>
               {rowItems.map((entry: any, idx: number) => {
-                const isLine = entry.type === 'line' || entry.type === 'plainline';
-                const isCircle = entry.type === 'circle';
-                const isSquare = entry.type === 'square';
                 const colorToUse = entry.payload?.baseColor || entry.color;
+                const itemIdx = entry.payload?.itemIndex ?? idx;
                 return (
                   <span key={idx} style={{ display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
-                    <svg width="10" height="10" style={{ flexShrink: 0, display: 'block' }}>
-                      {isLine ? (
-                        <line x1="0" y1="5" x2="10" y2="5" stroke={colorToUse} strokeWidth="2" strokeDasharray={entry.payload?.strokeDasharray || '0'} />
-                      ) : isCircle ? (
-                        <circle cx="5" cy="5" r="4" fill={colorToUse} />
-                      ) : isSquare ? (
-                        <rect x="1" y="1" width="8" height="8" fill={colorToUse} />
-                      ) : (
-                        <rect x="1" y="2" width="8" height="6" fill={colorToUse} />
-                      )}
-                    </svg>
+                    {renderLegendSwatch(colorToUse, itemIdx, entry.type)}
                     <span style={{ fontSize: legendFontSize + 'px', fontWeight: 700, color: theme.text }}>
                       {entry.value}
                     </span>
@@ -1689,7 +1890,7 @@ export default function KSensitivityCalculator({
       value: item.name,
       color: colorsArr[idx % colorsArr.length],
       type: isWeightView ? 'circle' : 'square',
-      payload: { baseColor: colorsArr[idx % colorsArr.length] }
+      payload: { baseColor: colorsArr[idx % colorsArr.length], itemIndex: idx }
     }));
 
     const standaloneLegend = !kSensChartSettings.directLabeling && (
@@ -1935,31 +2136,101 @@ export default function KSensitivityCalculator({
       return (
         <defs>
           {colorsArr.map((color, i) => {
-            if (kSensChartSettings.fillPattern === 'striped') {
-              return (
-                <pattern key={`pattern-${i}`} id={`pattern-${i}`} width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                  <rect width="8" height="8" fill={color} fillOpacity={kSensChartSettings.barOpacity} />
-                  <line x1="0" y1="0" x2="0" y2="8" stroke="white" strokeWidth="2" strokeOpacity="0.3" />
-                </pattern>
-              );
+            const patternId = getPatternId(i);
+            const patternProps = {
+              id: patternId,
+              width: 10,
+              height: 10,
+              patternUnits: "userSpaceOnUse" as const,
+            };
+
+            const rectFill = (
+              <rect width="10" height="10" fill={color} fillOpacity={kSensChartSettings.barOpacity} />
+            );
+
+            let currentPattern = kSensChartSettings.fillPattern;
+            if (currentPattern === 'mixed') {
+              const mixedPatterns: any[] = ['striped', 'crosshatch', 'grid', 'dots-dense', 'weave', 'horizontal'];
+              currentPattern = mixedPatterns[i % mixedPatterns.length];
             }
-            if (kSensChartSettings.fillPattern === 'dotted') {
-              return (
-                <pattern key={`pattern-${i}`} id={`pattern-${i}`} width="10" height="10" patternUnits="userSpaceOnUse">
-                  <rect width="10" height="10" fill={color} fillOpacity={kSensChartSettings.barOpacity} />
-                  <circle cx="5" cy="5" r="2" fill="white" fillOpacity="0.3" />
-                </pattern>
-              );
+
+            switch (currentPattern) {
+              case 'striped':
+                return (
+                  <pattern key={patternId} {...patternProps} width="8" height="8" patternTransform="rotate(45)">
+                    {rectFill}
+                    <line x1="0" y1="0" x2="0" y2="8" stroke="white" strokeWidth="2" strokeOpacity="0.4" />
+                  </pattern>
+                );
+              case 'dotted':
+                return (
+                  <pattern key={patternId} {...patternProps}>
+                    {rectFill}
+                    <circle cx="5" cy="5" r="2" fill="white" fillOpacity="0.4" />
+                  </pattern>
+                );
+              case 'grid':
+                return (
+                  <pattern key={patternId} {...patternProps}>
+                    {rectFill}
+                    <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="1" strokeOpacity="0.4" />
+                  </pattern>
+                );
+              case 'weave':
+                return (
+                  <pattern key={patternId} {...patternProps} width="4" height="4">
+                    {rectFill}
+                    <path d="M 0 2 L 4 2 M 2 0 L 2 4" stroke="white" strokeWidth="0.8" strokeOpacity="0.5" />
+                    <path d="M 0 0 L 4 4 M 4 0 L 0 4" stroke="black" strokeWidth="0.5" strokeOpacity="0.3" />
+                  </pattern>
+                );
+              case 'hatch-right':
+                return (
+                  <pattern key={patternId} {...patternProps} width="6" height="6" patternTransform="rotate(-45)">
+                    {rectFill}
+                    <line x1="0" y1="0" x2="0" y2="6" stroke="black" strokeWidth="1" strokeOpacity="0.5" />
+                  </pattern>
+                );
+              case 'crosshatch':
+                return (
+                  <pattern key={patternId} {...patternProps} width="4" height="4">
+                    {rectFill}
+                    <path d="M 0 0 L 4 4 M 4 0 L 0 4" stroke="black" strokeWidth="0.6" strokeOpacity="0.5" />
+                  </pattern>
+                );
+              case 'dots-dense':
+                return (
+                  <pattern key={patternId} {...patternProps} width="2.5" height="2.5">
+                    {rectFill}
+                    <circle cx="1.25" cy="1.25" r="0.6" fill="black" fillOpacity="0.4" />
+                  </pattern>
+                );
+              case 'horizontal':
+                return (
+                  <pattern key={patternId} {...patternProps} width="6" height="6">
+                    {rectFill}
+                    <path d="M 0 3 L 6 3" stroke="black" strokeWidth="1" strokeOpacity="0.5" />
+                  </pattern>
+                );
+              case 'checkerboard':
+                return (
+                  <pattern key={patternId} {...patternProps} width="10" height="10">
+                    {rectFill}
+                    <rect x="0" y="0" width="5" height="5" fill="black" fillOpacity="0.2" />
+                    <rect x="5" y="5" width="5" height="5" fill="black" fillOpacity="0.2" />
+                  </pattern>
+                );
+              case 'carbon':
+                return (
+                  <pattern key={patternId} {...patternProps} width="12" height="12">
+                    {rectFill}
+                    <path d="M 0 0 L 6 6 M 6 12 L 12 6" stroke="white" strokeWidth="2" strokeOpacity="0.3" />
+                    <path d="M 6 0 L 12 6 M 0 6 L 6 12" stroke="black" strokeWidth="2" strokeOpacity="0.3" />
+                  </pattern>
+                );
+              default:
+                return null;
             }
-            if (kSensChartSettings.fillPattern === 'grid') {
-              return (
-                <pattern key={`pattern-${i}`} id={`pattern-${i}`} width="10" height="10" patternUnits="userSpaceOnUse">
-                  <rect width="10" height="10" fill={color} fillOpacity={kSensChartSettings.barOpacity} />
-                  <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="1" strokeOpacity="0.3" />
-                </pattern>
-              );
-            }
-            return null;
           })}
         </defs>
       );
@@ -1991,7 +2262,7 @@ export default function KSensitivityCalculator({
                 })).map((item) => {
                   const originalIdx = isWeightView ? workingCriteria.indexOf(item as any) : alternatives.indexOf(item as any);
                   const color = colorsArr[originalIdx % colorsArr.length];
-                  const fill = kSensChartSettings.fillPattern === 'none' ? color : `url(#pattern-${originalIdx % colorsArr.length})`;
+                  const fill = kSensChartSettings.fillPattern === 'none' ? color : getPatternFill(originalIdx % colorsArr.length);
                   return (
                     <Area
                       key={item.name}
@@ -2178,8 +2449,8 @@ export default function KSensitivityCalculator({
             <ComposedChart
               data={data}
               margin={commonChartProps.margin}
-              barGap={0}
-              barCategoryGap="10%"
+              barGap={kSensChartSettings.barGap ?? 4}
+              barCategoryGap={`${100 - (kSensChartSettings.barWidthPercent || 80)}%`}
             >
               <XAxis
                 dataKey="variation"
@@ -2198,7 +2469,7 @@ export default function KSensitivityCalculator({
                 axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
                 tickLine={getTickLine('left')}
                 label={kSensChartSettings.showAxisTitles ? (labelStyle(`${MCDM_METHODS.find(m => m.value === selectedRankingMethod)?.label || selectedRankingMethod.toUpperCase()} Score`, true) as any) : undefined}
-                domain={[0, (max: number) => Math.ceil(max * 10) / 10]}
+                domain={[0, 'auto']}
                 tickFormatter={(val: number) => val.toFixed(1)}
               />
               <YAxis
@@ -2225,7 +2496,7 @@ export default function KSensitivityCalculator({
               {renderDefs()}
               {alternatives.map((alt, i) => {
                 const color = colorsArr[i % colorsArr.length];
-                const fill = kSensChartSettings.fillPattern === 'none' ? color : `url(#pattern-${i % colorsArr.length})`;
+                const fill = kSensChartSettings.fillPattern === 'none' ? color : getPatternFill(i % colorsArr.length);
                 return (
                   <Bar
                     key={`bar-${alt.name}`}
@@ -2390,8 +2661,8 @@ export default function KSensitivityCalculator({
               <BarChart
                 data={data}
                 margin={commonChartProps.margin}
-                barCategoryGap={isMobile ? "10%" : "20%"}
-                barGap={isMobile ? 1 : 2}
+                barCategoryGap={`${100 - (kSensChartSettings.barWidthPercent || 80)}%`}
+                barGap={kSensChartSettings.barGap ?? 4}
               >
                 {renderDefs()}
                 <XAxis dataKey="variation" tick={{ fontSize: isMobile ? Math.max(7, kSensChartSettings.fontSize - 3) : kSensChartSettings.fontSize, fill: '#000', fontWeight: 700 }} axisLine={{ stroke: '#000', strokeWidth: 1.5 }} tickLine={getTickLine('bottom')} interval={0} tickFormatter={isWeightView ? (val: string) => val.replace('%', '') : undefined} label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.xAxisTitle) as any) : undefined} />
@@ -2418,7 +2689,7 @@ export default function KSensitivityCalculator({
 
                 {(isWeightView ? workingCriteria : alternatives).map((item, idx) => {
                   const color = colorsArr[idx % colorsArr.length];
-                  const fill = kSensChartSettings.fillPattern === 'none' ? color : `url(#pattern-${idx % colorsArr.length})`;
+                  const fill = kSensChartSettings.fillPattern === 'none' ? color : getPatternFill(idx % colorsArr.length);
                   const totalItems = isWeightView ? workingCriteria.length : alternatives.length;
                   return (
                     <Bar

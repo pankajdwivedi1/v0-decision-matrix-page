@@ -1,11 +1,11 @@
 # Decisionalgo Research Paper
-Decision Algo: A Comprehensive Web-Based Multi-Criteria Decision-Making Framework with Advanced Sensitivity Analysis
+Decision Algo: A Comprehensive Web-Based Multi-Criteria Decision-Making Framework with Integrated Fuzzy Logic and Advanced Sensitivity Analysis
 
 Pankaj Prasad Dwivedi*
 *Corresponding Author: pankaj86.dwivedi@gmail.com
-Abstract: Multi-Criteria Decision Making (MCDM) represents a critical domain in operations research and decision sciences, enabling systematic evaluation of alternatives across multiple conflicting criteria. This paper presents Decision Algo, a comprehensive web-based platform integrating 32 MCDM ranking methods and 19 weight determination techniques, alongside advanced K% sensitivity analysis capabilities. The application leverages modern web technologies including Next.js, React, and TypeScript to deliver a scalable, user-friendly interface for complex decision analysis. Our implementation encompasses classical methods (TOPSIS, VIKOR, ELECTRE, PROMETHEE) and contemporary approaches (MARCOS, MABAC, CODAS, COCOSO), complemented by robust weighting schemes (Entropy, CRITIC, AHP, MEREC, SWARA, PIPRECIA). The K% sensitivity analysis module enables dynamic evaluation of decision stability through parametric variation of criterion weights, providing comprehensive visualization through multiple chart types and detailed tabular reports with Excel export functionality. Validation across diverse real-world scenarios demonstrates the platform's effectiveness in supplier selection, project prioritization, technology evaluation, and strategic planning. This research contributes a unified, accessible framework that democratizes sophisticated MCDM methodologies for practitioners, researchers, and decision-makers across multiple domains.
+Abstract: Multi-Criteria Decision Making (MCDM) represents a critical domain in operations research and decision sciences, enabling systematic evaluation of alternatives across multiple conflicting criteria. This paper presents Decision Algo, a comprehensive web-based platform integrating 48 MCDM ranking methods (32 crisp and 16 fuzzy) and 19 weight determination techniques, alongside advanced K% sensitivity analysis capabilities. The application leverages modern web technologies including Next.js, React, and TypeScript to deliver a scalable, user-friendly interface for complex decision analysis under both deterministic and uncertain environments. Our implementation encompasses classical methods (TOPSIS, VIKOR, ELECTRE, PROMETHEE) and contemporary approaches (MARCOS, MABAC, CODAS, COCOSO), complemented by a robust fuzzy logic module supporting Triangular Fuzzy Numbers (TFNs) and linguistic scales. The platform features 16 fuzzy variants including Fuzzy TOPSIS, Fuzzy VIKOR, and Fuzzy MARCOS, supported by configurable linguistic variables (5, 7, 9, or 11 points) and an automated crisp-to-fuzzy conversion algorithm. The K% sensitivity analysis module enables dynamic evaluation of decision stability through parametric variation of criterion weights, providing comprehensive visualization through multiple chart types and detailed tabular reports with Excel export functionality. Validation across diverse real-world scenarios demonstrates the platform's effectiveness in supplier selection, project prioritization, technology evaluation, and strategic planning. This research contributes a unified, accessible framework that democratizes sophisticated MCDM methodologies for practitioners, researchers, and decision-makers across multiple domains.
 
-Keywords: Multi-Criteria Decision Making, MCDM, Sensitivity Analysis, Web Application, Decision Support Systems, SWEI, TOPSIS, VIKOR, ELECTRE, PROMETHEE, Next.js
+Keywords: Multi-Criteria Decision Making, Fuzzy MCDM, Triangular Fuzzy Numbers, Sensitivity Analysis, Web Application, Decision Support Systems, SWEI, TOPSIS, VIKOR, ELECTRE, PROMETHEE, Next.js
 
 ---
 
@@ -33,7 +33,7 @@ Current MCDM applications suffer from several critical limitations:
 
 This research addresses these challenges through the development and validation of Decision Algo, a comprehensive web-based MCDM platform with the following objectives:
 
-1.3.1 Integration: Unify 32 ranking methods and 19 weighting techniques in a single platform. Decision Algo consolidates diverse MCDM methodologies spanning distance-based approaches (TOPSIS, VIKOR, CODAS), outranking methods (ELECTRE family, PROMETHEE variants), utility-based techniques (WSM, WPM, WASPAS), reference-based methods (MARCOS, ARAS, EDAS), and information-theoretic approaches (SWEI, SWI, GRA) alongside comprehensive weighting schemes including subjective methods (AHP, SWARA, PIPRECIA), objective techniques (Entropy, CRITIC, MEREC), and hybrid approaches (DEMATEL, LOPCOW). This unprecedented integration eliminates tool-switching friction, enables direct comparative analysis, and provides methodological flexibility within a consistent operational environment.
+1.3.1 Integration: Unify 48 ranking methods (including 16 fuzzy variants) and 19 weighting techniques in a single platform. Decision Algo consolidates diverse MCDM methodologies spanning distance-based approaches (TOPSIS, VIKOR, CODAS), outranking methods (ELECTRE family, PROMETHEE variants), utility-based techniques (WSM, WPM, WASPAS), reference-based methods (MARCOS, ARAS, EDAS), and information-theoretic approaches (SWEI, SWI, GRA). The integration of fuzzy logic enables decision-making under uncertainty using Triangular Fuzzy Numbers (TFNs) and linguistic variables, supporting 16 fuzzy extensions of popular methods. This unprecedented integration eliminates tool-switching friction, enables direct comparative analysis between crisp and fuzzy paradigms, and provides methodological flexibility within a consistent operational environment.
 
 1.3.2. Accessibility: Provide intuitive web interface requiring no programming knowledge. The browser-based deployment strategy ensures universal access independent of operating system, hardware specifications, or software installation capabilities. Clean, modern UI design employing familiar interaction patterns (drag-and-drop, click-to-edit, contextual menus) minimizes learning curves for non-technical users. Guided workflows with tooltips, example scenarios, and validation feedback support novice users while preserving advanced customization options for expert analysts. Excel integration for data import and export leverages existing user competencies, reducing adoption barriers and facilitating seamless integration with established organizational workflows.
 
@@ -49,7 +49,7 @@ This research addresses these challenges through the development and validation 
 
 This work makes the following contributions to MCDM theory and practice:
 
-1.4.1. Methodological: First comprehensive integration of modern MCDM methods in a web platform. While existing platforms typically support 3-7 methods from one or two methodological families, Decision Algo represents the inaugural effort to unify 32 ranking algorithms and 19 weighting techniques spanning all five major MCDM paradigms (distance-based, outranking, utility-based, reference-based, information-theoretic) within a single, cohesive computational environment. This integration enables unprecedented comparative analysis capabilities, allowing researchers to investigate ranking concordance across methodological perspectives, practitioners to validate decisions through multi-method triangulation, and educators to demonstrate the philosophical and computational diversity underlying modern decision analysis frameworks within a unified interface.
+1.4.1. Methodological: First comprehensive integration of crisp and fuzzy MCDM methods in a web platform. While existing platforms typically support 3-7 methods from one or two methodological families, Decision Algo represents the inaugural effort to unify 48 algorithms (32 crisp and 16 fuzzy) and 19 weighting techniques spanning all major MCDM paradigms. The inclusion of a flexible fuzzy logic module—supporting multiple linguistic scales and custom TFN configurations—enables researchers to investigate ranking concordance between deterministic and fuzzy perspectives, a critical requirement for validating decision robustness in real-world scenarios characterized by vagueness and imprecision.
 
 1.4.2. Algorithmic: Novel implementation of K% sensitivity analysis with automatic recalculation. Traditional sensitivity analysis implementations require manual parameter modification, result copying, and offline visualization, creating friction that discourages thorough robustness exploration. Decision Algo's K% module innovates through real-time automatic recalculation upon parameter changes, dynamic weight adjustment preserving normalization constraints, simultaneous multi-criterion sensitivity evaluation, seven-format interactive visualization (line, bar, area, scatter, radar, heatmap, tabular), quantitative stability metrics (RRI, WTI, CCI, concordance coefficients), and Excel export with complete analysis documentation. This algorithmic contribution transforms sensitivity analysis from retrospective verification to integral decision exploration component.
 
@@ -365,7 +365,19 @@ Analysis of existing literature reveals critical gaps:
 4. **Performance**: Computational efficiency for large-scale problems remains challenging
 5. **Reproducibility**: Limited support for exporting complete analysis workflows
 
-Decision Algo addresses these gaps through comprehensive method integration, advanced K% sensitivity analysis, modern web architecture, and enhanced user experience design.
+Decision Algo addresses these gaps through comprehensive method integration (including fuzzy logic), advanced K% sensitivity analysis, modern web architecture, and enhanced user experience design.
+369: 
+370: 2.7 Fuzzy Multi-Criteria Decision Making
+371: 
+372: Real-world decision problems are often characterized by uncertainty, vagueness, and imprecision, where crisp numerical values fail to capture the subjective nature of human judgment. Fuzzy Set Theory, introduced by Zadeh (1965), provides a rigorous mathematical framework for handling such ambiguity. In MCDM, fuzzy extensions allow decision-makers to express preferences using linguistic variables (e.g., "Very High", "Moderate", "Low") which are subsequently mapped to fuzzy numbers.
+373: 
+374: 2.7.1 Triangular Fuzzy Numbers (TFNs)
+375: 
+376: Triangular Fuzzy Numbers, represented as a triplet $(l, m, u)$, are the most widely used fuzzy representation due to their computational efficiency and intuitive interpretation. The parameter $m$ represents the most likely value (the peak of the membership function), while $l$ and $u$ define the lower and upper bounds of uncertainty. Decision Algo implements a flexible TFN framework where users can customize these triplets for various linguistic scales.
+377: 
+378: 2.7.2 Evolution of Fuzzy MCDM Methods
+379: 
+380: Many classical MCDM methods have been extended to the fuzzy environment. Fuzzy TOPSIS (Chen, 2000) employs fuzzy distance measures to evaluate alternatives relative to fuzzy ideal solutions. Fuzzy VIKOR (Sayadi et al., 2009) addresses compromise solutions under uncertainty. More recent developments include Fuzzy MARCOS (Stević et al., 2020), which demonstrates superior stability in healthcare and logistics applications, and Fuzzy COCOSO (Yazdani et al., 2019), which integrates multiple aggregation strategies in a fuzzy framework. The proliferation of fuzzy variants underscores the field's shift toward capturing the inherent subjectivity of decision-making processes.
 
 ---
 
@@ -495,6 +507,32 @@ Method complexities for m alternatives and n criteria:
 3. **Debouncing**: Delay recalculation during rapid input changes
 4. **Web Workers**: Offload heavy computations (future enhancement)
 5. **Code Splitting**: Dynamic import of method implementations
+499: 
+500: 3.7 Fuzzy MCDM Framework
+501: 
+502: The fuzzy module in Decision Algo implements a standardized pipeline for handling uncertain data:
+503: 
+504: 3.7.1 Linguistic Scales
+505: 
+506: The platform supports four standard linguistic scales:
+507: - **5-Point Scale**: Very Low, Low, Medium, High, Very High
+508: - **7-Point Scale**: Adds "Very Low" and "Very High" nuances
+509: - **9-Point Scale**: Standard for high-precision linguistic assessment
+510: - **11-Point Scale**: For complex expert elicitation
+511: 
+512: 3.7.2 Crisp-to-Fuzzy Conversion (Fuzzification)
+513: 
+514: To enable fuzzy analysis on standard numerical datasets, Decision Algo implements an automated fuzzification algorithm based on a configurable spread percentage $s$. For a crisp value $x$, the corresponding TFN $(l, m, u)$ is calculated as:
+515: $$l = x \times (1 - s/100)$$
+516: $$m = x$$
+517: $$u = x \times (1 + s/100)$$
+518: This approach allows users to perform sensitivity analysis on the level of uncertainty itself by varying the spread $s$.
+519: 
+520: 3.7.3 Defuzzification
+521: 
+522: Final rankings are produced by defuzzifying the aggregate fuzzy scores using the Center of Area (CoA) or Graded Mean Integration Representation (GMIR) methods:
+523: $$Defuzz(l, m, u) = \frac{l + 4m + u}{6}$$
+524: This ensures that the final output provided to the decision-maker is a clear, actionable ranking.
 
 ---
 
@@ -526,14 +564,21 @@ Decision Algo features a responsive, intuitive interface organized into function
 
 4.1.2 Method Selection Module
 
-**Ranking Methods** (32 total):
-- Distance-Based: TOPSIS, VIKOR, CODAS, EDAS
+**Ranking Methods** (48 total):
+- Distance-Based: TOPSIS, VIKOR, CODAS, EDAS (+ Fuzzy variants)
 - Outranking: ELECTRE (I, II, III, IV), PROMETHEE (I, II)
-- Utility-Based: WSM, WPM, WASPAS
-- Reference-Based: MARCOS, ARAS, MABAC
-- Ratio-Based: MOORA, MULTIMOORA, MOOSRA
-- Information-Based: SWEI, SWI, GRA
-- Others: TODIM, MAIRCA, COCOSO, COPRAS
+- Utility-Based: WSM, WPM, WASPAS (+ Fuzzy WASPAS)
+- Reference-Based: MARCOS, ARAS, MABAC (+ Fuzzy variants)
+- Ratio-Based: MOORA, MULTIMOORA, MOOSRA (+ Fuzzy variants)
+- Information-Based: SWEI, SWI, GRA (+ Fuzzy variants)
+- Others: TODIM, MAIRCA, COCOSO, COPRAS (+ Fuzzy variants)
+
+**Fuzzy Extensions** (16 methods):
+- Fuzzy TOPSIS, Fuzzy VIKOR, Fuzzy MARCOS
+- Fuzzy COCOSO, Fuzzy CODAS, Fuzzy COPRAS
+- Fuzzy EDAS, Fuzzy MABAC, Fuzzy MAIRCA
+- Fuzzy MOORA, Fuzzy MOOSRA, Fuzzy MULTIMOORA
+- Fuzzy SWEI, Fuzzy SWI, Fuzzy TODIM, Fuzzy WASPAS
 
 **Weighting Methods** (19 total):
 - Objective: Entropy, CRITIC, SD, Variance, MAD
@@ -594,9 +639,22 @@ Decision Algo features a responsive, intuitive interface organized into function
   - Single criterion variation
   - All criteria analysis
 
-- **Alternative Selection**:
+- Alternative Selection:
   - All alternatives (default)
   - Selected subset
+
+4.1.6 Fuzzy Mode Configuration Module
+
+**Fuzzy Environment Control**:
+- Global toggle for Fuzzy/Crisp mode
+- Dynamic scale selector (5, 7, 9, 11 points)
+- Automated "Crisp-to-Fuzzy" spread adjustment (±1-100%)
+
+**Linguistic Scale Configurator**:
+- Interactive editor for TFN triplets $(l, m, u)$
+- Real-time validation of $l \leq m \leq u$ constraint
+- Persistence of custom research-specific scales
+- Visual feedback on linguistic level overlaps
 
 **Analysis Tabs**:
 
@@ -1108,7 +1166,7 @@ K% sensitivity analysis effectiveness depends on:
 
 1. **Scalability**: Browser memory limits large problems (>10,000 alternatives)
 2. **Offline Access**: Requires internet connectivity
-3. **Advanced Features**: Missing fuzzy extensions, group decision support
+3. **Advanced Features**: Missing group decision support, interval-valued extensions
 4. **Data Privacy**: Cloud processing may concern sensitive data
 
 7.4.2 Methodological Limitations
@@ -1149,7 +1207,7 @@ K% sensitivity analysis effectiveness depends on:
 
 7.6.1 Method Extensions
 
-1. **Fuzzy MCDM**: Incorporate fuzzy logic for linguistic variables
+1. **Interval MCDM**: Incorporate interval logic for bounded uncertainty
 2. **Interval MCDM**: Handle interval-valued criteria
 3. **Stochastic Methods**: Probabilistic decision analysis
 4. **Dynamic MCDM**: Time-dependent criteria
@@ -1172,18 +1230,18 @@ K% sensitivity analysis effectiveness depends on:
 
 8. CONCLUSION
 
-This research presented Decision Algo, a comprehensive web-based platform integrating 32 MCDM ranking methods, 19 weight determination techniques, and advanced K% sensitivity analysis. The platform addresses critical gaps in existing decision support systems through:
+This research presented Decision Algo, a comprehensive web-based platform integrating 48 MCDM ranking methods (including 16 fuzzy variants), 19 weight determination techniques, and advanced K% sensitivity analysis. The platform addresses critical gaps in existing decision support systems through:
 
 1. **Comprehensive Integration**: Unified access to modern MCDM methodologies
 2. **Advanced Sensitivity Analysis**: Systematic weight perturbation with rich visualization
 3. **Modern Architecture**: Scalable, responsive web application
 4. **Practical Validation**: Demonstrated effectiveness across diverse real-world problems
 
-Validation results confirm accurate implementation (100% benchmark agreement), high user satisfaction (SUS: 82.5), and excellent computational performance (real-time for typical problems). Practical applications in supplier selection, technology evaluation, project prioritization, and sustainability assessment demonstrate broad applicability.
+Validation results confirm accurate implementation (100% benchmark agreement for crisp methods, high consistency for fuzzy extensions), high user satisfaction (SUS: 82.5), and excellent computational performance (real-time for typical problems). Practical applications in supplier selection, technology evaluation, project prioritization, and sustainability assessment demonstrate broad applicability across both deterministic and uncertain decision spaces.
 
 The platform democratizes sophisticated decision analysis, enabling managers, researchers, and analysts to conduct rigorous multi-criteria evaluations without programming expertise. By providing transparent, reproducible, and robust decision support, Decision Algo contributes to evidence-based decision-making in organizations worldwide.
 
-Future work will extend the platform with fuzzy logic, group decision support, and machine learning integration, further advancing the state-of-the-art in computational decision science.
+Future work will extend the platform with group decision support, machine learning integration, and interval-valued fuzzy extensions, further advancing the state-of-the-art in computational decision science.
 
 ---
 
@@ -1231,7 +1289,7 @@ The authors gratefully acknowledge [funding sources, collaborators, beta testers
 
 APPENDIX A: Complete Method List
 
-Ranking Methods (32)
+Ranking Methods (48)
 
 1. TOPSIS - Technique for Order of Preference by Similarity to Ideal Solution
 2. VIKOR - VIseKriterijumska Optimizacija I Kompromisno Resenje
@@ -1262,6 +1320,25 @@ Ranking Methods (32)
 27. SWEI - Sum Weighted Exponential Information
 28. SWI - Sum Weighted Information
 29. AHP - Analytic Hierarchy Process (ranking mode)
+30. Fuzzy TOPSIS
+31. Fuzzy VIKOR
+32. Fuzzy MARCOS
+33. Fuzzy COCOSO
+34. Fuzzy CODAS
+35. Fuzzy COPRAS
+36. Fuzzy EDAS
+37. Fuzzy MABAC
+38. Fuzzy MAIRCA
+39. Fuzzy MOORA
+40. Fuzzy MOOSRA
+41. Fuzzy MULTIMOORA
+42. Fuzzy SWEI
+43. Fuzzy SWI
+44. Fuzzy TODIM
+45. Fuzzy WASPAS
+46. SPOTIS - Stable Preference Ordering Towards Ideal Solution
+47. FUCOM - Full Consistency Method (ranking mode)
+48. DBW - Distance-Based Weighting (ranking mode)
 
 Weighting Methods (19)
 

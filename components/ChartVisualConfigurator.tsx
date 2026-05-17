@@ -43,6 +43,7 @@ export interface ChartSettings {
   colorPalette: 'default' | 'academic' | 'grayscale' | 'vibrant' | 'fluorescent' | 'viridis' | 'magma' | 'inferno' | 'custom';
   backgroundTheme: 'white' | 'slate' | 'dark' | 'glass';
   borderWidth: number;
+  barGap: number;
   barOpacity: number;
   gridColor: string;
   gridOpacity: number;
@@ -71,7 +72,8 @@ export interface ChartSettings {
   // Enhancements
   barSaturation: number;
   barBrightness: number;
-  fillPattern: 'none' | 'striped' | 'dotted' | 'grid';
+  barWidthPercent: number;
+  fillPattern: 'none' | 'striped' | 'dotted' | 'grid' | 'weave' | 'hatch-right' | 'crosshatch' | 'dots-dense' | 'horizontal' | 'checkerboard' | 'carbon' | 'mixed';
   separatorColor: string;
   showSeparator: boolean;
   aspectRatio: 'auto' | '1:1' | '4:3' | '16:9' | '3:2' | 'golden' | 'journal-single' | 'journal-double';
@@ -398,19 +400,20 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                   ))}
                 </div>
 
-                <div className="pt-2 sm:pt-4 grid grid-cols-3 gap-2 sm:gap-4 border-t border-slate-50">
+                <div className="pt-2 sm:pt-4 grid grid-cols-4 gap-1 sm:gap-3 border-t border-slate-50">
                   {[
-                    { key: 'barOpacity', label: 'OPAC', isPercent: true },
-                    { key: 'barSaturation', label: 'SATUR', isPercent: true },
-                    { key: 'barBrightness', label: 'BRIGHT', isPercent: true }
+                    { key: 'barOpacity', label: 'OPAC', max: 1, step: 0.1, min: 0.1 },
+                    { key: 'barSaturation', label: 'SATUR', max: 2, step: 0.1, min: 0 },
+                    { key: 'barBrightness', label: 'BRIGHT', max: 2, step: 0.1, min: 0 },
+                    { key: 'barWidthPercent', label: 'BREADTH', max: 100, step: 5, min: 10 }
                   ].map((m) => (
                     <div key={m.key} className="space-y-1 min-w-0">
                       <div className="flex justify-between font-bold text-slate-400 uppercase tracking-tighter" style={{ fontSize: "7px" }}>
                         <span style={{ fontSize: "7px" }}>{m.label}</span>
-                        <span style={{ fontSize: "7px" }}>{Math.round((settings[m.key as keyof ChartSettings] as number) * 100)}%</span>
+                        <span style={{ fontSize: "7px" }}>{m.key === 'barWidthPercent' ? `${settings[m.key as keyof ChartSettings]}%` : `${Math.round((settings[m.key as keyof ChartSettings] as number) * 100)}%`}</span>
                       </div>
                       <input
-                        type="range" min={m.key === 'barOpacity' ? "0.1" : "0"} max={m.key === 'barOpacity' ? "1" : "2"} step="0.1"
+                        type="range" min={m.min} max={m.max} step={m.step}
                         value={settings[m.key as keyof ChartSettings] as number}
                         onChange={(e) => updateSetting(m.key as any, parseFloat(e.target.value))}
                         className="w-full h-0.5 sm:h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
@@ -430,6 +433,16 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                       <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => updateSetting('borderWidth', Math.max(0.5, settings.borderWidth - 0.5))}>-</Button>
                       <span className="font-black min-w-[15px] text-center" style={{ fontSize: "7px" }}>{settings.borderWidth}</span>
                       <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => updateSetting('borderWidth', Math.min(4, settings.borderWidth + 0.5))}>+</Button>
+                    </div>
+                  </div>
+
+                  {/* Bar Gap control */}
+                  <div className="flex items-center justify-between p-1.5 sm:p-2 bg-white border border-slate-100 rounded-lg">
+                    <span className="font-bold text-slate-600" style={{ fontSize: "7px" }}>Bar Gap</span>
+                    <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-md p-0.5">
+                      <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => updateSetting('barGap', Math.max(0, (settings.barGap ?? 4) - 1))}>-</Button>
+                      <span className="font-black min-w-[15px] text-center" style={{ fontSize: "7px" }}>{settings.barGap ?? 4}px</span>
+                      <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => updateSetting('barGap', Math.min(30, (settings.barGap ?? 4) + 1))}>+</Button>
                     </div>
                   </div>
 
@@ -473,7 +486,15 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                           { val: 'none', lab: 'Solid' },
                           { val: 'striped', lab: 'Striped' },
                           { val: 'dotted', lab: 'Dotted' },
-                          { val: 'grid', lab: 'Grid' }
+                          { val: 'grid', lab: 'Grid' },
+                          { val: 'weave', lab: 'Weave' },
+                          { val: 'hatch-right', lab: 'Hatch R' },
+                          { val: 'crosshatch', lab: 'Crosshatch' },
+                          { val: 'dots-dense', lab: 'Dots Dense' },
+                          { val: 'horizontal', lab: 'Horizontal' },
+                          { val: 'checkerboard', lab: 'Checkerboard' },
+                          { val: 'carbon', lab: 'Carbon Fiber' },
+                          { val: 'mixed', lab: 'Mixed (Different)' }
                         ]},
                         { label: 'Grid', key: 'gridStyle', options: [
                           { val: 'normal', lab: 'Normal' },
