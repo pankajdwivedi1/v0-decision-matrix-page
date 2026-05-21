@@ -10,14 +10,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import AHPFormula from "./AHPFormula";
 import PIPRECIAFormula from "./PIPRECIAFormula";
-import { ComposedChart, LineChart, Line, BarChart, Bar, AreaChart, Area, ScatterChart, Scatter, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label, LabelList, ReferenceLine, Customized } from 'recharts';
-import { Check, ChevronRight, Download, RefreshCw, Loader2, Sparkles, Bot, FileText, LayoutGrid } from 'lucide-react';
+import { CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, RadialBar, RadialBarChart, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ComposedChart, Bar, Area, AreaChart, BarChart, Label, LabelList, Customized } from 'recharts';
+import { Check, ChevronRight, Download, RefreshCw, Loader2, Sparkles, Bot, FileText, LayoutGrid, Info, PlayCircle, Settings2, Sigma, ArrowRightLeft, Wand2, Calculator, Save, GripVertical, Trash2 } from 'lucide-react';
+import { RankHeatmap, RankBubbleChart, GroupedRankBarChart } from './AdvancedRankCharts';
 import ExcelJS from 'exceljs';
 import ReactMarkdown from 'react-markdown';
 import { AIResearchAssistant } from './AIResearchAssistant';
 import { AssetLabel } from './AssetLabel';
 import { ResearchAssetHeader } from './ResearchAssetHeader';
-import { Tag } from 'lucide-react';
+
 import { toJpeg, toPng, toSvg } from 'html-to-image';
 import { MCDM_METHODS } from "@/constants/mcdm";
 import { MCDMMethod, Alternative, Criterion } from "@/types/mcdm";
@@ -409,6 +410,10 @@ export default function KSensitivityCalculator({
   const [selectedCriterionToVary, setSelectedCriterionToVary] = useState<string>(''); // New state for criterion selection
   const [kSensViewType, setKSensViewType] = useState<'ranking' | 'weight'>('ranking'); // New state for view type
   const [kSensActiveTab, setKSensActiveTab] = useState<'config' | 'results'>('config');
+  // Weight scenario section visibility toggles
+  const [showWeightSummaryTable, setShowWeightSummaryTable] = useState<boolean>(true);
+  const [showWeightScenarioCharts, setShowWeightScenarioCharts] = useState<boolean>(true);
+
 
   // Separate AI Analysis States for Reports and Abstracts
   const [aiReportResult, setAiReportResult] = useState<string | null>(null);
@@ -526,6 +531,13 @@ export default function KSensitivityCalculator({
   const [selectedRankingMethod, setSelectedRankingMethod] = useState<string>('topsis');
   const [showFormula, setShowFormula] = useState<boolean>(false);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+
+  const [hiddenScenarios, setHiddenScenarios] = useState<number[]>([]);
+
+  // Reset hidden scenarios when target criterion, ranking method, view type, variation range, or results change
+  useEffect(() => {
+    setHiddenScenarios([]);
+  }, [selectedCriterionToVary, kSensViewType, selectedRankingMethod, kSensVariationRange, kSensResults]);
 
   // Dialog states for subjective weight methods
   const [isAhpDialogOpen, setIsAhpDialogOpen] = useState<boolean>(false);
@@ -1024,8 +1036,12 @@ export default function KSensitivityCalculator({
     { value: 'scatter', label: 'Scatter Plot', icon: '⚫' },
     { value: 'radar', label: 'Radar Chart', icon: '🎯' },
     { value: 'dual', label: 'Dual-Axis (Score & Rank)', icon: '🌓' },
+    { value: 'scenarioCombo', label: 'Per-Scenario Combo Panels', icon: '🎛️' },
     { value: 'heatmap', label: 'Sensitivity Heatmap', icon: '🌡️' },
     { value: 'parallel', label: 'Parallel Coordinates', icon: '〰️' },
+    { value: 'rankHeatmap', label: 'Rank Heatmap Matrix', icon: '🌡️' },
+    { value: 'rankBubble', label: 'Rank Bubble Matrix', icon: '🔵' },
+    { value: 'groupedBar', label: 'Grouped Rank Bar Chart', icon: '📊' },
   ];
 
   const calculateKSensScore = (altValues: number[], weights: number[], criteriaTypes: string[]) => {
@@ -1042,13 +1058,13 @@ export default function KSensitivityCalculator({
 
     // Store original state
     const originalAttr = element.getAttribute("style");
-    const rect = element.getBoundingClientRect();
-    const currentWidth = rect.width || 1200;
-    const currentHeight = rect.height || 600;
+    const excludeNodes = Array.from(element.querySelectorAll('.export-exclude')) as HTMLElement[];
+    const originalDisplays = excludeNodes.map(node => node.style.display);
+    
+    // Temporarily hide excluded elements so the container shrinks perfectly
+    excludeNodes.forEach(node => node.style.display = 'none');
 
-    // Use actual app dimensions for parity
-    element.style.width = `${currentWidth}px`;
-    element.style.height = `${currentHeight}px`;
+    // Let html-to-image determine dimensions automatically
     element.style.maxWidth = 'none';
     element.style.backgroundColor = '#ffffff';
     element.style.overflow = 'hidden';
@@ -1061,10 +1077,11 @@ export default function KSensitivityCalculator({
           quality: 1.0,
           backgroundColor: "#ffffff",
           pixelRatio: 5, // Ultra-high 5x density for Q1 journal publishing (600 DPI equivalent)
-          width: currentWidth,
-          height: currentHeight,
-          style: {
-            padding: '15px'
+          filter: (node: any) => {
+            if (node?.classList && node.classList.contains('export-exclude')) {
+              return false;
+            }
+            return true;
           }
         };
 
@@ -1095,6 +1112,8 @@ export default function KSensitivityCalculator({
         } else {
           element.removeAttribute("style");
         }
+        // Restore excluded elements
+        excludeNodes.forEach((node, i) => node.style.display = originalDisplays[i]);
       }
     }, 500);
   };
@@ -1141,7 +1160,12 @@ export default function KSensitivityCalculator({
 
       const critIdx = workingCriteria.findIndex(c => c.id === currentCriterionId);
 
-      kSensVariationRange.forEach(variation => {
+      const variationTasks = [...kSensVariationRange];
+      if (!variationTasks.includes(0)) {
+        variationTasks.push(0);
+      }
+
+      variationTasks.forEach(variation => {
         const adjustedWeights = [...workingCriteria.map(c => c.weight)];
         const variationFactor = 1 + (variation / 100);
         adjustedWeights[critIdx] = workingCriteria[critIdx].weight * variationFactor;
@@ -1252,7 +1276,13 @@ export default function KSensitivityCalculator({
     const critIdx = workingCriteria.findIndex(c => c.id === criterionId);
     if (critIdx === -1) return [];
 
-    return kSensVariationRange.map(variation => {
+    const variationRange = [...kSensVariationRange];
+    if (!variationRange.includes(0)) {
+      variationRange.push(0);
+    }
+    variationRange.sort((a, b) => a - b);
+
+    return variationRange.map(variation => {
       const adjustedWeights = [...workingCriteria.map(c => c.weight)];
       // Calculate adjusted weight for the varying criterion: w_p' = w_p * (1 + k/100)
       const variationFactor = 1 + (variation / 100);
@@ -1391,6 +1421,796 @@ export default function KSensitivityCalculator({
       </div>
     );
   };
+
+  // ─── Weight Scenario Charts ─────────────────────────────────────────────
+  const renderWeightScenarioCharts = (criterion: Criterion, isMainFigure?: boolean) => {
+    if (!kSensResults || !kSensResults[criterion.name]) return null;
+    const criterionData: any[] = kSensResults[criterion.name];
+    if (!criterionData || criterionData.length === 0) return null;
+
+    const baseColors = kSensChartSettings.colorPalette === 'academic' ? ['#2563eb', '#dc2626', '#16a34a', '#ea580c', '#9333ea', '#92400e', '#db2777', '#4b5563', '#a16207', '#0891b2'] :
+      kSensChartSettings.colorPalette === 'vibrant' ? ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#a855f7', '#64748b'] :
+        kSensChartSettings.colorPalette === 'fluorescent' ? ['#FF00FF', '#00FFFF', '#00FF00', '#FFFF00', '#FF0000', '#8A2BE2', '#FF4500', '#7FFF00', '#1E90FF', '#FF1493'] :
+          kSensChartSettings.colorPalette === 'grayscale' ? ['#333333', '#666666', '#999999', '#aaaaaa', '#cccccc', '#777777', '#555555', '#444444', '#888888', '#bbbbbb'] :
+            kSensChartSettings.colorPalette === 'viridis' ? ['#440154', '#482878', '#3e4989', '#31688e', '#26828e', '#1f9e89', '#35b779', '#6ece58', '#addc30', '#fde725'] :
+              kSensChartSettings.colorPalette === 'magma' ? ['#000004', '#140e36', '#3b0f70', '#631184', '#8c2981', '#b73779', '#de4968', '#f56d5d', '#fe9444', '#ffbd35'] :
+                kSensChartSettings.colorPalette === 'inferno' ? ['#000004', '#1b0c41', '#4a0c6b', '#781c6d', '#a52c60', '#cf4446', '#ed6925', '#fb9b06', '#f7d13d', '#fcffa4'] :
+                  ['#8884d8', '#82ca9d', '#ffc658', '#0088fe', '#00c49f', '#ff8042', '#a4de6c', '#d0ed57', '#83a6ed', '#8dd1e1'];
+
+    // Helper to adjust color brightness and saturation
+    const adjustColor = (hex: string) => {
+      let r = parseInt(hex.slice(1, 3), 16);
+      let g = parseInt(hex.slice(3, 5), 16);
+      let b = parseInt(hex.slice(5, 7), 16);
+
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h = 0, s = 0, l = (max + min) / 2;
+
+      if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+      }
+
+      s = Math.min(1, s * (kSensChartSettings.barSaturation || 1));
+      l = Math.min(1, l * (kSensChartSettings.barBrightness || 1));
+
+      const hue2rgb = (p: number, q: number, t: number) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+
+      const rFinal = Math.round(hue2rgb(p, q, h + 1/3) * 255);
+      const gFinal = Math.round(hue2rgb(p, q, h) * 255);
+      const bFinal = Math.round(hue2rgb(p, q, h - 1/3) * 255);
+
+      const toHex = (x: number) => {
+        const hexVal = x.toString(16);
+        return hexVal.length === 1 ? '0' + hexVal : hexVal;
+      };
+
+      return `#${toHex(rFinal)}${toHex(gFinal)}${toHex(bFinal)}`;
+    };
+
+    const colorsArr = baseColors.map(adjustColor);
+
+    const theme = {
+      bg: kSensChartSettings.backgroundTheme === 'dark' ? '#1e293b' :
+        kSensChartSettings.backgroundTheme === 'slate' ? '#f8fafc' :
+          kSensChartSettings.backgroundTheme === 'glass' ? 'transparent' : '#ffffff',
+      text: kSensChartSettings.backgroundTheme === 'dark' ? '#f8fafc' : '#1e293b',
+      border: kSensChartSettings.backgroundTheme === 'dark' ? '#334155' : '#e2e8f0',
+      chartBorder: kSensChartSettings.backgroundTheme === 'dark' ? '#64748b' : '#000000',
+      tooltipBg: kSensChartSettings.backgroundTheme === 'dark' ? '#0f172a' : '#ffffff',
+    };
+
+    const patternPrefix = `ps-${kSensChartSettings.colorPalette}-${Math.round((kSensChartSettings.barSaturation || 1) * 100)}-${Math.round((kSensChartSettings.barBrightness || 1) * 100)}-${Math.round((kSensChartSettings.barOpacity || 1) * 100)}`;
+    const getPatternId = (i: number) => `${patternPrefix}-${i}`;
+
+    const getPatternFill = (i: number) => {
+      if (kSensChartSettings.fillPattern === 'none') return colorsArr[i % colorsArr.length];
+      return `url(#${getPatternId(i)})`;
+    };
+
+    const renderDefs = () => {
+      if (kSensChartSettings.fillPattern === 'none') return null;
+
+      return (
+        <defs>
+          {colorsArr.map((color, i) => {
+            const patternId = getPatternId(i);
+            const patternProps = {
+              id: patternId,
+              width: 10,
+              height: 10,
+              patternUnits: "userSpaceOnUse" as const,
+            };
+
+            const rectFill = (
+              <rect width="10" height="10" fill={color} fillOpacity={kSensChartSettings.barOpacity} />
+            );
+
+            let currentPattern = kSensChartSettings.fillPattern;
+            if (currentPattern === 'mixed') {
+              const mixedPatterns: any[] = ['striped', 'crosshatch', 'grid', 'dots-dense', 'weave', 'horizontal'];
+              currentPattern = mixedPatterns[i % mixedPatterns.length];
+            }
+
+            switch (currentPattern as string) {
+              case 'striped':
+                return (
+                  <pattern key={patternId} {...patternProps} width="8" height="8" patternTransform="rotate(45)">
+                    {rectFill}
+                    <line x1="0" y1="0" x2="0" y2="8" stroke="white" strokeWidth="2" strokeOpacity="0.4" />
+                  </pattern>
+                );
+              case 'dotted':
+                return (
+                  <pattern key={patternId} {...patternProps}>
+                    {rectFill}
+                    <circle cx="5" cy="5" r="2" fill="white" fillOpacity="0.4" />
+                  </pattern>
+                );
+              case 'grid':
+                return (
+                  <pattern key={patternId} {...patternProps}>
+                    {rectFill}
+                    <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="1" strokeOpacity="0.4" />
+                  </pattern>
+                );
+              case 'weave':
+                return (
+                  <pattern key={patternId} {...patternProps} width="4" height="4">
+                    {rectFill}
+                    <path d="M 0 2 L 4 2 M 2 0 L 2 4" stroke="white" strokeWidth="0.8" strokeOpacity="0.5" />
+                    <path d="M 0 0 L 4 4 M 4 0 L 0 4" stroke="black" strokeWidth="0.5" strokeOpacity="0.3" />
+                  </pattern>
+                );
+              case 'hatch-right':
+                return (
+                  <pattern key={patternId} {...patternProps} width="6" height="6" patternTransform="rotate(-45)">
+                    {rectFill}
+                    <line x1="0" y1="0" x2="0" y2="6" stroke="black" strokeWidth="1" strokeOpacity="0.5" />
+                  </pattern>
+                );
+              case 'hatch-left':
+                return (
+                  <pattern key={patternId} {...patternProps} width="6" height="6" patternTransform="rotate(45)">
+                    {rectFill}
+                    <line x1="0" y1="0" x2="0" y2="6" stroke="black" strokeWidth="1" strokeOpacity="0.5" />
+                  </pattern>
+                );
+              case 'crosshatch':
+                return (
+                  <pattern key={patternId} {...patternProps} width="8" height="8">
+                    {rectFill}
+                    <path d="M 0 0 L 8 8 M 8 0 L 0 8" stroke="white" strokeWidth="1.2" strokeOpacity="0.4" />
+                  </pattern>
+                );
+              case 'dots-dense':
+                return (
+                  <pattern key={patternId} {...patternProps} width="6" height="6">
+                    {rectFill}
+                    <circle cx="3" cy="3" r="1" fill="white" fillOpacity="0.5" />
+                  </pattern>
+                );
+              case 'horizontal':
+                return (
+                  <pattern key={patternId} {...patternProps} width="6" height="6">
+                    {rectFill}
+                    <line x1="0" y1="3" x2="6" y2="3" stroke="white" strokeWidth="1.5" strokeOpacity="0.4" />
+                  </pattern>
+                );
+              case 'vertical':
+                return (
+                  <pattern key={patternId} {...patternProps} width="6" height="6">
+                    {rectFill}
+                    <line x1="3" y1="0" x2="3" y2="6" stroke="white" strokeWidth="1.5" strokeOpacity="0.4" />
+                  </pattern>
+                );
+              default:
+                return (
+                  <pattern key={patternId} {...patternProps} width="8" height="8" patternTransform="rotate(45)">
+                    {rectFill}
+                    <line x1="0" y1="0" x2="0" y2="8" stroke="white" strokeWidth="1.5" strokeOpacity="0.4" />
+                  </pattern>
+                );
+            }
+          })}
+        </defs>
+      );
+    };
+
+    // Label map: variation number → scenario label (include 0% = base case scenario)
+    const variationLabels: Record<number, string> = {};
+    const sortedVariations = [...kSensVariationRange];
+    if (!sortedVariations.includes(0)) {
+      sortedVariations.push(0);
+    }
+    sortedVariations.sort((a, b) => a - b);
+    sortedVariations.forEach((v, i) => {
+      variationLabels[v] = `Scenario ${i + 1}`;
+    });
+
+    // Get weight distribution for a variation step (for caption)
+    const getWeightsLabel = (variation: number) => {
+      const wData = calculateWeightSensitivityData(criterion.id);
+      const row = wData.find((r: any) => r.variation === `${variation}%`);
+      if (!row) return '';
+      return workingCriteria.map(c => `${c.name}: ${(row[c.name] * 100).toFixed(2)}%`).join(' | ');
+    };
+
+
+
+    // Build per-scenario chart data
+    const scenarios = sortedVariations.map((variation) => {
+      const varEntry = criterionData.find(
+        (v: any) => v.variation === variation || parseFloat(v.variation) === variation
+      );
+      if (!varEntry || !varEntry.rankings) return null;
+
+      const chartData = alternatives
+        .filter(a => varEntry.rankings[a.name])
+        .map(a => ({
+          name: a.name,
+          score: parseFloat((varEntry.rankings[a.name].score || 0).toFixed(4)),
+          rank: varEntry.rankings[a.name].rank,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
+      return {
+        variation,
+        label: variationLabels[variation] || `${variation >= 0 ? '+' : ''}${variation}%`,
+        weightsLabel: getWeightsLabel(variation),
+        chartData,
+      };
+    }).filter(Boolean) as { variation: number; label: string; weightsLabel: string; chartData: { name: string; score: number; rank: number }[] }[];
+
+    if (scenarios.length === 0) return null;
+
+    const visibleScenarios = scenarios.filter(sc => !hiddenScenarios.includes(sc.variation));
+
+    const numAlts = alternatives.length;
+    const lineStroke = colorsArr[1 % colorsArr.length] || '#e07b2a';
+
+    // Calculate consistent Rank Y-Axis ticks
+    const getRankTicks = () => {
+      let step = 1;
+      if (numAlts > 30) step = 5;
+      else if (numAlts > 15) step = 3;
+      else if (numAlts > 10) step = 2;
+
+      const ticks = [1];
+      let curr = 1;
+      while (curr + step < numAlts) {
+        curr += step;
+        ticks.push(curr);
+      }
+      if (numAlts > 1 && !ticks.includes(numAlts)) {
+        ticks.push(numAlts);
+      }
+      return ticks;
+    };
+    const rankTicks = getRankTicks();
+
+    const allScores = scenarios.flatMap(s => s.chartData.map(d => d.score));
+    const minScore = Math.min(...allScores);
+    const maxScore = Math.max(...allScores);
+    const scorePad = (maxScore - minScore) * 0.1 || 0.05;
+    const scoreDomain = [Math.max(0, minScore - scorePad), maxScore + scorePad];
+
+    const tickStyle = {
+      fontSize: isMobile ? Math.max(7, kSensChartSettings.fontSize - 3) : kSensChartSettings.fontSize - 1,
+      fill: theme.text,
+      fontWeight: 700
+    };
+
+    const getTickLine = (orientation: 'top' | 'bottom' | 'left' | 'right') => {
+      const isInner = kSensChartSettings.tickDirection === 'inner';
+      const size = 4;
+      const stroke = theme.chartBorder;
+      const strokeWidth = 1.2;
+
+      if (!isInner) return { stroke, strokeWidth };
+
+      switch (orientation) {
+        case 'bottom': return { stroke, strokeWidth, transform: `translate(0, -${size})` };
+        case 'top': return { stroke, strokeWidth, transform: `translate(0, ${size})` };
+        case 'left': return { stroke, strokeWidth, transform: `translate(${size}, 0)` };
+        case 'right': return { stroke, strokeWidth, transform: `translate(-${size}, 0)` };
+      }
+    };
+
+    const makeCustomDot = (color: string) => (props: any) => {
+      const { cx, cy } = props;
+      const s = kSensChartSettings.markerSize;
+      if (s <= 0) return <rect width={0} height={0} />;
+      switch (kSensChartSettings.markerType) {
+        case 'square':
+          return <rect key={`${cx}-${cy}`} x={cx - s} y={cy - s} width={s * 2} height={s * 2} fill={color} />;
+        case 'triangle':
+          return <polygon key={`${cx}-${cy}`} points={`${cx},${cy - s} ${cx - s},${cy + s} ${cx + s},${cy + s}`} fill={color} />;
+        case 'diamond':
+          return <polygon key={`${cx}-${cy}`} points={`${cx},${cy - s} ${cx + s},${cy} ${cx},${cy + s} ${cx - s},${cy}`} fill={color} />;
+        default:
+          return <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={s} fill={color} stroke="#fff" strokeWidth={1} />;
+      }
+    };
+
+    const getLineDashArray = () => {
+      if (kSensChartSettings.lineStyle === 'dashed') return "4 4";
+      if (kSensChartSettings.lineStyle === 'dotted') return "1 3";
+      return undefined;
+    };
+
+    const customScenarioLegend = (props: any) => {
+      const { payload } = props;
+      if (!payload) return null;
+
+      const isVertical = kSensChartSettings.legendLayout === 'vertical';
+
+      return (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          width: '100%',
+          paddingTop: kSensChartSettings.legendPosition === 'bottom' ? '4px' : '0px',
+          paddingBottom: kSensChartSettings.legendPosition === 'bottom' ? '0px' : '4px',
+        }}>
+          <div style={{
+            display: 'flex',
+            flexDirection: isVertical ? 'column' : 'row',
+            alignItems: 'center',
+            gap: isVertical ? '2px' : '12px',
+            fontSize: `${Math.max(7, kSensChartSettings.fontSize - 3)}px`,
+            color: theme.text,
+            fontWeight: 700,
+            border: `1px solid ${theme.chartBorder}`,
+            borderRadius: '4px',
+            padding: '2px 8px',
+            backgroundColor: theme.tooltipBg,
+          }}>
+          {payload.map((entry: any, index: number) => {
+            const isScore = entry.value === 'score' || entry.name === 'score';
+            
+            if (isScore) {
+              const opacity = kSensChartSettings.barOpacity ?? 1;
+              const baseColor = colorsArr[0] || '#2563eb';
+              const patternId = `${patternPrefix}-0`;
+              const swatchFill = kSensChartSettings.fillPattern === 'none' ? baseColor : `url(#${patternId})`;
+
+              return (
+                <span key={`legend-item-${index}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <svg width="14" height="10" style={{ display: 'inline-block', verticalAlign: 'middle', border: `1px solid ${theme.border}`, borderRadius: '1px' }}>
+                    <rect width="14" height="10" fill={swatchFill} fillOpacity={opacity} />
+                  </svg>
+                  <span>Score</span>
+                </span>
+              );
+            }
+
+            // RANK line
+            const dashArray = getLineDashArray();
+            const s = kSensChartSettings.markerSize || 4;
+            const markerType = kSensChartSettings.markerType;
+            const svgHeight = Math.max(12, s * 2 + 2);
+            const cy = svgHeight / 2;
+
+            return (
+              <span key={`legend-item-${index}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="24" height={svgHeight} style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+                  {/* Dasharray line */}
+                  <line 
+                    x1="0" 
+                    y1={cy} 
+                    x2="24" 
+                    y2={cy} 
+                    stroke={lineStroke} 
+                    strokeWidth={kSensChartSettings.borderWidth || 2} 
+                    strokeDasharray={dashArray} 
+                  />
+                  {/* Central marker icon */}
+                  {s > 0 && (
+                    <>
+                      {markerType === 'square' && (
+                        <rect x={12 - s} y={cy - s} width={s * 2} height={s * 2} fill={lineStroke} />
+                      )}
+                      {markerType === 'triangle' && (
+                        <polygon points={`12,${cy - s} ${12 - s},${cy + s} ${12 + s},${cy + s}`} fill={lineStroke} />
+                      )}
+                      {markerType === 'diamond' && (
+                        <polygon points={`12,${cy - s} ${12 + s},${cy} 12,${cy + s} ${12 - s},${cy}`} fill={lineStroke} />
+                      )}
+                      {markerType === 'circle' && (
+                        <circle cx="12" cy={cy} r={s} fill={lineStroke} stroke="#fff" strokeWidth={1} />
+                      )}
+                    </>
+                  )}
+                </svg>
+                <span>RANK</span>
+              </span>
+            );
+          })}
+          </div>
+        </div>
+      );
+    };
+
+    const RightFrameBorder = (props: any) => {
+      const { viewBox } = props;
+      if (!viewBox || viewBox.width == null || viewBox.height == null) return null;
+      const x = viewBox.x + viewBox.width;
+      const y1 = viewBox.y;
+      const y2 = viewBox.y + viewBox.height;
+      return (
+        <line
+          key="right-frame-border"
+          x1={x} y1={y1} x2={x} y2={y2}
+          stroke={theme.chartBorder}
+          strokeWidth={1.5}
+          strokeLinecap="square"
+          pointerEvents="none"
+        />
+      );
+    };
+
+    const precision = kSensChartSettings.resultsDecimalPlaces ?? 2;
+    const barDataLabel = kSensChartSettings.showDataLabels ? (
+      <LabelList
+        position="top"
+        offset={6}
+        formatter={(val: any) => {
+          if (typeof val !== 'number') return val;
+          return val.toFixed(precision);
+        }}
+        style={{ fontSize: Math.max(6, kSensChartSettings.fontSize - 4), fill: theme.text, fontWeight: 'bold' }}
+      />
+    ) : null;
+
+    const lineDataLabel = kSensChartSettings.showDataLabels ? (
+      <LabelList
+        position="top"
+        offset={6}
+        formatter={(val: any) => {
+          if (typeof val !== 'number') return val;
+          return Math.round(val).toString();
+        }}
+        style={{ fontSize: Math.max(6, kSensChartSettings.fontSize - 4), fill: theme.text, fontWeight: 'bold' }}
+      />
+    ) : null;
+
+    const gridProps = kSensChartSettings.showGridLines ? {
+      strokeDasharray: kSensChartSettings.gridStyle === 'hairline' ? "1 1" : "3 3",
+      strokeWidth: kSensChartSettings.gridStyle === 'hairline' ? 0.5 : 1,
+      horizontal: kSensChartSettings.gridLinesMode === 'horizontal' || kSensChartSettings.gridLinesMode === 'both',
+      vertical: kSensChartSettings.gridLinesMode === 'vertical' || kSensChartSettings.gridLinesMode === 'both',
+      stroke: kSensChartSettings.gridColor || (kSensChartSettings.backgroundTheme === 'dark' ? '#334155' : '#e2e8f0'),
+      opacity: kSensChartSettings.gridOpacity ?? 0.6,
+      style: { pointerEvents: 'none' as const }
+    } : null;
+
+    const barProps = {
+      barSize: Math.max(6, 12 * (kSensChartSettings.barWidthPercent / 80)),
+      stroke: kSensChartSettings.showSeparator ? (kSensChartSettings.separatorColor || '#000') : 'none',
+      strokeWidth: kSensChartSettings.showSeparator ? (kSensChartSettings.borderWidth || 0.5) : 0,
+      fillOpacity: kSensChartSettings.barOpacity ?? 1,
+    };
+
+    return (
+      <div className={isMainFigure ? "" : "mt-10 pt-8 border-t-2 border-dashed border-gray-200"}>
+        {/* Section Header with Toggle Controls */}
+        <div className={`flex flex-wrap items-center justify-between gap-3 mb-5 ${isMainFigure ? 'export-exclude' : ''}`}>
+          {!isMainFigure ? (
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 rounded-lg border border-blue-200">
+                <LayoutGrid className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest">Per-Scenario Ranking Analysis</h4>
+                <p className="text-[10px] text-gray-500 font-medium italic">
+                  Complete ranking (Score &amp; Rank) per weight perturbation scenario.
+                  Varying: <strong>{criterion.name}</strong> (Base: {(criterion.weight * 100).toFixed(2)}%)
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div />
+          )}
+
+          {/* Display Settings Toolbar */}
+          <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 ml-auto export-exclude">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mr-2">Show:</span>
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showWeightSummaryTable}
+                onChange={e => setShowWeightSummaryTable(e.target.checked)}
+                className="w-3 h-3 accent-blue-600 cursor-pointer"
+              />
+              <span className="text-[10px] font-semibold text-gray-700">Table</span>
+            </label>
+            <div className="w-px h-4 bg-gray-300 mx-1.5" />
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showWeightScenarioCharts}
+                onChange={e => setShowWeightScenarioCharts(e.target.checked)}
+                className="w-3 h-3 accent-blue-600 cursor-pointer"
+              />
+              <span className="text-[10px] font-semibold text-gray-700">Figures</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Weight Distribution Summary Table */}
+        {showWeightSummaryTable && (
+          <div className="mb-5 overflow-x-auto border border-blue-100 rounded-lg">
+          <table className="w-full text-[10px] border-collapse">
+            <thead>
+              <tr className="bg-blue-50">
+                <th className="px-3 py-2 text-left font-bold text-gray-700 border-b border-blue-100 whitespace-nowrap">Scenario</th>
+                <th className="px-3 py-2 text-center font-bold text-gray-700 border-b border-blue-100 whitespace-nowrap">Variation</th>
+                {workingCriteria.map(c => (
+                  <th key={c.id} className="px-3 py-2 text-center font-bold text-gray-700 border-b border-blue-100 whitespace-nowrap">{c.name}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {scenarios.map((sc, idx) => {
+                const wData = calculateWeightSensitivityData(criterion.id);
+                const row = wData.find((r: any) => r.variation === `${sc.variation}%`);
+                return (
+                  <tr key={idx} className={`border-b border-blue-50 ${idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/30'}`}>
+                    <td className="px-3 py-1.5 font-semibold text-blue-700 whitespace-nowrap">{sc.label}</td>
+                    <td className={`px-3 py-1.5 text-center font-bold whitespace-nowrap ${
+                      sc.variation < 0 ? 'text-red-600' : sc.variation > 0 ? 'text-green-600' : 'text-gray-700'
+                    }`}>
+                      {sc.variation > 0 ? '+' : ''}{sc.variation}%
+                    </td>
+                    {workingCriteria.map(c => (
+                      <td key={c.id} className={`px-3 py-1.5 text-center whitespace-nowrap ${
+                        c.id === criterion.id ? 'font-bold text-blue-800 bg-blue-100/60' : 'text-gray-700'
+                      }`}>
+                        {row ? `${(row[c.name] * 100).toFixed(2)}%` : '—'}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          </div>
+        )}
+
+        {/* Scenario Chart Grid */}
+        {showWeightScenarioCharts && (
+          <div className="w-full">
+            {hiddenScenarios.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between bg-blue-50/80 border border-blue-200 rounded-xl p-3 mb-4 gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase text-blue-800 tracking-wider">
+                    Hidden Scenarios:
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {hiddenScenarios.map(v => (
+                      <span
+                        key={v}
+                        onClick={() => setHiddenScenarios(prev => prev.filter(x => x !== v))}
+                        className="cursor-pointer bg-blue-100 hover:bg-blue-200 text-blue-800 text-[9px] font-extrabold px-2 py-0.5 rounded border border-blue-300 transition-colors flex items-center gap-1 select-none"
+                        title="Click to restore this scenario graph"
+                      >
+                        {v > 0 ? '+' : ''}{v}% ✕
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setHiddenScenarios([])}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-wider py-1 px-3 rounded shadow transition-all duration-150 cursor-pointer"
+                >
+                  Restore All Graphs
+                </button>
+              </div>
+            )}
+
+            {visibleScenarios.length === 0 ? (
+              <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50">
+                <p className="text-xs font-bold text-gray-500">All scenario graphs have been removed.</p>
+                <button
+                  onClick={() => setHiddenScenarios([])}
+                  className="mt-3 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-wider py-1.5 px-4 rounded shadow cursor-pointer transition-all"
+                >
+                  Restore All Graphs
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {visibleScenarios.map((sc: any, idx: number) => {
+                  const scoreTicks = sc.chartData.map((d: any) => d.score);
+                  const localMin = Math.min(...scoreTicks);
+                  const localMax = Math.max(...scoreTicks);
+                  const localPad = (localMax - localMin) * 0.12 || 0.05;
+                  const localScoreDomain: [number, number] = [
+                    parseFloat((localMin - localPad).toFixed(4)),
+                    parseFloat((localMax + localPad).toFixed(4)),
+                  ];
+                  
+                  // Compute exactly numAlts evenly spaced ticks for the Score axis so it perfectly matches the Rank axis
+                  const exactScoreTicks = Array.from({ length: numAlts }, (_, i) => {
+                    const val = localScoreDomain[0] + i * ((localScoreDomain[1] - localScoreDomain[0]) / (numAlts - 1));
+                    return parseFloat(val.toFixed(4));
+                  });
+
+                  const variationColor = sc.variation < 0 ? '#dc2626' : sc.variation > 0 ? '#16a34a' : '#2563eb';
+
+                  return (
+                    <div
+                      key={idx}
+                      className="rounded-lg overflow-hidden flex flex-col justify-between border relative group"
+                      style={{
+                        backgroundColor: theme.bg,
+                        borderColor: colorsArr[0] || theme.border,
+                        color: theme.text,
+                        borderWidth: `${kSensChartSettings.borderWidth || 2}px`
+                      }}
+                    >
+                      {/* Remove Graph Hover Button overlay */}
+                      <button
+                        onClick={() => setHiddenScenarios(prev => [...prev, sc.variation])}
+                        className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white text-[9px] font-black uppercase tracking-wider py-1 px-2 rounded shadow-md transition-all duration-200 z-30 flex items-center gap-1 cursor-pointer select-none"
+                        title="Remove this scenario graph"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Remove Graph
+                      </button>
+                {/* Chart Title Bar - Square & Academic Style */}
+                <div
+                  className="flex items-center justify-between px-3 py-1.5 border-b"
+                  style={{
+                    backgroundColor: kSensChartSettings.backgroundTheme === 'dark' ? '#0f172a' : '#f8fafc',
+                    borderColor: colorsArr[0] || theme.border,
+                  }}
+                >
+                  <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: theme.text }}>
+                    {idx + 1}. {sc.label.toUpperCase()}
+                  </span>
+                  <span
+                    className="text-[9px] font-bold px-2 py-0.5 border rounded"
+                    style={{
+                      borderColor: `${variationColor}35`,
+                      background: `${variationColor}08`,
+                      color: variationColor
+                    }}
+                  >
+                    {criterion.name} {sc.variation > 0 ? '+' : ''}{sc.variation}%
+                  </span>
+                </div>
+
+                {/* Recharts ComposedChart */}
+                <div className="p-1 pt-2" style={{ height: 240 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart
+                      data={sc.chartData}
+                      margin={{
+                        top: kSensChartSettings.marginTop ?? 4,
+                        right: kSensChartSettings.marginRight ?? 36,
+                        bottom: kSensChartSettings.marginBottom ?? 4,
+                        left: kSensChartSettings.marginLeft ?? 4
+                      }}
+                    >
+                      {renderDefs()}
+                      {gridProps && <CartesianGrid {...gridProps} />}
+                      <XAxis
+                        dataKey="name"
+                        tick={tickStyle}
+                        tickLine={getTickLine('bottom')}
+                        axisLine={{ stroke: theme.chartBorder }}
+                        interval={0}
+                        angle={numAlts > 6 ? -35 : 0}
+                        textAnchor={numAlts > 6 ? 'end' : 'middle'}
+                        height={numAlts > 6 ? 36 : 22}
+                      />
+                      {kSensChartSettings.showMirrorTicks && (
+                        <XAxis
+                          orientation="top"
+                          xAxisId="top_border"
+                          axisLine={{ stroke: theme.chartBorder, strokeWidth: 1.5 }}
+                          tick={tickStyle}
+                          tickLine={getTickLine('top')}
+                        />
+                      )}
+                      {/* Left Y-Axis: Score */}
+                      <YAxis
+                        yAxisId="score"
+                        orientation="left"
+                        domain={localScoreDomain}
+                        tick={tickStyle}
+                        ticks={exactScoreTicks}
+                        tickLine={getTickLine('left')}
+                        axisLine={{ stroke: theme.chartBorder }}
+                        width={28}
+                        tickFormatter={(v: number) => v.toFixed(2)}
+                        label={{
+                          value: 'Score',
+                          angle: -90,
+                          position: 'insideLeft',
+                          offset: -10,
+                          style: { fontSize: 7, fill: theme.text, fontWeight: 700, textAnchor: 'middle' },
+                        }}
+                      />
+                      {/* Right Y-Axis: Rank (reversed so Rank 1 is at the top) */}
+                      <YAxis
+                        yAxisId="rank"
+                        orientation="right"
+                        reversed={true}
+                        domain={[1, numAlts]}
+                        allowDecimals={false}
+                        tick={tickStyle}
+                        tickLine={getTickLine('right')}
+                        axisLine={{ stroke: theme.chartBorder }}
+                        width={18}
+                        ticks={rankTicks}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          fontSize: 10,
+                          borderRadius: 6,
+                          backgroundColor: theme.tooltipBg,
+                          color: theme.text,
+                          border: `1px solid ${theme.border}`
+                        }}
+                        formatter={(value: any, name: string) =>
+                          name === 'score'
+                            ? [Number(value).toFixed(precision), 'Score']
+                            : [value, 'Rank']
+                        }
+                      />
+                      {kSensChartSettings.zeroBaseline && (
+                        <ReferenceLine y={0} yAxisId="score" stroke={theme.chartBorder} strokeWidth={2} strokeOpacity={0.8} />
+                      )}
+                      <Bar
+                        yAxisId="score"
+                        dataKey="score"
+                        name="score"
+                        {...barProps}
+                      >
+                        {sc.chartData.map((entry: any, index: number) => {
+                          const color = colorsArr[index % colorsArr.length];
+                          const fill = kSensChartSettings.fillPattern === 'none' ? color : getPatternFill(index % colorsArr.length);
+                          return <Cell key={`cell-${index}`} fill={fill} />;
+                        })}
+                        {barDataLabel}
+                      </Bar>
+                      <Line
+                        yAxisId="rank"
+                        type="monotone"
+                        dataKey="rank"
+                        name="rank"
+                        stroke={lineStroke}
+                        strokeWidth={kSensChartSettings.borderWidth || 2}
+                        strokeDasharray={getLineDashArray()}
+                        dot={kSensChartSettings.markerSize > 0 ? (makeCustomDot(lineStroke) as any) : false}
+                        activeDot={{ r: (kSensChartSettings.markerSize || 4) + 2, fill: lineStroke }}
+                      >
+                        {lineDataLabel}
+                      </Line>
+                      {kSensChartSettings.frameStyle === 'Box' && <Customized component={RightFrameBorder} />}
+                      <Legend
+                        verticalAlign={kSensChartSettings.legendPosition === 'bottom' ? 'bottom' : 'top'}
+                        layout={kSensChartSettings.legendLayout}
+                        height={18}
+                        content={customScenarioLegend}
+                        wrapperStyle={{
+                          transform: `translate(${kSensChartSettings.legendOffsetX || 0}px, ${kSensChartSettings.legendOffsetY || 0}px)`
+                        }}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            );
+          })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+  // ────────────────────────────────────────────────────────────────────────
 
   const renderKSensChart = (criterionName: string) => {
     const isWeightView = kSensViewType === 'weight';
@@ -1790,7 +2610,7 @@ export default function KSensitivityCalculator({
         width: isMobile ? "max-content" : ((kSensChartSettings.legendPosition === 'left' || kSensChartSettings.legendPosition === 'right') ? "150px" : "max-content"),
         height: "auto",
         zIndex: 50,
-        boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+        boxShadow: "none",
         whiteSpace: isMobile ? 'normal' : 'nowrap',
         maxWidth: isMobile ? 'calc(100% - 10px)' : '95%',
         pointerEvents: 'auto'
@@ -1808,6 +2628,24 @@ export default function KSensitivityCalculator({
         style={{ fontSize: kSensChartSettings.fontSize - 3, fill: theme.text, fontWeight: 'bold' }}
       />
     ) : null;
+    if (kSensChartType === 'scenarioCombo') {
+      if (!isWeightView) {
+        return (
+          <div className="p-4 text-center text-gray-500 font-bold text-xs mt-10 border-2 border-dashed rounded-xl bg-gray-50">
+            Per-Scenario Combo Panels are optimized for Weight Analysis. <br />
+            Please switch to <span className="text-blue-600 underline cursor-pointer" onClick={() => setKSensViewType('weight')}>Weight Analysis</span> view above.
+          </div>
+        );
+      }
+      if (!targetCrit) return null;
+      return (
+        <div className="w-full flex justify-center">
+          <div ref={chartRef} className="w-full max-w-[1400px] bg-white p-8 mx-auto rounded-xl" style={{ border: `1px solid ${theme.border}` }}>
+            {renderWeightScenarioCharts(targetCrit, true)}
+          </div>
+        </div>
+      );
+    }
 
     if (kSensChartType === '3dBar') {
       if (!isWeightView) {
@@ -1889,7 +2727,7 @@ export default function KSensitivityCalculator({
     const manualLegendPayload = (isWeightView ? workingCriteria : alternatives).map((item, idx) => ({
       value: item.name,
       color: colorsArr[idx % colorsArr.length],
-      type: isWeightView ? 'circle' : 'square',
+      type: kSensChartType === 'line' || kSensChartType === 'parallel' ? 'plainline' : (kSensChartType === 'rankBubble' ? 'circle' : (isWeightView ? 'circle' : 'square')),
       payload: { baseColor: colorsArr[idx % colorsArr.length], itemIndex: idx }
     }));
 
@@ -1898,6 +2736,21 @@ export default function KSensitivityCalculator({
         {customLegendContent({ payload: manualLegendPayload })}
       </div>
     );
+
+    if (kSensChartType === 'rankHeatmap') {
+      if (isWeightView) return <div className="p-4 text-center text-gray-500 font-bold text-xs mt-10">Rank Heatmap is optimized for Data Perturbation Ranking flow.</div>;
+      return <RankHeatmap kSensResults={kSensResults} alternatives={alternatives} variationRange={kSensVariationRange} criterionName={criterionName} colorsArr={colorsArr} theme={theme} chartSettings={kSensChartSettings} isMobile={isMobile} standaloneLegend={standaloneLegend} chartAspectRatio={chartAspectRatio} labelStyle={labelStyle} />;
+    }
+
+    if (kSensChartType === 'rankBubble') {
+      if (isWeightView) return <div className="p-4 text-center text-gray-500 font-bold text-xs mt-10">Rank Bubble Matrix is optimized for Data Perturbation Ranking flow.</div>;
+      return <RankBubbleChart kSensResults={kSensResults} alternatives={alternatives} variationRange={kSensVariationRange} criterionName={criterionName} colorsArr={colorsArr} theme={theme} chartSettings={kSensChartSettings} isMobile={isMobile} standaloneLegend={standaloneLegend} chartAspectRatio={chartAspectRatio} labelStyle={labelStyle} />;
+    }
+
+    if (kSensChartType === 'groupedBar') {
+      if (isWeightView) return <div className="p-4 text-center text-gray-500 font-bold text-xs mt-10">Grouped Rank Bar Chart is optimized for Data Perturbation Ranking flow.</div>;
+      return <GroupedRankBarChart kSensResults={kSensResults} alternatives={alternatives} variationRange={kSensVariationRange} criterionName={criterionName} colorsArr={colorsArr} theme={theme} chartSettings={kSensChartSettings} isMobile={isMobile} standaloneLegend={standaloneLegend} chartAspectRatio={chartAspectRatio} labelStyle={labelStyle} />;
+    }
 
     if (kSensChartType === 'radar') {
 
@@ -2672,7 +3525,8 @@ export default function KSensitivityCalculator({
                   tick={{ fontSize: isMobile ? Math.max(7, kSensChartSettings.fontSize - 3) : kSensChartSettings.fontSize, fill: '#000', fontWeight: 700 }}
                   axisLine={{ stroke: '#000', strokeWidth: 1.5 }}
                   tickLine={getTickLine('left')}
-                  domain={(isWeightView || kSensChartType === 'stackedBar') ? [0, 'auto'] : [0.5, alternatives.length]}
+                  domain={(isWeightView || kSensChartType === 'stackedBar') ? [0, 'dataMax'] : [0.5, alternatives.length]}
+                  allowDataOverflow={isWeightView || kSensChartType === 'stackedBar'}
                   ticks={(!isWeightView && kSensChartType !== 'stackedBar') ? Array.from({ length: alternatives.length }, (_, i) => i + 1) : undefined}
                   label={kSensChartSettings.showAxisTitles ? (labelStyle(kSensChartSettings.yAxisTitle, true) as any) : undefined}
                   tickFormatter={(isWeightView || kSensChartType === 'stackedBar') ? (val: number) => val.toFixed(2) : undefined}
@@ -2727,8 +3581,9 @@ export default function KSensitivityCalculator({
                   axisLine={{ stroke: '#000', strokeWidth: 1.5 }}
                   tick={kSensChartSettings.showMirrorTicks ? { fontSize: isMobile ? Math.max(7, kSensChartSettings.fontSize - 3) : kSensChartSettings.fontSize, fill: '#000', fontWeight: 700 } : false}
                   tickLine={kSensChartSettings.showMirrorTicks ? getTickLine('right') : false}
-                  reversed={!isWeightView}
-                  domain={isWeightView ? [0, 'auto'] : [1, alternatives.length]}
+                  reversed={!isWeightView && kSensChartType !== 'stackedBar'}
+                  domain={(isWeightView || kSensChartType === 'stackedBar') ? [0, 'dataMax'] : [1, alternatives.length]}
+                  allowDataOverflow={isWeightView || kSensChartType === 'stackedBar'}
                   ticks={!isWeightView ? Array.from({ length: alternatives.length }, (_, i) => i + 1) : undefined}
                 />
                 {kSensChartType !== 'stackedBar' && (
@@ -3734,6 +4589,8 @@ export default function KSensitivityCalculator({
                           </CardContent>
                         </Card>
 
+
+
                         {/* 2. CORRESPONDING FIGURE */}
                         <Card className="border-none bg-white shadow-none -mx-3 sm:mx-0 rounded-none sm:rounded-xl overflow-hidden w-full max-w-full">
                           <CardHeader className="pb-3 px-3 sm:px-6 bg-gray-50/50">
@@ -3758,7 +4615,11 @@ export default function KSensitivityCalculator({
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {kSensChartTypes.map(ct => (
+                                    {kSensChartTypes.filter(ct => {
+                                      if (kSensViewType !== 'weight' && (ct.value === 'stackedArea' || ct.value === 'scenarioCombo')) return false;
+                                      if (kSensViewType === 'weight' && (ct.value === 'rankHeatmap' || ct.value === 'rankBubble' || ct.value === 'groupedBar')) return false;
+                                      return true;
+                                    }).map(ct => (
                                       <SelectItem key={ct.value} value={ct.value} className="text-[11px]">
                                         <div className="flex items-center gap-1.5 font-medium text-gray-700">
                                           <span className="opacity-70">{ct.icon}</span>

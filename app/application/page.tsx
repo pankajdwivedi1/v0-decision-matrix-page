@@ -217,6 +217,11 @@ export default function MCDMCalculator() {
   const [numAlternatives, setNumAlternatives] = useState(3)
   const [numCriteria, setNumCriteria] = useState(3)
 
+  // Group Decision Making (Multi-Expert) State
+  const [expertMatrices, setExpertMatrices] = useState<Array<{ name: string, data: { criteria: Criterion[], alternatives: Alternative[] } }>>([])
+  const [isMultiExpertMode, setIsMultiExpertMode] = useState(false)
+  const [activeExpertTab, setActiveExpertTab] = useState<string>("aggregated")
+
   const [isLoading, setIsLoading] = useState(false)
   const [apiResults, setApiResults] = useState<any>(null)
   const [rankingChartType, setRankingChartType] = useState<string>('dualScoreRank')
@@ -1010,10 +1015,51 @@ export default function MCDMCalculator() {
   const getSensitivityTableLabel = () => `Table S${sensitivityTableCounter++}`;
   const getSensitivityFigureLabel = () => `Figure S${sensitivityFigureCounter++}`;
 
+  const aggregateExperts = (experts: { name: string, data: { criteria: Criterion[], alternatives: Alternative[] } }[]) => {
+    if (experts.length === 0) return;
+    
+    const baseCriteria = experts[0].data.criteria;
+    const baseAlternatives = experts[0].data.alternatives;
+    const numExperts = experts.length;
 
+    const aggregatedAlternatives = baseAlternatives.map((baseAlt, altIdx) => {
+      const aggScores: Record<string, any> = {};
+      
+      baseCriteria.forEach((crit) => {
+        const values = experts.map(e => {
+            const alt = e.data.alternatives[altIdx];
+            return alt ? alt.scores[crit.id] : 0;
+        });
+        
+        const isAllTfns = values.every(v => typeof v === 'object' && v !== null && 'l' in v);
+        const isAllNumbers = values.every(v => typeof v !== 'object' && !isNaN(Number(v)) && v !== "");
+        
+        if (isAllTfns) {
+            let l = 0, m = 0, u = 0;
+            values.forEach((v: any) => { l += v.l; m += v.m; u += v.u; });
+            aggScores[crit.id] = { l: l/numExperts, m: m/numExperts, u: u/numExperts };
+        } else if (isAllNumbers) {
+            const sum = values.reduce<number>((acc, val) => acc + Number(val), 0);
+            aggScores[crit.id] = sum / numExperts;
+        } else {
+            aggScores[crit.id] = values[0]; // fallback
+        }
+      });
+      
+      return {
+        ...baseAlt,
+        scores: aggScores
+      };
+    });
 
+    setCriteria(baseCriteria);
+    setAlternatives(aggregatedAlternatives);
+    setNumCriteria(baseCriteria.length);
+    setNumAlternatives(aggregatedAlternatives.length);
+    setCurrentStep("matrix");
+  }
 
-  const parseExcelData = (data: any[][]) => {
+  const parseExcelData = (data: any[][], applyToState = true): { criteria: Criterion[], alternatives: Alternative[] } | undefined => {
     // 1. Sanitize: Remove completely empty rows
     const rows = data.filter(r => r && r.length > 0)
     if (rows.length === 0) {
@@ -1146,10 +1192,19 @@ export default function MCDMCalculator() {
       }
     })
 
-    setCriteria(finalCriteria)
-    setAlternatives(newAlternatives)
-    setNumCriteria(finalCriteria.length)
-    setNumAlternatives(newAlternatives.length)
+    if (applyToState) {
+      setCriteria(finalCriteria)
+      setAlternatives(newAlternatives)
+      setNumCriteria(finalCriteria.length)
+      setNumAlternatives(newAlternatives.length)
+
+      // Clear expert mode when importing single matrix
+      setExpertMatrices([])
+      setIsMultiExpertMode(false)
+      setActiveExpertTab("aggregated")
+    }
+
+    return { criteria: finalCriteria, alternatives: newAlternatives }
 
     // Clear saved Research Context and calculation results on new file upload
     localStorage.removeItem("ai_research_topic")
@@ -2373,6 +2428,39 @@ export default function MCDMCalculator() {
     setSelectedCells(new Set())
   }
 
+  const handleImportAllSheetsAsExperts = () => {
+    if (!excelWorkbook) return;
+
+    resetAllCalculations();
+    
+    const parsedExperts: { name: string, data: { criteria: Criterion[], alternatives: Alternative[] } }[] = [];
+
+    for (const sheetName of excelWorkbook.SheetNames) {
+      const sheet = excelWorkbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+      const parsed = parseExcelData(jsonData, false);
+      if (parsed) {
+        parsedExperts.push({
+          name: sheetName,
+          data: parsed
+        });
+      }
+    }
+
+    if (parsedExperts.length > 0) {
+      setExpertMatrices(parsedExperts);
+      setIsMultiExpertMode(true);
+      setActiveExpertTab("aggregated");
+      aggregateExperts(parsedExperts);
+
+      setIsExcelPreviewOpen(false);
+      setExcelPreviewData(null);
+      setSelectedCells(new Set());
+    } else {
+      alert("No valid data found in sheets.");
+    }
+  }
+
   const selectAllData = () => {
     if (!excelPreviewData) return
     const rows = excelPreviewData.length
@@ -2434,48 +2522,57 @@ export default function MCDMCalculator() {
   }
 
   const updateAlternativeScore = (altId: string, critId: string, value: any) => {
-    // If it's a fuzzy triplet object, allow it directly
+    let parsedValue = value;
+    
     if (typeof value === 'object' && value !== null && 'l' in value) {
-      setAlternatives(
-        alternatives.map((alt) =>
-          alt.id === altId
-            ? {
-              ...alt,
-              scores: {
-                ...alt.scores,
-                [critId]: value,
-              },
-            }
-            : alt
-        )
-      )
-      return;
-    }
+        // Keep TFN as is
+    } else {
+        const allLinguisticValues = Object.values(LINGUISTIC_SCALES).flat().map(s => s.value);
+        const isLinguistic = typeof value === 'string' && allLinguisticValues.includes(value);
 
-    // If it's a linguistic value from our scale, allow it directly
-    const allLinguisticValues = Object.values(LINGUISTIC_SCALES).flat().map(s => s.value);
-    const isLinguistic = typeof value === 'string' && allLinguisticValues.includes(value);
-
-    if (!isLinguistic && value !== "" && typeof value !== 'object') {
-      const numValue = Number.parseFloat(value)
-      if (isNaN(numValue) || numValue < 0) {
-        return
-      }
-    }
-
-    setAlternatives(
-      alternatives.map((alt) =>
-        alt.id === altId
-          ? {
-            ...alt,
-            scores: {
-              ...alt.scores,
-              [critId]: isLinguistic ? value : (value === "" ? "" : Number.parseFloat(value)),
-            },
+        if (!isLinguistic && value !== "" && typeof value !== 'object') {
+          const numValue = Number.parseFloat(value)
+          if (isNaN(numValue) || numValue < 0) {
+            return
           }
-          : alt,
-      ),
-    )
+          parsedValue = numValue;
+        } else {
+          parsedValue = isLinguistic ? value : (value === "" ? "" : parsedValue);
+        }
+    }
+
+    if (isMultiExpertMode && activeExpertTab !== "aggregated") {
+       const updatedExperts = expertMatrices.map(expert => {
+           if (expert.name === activeExpertTab) {
+               return {
+                   ...expert,
+                   data: {
+                       ...expert.data,
+                       alternatives: expert.data.alternatives.map(alt => 
+                           alt.id === altId ? { ...alt, scores: { ...alt.scores, [critId]: parsedValue } } : alt
+                       )
+                   }
+               };
+           }
+           return expert;
+       });
+       setExpertMatrices(updatedExperts);
+       aggregateExperts(updatedExperts);
+    } else {
+       setAlternatives(
+         alternatives.map((alt) =>
+           alt.id === altId
+             ? {
+               ...alt,
+               scores: {
+                 ...alt.scores,
+                 [critId]: parsedValue,
+               },
+             }
+             : alt,
+         ),
+       )
+    }
   }
 
   const updateCriterion = (id: string, updates: Partial<Criterion>) => {
@@ -4551,7 +4648,7 @@ export default function MCDMCalculator() {
                       border: `${chartSettings.borderWidth}px solid ${themeColors.border}`,
                       padding: "4px 8px",
                       zIndex: 50,
-                      boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                      boxShadow: "none",
                       whiteSpace: "nowrap",
                       width: "fit-content",
                       left: legCfg.align === 'center' ? '50%' : undefined,
@@ -5227,9 +5324,35 @@ export default function MCDMCalculator() {
                         </Button>
                       </div>
 
+                      {isMultiExpertMode && expertMatrices.length > 0 && (
+                        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                          {expertMatrices.map((expert, idx) => (
+                             <Button
+                                key={idx}
+                                variant={activeExpertTab === expert.name ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setActiveExpertTab(expert.name)}
+                                className={activeExpertTab === expert.name ? "bg-blue-600 text-white" : "text-gray-600"}
+                             >
+                                {expert.name}
+                             </Button>
+                          ))}
+                          <div className="w-px h-8 bg-gray-200 mx-1"></div>
+                          <Button
+                             variant={activeExpertTab === "aggregated" ? "default" : "outline"}
+                             size="sm"
+                             onClick={() => setActiveExpertTab("aggregated")}
+                             className={activeExpertTab === "aggregated" ? "bg-purple-600 text-white hover:bg-purple-700" : "text-purple-600 border-purple-200 hover:bg-purple-50"}
+                          >
+                             <Sparkles className="w-3 h-3 mr-1" />
+                             Aggregated Result
+                          </Button>
+                        </div>
+                      )}
+
                       <SharedDecisionMatrix
-                        alternatives={alternatives}
-                        criteria={criteria}
+                        alternatives={isMultiExpertMode && activeExpertTab !== "aggregated" ? (expertMatrices.find(e => e.name === activeExpertTab)?.data.alternatives || alternatives) : alternatives}
+                        criteria={isMultiExpertMode && activeExpertTab !== "aggregated" ? (expertMatrices.find(e => e.name === activeExpertTab)?.data.criteria || criteria) : criteria}
                         isFuzzyMode={isFuzzyMode}
                         fuzzyScaleType={fuzzyScaleType}
                         customFuzzyScales={customFuzzyScales}
@@ -6084,7 +6207,7 @@ export default function MCDMCalculator() {
                                   width: "max-content",
                                   maxWidth: "95%",
                                   zIndex: 50,
-                                  boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                  boxShadow: "none",
                                   whiteSpace: "nowrap"
                                 }} />
                                 <Tooltip contentStyle={{ fontSize: "11px", borderRadius: "4px", border: "1px solid #000", boxShadow: "none" }} cursor={{ fill: "rgba(0,0,0,0.05)" }} />
@@ -6121,7 +6244,7 @@ export default function MCDMCalculator() {
                                   width: "max-content",
                                   maxWidth: "95%",
                                   zIndex: 50,
-                                  boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                  boxShadow: "none",
                                   whiteSpace: "nowrap"
                                 }} />
                                 {sensitivityWeightComparisonResults.map((res, i) => (
@@ -6150,7 +6273,7 @@ export default function MCDMCalculator() {
                                   width: "max-content",
                                   maxWidth: "95%",
                                   zIndex: 50,
-                                  boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                  boxShadow: "none",
                                   whiteSpace: "nowrap"
                                 }} />
                                 {sensitivityWeightComparisonResults.map((res, i) => (
@@ -6206,7 +6329,7 @@ export default function MCDMCalculator() {
                                   width: "max-content",
                                   maxWidth: "95%",
                                   zIndex: 50,
-                                  boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                  boxShadow: "none",
                                   whiteSpace: "nowrap"
                                 }} />
                                 {sensitivityWeightComparisonResults.map((res, i) => (
@@ -6234,7 +6357,7 @@ export default function MCDMCalculator() {
                                   width: "max-content",
                                   maxWidth: "95%",
                                   zIndex: 50,
-                                  boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                  boxShadow: "none",
                                   whiteSpace: "nowrap"
                                 }} />
                                 {sensitivityWeightComparisonResults.map((res, i) => (
@@ -6369,7 +6492,7 @@ export default function MCDMCalculator() {
                                   width: "max-content",
                                   maxWidth: "95%",
                                   zIndex: 50,
-                                  boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                  boxShadow: "none",
                                   whiteSpace: "nowrap"
                                 }} />
                                 {sensitivityWeightComparisonResults.map((res, i) => (
@@ -6626,7 +6749,7 @@ export default function MCDMCalculator() {
                                     width: "max-content",
                                     maxWidth: "95%",
                                     zIndex: 50,
-                                    boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                    boxShadow: "none",
                                     whiteSpace: "nowrap"
                                   }} />
                                   {sensitivityWeightComparisonResults.map((res, i) => (
@@ -7703,7 +7826,7 @@ export default function MCDMCalculator() {
                                   width: isMobile ? "max-content" : ((chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content"),
                                   height: "auto",
                                   zIndex: 50,
-                                  boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                  boxShadow: "none",
                                   whiteSpace: isMobile ? 'normal' : 'nowrap',
                                   maxWidth: isMobile ? 'calc(100% - 10px)' : '95%',
                                   pointerEvents: 'auto'
@@ -9245,7 +9368,7 @@ export default function MCDMCalculator() {
                                   width: "max-content",
                                   maxWidth: "95%",
                                   zIndex: 50,
-                                  boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                  boxShadow: "none",
                                   whiteSpace: "nowrap"
                                 }} />
                               </RadarChart>
@@ -10107,7 +10230,7 @@ export default function MCDMCalculator() {
                                         width: isMobile ? "max-content" : ((chartSettings.legendPosition === 'left' || chartSettings.legendPosition === 'right') ? "150px" : "max-content"),
                                         height: "auto",
                                         zIndex: 50,
-                                        boxShadow: isMobile ? "none" : "2px 2px 0px rgba(0,0,0,1)",
+                                        boxShadow: "none",
                                         whiteSpace: isMobile ? 'normal' : 'nowrap',
                                         maxWidth: isMobile ? 'calc(100% - 10px)' : '95%',
                                         pointerEvents: 'auto'
@@ -11419,6 +11542,16 @@ export default function MCDMCalculator() {
                     >
                       Import Selected Data
                     </Button>
+                    {excelWorkbook && excelWorkbook.SheetNames.length > 1 && (
+                        <Button
+                          variant="outline"
+                          onClick={handleImportAllSheetsAsExperts}
+                          className="text-xs h-8 text-purple-600 border-purple-200 hover:bg-purple-50 mr-auto"
+                        >
+                          <Sparkles className="w-3 h-3 mr-1" />
+                          Import All Sheets as Experts
+                        </Button>
+                    )}
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -16416,7 +16549,7 @@ export default function MCDMCalculator() {
                               fontSize: `${isMobile ? Math.max(7, chartSettings.fontSize - 3) : Math.max(8, chartSettings.fontSize - 2)}px`,
                               fontWeight: 700,
                               color: themeColors.text,
-                              boxShadow: isMobile ? "none" : "3px 3px 0px rgba(0,0,0,1)",
+                              boxShadow: "none",
                               display: 'flex',
                               flexDirection: chartSettings.legendLayout === 'vertical' ? 'column' : 'row',
                               gap: '12px',

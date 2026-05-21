@@ -126,24 +126,29 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
     default: ['#8884d8', '#82ca9d', '#ffc658', '#0088fe', '#00c49f', '#ff8042', '#a4de6c', '#d0ed57', '#83a6ed', '#8dd1e1']
   };
 
+  const settingsRef = React.useRef(settings);
+  React.useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
   const intervalRef = React.useRef<any>(null);
 
   const startNudging = (dx: number, dy: number) => {
     if (intervalRef.current) return;
 
-    // 1. Move immediately by 15px (0.5cm) for responsiveness
+    // 1. Move immediately by 10px (for responsiveness/single click)
     onSettingsChange({
-      ...settings,
-      legendOffsetX: settings.legendOffsetX + (dx > 0 ? 15 : dx < 0 ? -15 : 0),
-      legendOffsetY: settings.legendOffsetY + (dy > 0 ? 15 : dy < 0 ? -15 : 0)
+      ...settingsRef.current,
+      legendOffsetX: settingsRef.current.legendOffsetX + (dx > 0 ? 10 : dx < 0 ? -10 : 0),
+      legendOffsetY: settingsRef.current.legendOffsetY + (dy > 0 ? 10 : dy < 0 ? -10 : 0)
     });
 
-    // 2. Start the continuous glide if they keep holding (slight delay like a keyboard repeat)
+    // 2. Start the continuous glide if they keep holding
     const performCrawl = () => {
       onSettingsChange({
-        ...settings,
-        legendOffsetX: settings.legendOffsetX + (dx > 0 ? 2 : dx < 0 ? -2 : 0),
-        legendOffsetY: settings.legendOffsetY + (dy > 0 ? 2 : dy < 0 ? -2 : 0)
+        ...settingsRef.current,
+        legendOffsetX: settingsRef.current.legendOffsetX + (dx > 0 ? 2 : dx < 0 ? -2 : 0),
+        legendOffsetY: settingsRef.current.legendOffsetY + (dy > 0 ? 2 : dy < 0 ? -2 : 0)
       });
     };
 
@@ -268,12 +273,14 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                       <Button
                         variant="ghost" size="icon" className="h-4 sm:h-5 w-4 sm:w-5 rounded-sm p-0"
                         onMouseDown={() => startNudging(0, -1)} onMouseUp={stopNudging} onMouseLeave={stopNudging}
+                        onTouchStart={(e) => { e.preventDefault(); startNudging(0, -1); }} onTouchEnd={stopNudging}
                       ><ChevronUp className="w-2.5 sm:w-3 h-2.5 sm:h-3" /></Button>
                       <div />
 
                       <Button
                         variant="ghost" size="icon" className="h-4 sm:h-5 w-4 sm:w-5 rounded-sm p-0"
                         onMouseDown={() => startNudging(-1, 0)} onMouseUp={stopNudging} onMouseLeave={stopNudging}
+                        onTouchStart={(e) => { e.preventDefault(); startNudging(-1, 0); }} onTouchEnd={stopNudging}
                       ><ChevronLeft className="w-2.5 sm:w-3 h-2.5 sm:h-3" /></Button>
                       <Button
                         variant={settings.legendPosition === 'middle' && settings.legendOffsetX === 0 && settings.legendOffsetY === 0 ? 'default' : 'ghost'}
@@ -283,12 +290,14 @@ export const ChartVisualConfigurator: React.FC<ChartVisualConfiguratorProps> = (
                       <Button
                         variant="ghost" size="icon" className="h-4 sm:h-5 w-4 sm:w-5 rounded-sm p-0"
                         onMouseDown={() => startNudging(1, 0)} onMouseUp={stopNudging} onMouseLeave={stopNudging}
+                        onTouchStart={(e) => { e.preventDefault(); startNudging(1, 0); }} onTouchEnd={stopNudging}
                       ><ChevronRight className="w-2.5 sm:w-3 h-2.5 sm:h-3" /></Button>
 
                       <div />
                       <Button
                         variant="ghost" size="icon" className="h-4 sm:h-5 w-4 sm:w-5 rounded-sm p-0"
                         onMouseDown={() => startNudging(0, 1)} onMouseUp={stopNudging} onMouseLeave={stopNudging}
+                        onTouchStart={(e) => { e.preventDefault(); startNudging(0, 1); }} onTouchEnd={stopNudging}
                       ><ChevronDown className="w-2.5 sm:w-3 h-2.5 sm:h-3" /></Button>
                       <div />
                     </div>
