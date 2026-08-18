@@ -19,6 +19,8 @@ export const metadata: Metadata = {
 
 import { Toaster } from "sonner"
 
+import { AnalyticsTracker } from "@/components/AnalyticsTracker"
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -34,6 +36,7 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
+          <AnalyticsTracker />
           {children}
           <Analytics />
           <Toaster position="top-right" richColors />
