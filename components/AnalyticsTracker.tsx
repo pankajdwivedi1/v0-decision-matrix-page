@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import React, { useEffect, useRef, Suspense } from "react";
+import { usePathname } from "next/navigation";
 import { getDeviceFingerprint } from "@/lib/fingerprint";
 
-export function AnalyticsTracker() {
+function AnalyticsTrackerInner() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const fingerprintRef = useRef<{
     visitorId: string;
@@ -98,7 +97,8 @@ export function AnalyticsTracker() {
     else if (userAgent.includes("safari/") && !userAgent.includes("chrome")) browser = "Safari";
     else if (userAgent.includes("firefox/")) browser = "Firefox";
 
-    const fullPath = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : "");
+    const searchStr = typeof window !== "undefined" ? window.location.search : "";
+    const fullPath = (pathname || "/") + searchStr;
 
     const sendTrackEvent = async (isHeartbeat = false) => {
       try {
@@ -171,7 +171,15 @@ export function AnalyticsTracker() {
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
     };
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   return null;
+}
+
+export function AnalyticsTracker() {
+  return (
+    <Suspense fallback={null}>
+      <AnalyticsTrackerInner />
+    </Suspense>
+  );
 }
