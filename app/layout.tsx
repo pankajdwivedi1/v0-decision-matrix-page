@@ -12,9 +12,9 @@ const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-serif"
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
-  title: "decisionalgo",
-  description: "Advanced Decision Matrix System",
-  generator: "decisionalgo",
+  title: "RankoWise | Multi-Criteria Decision Intelligence",
+  description: "Advanced Multi-Criteria Decision Making (MCDM) & Optimization Platform",
+  generator: "RankoWise",
 }
 
 import { Toaster } from "sonner"

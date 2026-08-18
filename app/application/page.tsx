@@ -4297,7 +4297,7 @@ export default function MCDMCalculator() {
     return (
       <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-black truncate" style={{ fontFamily: '"Century Schoolbook", "Century", "Book Antiqua", Georgia, serif', fontWeight: 700, letterSpacing: '-0.01em' }}>DECISION ALGO</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-black truncate" style={{ fontFamily: '"Century Schoolbook", "Century", "Book Antiqua", Georgia, serif', fontWeight: 700, letterSpacing: '-0.01em' }}>RANKOWISE</h1>
           <p className="text-[10px] sm:text-xs text-gray-700">Multicriteria Decision Making Calculator</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">

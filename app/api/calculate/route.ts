@@ -671,11 +671,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response, { status: 200 });
   } catch (err: any) {
     console.error("Calculation error:", err);
-    try {
-      fs.writeFileSync("c:/Users/PANKAJ DWIVEDI/Desktop/decisionalgo/app/api/calculate/error_log.txt", String(err) + "\n" + err?.stack);
-    } catch (e) {
-      console.error("Failed to write error_log.txt", e);
-    }
     return NextResponse.json(
       { error: "Internal server error during calculation: " + (err?.message || String(err)) },
       { status: 500 }

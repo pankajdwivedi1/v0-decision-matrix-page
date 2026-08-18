@@ -4,13 +4,14 @@ import React, { useEffect, useState } from 'react'
 import { cn } from "@/lib/utils"
 
 const themes = [
-    { id: 'white', bg: '#ffffff', text: '#000000', label: 'Default' },
-    { id: 'charcoal', bg: '#1e293b', text: '#ffffff', label: 'Charcoal' },
-    { id: 'gray', bg: '#475569', text: '#ffffff', label: 'Slate Gray' },
-    { id: 'green', bg: '#064e3b', text: '#ffffff', label: 'Deep Forest' },
-    { id: 'brown', bg: '#4a6d4a', text: '#ffffff', label: 'Sage Green' },
-    { id: 'darkblue', bg: '#0f172a', text: '#ffffff', label: 'Midnight Blue' },
-    { id: 'lightblue', bg: '#f0f9ff', text: '#000000', label: 'Sky Mist' },
+    { id: 'white', bg: '#ffffff', text: '#000000', label: 'Pure White' },
+    { id: 'alabaster', bg: '#faf7f2', text: '#1c1917', label: 'Warm Alabaster' },
+    { id: 'arctic', bg: '#f0f7ff', text: '#0f172a', label: 'Arctic Frost' },
+    { id: 'lavender', bg: '#f5f3ff', text: '#1e1b4b', label: 'Lavender Dream' },
+    { id: 'jade', bg: '#f0fdf4', text: '#064e3b', label: 'Botanical Jade' },
+    { id: 'blush', bg: '#fff1f5', text: '#4c0519', label: 'Abstract Blush' },
+    { id: 'obsidian', bg: '#0f172a', text: '#ffffff', label: 'Cosmic Obsidian' },
+    { id: 'royal', bg: '#1e1b4b', text: '#ffffff', label: 'Royal Velvet' },
 ]
 
 export default function ColorSwitcher() {
@@ -28,11 +29,6 @@ export default function ColorSwitcher() {
         if (!theme) return
 
         document.documentElement.style.setProperty('--background', theme.bg)
-        // Convert hex to oklch or just use hex directly for background
-        // Since the app uses tailwind variables, we can just inject hex into the CSS variable
-        // But tailwind 4 with oklch might be picky. Let's use hex in a custom property if needed.
-
-        // Actually, we can just set the style on the root element
         document.documentElement.style.setProperty('--page-bg-color', theme.bg)
         document.documentElement.style.setProperty('--page-text-color', theme.text)
 
@@ -47,17 +43,21 @@ export default function ColorSwitcher() {
     }
 
     return (
-        <div className="flex items-center gap-0.5">
+        <div 
+            className="flex items-center gap-1 bg-slate-100/90 hover:bg-slate-200/70 transition-colors p-1 rounded-full border border-slate-200/80 shadow-xs" 
+            title="Theme Palette"
+        >
             {themes.map((t) => (
                 <button
                     key={t.id}
                     onClick={() => applyTheme(t.id)}
                     className={cn(
-                        "w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-none border border-gray-300 shadow-xs transition-transform hover:scale-110 focus:outline-none focus:ring-1 focus:ring-blue-500",
-                        activeTheme === t.id ? "ring-1 ring-black scale-110" : ""
+                        "w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border border-black/15 shadow-xs transition-all duration-150 hover:scale-125 focus:outline-none",
+                        activeTheme === t.id ? "ring-2 ring-offset-1 ring-blue-600 scale-110 z-10 shadow-sm" : "opacity-85 hover:opacity-100"
                     )}
                     style={{ backgroundColor: t.bg }}
                     title={t.label}
+                    aria-label={t.label}
                 />
             ))}
         </div>

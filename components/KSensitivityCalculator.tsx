@@ -3626,8 +3626,8 @@ export default function KSensitivityCalculator({
       ];
       worksheet.columns = cols;
 
-      // Row 1: DECISION ALGO header with blue background
-      const titleRow = worksheet.addRow(["DECISION ALGO"]);
+      // Row 1: RANKOWISE header with blue background
+      const titleRow = worksheet.addRow(["RANKOWISE"]);
       worksheet.mergeCells(`A1:${String.fromCharCode(64 + alternatives.length + 1)}1`);
       const titleCell = titleRow.getCell(1);
       titleCell.font = { name: 'Cambria', bold: true, size: 14, color: { argb: 'FFFFFFFF' } };

@@ -144,11 +144,9 @@ export default function LandingPage() {
       <nav className="fixed top-0 w-full z-50 border-b border-slate-200 bg-white/70 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#1d4ed8] rounded-sm flex items-center justify-center font-serif font-bold text-lg sm:text-xl text-white shadow-sm ring-1 ring-blue-700 shrink-0">
-              DA
-            </div>
+            <img src="/logo.jpg" alt="RankoWise" className="w-8 h-8 sm:w-10 sm:h-10 rounded-sm object-cover shadow-sm ring-1 ring-blue-700/50 shrink-0" />
             <div className="flex flex-col -gap-1 overflow-hidden">
-              <span className="font-serif font-bold text-lg sm:text-xl tracking-tight text-slate-900 truncate">DecisionAlgo</span>
+              <span className="font-serif font-bold text-lg sm:text-xl tracking-tight text-slate-900 truncate">RankoWise</span>
               <span className="text-[8px] sm:text-[10px] uppercase tracking-[0.2em] font-medium text-slate-500 truncate hidden xs:block">Academic Intelligence</span>
             </div>
           </div>
@@ -162,10 +160,8 @@ export default function LandingPage() {
               </SheetTrigger>
               <SheetContent side="left" className="w-[280px] sm:w-[350px] border-r-slate-200 p-0">
                 <div className="p-6 border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-8 h-8 bg-[#1d4ed8] rounded-sm flex items-center justify-center font-serif font-bold text-white">
-                    DA
-                  </div>
-                  <span className="font-serif font-bold text-lg text-slate-900">DecisionAlgo</span>
+                  <img src="/logo.jpg" alt="RankoWise" className="w-8 h-8 rounded-sm object-cover ring-1 ring-blue-700/50" />
+                  <span className="font-serif font-bold text-lg text-slate-900">RankoWise</span>
                 </div>
                 <div className="px-6 py-8 flex flex-col gap-6">
                   {['Methodology', 'Analysis', 'Showcase', 'Contact'].map((item) => (
@@ -660,8 +656,8 @@ export default function LandingPage() {
           <div className="mt-20 md:mt-32 pt-12 md:pt-16 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-10">
             <div className="flex flex-col items-center md:items-start gap-1">
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 sm:w-7 sm:h-7 bg-white text-slate-900 flex items-center justify-center font-serif font-black text-[10px] sm:text-xs">DA</div>
-                <span className="font-serif font-bold text-base sm:text-lg tracking-tight">DecisionAlgo</span>
+                <img src="/logo.jpg" alt="RankoWise" className="w-6 h-6 sm:w-7 sm:h-7 rounded-sm object-cover ring-1 ring-white/20" />
+                <span className="font-serif font-bold text-base sm:text-lg tracking-tight">RankoWise</span>
               </div>
               <p className="text-[8px] sm:text-[10px] text-white/30 uppercase tracking-[0.3em] mt-1 italic">Advanced Decision Systems © 2025</p>
             </div>

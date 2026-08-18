@@ -14,7 +14,7 @@ async function fetchCrossRef(query: string): Promise<Paper[]> {
     try {
         const url = `https://api.crossref.org/works?query=${encodeURIComponent(query)}&rows=100&sort=relevance&filter=type:journal-article,from-pub-date:2018`;
         const res = await fetch(url, {
-            headers: { "User-Agent": "DecisionAlgo/1.0 (mailto:research@decisionalgo.app)" },
+            headers: { "User-Agent": "RankoWise/1.0 (mailto:research@rankowise.online)" },
             signal: AbortSignal.timeout(10000)
         });
         if (!res.ok) return [];

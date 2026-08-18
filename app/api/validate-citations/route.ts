@@ -48,7 +48,7 @@ async function validateCitation(author: string, year: string): Promise<AuthorRes
         const query = `${author} ${year}`;
         const url = `https://api.crossref.org/works?query=${encodeURIComponent(query)}&rows=3`;
         const res = await fetch(url, {
-            headers: { "User-Agent": "DecisionAlgo/1.0 (mailto:research@decisionalgo.app)" },
+            headers: { "User-Agent": "RankoWise/1.0 (mailto:research@rankowise.online)" },
             signal: AbortSignal.timeout(6000)
         });
         if (!res.ok) {
@@ -116,7 +116,7 @@ async function validateDoi(doi: string): Promise<DoiResult & { quartile?: string
     try {
         const url = `https://api.crossref.org/works/${encodeURIComponent(cleanDoi)}`;
         const res = await fetch(url, {
-            headers: { "User-Agent": "DecisionAlgo/1.0 (mailto:research@decisionalgo.app)" },
+            headers: { "User-Agent": "RankoWise/1.0 (mailto:research@rankowise.online)" },
             signal: AbortSignal.timeout(6000)
         });
         if (res.status === 404) return { type: "doi", doi: cleanDoi, valid: false, reason: "DOI not found — may be fake or mistyped." };
