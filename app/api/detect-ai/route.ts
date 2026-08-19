@@ -113,20 +113,39 @@ export async function POST(req: NextRequest) {
         let lastError = null;
         for (const key of apiKeys) {
             try {
-                const genAI = new GoogleGenerativeAI(key);
-                const model = genAI.getGenerativeModel({
-                    model: "gemini-2.5-flash",
-                    generationConfig: {
-                        temperature: 0.1, // Very low temp for consistent detection output
-                        topP: 0.9,
-                        topK: 10,
-                        maxOutputTokens: 100,
-                    },
-                });
+                if (key.startsWith("sk-")) {
+                    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${key.trim()}`,
+                        },
+                        body: JSON.stringify({
+                            model: "gpt-4o-mini",
+                            temperature: 0.1,
+                            messages: [{ role: "user", content: detectionPrompt }],
+                            max_tokens: 100,
+                        }),
+                    });
+                    if (!res.ok) throw new Error(`OpenAI detection failed with status ${res.status}`);
+                    const data = await res.json();
+                    rawOutput = (data.choices?.[0]?.message?.content || "").trim();
+                } else {
+                    const genAI = new GoogleGenerativeAI(key);
+                    const model = genAI.getGenerativeModel({
+                        model: "gemini-2.5-flash",
+                        generationConfig: {
+                            temperature: 0.1, // Very low temp for consistent detection output
+                            topP: 0.9,
+                            topK: 10,
+                            maxOutputTokens: 100,
+                        },
+                    });
 
-                const result = await model.generateContent(detectionPrompt);
-                const response = await result.response;
-                rawOutput = response.text().trim();
+                    const result = await model.generateContent(detectionPrompt);
+                    const response = await result.response;
+                    rawOutput = response.text().trim();
+                }
 
                 // Parse the structured output
                 const aiMatch = rawOutput.match(/AI Likelihood:\s*(\d+)%/i);

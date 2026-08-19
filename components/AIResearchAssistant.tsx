@@ -1052,6 +1052,23 @@ FORBIDDEN:
         setIsCopied(false);
     }, [selectedSection, method, weightMethod, comparisonMethods, sensitivityMethod, sensitivityWeightMethods, technicalDepth, variationRange]);
 
+    const getAiRequestConfig = () => {
+        const provider = (typeof window !== "undefined" ? localStorage.getItem("user_ai_provider") : "gemini") || "gemini";
+        const geminiKey = (typeof window !== "undefined" ? localStorage.getItem("user_gemini_api_key") : "") || "";
+        const openaiKey = (typeof window !== "undefined" ? localStorage.getItem("user_openai_api_key") : "") || "";
+        const openaiModel = (typeof window !== "undefined" ? localStorage.getItem("user_openai_model") : "gpt-4o") || "gpt-4o";
+
+        const userApiKey = provider === "openai" ? openaiKey : (geminiKey || openaiKey);
+        const effectiveProvider = provider === "openai" || (userApiKey && userApiKey.startsWith("sk-")) ? "openai" : "gemini";
+
+        return {
+            provider: effectiveProvider,
+            userApiKey,
+            userOpenAiKey: openaiKey,
+            model: effectiveProvider === "openai" ? openaiModel : "gemini-2.5-flash",
+        };
+    };
+
     // ── AI Content Detection Handler ────────────────────────────
     const handleDetectAI = async () => {
         if (!generatedContent) return;
@@ -1059,7 +1076,7 @@ FORBIDDEN:
         setAiDetectionResult(null);
         setAiDetectionError('');
         try {
-            const userApiKey = localStorage.getItem('user_gemini_api_key') || '';
+            const { userApiKey, provider, model } = getAiRequestConfig();
 
             // Client-side statistical pre-analysis
             const variance = computeSentenceVariance(generatedContent);
@@ -1068,7 +1085,7 @@ FORBIDDEN:
             const res = await fetch('/api/detect-ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: generatedContent, userApiKey }),
+                body: JSON.stringify({ text: generatedContent, userApiKey, provider, model }),
             });
 
             const data = await res.json();
@@ -1086,11 +1103,11 @@ FORBIDDEN:
         setIsFixingAI(true);
         setFixReport(null);
         try {
-            const userApiKey = localStorage.getItem('user_gemini_api_key') || '';
+            const { userApiKey, provider, model } = getAiRequestConfig();
             const res = await fetch('/api/fix-ai-sentences', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: generatedContent, userApiKey }),
+                body: JSON.stringify({ text: generatedContent, userApiKey, provider, model }),
             });
             const data = await res.json();
             if (data.fixedText) {
@@ -1121,7 +1138,7 @@ FORBIDDEN:
 
             const finalPrompt = basePrompt + (additionalContext ? `\n\nADDITIONAL USER CONTEXT:\n${additionalContext}` : '') + hiddenValidationRule;
 
-            const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
+            const { userApiKey, userOpenAiKey, provider, model: activeModel } = getAiRequestConfig();
 
             // 🔗 Fetch live citations before generating this section
             const topic = researchContext?.topic || method;
@@ -1135,6 +1152,9 @@ FORBIDDEN:
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     userApiKey,
+                    userOpenAiKey,
+                    provider,
+                    model: activeModel,
                     analysisType: 'custom_section',
                     sectionType: selectedSection,
                     customPrompt: finalPrompt,
@@ -1157,7 +1177,7 @@ FORBIDDEN:
             });
 
             const result = await response.json();
-            if (response.ok) {
+            if (response.ok && userApiKey) {
                 trackGeminiUsage(userApiKey);
             }
             // 🔷 AUTO POST-ENHANCEMENT: Remove banned phrases, replace generic patterns
@@ -1183,7 +1203,7 @@ FORBIDDEN:
         const sectionsToGenerate = SECTION_TEMPLATES.filter(s => s.id !== 'custom');
 
         try {
-            const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
+            const { userApiKey, userOpenAiKey, provider, model: activeModel } = getAiRequestConfig();
 
             // 🔗 STEP: Fetch live citations ONCE before the entire manuscript run
             setFullProgress(3);
@@ -1200,6 +1220,9 @@ FORBIDDEN:
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     userApiKey,
+                    userOpenAiKey,
+                    provider,
+                    model: activeModel,
                     analysisType: 'manuscript_title',
                     alternatives,
                     criteria,
@@ -1209,7 +1232,7 @@ FORBIDDEN:
                 })
             });
             const titleData = await titleResponse.json();
-            if (titleResponse.ok) {
+            if (titleResponse.ok && userApiKey) {
                 trackGeminiUsage(userApiKey);
             }
             const generatedTitle = (titleData.markdown || "Technical Analysis of Decision Criteria").replace(/[#*]/g, '').trim();
@@ -1228,6 +1251,9 @@ FORBIDDEN:
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         userApiKey,
+                        userOpenAiKey,
+                        provider,
+                        model: activeModel,
                         analysisType: 'custom_section',
                         sectionType: section.id,
                         customPrompt: getDynamicPrompt(section.id) + `\nCRITICAL CONSTRAINTS: Target Word Count: ${assignedWordCount}. Target Citations: ${assignedCitations}. Start writing technical content DIRECTLY. Do NOT include any section titles, numbers, or headings at the start of your response. This is part of a professional research paper; ensure it flows naturally without repeating headers.`,
@@ -1705,6 +1731,9 @@ FORBIDDEN:
                                             <li>• Specific research gap (non-generic)</li>
                                             <li>• Methodology consistency across sections</li>
                                         </ul>
+                                        <div className="mt-1 pt-1 border-t border-indigo-100/60 text-[9px] font-mono text-indigo-600/90 font-medium">
+                                            Legend: <strong>W</strong>-Weight | <strong>R</strong>-Ranking | <strong>C</strong>-Comparison | <strong>S</strong>-Sensitivity
+                                        </div>
                                     </div>
                                 </div>
                             </div>

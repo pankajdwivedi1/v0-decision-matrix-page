@@ -28,20 +28,36 @@ function formatNumbersInObject(obj: any): any {
 export async function POST(req: NextRequest) {
     try {
         const reqContent = await req.json();
-        const { alternatives, criteria, ranking, method, analysisType, userApiKey: providedKey, assetLabels, isLastSection } = reqContent;
+        const { alternatives, criteria, ranking, method, analysisType, userApiKey: providedKey, userOpenAiKey, provider: reqProvider, model: reqModel, assetLabels, isLastSection } = reqContent;
+
+        const effectiveProvider = reqProvider || (providedKey?.startsWith("sk-") ? "openai" : "gemini");
+        const isOpenAiSelected = effectiveProvider === "openai" || Boolean(userOpenAiKey) || (providedKey && providedKey.startsWith("sk-"));
 
         // 1. Get List of Keys
         let apiKeys: string[] = [];
-        if (providedKey && providedKey.trim().length > 0) {
-            apiKeys = [providedKey.trim()];
+        if (isOpenAiSelected) {
+            if (userOpenAiKey && userOpenAiKey.trim().length > 0) {
+                apiKeys = [userOpenAiKey.trim()];
+            } else if (providedKey && providedKey.startsWith("sk-")) {
+                apiKeys = [providedKey.trim()];
+            } else {
+                const keysString = process.env.OPENAI_API_KEY || "";
+                apiKeys = keysString.split(",").map(k => k.trim()).filter(k => k.length > 0);
+            }
         } else {
-            const keysString = process.env.GEMINI_API_KEY || "";
-            apiKeys = keysString.split(",").map(k => k.trim()).filter(k => k.length > 0);
+            if (providedKey && providedKey.trim().length > 0) {
+                apiKeys = [providedKey.trim()];
+            } else {
+                const keysString = process.env.GEMINI_API_KEY || "";
+                apiKeys = keysString.split(",").map(k => k.trim()).filter(k => k.length > 0);
+            }
         }
 
         if (apiKeys.length === 0) {
             return NextResponse.json(
-                { error: "Gemini API Keys are missing. Please add GEMINI_API_KEY to your env variables or provide your own API key." },
+                { error: isOpenAiSelected 
+                    ? "OpenAI API Key is missing. Please enter your OpenAI API key in API Settings." 
+                    : "Gemini API Keys are missing. Please add your Gemini API key in API Settings." },
                 { status: 500 }
             );
         }
@@ -673,23 +689,7 @@ export async function POST(req: NextRequest) {
        `;
         }
 
-        // ---------------------------------------------------------
-        // Failover Logic: Try keys one by one
-        // ---------------------------------------------------------
-        let lastError = null;
-        for (const key of apiKeys) {
-            try {
-                // Initialize AI with current key
-                const genAI = new GoogleGenerativeAI(key);
-                // Use gemini-2.5-flash (as requested by user)
-                const model = genAI.getGenerativeModel({
-                    model: "gemini-2.5-flash",
-                    generationConfig: {
-                        temperature: 0.85, // Higher temperature for more natural variability
-                        topP: 0.95,
-                        topK: 40,
-                    },
-                    systemInstruction: `You are an experienced Senior Researcher and Academic Writer specializing in Multi-Criteria Decision Analysis.
+        const systemInstructionText = `You are an experienced Senior Researcher and Academic Writer specializing in Multi-Criteria Decision Analysis.
                     
 Your writing style:
 - Natural and flowing, mixing varied sentence lengths (some short and punchy, others complex and analytical)
@@ -735,17 +735,81 @@ Quality standards:
   3. **Methodological Exclusion**: ONLY describe methods that are active in the current session (refer to the STRICT METHODOLOGY SCOPE).
   4. **No Findings in Background (CRITICAL Q1 RULE)**: DO NOT include any rankings, scores, or empirical results of THIS study in the Introduction or Literature Review. This rule SPECIFICALLY applies to the 'Literature Gap and Novel Contributions' sub-section. Contributions listed there MUST describe the study METHODOLOGY, FRAMEWORK, and APPROACH only. Any mention of specific scores (e.g. 'Alternative X scored 0.81'), city/alternative rankings (e.g. 'Liverpool emerged as top-ranked'), or quantitative findings inside a contributions bullet point is an ABSOLUTE VIOLATION of Q1 academic writing standards.
   5. **Hierarchical Precision**: Ensure consistent section and subsection numbering (e.g., 4.1, 4.2.1).
-  6. **TECHNICAL PURITY**: You are strictly FORBIDDEN from mentioning Spearman’s Rho, Kendall’s Tau, or Sensitivity Analysis (±30%) if the prompt does not contain their corresponding numerical data tables. Do not use them even as \"generic validation examples.\"
+  6. **TECHNICAL PURITY**: You are strictly FORBIDDEN from mentioning Spearman’s Rho, Kendall’s Tau, or Sensitivity Analysis (±30%) if the prompt does not contain their corresponding numerical data tables. Do not use them even as "generic validation examples."
 - **ANTI-HALLUCINATION POLICY (STRICT)**: You are FORBIDDEN from mentioning or explaining methods like SWEI, SWI, VOI, or Sensitivity Analysis if their corresponding data is not provided in the current prompt context. Do not use standard templates; write uniquely based on the provided inputs.
-- Technical precision in terminology`
-                });
+- Technical precision in terminology`;
 
-                const result = await model.generateContent(prompt);
-                const response = await result.response;
-                const text = response.text();
+        // ---------------------------------------------------------
+        // Failover Logic: Try keys one by one (OpenAI or Gemini)
+        // ---------------------------------------------------------
+        let lastError = null;
+        for (const key of apiKeys) {
+            try {
+                const isKeyOpenAI = key.startsWith("sk-") || isOpenAiSelected;
 
-                // If successful, return immediately
-                return NextResponse.json({ markdown: text });
+                if (isKeyOpenAI) {
+                    // Call OpenAI Chat Completion API
+                    const chosenModel = reqModel || "gpt-4o";
+                    const isReasoningModel = chosenModel.startsWith("o1") || chosenModel.startsWith("o3");
+
+                    const messages: any[] = isReasoningModel
+                        ? [{ role: "user", content: `${systemInstructionText}\n\n${prompt}` }]
+                        : [
+                            { role: "system", content: systemInstructionText },
+                            { role: "user", content: prompt },
+                        ];
+
+                    const openAiBody: any = {
+                        model: chosenModel,
+                        messages,
+                    };
+
+                    if (!isReasoningModel) {
+                        openAiBody.temperature = 0.85;
+                        openAiBody.top_p = 0.95;
+                    }
+
+                    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${key.trim()}`,
+                        },
+                        body: JSON.stringify(openAiBody),
+                    });
+
+                    if (!res.ok) {
+                        const errJson = await res.json().catch(() => ({}));
+                        throw new Error(errJson.error?.message || `OpenAI API error ${res.status}`);
+                    }
+
+                    const data = await res.json();
+                    const text = data.choices?.[0]?.message?.content || "";
+
+                    if (text && text.trim().length > 0) {
+                        return NextResponse.json({ markdown: text, provider: "openai", model: chosenModel });
+                    }
+                } else {
+                    // Call Google Gemini Generative Model
+                    const genAI = new GoogleGenerativeAI(key);
+                    const model = genAI.getGenerativeModel({
+                        model: "gemini-2.5-flash",
+                        generationConfig: {
+                            temperature: 0.85,
+                            topP: 0.95,
+                            topK: 40,
+                        },
+                        systemInstruction: systemInstructionText,
+                    });
+
+                    const result = await model.generateContent(prompt);
+                    const response = await result.response;
+                    const text = response.text();
+
+                    if (text && text.trim().length > 0) {
+                        return NextResponse.json({ markdown: text, provider: "gemini", model: "gemini-2.5-flash" });
+                    }
+                }
 
             } catch (error: any) {
                 console.error(`Attempt failed with key ending in ...${key.slice(-4)}:`, error.message);

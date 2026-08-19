@@ -162,19 +162,48 @@ Return ONLY the JSON object, no additional text.
     // Try each API key
     for (let i = 0; i < apiKeys.length; i++) {
       try {
-        const genAI = new GoogleGenerativeAI(apiKeys[i]);
-        const model = genAI.getGenerativeModel({
-          model: "gemini-2.5-flash", // Reverting to user confirmed working model
-          generationConfig: {
-            temperature: 0.3,
-            topP: 0.95,
-            topK: 40,
-          },
-        });
+        const currentKey = apiKeys[i];
+        let text = "";
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        let text = response.text();
+        if (currentKey.startsWith("sk-")) {
+          // OpenAI Call
+          const res = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${currentKey.trim()}`,
+            },
+            body: JSON.stringify({
+              model: "gpt-4o",
+              temperature: 0.3,
+              messages: [{ role: "user", content: prompt }],
+              response_format: { type: "json_object" },
+            }),
+          });
+
+          if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error(errJson.error?.message || `OpenAI API error ${res.status}`);
+          }
+
+          const data = await res.json();
+          text = data.choices?.[0]?.message?.content || "";
+        } else {
+          // Gemini Call
+          const genAI = new GoogleGenerativeAI(currentKey);
+          const model = genAI.getGenerativeModel({
+            model: "gemini-2.5-flash",
+            generationConfig: {
+              temperature: 0.3,
+              topP: 0.95,
+              topK: 40,
+            },
+          });
+
+          const result = await model.generateContent(prompt);
+          const response = await result.response;
+          text = response.text();
+        }
 
         // Clean JSON response
         text = text.trim();
