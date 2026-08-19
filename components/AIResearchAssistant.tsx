@@ -399,6 +399,7 @@ export function AIResearchAssistant({
     }, [markedAssets, computedAssetLabels]);
     const [showResult, setShowResult] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
+    const [isDownloadingLatex, setIsDownloadingLatex] = useState(false);
 
     // Live Citation System state
     const [liveCitations, setLiveCitations] = useState<string>('');
@@ -1067,6 +1068,75 @@ FORBIDDEN:
             userOpenAiKey: openaiKey,
             model: effectiveProvider === "openai" ? openaiModel : "gemini-2.5-flash",
         };
+    };
+
+    // ── LaTeX Export Handler ─────────────────────────────────────
+    const handleDownloadLatex = async (contentOverride?: string, sectionOverride?: string) => {
+        const content = contentOverride || generatedContent;
+        if (!content) return;
+        setIsDownloadingLatex(true);
+        try {
+            const res = await fetch('/api/export/latex', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content,
+                    title: manuscriptTitle || researchContext?.topic || 'MCDM Research Paper',
+                    authors: researchContext?.authors || '',
+                    sectionName: sectionOverride || currentTemplate?.name || 'manuscript',
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.latex) throw new Error(data.error || 'LaTeX conversion failed');
+
+            // Trigger browser download
+            const blob = new Blob([data.latex], { type: 'application/x-tex' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = data.filename || 'rankowise_manuscript.tex';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err: any) {
+            console.error('LaTeX download failed:', err);
+            alert('LaTeX export failed: ' + err.message);
+        } finally {
+            setIsDownloadingLatex(false);
+        }
+    };
+
+    // ── BibTeX Export Handler ─────────────────────────────────────
+    const [isDownloadingBibtex, setIsDownloadingBibtex] = useState(false);
+
+    const handleDownloadBibtex = async () => {
+        if (!generatedContent) return;
+        setIsDownloadingBibtex(true);
+        try {
+            const res = await fetch('/api/export/bibtex', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: generatedContent }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.bibtex) throw new Error(data.error || 'BibTeX generation failed');
+
+            const blob = new Blob([data.bibtex], { type: 'application/x-bibtex' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = data.filename || 'rankowise_references.bib';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err: any) {
+            console.error('BibTeX download failed:', err);
+            alert('BibTeX export failed: ' + err.message);
+        } finally {
+            setIsDownloadingBibtex(false);
+        }
     };
 
     // ── AI Content Detection Handler ────────────────────────────
@@ -1913,15 +1983,30 @@ FORBIDDEN:
                             </h3>
                             <div className="flex flex-wrap items-center gap-2">
                                 {fullProgress === 100 && Object.keys(fullManuscriptData).length > 0 && (
-                                    <Button
-                                        onClick={() => handleDownloadDocx(undefined, "Full Research Manuscript")}
-                                        variant="default"
-                                        size="sm"
-                                        className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white flex items-center gap-1.5"
-                                    >
-                                        <Download className="w-3.5 h-3.5" />
-                                        Download Full Paper (.docx)
-                                    </Button>
+                                    <>
+                                        <Button
+                                            onClick={() => handleDownloadDocx(undefined, "Full Research Manuscript")}
+                                            variant="default"
+                                            size="sm"
+                                            className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white flex items-center gap-1.5"
+                                        >
+                                            <Download className="w-3.5 h-3.5" />
+                                            Download Full Paper (.docx)
+                                        </Button>
+                                        <Button
+                                            onClick={() => handleDownloadLatex(generatedContent, "Full Research Manuscript")}
+                                            disabled={isDownloadingLatex || !generatedContent}
+                                            variant="default"
+                                            size="sm"
+                                            className="h-8 text-xs bg-orange-600 hover:bg-orange-700 text-white flex items-center gap-1.5"
+                                        >
+                                            {isDownloadingLatex ? (
+                                                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+                                            ) : (
+                                                <><FileText className="w-3.5 h-3.5" /> Download LaTeX (.tex)</>
+                                            )}
+                                        </Button>
+                                    </>
                                 )}
                                 <Button
                                     onClick={() => handleDownloadDocx()}
@@ -1931,6 +2016,19 @@ FORBIDDEN:
                                 >
                                     <Download className="w-3.5 h-3.5" />
                                     Download Word (.docx)
+                                </Button>
+                                <Button
+                                    onClick={() => handleDownloadLatex()}
+                                    disabled={isDownloadingLatex || !generatedContent}
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs bg-orange-50 border-orange-300 text-orange-700 hover:bg-orange-100 flex items-center gap-1.5"
+                                >
+                                    {isDownloadingLatex ? (
+                                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+                                    ) : (
+                                        <><FileText className="w-3.5 h-3.5" /> Download LaTeX (.tex)</>
+                                    )}
                                 </Button>
                                 <Button
                                     onClick={() => {
@@ -1951,6 +2049,19 @@ FORBIDDEN:
                                         <>
                                             📋 Copy
                                         </>
+                                    )}
+                                </Button>
+                                <Button
+                                    onClick={handleDownloadBibtex}
+                                    disabled={isDownloadingBibtex || !generatedContent || isGenerating}
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs border-teal-300 text-teal-700 hover:bg-teal-50 flex items-center gap-1.5"
+                                >
+                                    {isDownloadingBibtex ? (
+                                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+                                    ) : (
+                                        <>📚 BibTeX (.bib)</>
                                     )}
                                 </Button>
                                 <Button

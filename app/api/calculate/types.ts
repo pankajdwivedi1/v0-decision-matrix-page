@@ -40,6 +40,13 @@ export interface CalculationRequest {
   | "gra"
   | "aras"
   | "fuzzytopsis"
+  | "cradis"
+  | "wisp"
+  | "aroman"
+  | "dnma"
+  | "ervd"
+  | "lbwa"
+  | string
   alternatives: Alternative[]
   criteria: Criterion[]
   vikorVValue?: number

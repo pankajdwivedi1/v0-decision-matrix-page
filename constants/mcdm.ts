@@ -164,6 +164,42 @@ export const MCDM_METHODS: { value: MCDMMethod; label: string; description: stri
         formula: "Score = Σ(w_j × |(A_ij - S_best,j) / (S_max,j - S_min,j)|)"
     },
     {
+        value: "cradis",
+        label: "CRADIS",
+        description: "Compromise Ranking of Alternatives from Distance to Ideal Solution",
+        formula: "Q_i = 0.5 × (d_i⁻ / max d⁻) + 0.5 × (min d⁺ / d_i⁺)"
+    },
+    {
+        value: "wisp",
+        label: "WISP",
+        description: "Integrated Simple Weighted Sum Product",
+        formula: "IS_i = (u₁ + u₂ + u₃ + u₄) / 4"
+    },
+    {
+        value: "aroman",
+        label: "AROMAN",
+        description: "Alternative Ranking Order Method Accounting for Two-Step Normalization",
+        formula: "f_i = 0.5 × S_i + 0.5 × P_i"
+    },
+    {
+        value: "dnma",
+        label: "DNMA",
+        description: "Double Normalization-based Multiple Aggregation",
+        formula: "DNMA_i = 0.5 × SL_i + 0.5 × SV_i"
+    },
+    {
+        value: "ervd",
+        label: "ERVD",
+        description: "Election based on Relative Value Distances (Prospect Theory)",
+        formula: "V_i = Σ(w_j × v_ij(Δ_ij))"
+    },
+    {
+        value: "lbwa",
+        label: "LBWA",
+        description: "Level-Based Weight Assessment and Multi-Criteria Evaluation",
+        formula: "Score_i = Σ(w_j^LBWA × r_ij)"
+    },
+    {
         value: "fuzzytopsis",
         label: "Fuzzy TOPSIS",
         description: "Technique for Order Preference by Similarity to Ideal Solution with Fuzzy Logic (Vertex Method)",

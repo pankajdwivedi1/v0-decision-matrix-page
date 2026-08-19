@@ -47,6 +47,12 @@ import { calculateFuzzyCOCOSO } from "./fuzzyCocoso";
 import { calculateFuzzyCOPRAS } from "./fuzzyCopras";
 import { calculateFuzzySWEI } from "./fuzzySwei";
 import { calculateFuzzySWI } from "./fuzzySwi";
+import { calculateCRADIS } from "./cradis";
+import { calculateWISP } from "./wisp";
+import { calculateAROMAN } from "./aroman";
+import { calculateDNMA } from "./dnma";
+import { calculateERVD } from "./ervd";
+import { calculateLBWA } from "./lbwa";
 
 // Helper: build ranking and response
 function buildResponse(
@@ -645,6 +651,77 @@ export async function POST(request: NextRequest) {
           fuzzyTopsisFPIS: fuzzyData.fpis,
           fuzzyTopsisFNIS: fuzzyData.fnis,
           fuzzyTopsisDistances: fuzzyData.distances
+        };
+        break;
+      }
+      case "cradis": {
+        const cradisData = calculateCRADIS(alternatives, criteria);
+        results = cradisData.scores;
+        (request as any).extraMetrics = {
+          cradisNormalizedMatrix: cradisData.normalizedMatrix,
+          cradisWeightedMatrix: cradisData.weightedMatrix,
+          cradisIdealPositive: cradisData.idealPositive,
+          cradisIdealNegative: cradisData.idealNegative,
+          cradisDistancePlus: cradisData.distancePlus,
+          cradisDistanceMinus: cradisData.distanceMinus
+        };
+        break;
+      }
+      case "wisp": {
+        const wispData = calculateWISP(alternatives, criteria);
+        results = wispData.scores;
+        (request as any).extraMetrics = {
+          wispNormalizedMatrix: wispData.normalizedMatrix,
+          wispSumScoreBeneficial: wispData.sumScoreBeneficial,
+          wispProductScoreBeneficial: wispData.productScoreBeneficial,
+          wispSumScoreNonBeneficial: wispData.sumScoreNonBeneficial,
+          wispProductScoreNonBeneficial: wispData.productScoreNonBeneficial
+        };
+        break;
+      }
+      case "aroman": {
+        const aromanData = calculateAROMAN(alternatives, criteria);
+        results = aromanData.scores;
+        (request as any).extraMetrics = {
+          aromanStep1NormalizedMatrix: aromanData.step1NormalizedMatrix,
+          aromanStep2NormalizedMatrix: aromanData.step2NormalizedMatrix,
+          aromanWeightedMatrix: aromanData.weightedMatrix,
+          aromanSumValues: aromanData.sumValues,
+          aromanProductValues: aromanData.productValues
+        };
+        break;
+      }
+      case "dnma": {
+        const dnmaData = calculateDNMA(alternatives, criteria);
+        results = dnmaData.scores;
+        (request as any).extraMetrics = {
+          dnmaLinearNormMatrix: dnmaData.linearNormMatrix,
+          dnmaVectorNormMatrix: dnmaData.vectorNormMatrix,
+          dnmaWeightedLinear: dnmaData.weightedLinear,
+          dnmaWeightedVector: dnmaData.weightedVector,
+          dnmaLinearScores: dnmaData.linearScores,
+          dnmaVectorScores: dnmaData.vectorScores
+        };
+        break;
+      }
+      case "ervd": {
+        const ervdData = calculateERVD(alternatives, criteria);
+        results = ervdData.scores;
+        (request as any).extraMetrics = {
+          ervdNormalizedMatrix: ervdData.normalizedMatrix,
+          ervdReferencePoint: ervdData.referencePoint,
+          ervdDeviationMatrix: ervdData.deviationMatrix,
+          ervdProspectMatrix: ervdData.prospectMatrix
+        };
+        break;
+      }
+      case "lbwa": {
+        const lbwaData = calculateLBWA(alternatives, criteria);
+        results = lbwaData.scores;
+        (request as any).extraMetrics = {
+          lbwaWeights: lbwaData.lbwaWeights,
+          lbwaNormalizedMatrix: lbwaData.normalizedMatrix,
+          lbwaWeightedMatrix: lbwaData.weightedMatrix
         };
         break;
       }

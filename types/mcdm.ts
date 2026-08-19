@@ -11,7 +11,7 @@ export interface Alternative {
     scores: Record<string, number | string | FuzzyNumber>
 }
 
-export type MCDMMethod = "wsm" | "wpm" | "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "multimoora" | "todim" | "codas" | "moosra" | "mairca" | "marcos" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2" | "mabac" | "gra" | "aras" | "spotis" | "fuzzytopsis" | "fuzzyvikor" | "fuzzywaspas" | "fuzzyedas" | "fuzzymoora" | "fuzzymultimoora" | "fuzzytodim" | "fuzzycodas" | "fuzzymoosra" | "fuzzymairca" | "fuzzymabac" | "fuzzymarcos" | "fuzzycocoso" | "fuzzycopras" | "fuzzyswei" | "fuzzyswi"
+export type MCDMMethod = "wsm" | "wpm" | "swei" | "swi" | "topsis" | "vikor" | "waspas" | "edas" | "moora" | "multimoora" | "todim" | "codas" | "moosra" | "mairca" | "marcos" | "cocoso" | "copras" | "promethee" | "promethee1" | "promethee2" | "electre" | "electre1" | "electre2" | "mabac" | "gra" | "aras" | "spotis" | "cradis" | "wisp" | "aroman" | "dnma" | "ervd" | "lbwa" | "fuzzytopsis" | "fuzzyvikor" | "fuzzywaspas" | "fuzzyedas" | "fuzzymoora" | "fuzzymultimoora" | "fuzzytodim" | "fuzzycodas" | "fuzzymoosra" | "fuzzymairca" | "fuzzymabac" | "fuzzymarcos" | "fuzzycocoso" | "fuzzycopras" | "fuzzyswei" | "fuzzyswi"
 
 export type WeightMethod = "equal" | "entropy" | "critic" | "ahp" | "piprecia" | "merec" | "swara" | "wenslo" | "fucom"
     | "lopcow"

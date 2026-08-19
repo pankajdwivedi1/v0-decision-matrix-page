@@ -70,6 +70,12 @@ import CODASFormula from "@/components/CODASFormula"
 import MOOSRAFormula from "@/components/MOOSRAFormula"
 import MAIRCAFormula from "@/components/MAIRCAFormula"
 import MARCOSFormula from "@/components/MARCOSFormula"
+import CRADISFormula from "@/components/CRADISFormula"
+import WISPFormula from "@/components/WISPFormula"
+import AROMANFormula from "@/components/AROMANFormula"
+import DNMAFormula from "@/components/DNMAFormula"
+import ERVDFormula from "@/components/ERVDFormula"
+import LBWAFormula from "@/components/LBWAFormula"
 import AHPFormula from "@/components/AHPFormula"
 import PROMETHEEFormula from "@/components/PROMETHEEFormula"
 import PROMETHEE1Formula from "@/components/PROMETHEE1Formula"
@@ -131,6 +137,10 @@ import ARASFormula from "@/components/ARASFormula"
 import ColorSwitcher from "@/components/ColorSwitcher"
 import KSensitivityCalculator from "@/components/KSensitivityCalculator"
 import CorrelationHeatmap from "@/components/CorrelationHeatmap"
+import MonteCarloPanel from "@/components/MonteCarloPanel"
+import DecisionMatrixHeatmap from "@/components/DecisionMatrixHeatmap"
+import RadarChartPanel from "@/components/RadarChartPanel"
+import MonteCarloFormula from "@/components/MonteCarloFormula"
 
 import { AIResearchAssistant } from "@/components/AIResearchAssistant"
 import { ResearchAssetHeader } from "@/components/ResearchAssetHeader"
@@ -11058,6 +11068,21 @@ export default function MCDMCalculator() {
                     }
                   }}
                 />
+
+                {/* Alternative Radar Footprint Spectrum */}
+                <div className="mt-8">
+                  <RadarChartPanel alternatives={alternatives as any} criteria={criteria as any} />
+                </div>
+
+                {/* Decision Matrix Heatmap Spectrum */}
+                <div className="mt-8">
+                  <DecisionMatrixHeatmap alternatives={alternatives as any} criteria={criteria as any} />
+                </div>
+
+                {/* Monte Carlo Sensitivity Simulation Engine */}
+                <div className="mt-8">
+                  <MonteCarloPanel alternatives={alternatives as any} criteria={criteria as any} currentMethod={method || sensitivityMethod || "swei"} />
+                </div>
               </>
             )
           }
@@ -11099,6 +11124,12 @@ export default function MCDMCalculator() {
                     {method === "gra" && <GRAFormula />}
                     {method === "aras" && <ARASFormula />}
                     {method === "spotis" && <SPOTISFormula />}
+                    {method === "cradis" && <CRADISFormula />}
+                    {method === "wisp" && <WISPFormula />}
+                    {method === "aroman" && <AROMANFormula />}
+                    {method === "dnma" && <DNMAFormula />}
+                    {method === "ervd" && <ERVDFormula />}
+                    {method === "lbwa" && <LBWAFormula />}
                     {method === "fuzzytopsis" && <FuzzyTOPSISFormula />}
                     {method === "fuzzyswei" && <FuzzySWEIFormula />}
                     {method === "fuzzyswi" && <FuzzySWIFormula />}
