@@ -11071,16 +11071,43 @@ export default function MCDMCalculator() {
 
                 {/* Alternative Radar Footprint Spectrum */}
                 <div className="mt-8">
+                  <ResearchAssetHeader
+                    assetKey="radar_footprint_chart"
+                    defaultLabel="Figure F5"
+                    title="Alternative Radar Footprint Spectrum"
+                    onLabelChange={handleAssetLabelChange}
+                    included={selectedAiAssets.has("radar_footprint_chart")}
+                    onIncludeChange={handleIncludeChange}
+                    onAiAnalysis={() => handleAiAnalysis("radar_chart", { alternatives, criteria })}
+                  />
                   <RadarChartPanel alternatives={alternatives as any} criteria={criteria as any} />
                 </div>
 
                 {/* Decision Matrix Heatmap Spectrum */}
                 <div className="mt-8">
+                  <ResearchAssetHeader
+                    assetKey="matrix_heatmap_spectrum"
+                    defaultLabel="Table S7"
+                    title="Decision Matrix Heatmap Spectrum"
+                    onLabelChange={handleAssetLabelChange}
+                    included={selectedAiAssets.has("matrix_heatmap_spectrum")}
+                    onIncludeChange={handleIncludeChange}
+                    onAiAnalysis={() => handleAiAnalysis("heatmap", { alternatives, criteria })}
+                  />
                   <DecisionMatrixHeatmap alternatives={alternatives as any} criteria={criteria as any} />
                 </div>
 
                 {/* Monte Carlo Sensitivity Simulation Engine */}
                 <div className="mt-8">
+                  <ResearchAssetHeader
+                    assetKey="monte_carlo_sensitivity"
+                    defaultLabel="Table S8"
+                    title="Monte Carlo Sensitivity Simulation"
+                    onLabelChange={handleAssetLabelChange}
+                    included={selectedAiAssets.has("monte_carlo_sensitivity")}
+                    onIncludeChange={handleIncludeChange}
+                    onAiAnalysis={() => handleAiAnalysis("monte_carlo", { method: method || sensitivityMethod || "swei", alternatives, criteria })}
+                  />
                   <MonteCarloPanel alternatives={alternatives as any} criteria={criteria as any} currentMethod={method || sensitivityMethod || "swei"} />
                 </div>
               </>
