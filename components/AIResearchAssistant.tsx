@@ -1058,6 +1058,7 @@ FORBIDDEN:
         const geminiKey = (typeof window !== "undefined" ? localStorage.getItem("user_gemini_api_key") : "") || "";
         const openaiKey = (typeof window !== "undefined" ? localStorage.getItem("user_openai_api_key") : "") || "";
         const openaiModel = (typeof window !== "undefined" ? localStorage.getItem("user_openai_model") : "gpt-4o") || "gpt-4o";
+        const reasoningEffort = (typeof window !== "undefined" ? localStorage.getItem("user_openai_reasoning_effort") : "high") || "high";
 
         const userApiKey = provider === "openai" ? openaiKey : (geminiKey || openaiKey);
         const effectiveProvider = provider === "openai" || (userApiKey && userApiKey.startsWith("sk-")) ? "openai" : "gemini";
@@ -1067,6 +1068,7 @@ FORBIDDEN:
             userApiKey,
             userOpenAiKey: openaiKey,
             model: effectiveProvider === "openai" ? openaiModel : "gemini-2.5-flash",
+            reasoningEffort,
         };
     };
 
@@ -1208,7 +1210,7 @@ FORBIDDEN:
 
             const finalPrompt = basePrompt + (additionalContext ? `\n\nADDITIONAL USER CONTEXT:\n${additionalContext}` : '') + hiddenValidationRule;
 
-            const { userApiKey, userOpenAiKey, provider, model: activeModel } = getAiRequestConfig();
+            const { userApiKey, userOpenAiKey, provider, model: activeModel, reasoningEffort } = getAiRequestConfig();
 
             // 🔗 Fetch live citations before generating this section
             const topic = researchContext?.topic || method;
@@ -1225,6 +1227,7 @@ FORBIDDEN:
                     userOpenAiKey,
                     provider,
                     model: activeModel,
+                    reasoningEffort,
                     analysisType: 'custom_section',
                     sectionType: selectedSection,
                     customPrompt: finalPrompt,
@@ -1273,7 +1276,7 @@ FORBIDDEN:
         const sectionsToGenerate = SECTION_TEMPLATES.filter(s => s.id !== 'custom');
 
         try {
-            const { userApiKey, userOpenAiKey, provider, model: activeModel } = getAiRequestConfig();
+            const { userApiKey, userOpenAiKey, provider, model: activeModel, reasoningEffort } = getAiRequestConfig();
 
             // 🔗 STEP: Fetch live citations ONCE before the entire manuscript run
             setFullProgress(3);
@@ -1293,6 +1296,7 @@ FORBIDDEN:
                     userOpenAiKey,
                     provider,
                     model: activeModel,
+                    reasoningEffort,
                     analysisType: 'manuscript_title',
                     alternatives,
                     criteria,
@@ -1324,6 +1328,7 @@ FORBIDDEN:
                         userOpenAiKey,
                         provider,
                         model: activeModel,
+                        reasoningEffort,
                         analysisType: 'custom_section',
                         sectionType: section.id,
                         customPrompt: getDynamicPrompt(section.id) + `\nCRITICAL CONSTRAINTS: Target Word Count: ${assignedWordCount}. Target Citations: ${assignedCitations}. Start writing technical content DIRECTLY. Do NOT include any section titles, numbers, or headings at the start of your response. This is part of a professional research paper; ensure it flows naturally without repeating headers.`,

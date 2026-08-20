@@ -223,6 +223,7 @@ export default function MCDMCalculator() {
 
   const [alternatives, setAlternatives] = useState<Alternative[]>([])
   const [criteria, setCriteria] = useState<Criterion[]>([])
+  const [sensitivityWorkingCriteria, setSensitivityWorkingCriteria] = useState<Criterion[]>([])
 
   const [numAlternatives, setNumAlternatives] = useState(3)
   const [numCriteria, setNumCriteria] = useState(3)
@@ -3899,7 +3900,19 @@ export default function MCDMCalculator() {
         }
       })
 
+      const provider = (typeof window !== "undefined" ? localStorage.getItem("user_ai_provider") : "gemini") || "gemini"
+      const geminiKey = (typeof window !== "undefined" ? localStorage.getItem("user_gemini_api_key") : "") || ""
+      const openaiKey = (typeof window !== "undefined" ? localStorage.getItem("user_openai_api_key") : "") || ""
+      const openaiModel = (typeof window !== "undefined" ? localStorage.getItem("user_openai_model") : "gpt-4o") || "gpt-4o"
+      const reasoningEffort = (typeof window !== "undefined" ? localStorage.getItem("user_openai_reasoning_effort") : "high") || "high"
+      const userApiKey = provider === "openai" ? openaiKey : (geminiKey || openaiKey)
+
       const payload = {
+        userApiKey,
+        userOpenAiKey: openaiKey,
+        provider,
+        model: provider === "openai" ? openaiModel : "gemini-2.5-flash",
+        reasoningEffort,
         alternatives,
         criteria,
         ranking: apiResults?.ranking || [],
@@ -11042,6 +11055,7 @@ export default function MCDMCalculator() {
                   weightMethod={criteria.some(c => c.weight > 0) ? "Applied" : "Not Set"}
                   methodName={MCDM_METHODS.find(m => m.value === sensitivityMethod)?.label || sensitivityMethod.toUpperCase()}
                   chartSettings={chartSettings}
+                  onWorkingCriteriaChange={setSensitivityWorkingCriteria}
                   onAiAnalysis={(data) => handleAiAnalysis("k_sensitivity", {
                     kSensData: data.kSensData,
                     criterionName: data.criterionName,
@@ -11078,9 +11092,9 @@ export default function MCDMCalculator() {
                     onLabelChange={handleAssetLabelChange}
                     included={selectedAiAssets.has("radar_footprint_chart")}
                     onIncludeChange={handleIncludeChange}
-                    onAiAnalysis={() => handleAiAnalysis("radar_chart", { alternatives, criteria })}
+                    onAiAnalysis={() => handleAiAnalysis("radar_chart", { alternatives, criteria: sensitivityWorkingCriteria.length > 0 ? sensitivityWorkingCriteria : criteria })}
                   />
-                  <RadarChartPanel alternatives={alternatives as any} criteria={criteria as any} />
+                  <RadarChartPanel alternatives={alternatives as any} criteria={(sensitivityWorkingCriteria.length > 0 ? sensitivityWorkingCriteria : criteria) as any} />
                 </div>
 
                 {/* Decision Matrix Heatmap Spectrum */}
@@ -11092,9 +11106,9 @@ export default function MCDMCalculator() {
                     onLabelChange={handleAssetLabelChange}
                     included={selectedAiAssets.has("matrix_heatmap_spectrum")}
                     onIncludeChange={handleIncludeChange}
-                    onAiAnalysis={() => handleAiAnalysis("heatmap", { alternatives, criteria })}
+                    onAiAnalysis={() => handleAiAnalysis("heatmap", { alternatives, criteria: sensitivityWorkingCriteria.length > 0 ? sensitivityWorkingCriteria : criteria })}
                   />
-                  <DecisionMatrixHeatmap alternatives={alternatives as any} criteria={criteria as any} />
+                  <DecisionMatrixHeatmap alternatives={alternatives as any} criteria={(sensitivityWorkingCriteria.length > 0 ? sensitivityWorkingCriteria : criteria) as any} />
                 </div>
 
                 {/* Monte Carlo Sensitivity Simulation Engine */}
@@ -11106,9 +11120,9 @@ export default function MCDMCalculator() {
                     onLabelChange={handleAssetLabelChange}
                     included={selectedAiAssets.has("monte_carlo_sensitivity")}
                     onIncludeChange={handleIncludeChange}
-                    onAiAnalysis={() => handleAiAnalysis("monte_carlo", { method: method || sensitivityMethod || "swei", alternatives, criteria })}
+                    onAiAnalysis={() => handleAiAnalysis("monte_carlo", { method: method || sensitivityMethod || "swei", alternatives, criteria: sensitivityWorkingCriteria.length > 0 ? sensitivityWorkingCriteria : criteria })}
                   />
-                  <MonteCarloPanel alternatives={alternatives as any} criteria={criteria as any} currentMethod={method || sensitivityMethod || "swei"} />
+                  <MonteCarloPanel alternatives={alternatives as any} criteria={(sensitivityWorkingCriteria.length > 0 ? sensitivityWorkingCriteria : criteria) as any} currentMethod={method || sensitivityMethod || "swei"} />
                 </div>
               </>
             )

@@ -378,6 +378,7 @@ interface KSensitivityCalculatorProps {
   onIncludeChange?: (key: string, included: boolean) => void;
   selectedAiAssets?: Set<string>;
   onCalculationComplete?: (hasResults: boolean, results?: any, usedRange?: number[]) => void;
+  onWorkingCriteriaChange?: (criteria: Criterion[]) => void;
   methodName?: string;
   chartSettings?: any;
 }
@@ -396,6 +397,7 @@ export default function KSensitivityCalculator({
   onIncludeChange,
   selectedAiAssets = new Set(),
   onCalculationComplete,
+  onWorkingCriteriaChange,
   methodName = "Method",
   chartSettings = {}
 }: KSensitivityCalculatorProps) {
@@ -527,6 +529,13 @@ export default function KSensitivityCalculator({
   const [selectedAltIds, setSelectedAltIds] = useState<string[]>(alternatives.map(a => a.id));
   const [hasCalculatedOnce, setHasCalculatedOnce] = useState<boolean>(false);
 
+  // Synchronize working criteria with parent listeners
+  useEffect(() => {
+    if (onWorkingCriteriaChange && workingCriteria.length > 0) {
+      onWorkingCriteriaChange(workingCriteria);
+    }
+  }, [workingCriteria, onWorkingCriteriaChange]);
+
   // Ranking method state
   const [selectedRankingMethod, setSelectedRankingMethod] = useState<string>('topsis');
   const [showFormula, setShowFormula] = useState<boolean>(false);
@@ -602,7 +611,13 @@ export default function KSensitivityCalculator({
 
     try {
       // Compute ranking from K-sens results
-      const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
+      const provider = (typeof window !== "undefined" ? localStorage.getItem("user_ai_provider") : "gemini") || "gemini";
+      const geminiKey = (typeof window !== "undefined" ? localStorage.getItem("user_gemini_api_key") : "") || "";
+      const openaiKey = (typeof window !== "undefined" ? localStorage.getItem("user_openai_api_key") : "") || "";
+      const openaiModel = (typeof window !== "undefined" ? localStorage.getItem("user_openai_model") : "gpt-4o") || "gpt-4o";
+      const reasoningEffort = (typeof window !== "undefined" ? localStorage.getItem("user_openai_reasoning_effort") : "high") || "high";
+      const userApiKey = provider === "openai" ? openaiKey : (geminiKey || openaiKey);
+
       const criterionName = data.criterionName;
       const baseResults = data.kSensData?.results?.['0'] || {};
       const ranking = Object.entries(baseResults).map(([altName, score]: [string, any]) => ({
@@ -616,6 +631,10 @@ export default function KSensitivityCalculator({
         body: JSON.stringify({
           ...data,
           userApiKey,
+          userOpenAiKey: openaiKey,
+          provider,
+          model: provider === "openai" ? openaiModel : "gemini-2.5-flash",
+          reasoningEffort,
           alternatives,
           criteria: workingCriteria,
           method: selectedRankingMethod,
@@ -639,7 +658,13 @@ export default function KSensitivityCalculator({
 
     try {
       // Compute ranking from K-sens results
-      const userApiKey = localStorage.getItem("user_gemini_api_key") || "";
+      const provider = (typeof window !== "undefined" ? localStorage.getItem("user_ai_provider") : "gemini") || "gemini";
+      const geminiKey = (typeof window !== "undefined" ? localStorage.getItem("user_gemini_api_key") : "") || "";
+      const openaiKey = (typeof window !== "undefined" ? localStorage.getItem("user_openai_api_key") : "") || "";
+      const openaiModel = (typeof window !== "undefined" ? localStorage.getItem("user_openai_model") : "gpt-4o") || "gpt-4o";
+      const reasoningEffort = (typeof window !== "undefined" ? localStorage.getItem("user_openai_reasoning_effort") : "high") || "high";
+      const userApiKey = provider === "openai" ? openaiKey : (geminiKey || openaiKey);
+
       const criterionName = data.criterionName;
       const baseResults = data.kSensData?.results?.['0'] || {};
       const ranking = Object.entries(baseResults).map(([altName, score]: [string, any]) => ({
@@ -653,6 +678,10 @@ export default function KSensitivityCalculator({
         body: JSON.stringify({
           ...data,
           userApiKey,
+          userOpenAiKey: openaiKey,
+          provider,
+          model: provider === "openai" ? openaiModel : "gemini-2.5-flash",
+          reasoningEffort,
           alternatives,
           criteria: workingCriteria,
           method: selectedRankingMethod,

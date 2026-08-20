@@ -750,7 +750,7 @@ Quality standards:
                 if (isKeyOpenAI) {
                     // Call OpenAI Chat Completion API
                     const chosenModel = reqModel || "gpt-4o";
-                    const isReasoningModel = chosenModel.startsWith("o1") || chosenModel.startsWith("o3");
+                    const isReasoningModel = chosenModel.startsWith("o1") || chosenModel.startsWith("o3") || chosenModel.toLowerCase().includes("reason");
 
                     const messages: any[] = isReasoningModel
                         ? [{ role: "user", content: `${systemInstructionText}\n\n${prompt}` }]
@@ -764,7 +764,11 @@ Quality standards:
                         messages,
                     };
 
-                    if (!isReasoningModel) {
+                    if (isReasoningModel) {
+                        if (chosenModel.startsWith("o3") || chosenModel.startsWith("o1")) {
+                            openAiBody.reasoning_effort = reqContent.reasoningEffort || "high";
+                        }
+                    } else {
                         openAiBody.temperature = 0.85;
                         openAiBody.top_p = 0.95;
                     }

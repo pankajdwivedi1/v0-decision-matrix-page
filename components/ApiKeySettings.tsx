@@ -28,11 +28,29 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+const STANDARD_OPENAI_MODELS = [
+    { value: "gpt-5.6-sol", label: "GPT-5.6 Sol (Flagship for Ambitious Agentic Work)" },
+    { value: "gpt-5.6-sol-high", label: "GPT-5.6 Sol High (High-Reasoning Sol Engine)" },
+    { value: "gpt-5.5-high", label: "GPT-5.5 High (Deep Mathematical & Academic Synthesis)" },
+    { value: "gpt-5.5", label: "GPT-5.5 (Next-Gen Advanced Intelligence)" },
+    { value: "gpt-4.5-preview", label: "GPT-4.5 Preview (Largest Knowledge Model)" },
+    { value: "chatgpt-4o-latest", label: "ChatGPT-4o Latest (Dynamic Research Engine)" },
+    { value: "o3-mini", label: "o3-mini (High-Reasoning Mathematical Engine)" },
+    { value: "o1", label: "o1 (Full In-Depth Reasoning Model)" },
+    { value: "o1-mini", label: "o1-mini (Fast STEM Reasoning Engine)" },
+    { value: "gpt-4o", label: "GPT-4o (Recommended: Superior Q1 Academic Writing)" },
+    { value: "gpt-4o-mini", label: "GPT-4o Mini (Fast, Budget & Cost-Effective)" },
+    { value: "gpt-4-turbo", label: "GPT-4 Turbo (Legacy High-Context)" },
+];
+
 export function ApiKeySettings() {
     const [provider, setProvider] = useState<"gemini" | "openai">("gemini");
     const [geminiKeys, setGeminiKeys] = useState<string[]>([""]);
     const [openAiKeys, setOpenAiKeys] = useState<string[]>([""]);
     const [openAiModel, setOpenAiModel] = useState<string>("gpt-4o");
+    const [openAiModelMode, setOpenAiModelMode] = useState<string>("gpt-4o");
+    const [customOpenAiModel, setCustomOpenAiModel] = useState<string>("");
+    const [reasoningEffort, setReasoningEffort] = useState<"high" | "medium" | "low">("high");
 
     const [isOpen, setIsOpen] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
@@ -48,7 +66,18 @@ export function ApiKeySettings() {
 
         // Load OpenAI Model
         const savedModel = localStorage.getItem("user_openai_model") || "gpt-4o";
-        setOpenAiModel(savedModel);
+        const isStandard = STANDARD_OPENAI_MODELS.some(m => m.value === savedModel);
+        if (isStandard) {
+            setOpenAiModelMode(savedModel);
+            setOpenAiModel(savedModel);
+        } else {
+            setOpenAiModelMode("custom");
+            setCustomOpenAiModel(savedModel);
+            setOpenAiModel(savedModel);
+        }
+
+        const savedEffort = (localStorage.getItem("user_openai_reasoning_effort") as "high" | "medium" | "low") || "high";
+        setReasoningEffort(savedEffort);
 
         // Load Gemini Keys
         const savedGemini = localStorage.getItem("user_gemini_api_keys");
@@ -95,7 +124,9 @@ export function ApiKeySettings() {
     const handleSave = () => {
         // Save Provider
         localStorage.setItem("user_ai_provider", provider);
-        localStorage.setItem("user_openai_model", openAiModel);
+        const effectiveModel = openAiModelMode === "custom" ? (customOpenAiModel.trim() || "gpt-4o") : openAiModelMode;
+        localStorage.setItem("user_openai_model", effectiveModel);
+        localStorage.setItem("user_openai_reasoning_effort", reasoningEffort);
 
         // Save Gemini Keys
         const validGemini = geminiKeys.map(k => k.trim()).filter(k => k.length > 0);
@@ -349,22 +380,98 @@ export function ApiKeySettings() {
                     {/* ═════════════════ TAB 2: OPENAI (CHATGPT) ═════════════════ */}
                     <TabsContent value="openai" className="space-y-4 pt-2">
                         {/* Model Selector */}
-                        <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-lg space-y-2">
-                            <Label className="text-xs font-semibold text-emerald-950 flex items-center gap-1.5">
-                                <Cpu className="w-3.5 h-3.5 text-emerald-700" />
-                                Preferred OpenAI Model:
-                            </Label>
+                        <div className="p-3.5 bg-emerald-50/60 border border-emerald-200 rounded-xl space-y-3">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                                    <Cpu className="w-4 h-4 text-emerald-700" />
+                                    Preferred OpenAI Model:
+                                </Label>
+                                <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                                    {openAiModelMode === "custom" ? (customOpenAiModel || "Custom Model") : openAiModelMode}
+                                </span>
+                            </div>
+
                             <select
-                                value={openAiModel}
-                                onChange={(e) => setOpenAiModel(e.target.value)}
-                                className="w-full h-9 px-3 rounded-md bg-white border border-emerald-300 text-xs font-semibold text-slate-800 shadow-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                                value={openAiModelMode}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setOpenAiModelMode(val);
+                                    if (val !== "custom") {
+                                        setOpenAiModel(val);
+                                    } else {
+                                        setOpenAiModel(customOpenAiModel || "gpt-5.5");
+                                    }
+                                }}
+                                className="w-full h-9 px-3 rounded-lg bg-white border border-emerald-300 text-xs font-semibold text-slate-800 shadow-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                             >
-                                <option value="gpt-4o">GPT-4o (Recommended: Superior Q1 Academic Writing)</option>
-                                <option value="gpt-4o-mini">GPT-4o Mini (Fast, Budget & Cost-Effective)</option>
-                                <option value="o3-mini">o3-mini (High-Reasoning Mathematical Engine)</option>
-                                <option value="o1">o1 (Full In-Depth Reasoning Model)</option>
-                                <option value="gpt-4-turbo">GPT-4 Turbo (Legacy High-Context)</option>
+                                <optgroup label="🌟 Flagship Sol & Next-Gen Intelligence Tier">
+                                    <option value="gpt-5.6-sol">GPT-5.6 Sol (Flagship for Ambitious Agentic Work)</option>
+                                    <option value="gpt-5.6-sol-high">GPT-5.6 Sol High (High-Reasoning Sol Engine)</option>
+                                    <option value="gpt-5.5-high">GPT-5.5 High (Deep Mathematical & Academic Synthesis)</option>
+                                    <option value="gpt-5.5">GPT-5.5 (Next-Gen Advanced Intelligence)</option>
+                                </optgroup>
+                                <optgroup label="Frontier Reasoning & Knowledge Models">
+                                    <option value="gpt-4.5-preview">GPT-4.5 Preview (Largest Knowledge Model)</option>
+                                    <option value="chatgpt-4o-latest">ChatGPT-4o Latest (Dynamic Research Engine)</option>
+                                    <option value="o3-mini">o3-mini (High-Reasoning Mathematical Engine)</option>
+                                    <option value="o1">o1 (Full In-Depth Reasoning Model)</option>
+                                    <option value="o1-mini">o1-mini (Fast STEM Reasoning Engine)</option>
+                                </optgroup>
+                                <optgroup label="Standard Academic & Production Models">
+                                    <option value="gpt-4o">GPT-4o (Recommended: Superior Q1 Academic Writing)</option>
+                                    <option value="gpt-4o-mini">GPT-4o Mini (Fast, Budget & Cost-Effective)</option>
+                                    <option value="gpt-4-turbo">GPT-4 Turbo (Legacy High-Context)</option>
+                                </optgroup>
+                                <optgroup label="Custom / Future Deployment">
+                                    <option value="custom">✨ Custom Model ID (Enter Custom ID)...</option>
+                                </optgroup>
                             </select>
+
+                            {/* Custom Model Input */}
+                            {openAiModelMode === "custom" && (
+                                <div className="pt-2 space-y-1.5 border-t border-emerald-200/60">
+                                    <Label className="text-[11px] font-semibold text-emerald-900 flex items-center justify-between">
+                                        <span>Enter Custom Model Identifier:</span>
+                                        <span className="text-[10px] text-slate-500">e.g. gpt-5.6-sol-high, gpt-5.5</span>
+                                    </Label>
+                                    <Input
+                                        type="text"
+                                        placeholder="e.g. gpt-5.6-sol-high, gpt-5.5, ft:..."
+                                        value={customOpenAiModel}
+                                        onChange={(e) => {
+                                            setCustomOpenAiModel(e.target.value);
+                                            setOpenAiModel(e.target.value);
+                                        }}
+                                        className="h-8 text-xs font-mono font-semibold bg-white border-emerald-300 focus-visible:ring-emerald-500"
+                                    />
+                                    <p className="text-[10px] text-slate-600 leading-tight">
+                                        This custom identifier will be passed in the <code className="bg-emerald-100/60 px-1 rounded font-mono">model</code> field of your OpenAI chat completions requests.
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Reasoning Effort Selector */}
+                            {(openAiModelMode === "o3-mini" || openAiModelMode === "o1" || openAiModelMode === "custom") && (
+                                <div className="flex items-center justify-between pt-1.5 border-t border-emerald-200/60 text-xs">
+                                    <span className="text-[11px] font-medium text-emerald-950">Reasoning Effort:</span>
+                                    <div className="flex gap-1.5">
+                                        {(["low", "medium", "high"] as const).map((lvl) => (
+                                            <button
+                                                key={lvl}
+                                                type="button"
+                                                onClick={() => setReasoningEffort(lvl)}
+                                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                                                    reasoningEffort === lvl
+                                                        ? "bg-emerald-700 text-white shadow-xs"
+                                                        : "bg-white text-slate-700 hover:bg-emerald-100 border border-emerald-200"
+                                                }`}
+                                            >
+                                                {lvl === "high" ? "High (Deep Sol)" : lvl}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* OpenAI Keys list */}
