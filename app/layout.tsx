@@ -1,7 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Playfair_Display, Inter } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 
 import { ThemeProvider } from "@/components/ThemeProvider"
@@ -36,7 +35,6 @@ export default function RootLayout({
         >
           <AnalyticsTracker />
           {children}
-          <Analytics />
           <Toaster position="top-right" richColors />
         </ThemeProvider>
       </body>
