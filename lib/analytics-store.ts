@@ -65,8 +65,12 @@ class AnalyticsStore {
   public events: PageEvent[] = [];
 
   constructor() {
-    this.cacheFilePath = path.join(process.cwd(), ".analytics_data.json");
-    this.loadFromDisk();
+    try {
+      this.cacheFilePath = path.join(process.cwd(), ".analytics_data.json");
+      this.loadFromDisk();
+    } catch {
+      this.cacheFilePath = "";
+    }
   }
 
   public loadFromDisk() {
@@ -75,7 +79,7 @@ class AnalyticsStore {
       this.sessions.clear();
       this.events = [];
 
-      if (fs.existsSync(this.cacheFilePath)) {
+      if (this.cacheFilePath && typeof fs !== "undefined" && typeof fs.existsSync === "function" && fs.existsSync(this.cacheFilePath)) {
         const raw = fs.readFileSync(this.cacheFilePath, "utf8");
         const data = JSON.parse(raw);
         if (data.profiles && Array.isArray(data.profiles)) {
@@ -86,19 +90,21 @@ class AnalyticsStore {
         }
       }
     } catch {
-      // Ignore disk load error
+      // Ignore disk load error gracefully in serverless/edge environments
     }
   }
 
   public saveToDisk() {
     try {
-      const data = {
-        profiles: Array.from(this.profiles.values()),
-        events: this.events.slice(-2000),
-      };
-      fs.writeFileSync(this.cacheFilePath, JSON.stringify(data, null, 2), "utf8");
+      if (this.cacheFilePath && typeof fs !== "undefined" && typeof fs.writeFileSync === "function") {
+        const data = {
+          profiles: Array.from(this.profiles.values()),
+          events: this.events.slice(-2000),
+        };
+        fs.writeFileSync(this.cacheFilePath, JSON.stringify(data, null, 2), "utf8");
+      }
     } catch {
-      // Ignore disk write error
+      // Ignore disk write error gracefully in serverless/edge environments
     }
   }
 
