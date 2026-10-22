@@ -13,7 +13,8 @@ import PIPRECIAFormula from "./PIPRECIAFormula";
 import { CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, RadialBar, RadialBarChart, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ComposedChart, Bar, Area, AreaChart, BarChart, Label, LabelList, Customized } from 'recharts';
 import { Check, ChevronRight, Download, RefreshCw, Loader2, Sparkles, Bot, FileText, LayoutGrid, Info, PlayCircle, Settings2, Sigma, ArrowRightLeft, Wand2, Calculator, Save, GripVertical, Trash2 } from 'lucide-react';
 import { RankHeatmap, RankBubbleChart, GroupedRankBarChart } from './AdvancedRankCharts';
-import ExcelJS from 'exceljs';
+// @ts-ignore
+import ExcelJS from 'exceljs/dist/exceljs.min.js';
 import ReactMarkdown from 'react-markdown';
 import { AIResearchAssistant } from './AIResearchAssistant';
 import { AssetLabel } from './AssetLabel';

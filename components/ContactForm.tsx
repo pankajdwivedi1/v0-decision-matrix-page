@@ -10,8 +10,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { toast } from "sonner"
 import { Send, CheckCircle, Loader2 } from "lucide-react"
-import { collection, addDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
 
 import { translations } from "@/constants/translations"
 
@@ -44,16 +42,21 @@ export default function ContactForm({ language = "EN" }: ContactFormProps) {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true)
         try {
-            await addDoc(collection(db, "messages"), {
-                ...values,
-                timestamp: new Date(),
+            const res = await fetch("/api/contact", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(values),
             })
+
+            if (!res.ok) {
+                throw new Error("Failed to send message")
+            }
 
             setIsSuccess(true)
             toast.success(t.success)
             form.reset()
         } catch (error) {
-            console.error("Error adding document: ", error)
+            console.error("Error submitting contact form: ", error)
             toast.error(t.error)
         } finally {
             setIsSubmitting(false)

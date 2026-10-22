@@ -1,6 +1,4 @@
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAnalytics, isSupported } from "firebase/analytics";
+import { initializeApp, getApps, getApp } from "firebase/app";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBgXU8P-Wp0BRqdQJwYbedEiO_LTs039nA",
@@ -12,18 +10,25 @@ const firebaseConfig = {
     measurementId: "G-TREXPX323W"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// Initialize Firebase safely
+export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-let analytics;
-// Analytics is only supported in browser environments
-if (typeof window !== "undefined") {
-    isSupported().then((yes) => {
-        if (yes) {
-            analytics = getAnalytics(app);
-        }
-    });
+let firestoreInstance: any = null;
+
+export async function getDb() {
+    if (!firestoreInstance && typeof window !== "undefined") {
+        const { getFirestore } = await import("firebase/firestore");
+        firestoreInstance = getFirestore(app);
+    }
+    return firestoreInstance;
 }
 
-export { app, db, analytics };
+// For backwards compatibility
+export const db = new Proxy({} as any, {
+    get(target, prop) {
+        if (firestoreInstance) {
+            return (firestoreInstance as any)[prop];
+        }
+        return undefined;
+    }
+});

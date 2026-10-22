@@ -1,6 +1,7 @@
 // Export Route - Corrected
 import { NextRequest, NextResponse } from "next/server"
-import ExcelJS from "exceljs"
+// @ts-ignore
+import ExcelJS from "exceljs/dist/exceljs.min.js"
 import type { Alternative, Criterion } from "../calculate/types"
 
 interface ExportRequest {

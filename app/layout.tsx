@@ -1,3 +1,10 @@
+// Polyfill process.umask for edge/Cloudflare Workers runtime
+if (typeof process !== "undefined") {
+  try {
+    process.umask = () => 0;
+  } catch {}
+}
+
 import type React from "react"
 import type { Metadata } from "next"
 import { Playfair_Display, Inter } from "next/font/google"
