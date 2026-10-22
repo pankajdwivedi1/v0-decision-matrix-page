@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     template: "%s | RankoWise",
   },
   description:
-    "RankoWise is an advanced Multi-Criteria Decision Making (MCDM) and optimization platform for academic research, engineering, and business intelligence. Calculate AHP, TOPSIS, VIKOR, PROMETHEE, Fuzzy logic, Monte Carlo simulations, and sensitivity analysis.",
+    "RankoWise is an advanced Multi-Criteria Decision Making (MCDM) and Decision support systems platform for academic research, engineering, and business intelligence. Calculate SWEI Method, SWI Method, AHP, TOPSIS, VIKOR, PROMETHEE, Fuzzy logic, Monte Carlo simulations, and sensitivity analysis.",
   applicationName: "RankoWise",
   authors: [{ name: "RankoWise Academic & Decision Intelligence Team", url: "https://www.rankowise.online" }],
   creator: "RankoWise",
@@ -34,10 +34,15 @@ export const metadata: Metadata = {
     "rankowise.online",
     "MCDM Calculator",
     "Multi-Criteria Decision Making",
+    "SWEI MCDM Method",
+    "SWI MCDM Method",
+    "Decision support systems",
     "AHP Calculator",
     "TOPSIS Method",
     "VIKOR Ranking",
     "PROMETHEE",
+    "SWEI Method",
+    "SWI Method",
     "Fuzzy MCDM",
     "Sensitivity Analysis",
     "Monte Carlo Simulation",
@@ -55,7 +60,7 @@ export const metadata: Metadata = {
     siteName: "RankoWise",
     title: "RankoWise | Multi-Criteria Decision Intelligence & MCDM Calculator",
     description:
-      "Advanced Multi-Criteria Decision Making (MCDM) & Optimization Platform for academic research, engineering decisions, and operations optimization.",
+      "Advanced Multi-Criteria Decision Making (MCDM) and Decision support systems platform. Calculate SWEI Method, SWI Method, TOPSIS, VIKOR, AHP, PROMETHEE, and sensitivity analysis for academic research and engineering decisions.",
     images: [
       {
         url: "/logo.jpg",
@@ -68,7 +73,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "RankoWise | Multi-Criteria Decision Intelligence",
-    description: "Advanced Multi-Criteria Decision Making (MCDM) & Optimization Platform for researchers and decision-makers.",
+    description:
+      "Advanced Multi-Criteria Decision Making (MCDM) & Decision support systems platform featuring SWEI Method, SWI Method, TOPSIS, VIKOR, AHP, and PROMETHEE.",
     images: ["/logo.jpg"],
   },
   robots: {
@@ -100,9 +106,10 @@ const jsonLd = {
         "priceCurrency": "USD",
       },
       "description":
-        "RankoWise is an advanced Multi-Criteria Decision Making (MCDM) platform for academic researchers, engineering teams, and analysts. Features 25+ ranking algorithms including TOPSIS, VIKOR, AHP, PROMETHEE, Fuzzy logic, and sensitivity analysis.",
+        "RankoWise is an advanced Multi-Criteria Decision Making (MCDM) and Decision support systems platform for academic researchers, engineering teams, and analysts. Features 25+ ranking algorithms including SWEI MCDM Method, SWI MCDM Method, Decision support systems, TOPSIS, VIKOR, AHP, PROMETHEE, Fuzzy logic, and sensitivity analysis.",
       "featureList": [
-        "25+ Multi-Criteria Decision Analysis (MCDM) Ranking Methods",
+        "SWEI MCDM Method & SWI MCDM Method (Novel Weight & Ranking Algorithms)",
+        "25+ Multi-Criteria Decision Analysis (MCDM) & Decision support systems",
         "Analytical Hierarchy Process (AHP) Matrix & Consistency Ratio (CR)",
         "Fuzzy Logic & Triangular Fuzzy Numbers (TFN)",
         "Sensitivity Analysis with Dynamic Weight Variations",
@@ -115,7 +122,7 @@ const jsonLd = {
       "@id": "https://www.rankowise.online/#website",
       "url": "https://www.rankowise.online",
       "name": "RankoWise",
-      "description": "Multi-Criteria Decision Intelligence & Optimization Platform",
+      "description": "Multi-Criteria Decision Intelligence, SWEI Method, SWI Method & Decision support systems",
       "publisher": {
         "@type": "Organization",
         "name": "RankoWise",
