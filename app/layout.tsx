@@ -7,15 +7,11 @@ if (typeof process !== "undefined") {
 
 import type React from "react"
 import type { Metadata } from "next"
-import { Playfair_Display, Inter } from "next/font/google"
 import "./globals.css"
 
 import { ThemeProvider } from "@/components/ThemeProvider"
 import { Toaster } from "sonner"
 import { AnalyticsTracker } from "@/components/AnalyticsTracker"
-
-const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-serif" })
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.rankowise.online"),
@@ -139,7 +135,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           type="application/ld+json"

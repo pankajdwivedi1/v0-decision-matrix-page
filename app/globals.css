@@ -401,9 +401,22 @@ body {
   background-color: #ffffff;
 }
 
+@font-face {
+  font-family: "CambriaMath";
+  src: local("Cambria Math"), local("CambriaMath"), local("Cambria");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Cambria Math";
+  src: local("Cambria Math"), local("CambriaMath"), local("Cambria");
+  font-display: swap;
+}
+
 @theme inline {
-  --font-sans: "Geist", "Geist Fallback";
-  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --font-sans: "Cambria Math", "CambriaMath", Cambria, Georgia, serif;
+  --font-serif: "Cambria Math", "CambriaMath", Cambria, Georgia, serif;
+  --font-mono: "Cambria Math", "CambriaMath", Cambria, Georgia, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -441,14 +454,37 @@ body {
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 }
+:root {
+  --font-sans: "Cambria Math", "CambriaMath", Cambria, Georgia, serif;
+  --font-serif: "Cambria Math", "CambriaMath", Cambria, Georgia, serif;
+  --font-mono: "Cambria Math", "CambriaMath", Cambria, Georgia, monospace;
+}
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
 
+  html,
   body {
     @apply bg-background text-foreground;
+    font-family: "Cambria Math", "CambriaMath", Cambria, Georgia, serif;
+  }
+
+  button,
+  input,
+  optgroup,
+  select,
+  textarea,
+  table,
+  th,
+  td {
+    font-family: inherit;
+  }
+
+  /* Specific preservation for the RANKOWISE logo marked by blue pen */
+  .rankowise-logo {
+    font-family: "Century Schoolbook", "Century", "Book Antiqua", Georgia, serif !important;
   }
 
   input[type="number"]::-webkit-outer-spin-button,

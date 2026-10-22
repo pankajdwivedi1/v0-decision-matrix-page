@@ -4320,7 +4320,7 @@ export default function MCDMCalculator() {
     return (
       <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-black truncate" style={{ fontFamily: '"Century Schoolbook", "Century", "Book Antiqua", Georgia, serif', fontWeight: 700, letterSpacing: '-0.01em' }}>RANKOWISE</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-black truncate rankowise-logo" style={{ fontFamily: '"Century Schoolbook", "Century", "Book Antiqua", Georgia, serif', fontWeight: 700, letterSpacing: '-0.01em' }}>RANKOWISE</h1>
           <p className="text-[10px] sm:text-xs text-gray-700">Multicriteria Decision Making Calculator</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
@@ -6434,7 +6434,7 @@ export default function MCDMCalculator() {
                                 };
 
                                 return (
-                                  <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" style={{ fontFamily: 'sans-serif' }}>
+                                  <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" style={{ fontFamily: 'inherit' }}>
                                     {/* Y-axis and grid */}
                                     {Array.from({ length: 6 }).map((_, i) => {
                                       const yVal = gMin + (i / 5) * (gMax - gMin);
