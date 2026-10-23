@@ -3660,7 +3660,7 @@ export default function KSensitivityCalculator({
       const titleRow = worksheet.addRow(["RANKOWISE"]);
       worksheet.mergeCells(`A1:${String.fromCharCode(64 + alternatives.length + 1)}1`);
       const titleCell = titleRow.getCell(1);
-      titleCell.font = { name: 'Cambria', bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+      titleCell.font = { name: 'Times New Roman', bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
       titleCell.fill = {
         type: 'pattern',
         pattern: 'solid',
@@ -3693,7 +3693,7 @@ export default function KSensitivityCalculator({
         row.height = 25;
 
         const labelCell = row.getCell(1);
-        labelCell.font = { name: 'Cambria', bold: true, size: 11 };
+        labelCell.font = { name: 'Times New Roman', bold: true, size: 11 };
         labelCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
         labelCell.border = {
           top: { style: 'thin', color: { argb: 'FF000000' } },
@@ -3703,7 +3703,7 @@ export default function KSensitivityCalculator({
         };
 
         const valueCell = row.getCell(2);
-        valueCell.font = { name: 'Cambria', size: 11 };
+        valueCell.font = { name: 'Times New Roman', size: 11 };
         valueCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
         valueCell.border = {
           top: { style: 'thin', color: { argb: 'FF000000' } },
@@ -3720,7 +3720,7 @@ export default function KSensitivityCalculator({
       const headerRow = worksheet.addRow(tableHeader);
       headerRow.height = 25;
       headerRow.eachCell((cell) => {
-        cell.font = { name: 'Cambria', bold: true, size: 11 };
+        cell.font = { name: 'Times New Roman', bold: true, size: 11 };
         cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
         cell.border = {
           top: { style: 'thin', color: { argb: 'FF000000' } },
@@ -3746,7 +3746,7 @@ export default function KSensitivityCalculator({
         const dataRow = worksheet.addRow(rowData);
         dataRow.height = 20;
         dataRow.eachCell((cell, colNumber) => {
-          cell.font = { name: 'Cambria', size: 11 };
+          cell.font = { name: 'Times New Roman', size: 11 };
           cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
           cell.border = {
             top: { style: 'thin', color: { argb: 'FF000000' } },

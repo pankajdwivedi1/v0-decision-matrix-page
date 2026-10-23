@@ -218,7 +218,7 @@ export function ApiKeySettings() {
                 <Button
                     variant="outline"
                     size="sm"
-                    className={`h-8 w-full gap-1.5 text-xs font-medium px-2.5 transition-all shadow-xs ${totalActiveKeys > 0
+                    className={`h-9 w-full gap-1.5 text-sm font-medium px-2.5 transition-all shadow-xs ${totalActiveKeys > 0
                         ? "bg-emerald-50 border-emerald-300 text-emerald-900 hover:bg-emerald-100"
                         : "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
                     }`}
@@ -230,7 +230,7 @@ export function ApiKeySettings() {
                     )}
                     <span>AI Settings: {provider === "openai" ? "ChatGPT" : "Gemini"}</span>
                     {totalActiveKeys > 0 && (
-                        <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-200/80 text-emerald-800">
+                        <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-xs font-bold bg-emerald-200/80 text-emerald-800">
                             {totalActiveKeys} key{totalActiveKeys > 1 ? "s" : ""}
                         </span>
                     )}

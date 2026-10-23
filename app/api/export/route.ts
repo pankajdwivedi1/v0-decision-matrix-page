@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
     const worksheet = workbook.addWorksheet("Results")
 
     // Default Font: Cambria
-    const defaultFont = { name: "Cambria", size: 11 }
-    const boldFont = { name: "Cambria", size: 11, bold: true }
+    const defaultFont = { name: "Times New Roman", size: 11 }
+    const boldFont = { name: "Times New Roman", size: 11, bold: true }
 
     // Number format for uniform decimals
     const numFmt = resultsDecimalPlaces > 0 ? "0." + "0".repeat(resultsDecimalPlaces) : "0"

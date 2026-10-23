@@ -401,22 +401,10 @@ body {
   background-color: #ffffff;
 }
 
-@font-face {
-  font-family: "CambriaMath";
-  src: local("Cambria Math"), local("CambriaMath"), local("Cambria");
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Cambria Math";
-  src: local("Cambria Math"), local("CambriaMath"), local("Cambria");
-  font-display: swap;
-}
-
 @theme inline {
-  --font-sans: "Cambria Math", "CambriaMath", Cambria, Georgia, serif;
-  --font-serif: "Cambria Math", "CambriaMath", Cambria, Georgia, serif;
-  --font-mono: "Cambria Math", "CambriaMath", Cambria, Georgia, monospace;
+  --font-sans: "Times New Roman", Times, "Liberation Serif", serif;
+  --font-serif: "Times New Roman", Times, "Liberation Serif", serif;
+  --font-mono: "Times New Roman", Times, "Liberation Serif", serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -455,9 +443,9 @@ body {
   --color-sidebar-ring: var(--sidebar-ring);
 }
 :root {
-  --font-sans: "Cambria Math", "CambriaMath", Cambria, Georgia, serif;
-  --font-serif: "Cambria Math", "CambriaMath", Cambria, Georgia, serif;
-  --font-mono: "Cambria Math", "CambriaMath", Cambria, Georgia, monospace;
+  --font-sans: "Times New Roman", Times, "Liberation Serif", serif;
+  --font-serif: "Times New Roman", Times, "Liberation Serif", serif;
+  --font-mono: "Times New Roman", Times, "Liberation Serif", serif;
 }
 
 @layer base {
@@ -465,10 +453,14 @@ body {
     @apply border-border outline-ring/50;
   }
 
-  html,
+    html {
+    font-size: 18px !important;
+  }
+
   body {
     @apply bg-background text-foreground;
-    font-family: "Cambria Math", "CambriaMath", Cambria, Georgia, serif;
+    font-family: "Times New Roman", Times, "Liberation Serif", serif;
+    font-size: 18px;
   }
 
   button,

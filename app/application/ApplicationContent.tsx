@@ -4321,7 +4321,7 @@ export default function MCDMCalculator() {
       <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
         <div className="min-w-0 flex-1">
           <h1 className="text-xl sm:text-2xl font-bold text-black truncate rankowise-logo" style={{ fontFamily: '"Century Schoolbook", "Century", "Book Antiqua", Georgia, serif', fontWeight: 700, letterSpacing: '-0.01em' }}>RANKOWISE</h1>
-          <p className="text-[10px] sm:text-xs text-gray-700">Multicriteria Decision Making Calculator</p>
+          <p className="text-[12px] sm:text-sm text-gray-700">Multicriteria Decision Making Calculator</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="flex flex-col items-end sm:flex-row sm:items-center gap-1.5 sm:gap-4">
@@ -4836,7 +4836,7 @@ export default function MCDMCalculator() {
         </div>
         <Button
           variant="outline"
-          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${aiResearchContext.topic ? "bg-green-50 border-green-200 text-black" : "bg-white border-gray-200 text-black"} hover:bg-green-100 items-center justify-center flex`}
+          className={`flex-1 w-full text-[12px] h-9 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${aiResearchContext.topic ? "bg-green-50 border-green-200 text-black" : "bg-white border-gray-200 text-black"} hover:bg-green-100 items-center justify-center flex`}
           onClick={() => setIsResearchContextDialogOpen(true)}
         >
           {aiResearchContext.topic ? (
@@ -4848,7 +4848,7 @@ export default function MCDMCalculator() {
         </Button>
         <Button
           variant="outline"
-          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${isAnyWeightCalculated ? "bg-green-50 border-green-200" : homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+          className={`flex-1 w-full text-[12px] h-9 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${isAnyWeightCalculated ? "bg-green-50 border-green-200" : homeTab === "weightMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
           onClick={() => {
             setHomeTab("weightMethods");
             // If weight results already exist, go to matrix view to show them
@@ -4869,7 +4869,7 @@ export default function MCDMCalculator() {
         </Button>
         <Button
           variant="outline"
-          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${apiResults ? "bg-green-50 border-green-200" : homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+          className={`flex-1 w-full text-[12px] h-9 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${apiResults ? "bg-green-50 border-green-200" : homeTab === "rankingMethods" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
           onClick={() => {
             setHomeTab("rankingMethods");
             // Ranking results live in "calculate" view, weight results in "matrix" view
@@ -4890,7 +4890,7 @@ export default function MCDMCalculator() {
         </Button>
         <Button
           variant="outline"
-          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${comparisonResults.length > 0 ? "bg-green-50 border-green-200" : homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+          className={`flex-1 w-full text-[12px] h-9 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${comparisonResults.length > 0 ? "bg-green-50 border-green-200" : homeTab === "rankingComparison" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
           onClick={() => {
             setHomeTab("rankingComparison");
             if (currentStep !== "home") setCurrentStep("home");
@@ -4905,7 +4905,7 @@ export default function MCDMCalculator() {
         </Button>
         <Button
           variant="outline"
-          className={`flex-1 w-full text-[10px] h-8 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${(sensitivityWeightComparisonResults.length > 0 || isKSensitivityCalculated) ? "bg-green-50 border-green-200" : homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
+          className={`flex-1 w-full text-[12px] h-9 px-1.5 cursor-pointer whitespace-normal text-center leading-tight ${(sensitivityWeightComparisonResults.length > 0 || isKSensitivityCalculated) ? "bg-green-50 border-green-200" : homeTab === "sensitivityAnalysis" ? "bg-[#FFF2CC] border-[#FFF2CC] text-black hover:bg-[#FFE699]" : "bg-white border-gray-200 text-black hover:bg-gray-50"}`}
           onClick={() => {
             setHomeTab("sensitivityAnalysis");
             if (currentStep !== "home") setCurrentStep("home");
@@ -4923,7 +4923,7 @@ export default function MCDMCalculator() {
             setHomeTab("aiResearch");
             if (currentStep !== "home") setCurrentStep("home");
           }}
-          className={`col-span-2 sm:flex-1 h-8 text-[10px] gap-1 px-2 flex items-center justify-center cursor-pointer ${aiAnalysisResult ? 'bg-green-50 border border-green-200 text-black border-solid' : 'bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 text-white border-none shadow-lg'}`}
+          className={`col-span-2 sm:flex-1 h-9 text-[12px] gap-1 px-2 flex items-center justify-center cursor-pointer ${aiAnalysisResult ? 'bg-green-50 border border-green-200 text-black border-solid' : 'bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 text-white border-none shadow-lg'}`}
         >
           {aiAnalysisResult ? (
             <CheckCircle2 className="w-3.5 h-3.5 mr-0.5 text-green-600 shrink-0" />
